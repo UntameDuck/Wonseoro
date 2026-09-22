@@ -1,0 +1,733 @@
+openapi: 3.1.0
+info:
+  title: K-Admission University Data Plane API
+  version: 1.1.0
+  description: >
+    Reference contract for a university-local K-Admission data plane.
+    The university DB is the source of truth; central sync is not in the applicant critical path.
+servers:
+  - url: https://{university}.apply.k-admission.kr
+    variables:
+      university:
+        default: demo
+tags:
+  - name: Meta
+  - name: Catalog
+  - name: Applications
+  - name: Documents
+  - name: Payments
+  - name: Submissions
+  - name: Admin
+  - name: Internal
+paths:
+  /api/v1/meta/time:
+    get:
+      tags: [Meta]
+      operationId: getServerTime
+      security: []
+      responses:
+        '200':
+          description: Server time and active deadline policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerTime'
+  /api/v1/admission-cycles/current:
+    get:
+      tags: [Catalog]
+      operationId: getCurrentCycle
+      responses:
+        '200':
+          description: Current admission cycle
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdmissionCycle'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v1/admission-types:
+    get:
+      tags: [Catalog]
+      operationId: listAdmissionTypes
+      parameters:
+        - in: query
+          name: cycleId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Admission types
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AdmissionType' }
+  /api/v1/departments:
+    get:
+      tags: [Catalog]
+      operationId: listDepartments
+      parameters:
+        - in: query
+          name: cycleId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Departments
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Department' }
+  /api/v1/applications:
+    post:
+      tags: [Applications]
+      operationId: createApplication
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateApplicationRequest' }
+      responses:
+        '201':
+          description: Application created
+          headers:
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Application' }
+        '409':
+          $ref: '#/components/responses/Problem'
+  /api/v1/applications/{applicationId}:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationId'
+    get:
+      tags: [Applications]
+      operationId: getApplication
+      responses:
+        '200':
+          description: Application
+          headers:
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Application' }
+        '404':
+          $ref: '#/components/responses/Problem'
+    patch:
+      tags: [Applications]
+      operationId: updateApplication
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema: { $ref: '#/components/schemas/UpdateApplicationRequest' }
+      responses:
+        '200':
+          description: Updated
+          headers:
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Application' }
+        '412':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /api/v1/applications/{applicationId}/validate:
+    post:
+      tags: [Applications]
+      operationId: validateApplication
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationResult' }
+  /api/v1/applications/{applicationId}/documents/upload-intents:
+    post:
+      tags: [Documents]
+      operationId: createUploadIntent
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateUploadIntentRequest' }
+      responses:
+        '201':
+          description: Upload intent
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UploadIntent' }
+  /api/v1/documents/{documentId}/complete:
+    post:
+      tags: [Documents]
+      operationId: completeUpload
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sha256, sizeBytes]
+              properties:
+                sha256: { type: string, pattern: '^[a-fA-F0-9]{64}$' }
+                sizeBytes: { type: integer, minimum: 0 }
+      responses:
+        '202':
+          description: Accepted for malware/content validation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Document' }
+  /api/v1/documents/{documentId}:
+    delete:
+      tags: [Documents]
+      operationId: deleteDocument
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '204': { description: Deleted }
+        '409':
+          $ref: '#/components/responses/Problem'
+  /api/v1/applications/{applicationId}/payment-intents:
+    post:
+      tags: [Payments]
+      operationId: createPaymentIntent
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201':
+          description: Payment intent
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentIntent' }
+  /api/v1/payments/{paymentId}:
+    get:
+      tags: [Payments]
+      operationId: getPayment
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      responses:
+        '200':
+          description: Payment
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+  /api/v1/payments/{paymentId}/verify:
+    post:
+      tags: [Payments]
+      operationId: verifyPayment
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Verified payment state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '202':
+          description: Provider state temporarily unknown
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+  /api/v1/applications/{applicationId}/finalize:
+    post:
+      tags: [Submissions]
+      operationId: finalizeApplication
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Existing finalized result for idempotent retry
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Submission' }
+        '201':
+          description: Application finalized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Submission' }
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /api/v1/applications/{applicationId}/submission:
+    get:
+      tags: [Submissions]
+      operationId: getApplicationSubmission
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+      responses:
+        '200':
+          description: Submission state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Submission' }
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/submissions/{submissionId}/receipt:
+    get:
+      tags: [Submissions]
+      operationId: getReceipt
+      parameters:
+        - in: path
+          name: submissionId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Receipt metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [submissionId, applicationNumber, finalizedAt]
+                properties:
+                  submissionId: { type: string, format: uuid }
+                  applicationNumber: { type: string }
+                  finalizedAt: { type: string, format: date-time }
+                  receiptUrl: { type: string, format: uri }
+  /admin/v1/config/active:
+    get:
+      tags: [Admin]
+      operationId: getActiveConfig
+      security: [{ oidc: [admin] }]
+      responses:
+        '200':
+          description: Active configuration
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConfigVersion' }
+  /admin/v1/config/versions:
+    post:
+      tags: [Admin]
+      operationId: createConfigVersion
+      security: [{ oidc: [admin] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateConfigVersionRequest' }
+      responses:
+        '201':
+          description: Draft config version
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConfigVersion' }
+  /admin/v1/config/versions/{configId}/approve:
+    post:
+      tags: [Admin]
+      operationId: approveConfigVersion
+      security: [{ oidc: [admin] }]
+      parameters:
+        - in: path
+          name: configId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { description: Approval recorded }
+  /admin/v1/config/versions/{configId}/activate:
+    post:
+      tags: [Admin]
+      operationId: activateConfigVersion
+      security: [{ oidc: [admin] }]
+      parameters:
+        - in: path
+          name: configId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { description: Activated after two-person approval }
+  /admin/v1/deadline-policies:
+    post:
+      tags: [Admin]
+      operationId: createDeadlinePolicy
+      security: [{ oidc: [admin] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateDeadlinePolicyRequest' }
+      responses:
+        '201': { description: Deadline policy draft }
+  /admin/v1/deadline-policies/{policyId}/approve:
+    post:
+      tags: [Admin]
+      operationId: approveDeadlinePolicy
+      security: [{ oidc: [admin] }]
+      parameters:
+        - in: path
+          name: policyId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { description: Approval recorded }
+  /admin/v1/reconciliation/exceptions:
+    get:
+      tags: [Admin]
+      operationId: listReconciliationExceptions
+      security: [{ oidc: [operator] }]
+      responses:
+        '200':
+          description: Exceptions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ReconciliationException' }
+  /admin/v1/reconciliation/{exceptionId}/resolve:
+    post:
+      tags: [Admin]
+      operationId: resolveReconciliationException
+      security: [{ oidc: [admin] }]
+      parameters:
+        - in: path
+          name: exceptionId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resolutionCode, reason]
+              properties:
+                resolutionCode: { type: string }
+                reason: { type: string, minLength: 1 }
+      responses:
+        '200': { description: Resolved and audited }
+  /admin/v1/evidence/applications/{applicationId}:
+    get:
+      tags: [Admin]
+      operationId: getEvidencePackage
+      security: [{ oidc: [auditor] }]
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+      responses:
+        '200':
+          description: Evidence package metadata
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EvidencePackage' }
+  /internal/v1/events:
+    post:
+      tags: [Internal]
+      operationId: ingestUniversityEvent
+      security: [{ mutualTLS: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/cloudevents+json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '202':
+          description: Event accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [eventId, receiptId, acknowledgedAt]
+                properties:
+                  eventId: { type: string }
+                  receiptId: { type: string }
+                  acknowledgedAt: { type: string, format: date-time }
+        '409': { description: Duplicate event; existing receipt may be returned }
+  /internal/v1/events/{eventId}/receipt:
+    get:
+      tags: [Internal]
+      operationId: getEventReceipt
+      security: [{ mutualTLS: [] }]
+      parameters:
+        - in: path
+          name: eventId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Receipt
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+  /internal/v1/sync/status:
+    get:
+      tags: [Internal]
+      operationId: getSyncStatus
+      security: [{ mutualTLS: [] }]
+      responses:
+        '200':
+          description: Sync status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [universityId, oldestPendingAgeSeconds, pendingCount]
+                properties:
+                  universityId: { type: string }
+                  oldestPendingAgeSeconds: { type: integer, minimum: 0 }
+                  pendingCount: { type: integer, minimum: 0 }
+components:
+  securitySchemes:
+    oidc:
+      type: openIdConnect
+      openIdConnectUrl: https://id.example.kr/.well-known/openid-configuration
+    mutualTLS:
+      type: mutualTLS
+  parameters:
+    ApplicationId:
+      in: path
+      name: applicationId
+      required: true
+      schema: { type: string, format: uuid }
+    DocumentId:
+      in: path
+      name: documentId
+      required: true
+      schema: { type: string, format: uuid }
+    PaymentId:
+      in: path
+      name: paymentId
+      required: true
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string, minLength: 16, maxLength: 200 }
+    IfMatch:
+      in: header
+      name: If-Match
+      required: true
+      schema: { type: string }
+  responses:
+    Problem:
+      description: Problem Details
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+  schemas:
+    ServerTime:
+      type: object
+      required: [serverTime, deadlineAt, deadlinePolicyVersion]
+      properties:
+        serverTime: { type: string, format: date-time }
+        deadlineAt: { type: string, format: date-time }
+        deadlinePolicyVersion: { type: string }
+        clockOffsetMs: { type: integer }
+    AdmissionCycle:
+      type: object
+      required: [id, admissionYear, name, opensAt, closesAt, status]
+      properties:
+        id: { type: string, format: uuid }
+        admissionYear: { type: integer }
+        name: { type: string }
+        opensAt: { type: string, format: date-time }
+        closesAt: { type: string, format: date-time }
+        status: { type: string, enum: [DRAFT, OPEN, CLOSED, ARCHIVED] }
+    AdmissionType:
+      type: object
+      required: [id, code, name, feeAmount]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        feeAmount: { type: number, minimum: 0 }
+    Department:
+      type: object
+      required: [id, code, name]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+    CreateApplicationRequest:
+      type: object
+      additionalProperties: false
+      required: [cycleId, admissionTypeId, departmentId]
+      properties:
+        cycleId: { type: string, format: uuid }
+        admissionTypeId: { type: string, format: uuid }
+        departmentId: { type: string, format: uuid }
+    UpdateApplicationRequest:
+      type: object
+      properties:
+        admissionTypeId: { type: string, format: uuid }
+        departmentId: { type: string, format: uuid }
+        fields: { type: object, additionalProperties: true }
+    Application:
+      type: object
+      required: [id, cycleId, status, version, serverTime]
+      properties:
+        id: { type: string, format: uuid }
+        cycleId: { type: string, format: uuid }
+        admissionTypeId: { type: string, format: uuid }
+        departmentId: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [DRAFT, READY, PAYMENT_PENDING, PAID, FINALIZING, FINALIZED, CANCELLED, EXPIRED]
+        version: { type: integer, minimum: 1 }
+        lastSavedAt: { type: [string, 'null'], format: date-time }
+        fields: { type: object, additionalProperties: true }
+        serverTime: { type: string, format: date-time }
+    ValidationIssue:
+      type: object
+      required: [code, path, message]
+      properties:
+        code: { type: string }
+        path: { type: string }
+        message: { type: string }
+    ValidationResult:
+      type: object
+      required: [valid, issues]
+      properties:
+        valid: { type: boolean }
+        issues:
+          type: array
+          items: { $ref: '#/components/schemas/ValidationIssue' }
+    CreateUploadIntentRequest:
+      type: object
+      additionalProperties: false
+      required: [documentType, filename, mediaType, sizeBytes]
+      properties:
+        documentType: { type: string }
+        filename: { type: string, maxLength: 512 }
+        mediaType: { type: string }
+        sizeBytes: { type: integer, minimum: 1 }
+    UploadIntent:
+      type: object
+      required: [documentId, uploadUrl, expiresAt]
+      properties:
+        documentId: { type: string, format: uuid }
+        uploadUrl: { type: string, format: uri }
+        expiresAt: { type: string, format: date-time }
+        requiredHeaders:
+          type: object
+          additionalProperties: { type: string }
+    Document:
+      type: object
+      required: [id, status, filename, mediaType, sizeBytes]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [UPLOADING, QUARANTINED, AVAILABLE, REJECTED, DELETED] }
+        filename: { type: string }
+        mediaType: { type: string }
+        sizeBytes: { type: integer }
+    PaymentIntent:
+      type: object
+      required: [paymentId, amount, currency, provider, providerPayload]
+      properties:
+        paymentId: { type: string, format: uuid }
+        amount: { type: number }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        provider: { type: string }
+        providerPayload: { type: object, additionalProperties: true }
+    Payment:
+      type: object
+      required: [id, status, amount, currency, provider]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [CREATED, PENDING, UNKNOWN, CONFIRMED, FAILED, CANCELLED, REFUNDED] }
+        amount: { type: number }
+        currency: { type: string }
+        provider: { type: string }
+        providerApprovedAt: { type: [string, 'null'], format: date-time }
+        verifiedAt: { type: [string, 'null'], format: date-time }
+    Submission:
+      type: object
+      required: [applicationId, submissionId, applicationNumber, status, requestedAt, finalizedAt, deadlinePolicyVersion, serverTime]
+      properties:
+        applicationId: { type: string, format: uuid }
+        submissionId: { type: string, format: uuid }
+        applicationNumber: { type: string }
+        status: { type: string, const: FINALIZED }
+        requestedAt: { type: string, format: date-time }
+        paymentVerifiedAt: { type: string, format: date-time }
+        finalizedAt: { type: string, format: date-time }
+        deadlinePolicyVersion: { type: string }
+        configVersion: { type: string }
+        serverTime: { type: string, format: date-time }
+    ConfigVersion:
+      type: object
+      required: [id, version, status, configHash]
+      properties:
+        id: { type: string, format: uuid }
+        version: { type: string }
+        status: { type: string, enum: [DRAFT, APPROVED, ACTIVE, RETIRED] }
+        configHash: { type: string }
+        activatedAt: { type: [string, 'null'], format: date-time }
+    CreateConfigVersionRequest:
+      type: object
+      required: [cycleId, version, config]
+      properties:
+        cycleId: { type: string, format: uuid }
+        version: { type: string }
+        config: { type: object, additionalProperties: true }
+    CreateDeadlinePolicyRequest:
+      type: object
+      required: [cycleId, version, mode, deadlineAt]
+      properties:
+        cycleId: { type: string, format: uuid }
+        version: { type: string }
+        mode:
+          type: string
+          enum: [FINALIZED_COMMIT_BEFORE_DEADLINE, REQUEST_RECEIVED_BEFORE_DEADLINE, PAYMENT_APPROVED_BEFORE_DEADLINE]
+        deadlineAt: { type: string, format: date-time }
+    ReconciliationException:
+      type: object
+      required: [id, applicationId, exceptionType, severity, state, detectedAt]
+      properties:
+        id: { type: string, format: uuid }
+        applicationId: { type: string, format: uuid }
+        exceptionType: { type: string }
+        severity: { type: string, enum: [INFO, WARN, HIGH, CRITICAL] }
+        state: { type: string, enum: [OPEN, AUTO_RESOLVED, MANUAL_REVIEW, RESOLVED] }
+        detectedAt: { type: string, format: date-time }
+    EvidencePackage:
+      type: object
+      required: [applicationId, generatedAt, evidenceHash, timeline]
+      properties:
+        applicationId: { type: string, format: uuid }
+        generatedAt: { type: string, format: date-time }
+        evidenceHash: { type: string }
+        timeline:
+          type: array
+          items: { type: object, additionalProperties: true }
+    Problem:
+      type: object
+      required: [type, title, status, code, traceId]
+      properties:
+        type: { type: string, format: uri-reference }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        code: { type: string }
+        traceId: { type: string }
+        serverTime: { type: string, format: date-time }
+security:
+  - oidc: []

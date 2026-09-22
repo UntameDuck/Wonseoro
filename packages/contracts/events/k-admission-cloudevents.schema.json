@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.k-admission.kr/events/bundle/v1.json",
+  "title": "K-Admission CloudEvents Bundle v1",
+  "oneOf": [
+    { "$ref": "#/$defs/ApplicationFinalizedEvent" },
+    { "$ref": "#/$defs/ApplicationCancelledEvent" },
+    { "$ref": "#/$defs/PaymentConfirmedEvent" },
+    { "$ref": "#/$defs/SyncHeartbeatEvent" }
+  ],
+  "$defs": {
+    "BaseCloudEvent": {
+      "type": "object",
+      "required": ["specversion","id","source","type","subject","time","datacontenttype","dataschema","kadmissionuniversity","kadmissionsequence","data"],
+      "properties": {
+        "specversion": { "const": "1.0" },
+        "id": { "type": "string", "minLength": 16, "maxLength": 200 },
+        "source": { "type": "string", "pattern": "^urn:k-admission:university:[A-Za-z0-9_-]+$" },
+        "type": { "type": "string" },
+        "subject": { "type": "string" },
+        "time": { "type": "string", "format": "date-time" },
+        "datacontenttype": { "const": "application/json" },
+        "dataschema": { "type": "string", "format": "uri" },
+        "kadmissionuniversity": { "type": "string", "minLength": 2, "maxLength": 32 },
+        "kadmissionsequence": { "type": "integer", "minimum": 1 },
+        "configversion": { "type": "string" },
+        "policyversion": { "type": "string" },
+        "traceparent": { "type": "string" },
+        "data": { "type": "object" }
+      }
+    },
+    "ApplicationFinalizedData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["applicationId","admissionYear","admissionTypeCode","departmentCode","status","requestedAt","finalizedAt","applicationNumber","integrityHash"],
+      "properties": {
+        "applicationId": { "type": "string", "minLength": 16, "maxLength": 160 },
+        "applicantSubjectToken": { "type": "string", "minLength": 32, "maxLength": 256 },
+        "admissionYear": { "type": "integer", "minimum": 2020, "maximum": 2200 },
+        "admissionTypeCode": { "type": "string", "maxLength": 64 },
+        "departmentCode": { "type": "string", "maxLength": 64 },
+        "status": { "const": "FINALIZED" },
+        "requestedAt": { "type": "string", "format": "date-time" },
+        "paymentApprovedAt": { "type": ["string","null"], "format": "date-time" },
+        "finalizedAt": { "type": "string", "format": "date-time" },
+        "applicationNumber": { "type": "string", "maxLength": 80 },
+        "integrityHash": { "type": "string", "pattern": "^sha256:[a-fA-F0-9]{64}$" }
+      }
+    },
+    "ApplicationFinalizedEvent": {
+      "allOf": [
+        { "$ref": "#/$defs/BaseCloudEvent" },
+        { "type": "object", "properties": {
+          "type": { "const": "kr.kadmission.application.finalized.v1" },
+          "data": { "$ref": "#/$defs/ApplicationFinalizedData" }
+        }}
+      ]
+    },
+    "ApplicationCancelledData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["applicationId","cancelledAt","reasonCode","integrityHash"],
+      "properties": {
+        "applicationId": { "type": "string" },
+        "cancelledAt": { "type": "string", "format": "date-time" },
+        "reasonCode": { "type": "string", "maxLength": 64 },
+        "integrityHash": { "type": "string", "pattern": "^sha256:[a-fA-F0-9]{64}$" }
+      }
+    },
+    "ApplicationCancelledEvent": {
+      "allOf": [
+        { "$ref": "#/$defs/BaseCloudEvent" },
+        { "type": "object", "properties": {
+          "type": { "const": "kr.kadmission.application.cancelled.v1" },
+          "data": { "$ref": "#/$defs/ApplicationCancelledData" }
+        }}
+      ]
+    },
+    "PaymentConfirmedData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["applicationId","paymentId","provider","amount","currency","providerApprovedAt","verifiedAt","integrityHash"],
+      "properties": {
+        "applicationId": { "type": "string" },
+        "paymentId": { "type": "string" },
+        "provider": { "type": "string", "maxLength": 64 },
+        "amount": { "type": "number", "minimum": 0 },
+        "currency": { "const": "KRW" },
+        "providerApprovedAt": { "type": "string", "format": "date-time" },
+        "verifiedAt": { "type": "string", "format": "date-time" },
+        "integrityHash": { "type": "string", "pattern": "^sha256:[a-fA-F0-9]{64}$" }
+      }
+    },
+    "PaymentConfirmedEvent": {
+      "allOf": [
+        { "$ref": "#/$defs/BaseCloudEvent" },
+        { "type": "object", "properties": {
+          "type": { "const": "kr.kadmission.payment.confirmed.v1" },
+          "data": { "$ref": "#/$defs/PaymentConfirmedData" }
+        }}
+      ]
+    },
+    "SyncHeartbeatData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["universityId","platformVersion","configVersion","pendingOutbox","oldestPendingAgeSeconds"],
+      "properties": {
+        "universityId": { "type": "string" },
+        "platformVersion": { "type": "string" },
+        "configVersion": { "type": "string" },
+        "pendingOutbox": { "type": "integer", "minimum": 0 },
+        "oldestPendingAgeSeconds": { "type": "integer", "minimum": 0 },
+        "clockOffsetMs": { "type": "integer" }
+      }
+    },
+    "SyncHeartbeatEvent": {
+      "allOf": [
+        { "$ref": "#/$defs/BaseCloudEvent" },
+        { "type": "object", "properties": {
+          "type": { "const": "kr.kadmission.sync.heartbeat.v1" },
+          "data": { "$ref": "#/$defs/SyncHeartbeatData" }
+        }}
+      ]
+    }
+  }
+}

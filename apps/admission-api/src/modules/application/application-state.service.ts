@@ -44,12 +44,7 @@ export class ApplicationStateService {
   assertCan(from: ApplicationStatus, to: ApplicationStatus): void {
     if (from === 'FINALIZED') {
       // 접수 완료는 되돌릴 수 없다. 일반 사용자 API 에 수정 경로를 만들지 않는다.
-      throw new ProblemException({
-        type: 'https://wonseoro.kr/problems/already-finalized',
-        title: '이미 접수가 완료된 원서입니다',
-        status: 409,
-        detail: '접수 완료 후에는 원서를 변경할 수 없습니다.',
-      });
+      throw ProblemException.alreadyFinalized();
     }
     if (!this.can(from, to)) {
       throw ProblemException.illegalTransition(from, to);

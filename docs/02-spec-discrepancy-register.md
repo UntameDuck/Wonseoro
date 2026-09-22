@@ -78,9 +78,28 @@
 | **문제** | 구현 기준이 되는 canonical 첨부파일이 저장소에 없다 |
 | **대상** | DDL · OpenAPI yaml · CloudEvents json · Helm values-m · runtime yaml · network-rbac yaml · vault policy · KRDS 와이어프레임 html · k6 js · STRIDE csv |
 | **원인** | Notion MCP 연동 소유가 아니어서 API 다운로드 불가 (`object_not_found`) |
-| **조치** | 노션 화면에서 수동 다운로드 → `docs/spec-assets/README.md`의 경로에 배치 |
-| **영향** | **M1 착수 전 선행 작업.** 배치 전에 같은 내용을 코드로 새로 쓰면 원본이 둘로 갈라진다 |
-| **상태** | 🔴 OPEN |
+| **조치** | Notion 세션이 있는 브라우저에서 `/api/v3/getSignedFileUrls` 로 서명 URL을 받아 본문을 읽어 배치 |
+| **영향** | M1 착수 전 선행 작업 |
+| **진행** | 2026-09-22: **DDL · OpenAPI · CloudEvents 3종 배치 완료.** 원본과 바이트 단위 일치 검증 (문자수·줄수·체크섬) |
+| **잔여** | Helm values-m · runtime · network-rbac · vault policy · KRDS 와이어프레임 · k6 · STRIDE register (7종) — M4/M5 착수 전까지 |
+| **상태** | 🟡 부분 완료 |
+
+### 배치 절차 (재현용)
+
+Notion MCP `download-attachment` 는 이 연동이 만든 업로드만 받을 수 있어 404가 난다.
+로그인된 브라우저에서 아래로 받는다.
+
+```js
+// 노션 페이지 탭에서 실행. attId/name/blockId 는 페이지 fetch 결과의 file src 에서 얻는다.
+const r = await fetch('/api/v3/getSignedFileUrls', {
+  method:'POST', headers:{'content-type':'application/json'}, credentials:'include',
+  body: JSON.stringify({urls:[{url:`attachment:${attId}:${name}`,
+    permissionRecord:{table:'block', id:blockId, spaceId:'<spaceId>'}}]})
+});
+const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'omit'})).text();
+```
+
+배치 후 **문자수·줄수·체크섬**을 원본과 대조해 훼손이 없는지 확인한다.
 
 ---
 
@@ -93,6 +112,68 @@
 | **판정** | 셋 다 유효. 목적이 다르다 (사업 서술 / 제품 성숙도 / 개발 실행 단위) |
 | **조치** | `00-development-plan.md` §5에 3벌 매핑표를 넣어 대응관계를 고정 |
 | **상태** | 🟢 CLOSED |
+
+---
+
+## D-7. Application 상태에 CANCELLED 가 있으나 상태머신에 정의가 없다
+
+| | |
+|---|---|
+| **발견** | 2026-09-22 (M1) |
+| **충돌** | DDL `application.status` CHECK 와 OpenAPI `Application.status` enum 에는 `CANCELLED` 가 있으나, v1.0 §5.6 상태 다이어그램에는 없다. `kr.kadmission.application.cancelled.v1` 이벤트도 존재한다 |
+| **문제** | 어느 상태에서 누구의 권한으로 CANCELLED 로 가는지 정의가 없다. 특히 `FINALIZED → CANCELLED` 허용 여부는 "접수 완료는 되돌릴 수 없다"는 핵심 원칙과 충돌한다 |
+| **잠정 조치** | 타입에는 `CANCELLED` 를 포함하되(DB 가 이 값을 가질 수 있으므로) **전이는 정의하지 않았다.** 일반 사용자 API 로는 도달할 수 없다 |
+| **필요** | 노션에 취소 전이 규칙 추가 — 허용 출발 상태, 권한(사용자/입학처/관리자), 환불 연계, FINALIZED 취소 가능 여부 |
+| **상태** | 🔴 OPEN — **설계 결정 필요** |
+
+---
+
+## D-8. Payment 상태값이 달랐다
+
+| | |
+|---|---|
+| **발견** | 2026-09-22 (M1) |
+| **충돌** | M1 초안 contracts: `INTENT_CREATED, APPROVED, CANCELED` / canonical DDL·OpenAPI: `CREATED, CANCELLED, REFUNDED` (APPROVED 없음) |
+| **판정** | **canonical 채택** — `CREATED, PENDING, UNKNOWN, CONFIRMED, FAILED, CANCELLED, REFUNDED` |
+| **비고** | `APPROVED` 가 없는 것은 의도적으로 보인다. PG 승인만으로는 Finalize 할 수 없고 **서버 재검증을 거친 `CONFIRMED` 만** 사용 가능하다는 설계와 일치한다. 승인 시각은 별도 컬럼 `provider_approved_at` 으로 보존한다 |
+| **저장소 반영** | ✅ `packages/contracts/src/payment-state.ts` |
+| **상태** | 🟢 CLOSED |
+
+---
+
+## D-9. Deadline Policy 필드명이 달랐다
+
+| | |
+|---|---|
+| **발견** | 2026-09-22 (M1) |
+| **충돌** | M1 초안: `rule`, `policyVersion`, `approvedBy: [A, B]` / canonical: `mode`, `version`(DDL) · `deadlinePolicyVersion`(OpenAPI ServerTime), `approved_by_1` · `approved_by_2` |
+| **판정** | **canonical 채택.** 승인자는 배열이 아니라 두 컬럼이다 — DDL 이 `CHECK (approved_by_1 <> approved_by_2)` 로 단독 승인을 DB 레벨에서 막기 때문이다 |
+| **저장소 반영** | ✅ contracts · DeadlineService · `/meta/time` · 테스트 |
+| **상태** | 🟢 CLOSED |
+
+---
+
+## D-10. Problem 에 code 와 traceId 가 필수였다
+
+| | |
+|---|---|
+| **발견** | 2026-09-22 (M1) |
+| **충돌** | M1 초안 ProblemDetails 에 `code` 없음, `traceId` 선택 / OpenAPI `Problem.required: [type, title, status, code, traceId]` |
+| **판정** | canonical 채택. 분쟁 시 사건을 특정하는 두 필드이므로 선택일 수 없다 |
+| **저장소 반영** | ✅ `problem.ts` · `ProblemException` · `ProblemFilter` (filter 가 traceparent/X-Request-Id 에서 traceId 주입) |
+| **상태** | 🟢 CLOSED |
+
+---
+
+## D-11. idempotency_record 상태값이 달랐다
+
+| | |
+|---|---|
+| **발견** | 2026-09-22 (M1) |
+| **충돌** | M1 초안: `IN_FLIGHT, COMPLETED` / DDL: `PROCESSING, COMPLETED, FAILED` |
+| **판정** | canonical 채택. `FAILED` 는 실패한 요청을 기록으로 남기는 상태다 |
+| **비고** | 현재 메모리 어댑터는 실패 시 레코드를 삭제(`release`)한다. Postgres 어댑터에서는 삭제 대신 `FAILED` 로 전이시키고 `expires_at` 으로 정리해야 한다 — DDL 이 그렇게 설계되어 있다 |
+| **상태** | 🟡 판정완료 — Postgres 어댑터에서 마무리 |
 
 ---
 

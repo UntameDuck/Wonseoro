@@ -1,20 +1,23 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { DeadlinePolicy, DeadlineRule } from '@wonseoro/contracts';
+import { DeadlineMode, DeadlinePolicy } from '@wonseoro/contracts';
 import { DeadlinePolicyPort } from './deadline-policy.port';
 import { DeadlineService, MAX_CLOCK_OFFSET_MS } from './deadline.service';
 
 const DEADLINE = '2026-09-11T09:00:00.000Z'; // 실제 장애일의 마감시각을 기준으로 잡는다
 
-function serviceWith(rule: DeadlineRule): DeadlineService {
+function serviceWith(mode: DeadlineMode): DeadlineService {
   const port = new (class extends DeadlinePolicyPort {
     async current(): Promise<DeadlinePolicy> {
       return {
-        policyVersion: 'test-v1',
-        rule,
+        version: 'test-v1',
+        mode,
         deadlineAt: DEADLINE,
-        approvedBy: ['A', 'B'],
+        approvedBy1: 'A',
+        approvedBy2: 'B',
+        approvedAt: '2026-09-01T00:00:00.000Z',
         activatedAt: '2026-09-01T00:00:00.000Z',
+        policyHash: 'test-hash',
       };
     }
   })();
@@ -55,7 +58,7 @@ describe('마감 경계값 (v1.1 §A2 — 마감 전후 ±5초)', () => {
     );
   });
 
-  it('마감 초과 응답에는 serverTime·deadlineAt·policyVersion 이 실린다', async () => {
+  it('마감 초과 응답에는 serverTime·deadlineAt·deadlinePolicyVersion·code 가 실린다', async () => {
     await svc
       .assertWithinDeadline('c1', {
         requestReceivedAt: at('2026-09-11T09:00:05.000Z'),
@@ -66,13 +69,14 @@ describe('마감 경계값 (v1.1 §A2 — 마감 전후 ±5초)', () => {
         (err: { problem: Record<string, unknown> }) => {
           assert.ok(err.problem.serverTime, 'serverTime 필요');
           assert.equal(err.problem.deadlineAt, DEADLINE);
-          assert.equal(err.problem.policyVersion, 'test-v1');
+          assert.equal(err.problem.deadlinePolicyVersion, 'test-v1');
+          assert.equal(err.problem.code, 'DEADLINE_PASSED');
         },
       );
   });
 });
 
-describe('정책 rule 별 인정 시각 (v1.1 §A2)', () => {
+describe('정책 mode 별 인정 시각 (v1.1 §A2)', () => {
   const input = {
     requestReceivedAt: at('2026-09-11T08:59:58.000Z'), // 마감 전 도착
     paymentApprovedAt: at('2026-09-11T08:59:59.000Z'), // 마감 전 승인
@@ -129,9 +133,12 @@ describe('마감 스냅샷', () => {
     assert.equal(snap.warningMinutes, null);
   });
 
-  it('스냅샷에 policyVersion 이 항상 포함된다', async () => {
+  it('스냅샷은 OpenAPI ServerTime 필수 필드를 만족한다', async () => {
     const snap = await svc.snapshot('c1', at('2026-09-11T08:00:00.000Z'));
-    assert.equal(snap.policyVersion, 'test-v1');
+    // required: [serverTime, deadlineAt, deadlinePolicyVersion]
+    assert.ok(snap.serverTime);
+    assert.equal(snap.deadlineAt, DEADLINE);
+    assert.equal(snap.deadlinePolicyVersion, 'test-v1');
   });
 });
 

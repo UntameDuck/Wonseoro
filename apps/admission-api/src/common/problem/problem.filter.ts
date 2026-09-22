@@ -9,9 +9,12 @@ import {
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import {
   CACHE_CONTROL_PII,
+  HEADER_REQUEST_ID,
   HEADER_TRACEPARENT,
+  MEDIA_PROBLEM,
+  ProblemCode,
   ProblemDetails,
-  PROBLEM_BASE,
+  problemType,
 } from '@wonseoro/contracts';
 import { ProblemException } from './problem.exception';
 
@@ -34,14 +37,12 @@ export class ProblemFilter implements ExceptionFilter {
 
     if (problem.status >= 500) {
       // 본문은 로깅하지 않는다. 식별은 traceId 로만 한다.
-      this.logger.error(
-        `${problem.status} ${problem.type} trace=${problem.traceId ?? '-'}`,
-      );
+      this.logger.error(`${problem.status} ${problem.code} trace=${problem.traceId}`);
     }
 
     void reply
       .status(problem.status)
-      .header('content-type', 'application/problem+json; charset=utf-8')
+      .header('content-type', `${MEDIA_PROBLEM}; charset=utf-8`)
       .header('cache-control', CACHE_CONTROL_PII)
       .send(problem);
   }
@@ -50,33 +51,45 @@ export class ProblemFilter implements ExceptionFilter {
     const traceId = this.traceId(request);
 
     if (exception instanceof ProblemException) {
-      return { ...exception.problem, instance: request.url, traceId };
+      return {
+        ...exception.problem,
+        instance: request.url,
+        traceId: exception.problem.traceId || traceId,
+      };
     }
 
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
+      const code = status === 404 ? ProblemCode.NOT_FOUND : ProblemCode.INTERNAL;
       return {
-        type: `${PROBLEM_BASE}/http-${status}`,
+        type: problemType(code),
         title: exception.message,
         status,
-        instance: request.url,
+        code,
         traceId,
+        instance: request.url,
       };
     }
 
     return {
-      type: 'about:blank',
+      type: problemType(ProblemCode.INTERNAL),
       title: '서버 내부 오류가 발생했습니다',
       status: HttpStatus.INTERNAL_SERVER_ERROR,
-      instance: request.url,
+      code: ProblemCode.INTERNAL,
       traceId,
+      instance: request.url,
     };
   }
 
-  private traceId(request: FastifyRequest): string | undefined {
-    const header = request.headers[HEADER_TRACEPARENT];
-    if (typeof header !== 'string') return undefined;
-    // traceparent: 00-<trace-id>-<span-id>-<flags>
-    return header.split('-')[1];
+  /** traceparent: 00-<trace-id>-<span-id>-<flags> */
+  private traceId(request: FastifyRequest): string {
+    const tp = request.headers[HEADER_TRACEPARENT];
+    if (typeof tp === 'string') {
+      const parts = tp.split('-');
+      if (parts[1]) return parts[1];
+    }
+    const rid = request.headers[HEADER_REQUEST_ID];
+    if (typeof rid === 'string' && rid) return rid;
+    return request.id ?? '';
   }
 }

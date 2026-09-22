@@ -2,17 +2,21 @@ import { Injectable } from '@nestjs/common';
 
 /**
  * Idempotency 레코드 저장소 포트.
+ * canonical: k-admission-postgresql-ddl.txt — idempotency_record
+ *   state CHECK (state IN ('PROCESSING','COMPLETED','FAILED'))
+ *   UNIQUE (application_id, operation, idempotency_key)
  *
- * ⚠️ Postgres 어댑터는 노션 §02 첨부 DDL(IDEMPOTENCY_RECORD) 배치 후 구현한다.
- * 지금 DDL을 임의로 작성하면 설계 원본이 둘로 갈라진다. (불일치 대장 D-5)
  * Finalize 에서는 이 레코드를 **잠금과 함께** 조회해야 하므로
  * Postgres 어댑터는 SELECT ... FOR UPDATE 를 사용한다. (v1.1 §02 Finalize 1단계)
  */
+export const IDEMPOTENCY_STATE = ['PROCESSING', 'COMPLETED', 'FAILED'] as const;
+export type IdempotencyState = (typeof IDEMPOTENCY_STATE)[number];
+
 export interface IdempotencyRecord {
   key: string;
-  /** 같은 키로 다른 요청이 오는 것을 막기 위한 요청 지문. */
+  /** 같은 키로 다른 요청이 오는 것을 막기 위한 요청 지문. DDL: request_hash */
   requestHash: string;
-  status: 'IN_FLIGHT' | 'COMPLETED';
+  state: IdempotencyState;
   responseStatus?: number;
   responseBody?: unknown;
   createdAt: Date;
@@ -21,16 +25,17 @@ export interface IdempotencyRecord {
 export abstract class IdempotencyStore {
   /**
    * 키를 선점한다.
-   * - 처음 보는 키면 IN_FLIGHT 로 만들고 null 을 반환한다.
+   * - 처음 보는 키면 PROCESSING 으로 만들고 null 을 반환한다.
    * - 이미 있으면 기존 레코드를 반환한다.
    */
   abstract acquire(key: string, requestHash: string): Promise<IdempotencyRecord | null>;
   abstract complete(key: string, responseStatus: number, responseBody: unknown): Promise<void>;
+  /** 실패한 요청. 사용자가 같은 키로 재시도할 수 있게 한다. */
   abstract release(key: string): Promise<void>;
 }
 
 /**
- * 메모리 어댑터 — 단위 테스트와 DDL 도착 전 로컬 개발용.
+ * 메모리 어댑터 — 단위 테스트와 Postgres 어댑터 완성 전 로컬 개발용.
  * 프로세스가 여러 개면 동작하지 않는다. 운영에서는 절대 사용하지 않는다.
  */
 @Injectable()
@@ -43,7 +48,7 @@ export class InMemoryIdempotencyStore extends IdempotencyStore {
     this.records.set(key, {
       key,
       requestHash,
-      status: 'IN_FLIGHT',
+      state: 'PROCESSING',
       createdAt: new Date(),
     });
     return null;
@@ -52,7 +57,7 @@ export class InMemoryIdempotencyStore extends IdempotencyStore {
   async complete(key: string, responseStatus: number, responseBody: unknown): Promise<void> {
     const record = this.records.get(key);
     if (!record) return;
-    record.status = 'COMPLETED';
+    record.state = 'COMPLETED';
     record.responseStatus = responseStatus;
     record.responseBody = responseBody;
   }

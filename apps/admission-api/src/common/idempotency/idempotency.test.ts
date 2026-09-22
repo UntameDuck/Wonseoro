@@ -14,7 +14,7 @@ describe('Idempotency Store (v1.1 §B12 / §01 E 인수기준)', () => {
     await store.acquire('k1', 'hash-a');
     const second = await store.acquire('k1', 'hash-a');
     assert.ok(second);
-    assert.equal(second.status, 'IN_FLIGHT');
+    assert.equal(second.state, 'PROCESSING');
   });
 
   it('완료 후에는 저장된 응답을 돌려준다', async () => {
@@ -24,7 +24,7 @@ describe('Idempotency Store (v1.1 §B12 / §01 E 인수기준)', () => {
 
     const replay = await store.acquire('k1', 'hash-a');
     assert.ok(replay);
-    assert.equal(replay.status, 'COMPLETED');
+    assert.equal(replay.state, 'COMPLETED');
     assert.deepEqual(replay.responseBody, { submissionId: 'sub-1' });
   });
 

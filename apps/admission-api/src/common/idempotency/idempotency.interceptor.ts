@@ -8,7 +8,11 @@ import { createHash } from 'node:crypto';
 import type { FastifyRequest } from 'fastify';
 import { Observable, from, of, switchMap } from 'rxjs';
 import { tap } from 'rxjs/operators';
-import { HEADER_IDEMPOTENCY_KEY } from '@wonseoro/contracts';
+import {
+  HEADER_IDEMPOTENCY_KEY,
+  IDEMPOTENCY_KEY_MAX_LENGTH,
+  IDEMPOTENCY_KEY_MIN_LENGTH,
+} from '@wonseoro/contracts';
 import { ProblemException } from '../problem/problem.exception';
 import { IdempotencyStore } from './idempotency.store';
 
@@ -42,6 +46,12 @@ export class IdempotencyInterceptor implements NestInterceptor {
     if (typeof key !== 'string' || key.trim() === '') {
       throw ProblemException.idempotencyKeyRequired();
     }
+    // OpenAPI #/components/parameters/IdempotencyKey: minLength 16, maxLength 200
+    if (key.length < IDEMPOTENCY_KEY_MIN_LENGTH || key.length > IDEMPOTENCY_KEY_MAX_LENGTH) {
+      throw ProblemException.idempotencyKeyInvalid(
+        `Idempotency-Key 길이는 ${IDEMPOTENCY_KEY_MIN_LENGTH}~${IDEMPOTENCY_KEY_MAX_LENGTH}자여야 합니다.`,
+      );
+    }
 
     const requestHash = hashRequest(request);
 
@@ -51,7 +61,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
           if (existing.requestHash !== requestHash) {
             throw ProblemException.idempotencyKeyReused();
           }
-          if (existing.status === 'IN_FLIGHT') {
+          if (existing.state === 'PROCESSING') {
             throw ProblemException.retryable(
               '같은 요청이 처리 중입니다. 잠시 후 다시 확인해 주십시오.',
             );
@@ -63,7 +73,9 @@ export class IdempotencyInterceptor implements NestInterceptor {
         return next.handle().pipe(
           tap({
             next: (body) => {
-              void this.store.complete(key, 200, body);
+              const status = context.switchToHttp().getResponse<{ statusCode?: number }>()
+                .statusCode ?? 200;
+              void this.store.complete(key, status, body);
             },
             error: () => {
               // 실패한 요청은 키를 풀어 사용자가 재시도할 수 있게 한다.
