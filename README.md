@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>표준과 편의는 하나로, 장애와 접수 책임은 대학별로.</strong><br />
+  <strong>표준과 편의는 하나로, 장애와 접수는 대학별로.</strong><br />
   <sub>K-PaaS 기반 분산형 대학입학 원서접수 표준 플랫폼</sub>
 </p>
 
