@@ -34,3 +34,21 @@
 
 `migrations/0001_init.sql` — **노션 첨부 `k-admission-postgresql-ddl.txt`가 canonical이다.**
 docs/spec-assets/README.md 참조. 별도로 DDL을 새로 쓰지 말 것 (이중 원본 방지).
+
+`migrations/0002_integrity_constraints.sql` — 제약만 덧붙이는 임시 파일. (D-21·D-25)
+테이블을 다시 정의하지 않는다. 0001 은 첨부와 바이트가 같아야 하기 때문이다.
+노션 §02 에 접어 넣은 뒤 이 파일은 삭제한다.
+
+### 적용
+
+```
+docker exec -i wonseoro-dev-postgres-univ-a-1 psql -U wonseoro -d univ_a   -v ON_ERROR_STOP=1 < infra/db/migrations/0002_integrity_constraints.sql
+```
+
+### 제약이 실제로 막는지 확인
+
+```
+docker exec -i wonseoro-dev-postgres-univ-a-1 psql -U wonseoro -d univ_a   -v ON_ERROR_STOP=1 < infra/db/verify-constraints.sql
+```
+
+전부 ROLLBACK 으로 끝난다. 개발 DB 위에서 그대로 돌려도 데이터는 바뀌지 않는다.

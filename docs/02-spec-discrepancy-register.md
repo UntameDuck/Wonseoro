@@ -302,7 +302,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
-## D-21. config_version 은 단독 승인을 DB 가 막지 않는다 🔴
+## D-21. config_version 은 단독 승인을 DB 가 막지 않는다
 
 | | |
 |---|---|
@@ -311,8 +311,11 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **왜 중대한가** | v1.1 §A14 는 **마감시각·전형료·모집단위·지원자격·PG 설정**에 2인 승인을 요구한다. 그것들이 전부 `config_json` 에 들어간다. §01 E 의 핵심 인수기준 "단독 운영자 1명으로 마감시간 변경 불가" 가 Config 경로로 우회된다 |
 | **잠정 조치** | 애플리케이션에서 강제한다 — 서로 다른 두 승인자 + 작성자는 승인자가 될 수 없음. 하지만 **코드는 우회 가능하고 DB 는 아니다.** deadline_policy 와 같은 수준이 되려면 제약이 필요하다 |
 | **필요한 DDL** | `CHECK (status <> 'ACTIVE' OR (approved_by_1 IS NOT NULL AND approved_by_2 IS NOT NULL AND approved_by_1 <> approved_by_2))` |
-| **노션 반영** | ⬜ §02 첨부 DDL 에 제약 추가. 저장소에서 먼저 고치면 원본이 갈라진다 |
-| **상태** | 🔴 OPEN — **DDL 변경 필요** |
+| **조치 (2026-09-23)** | `infra/db/migrations/0002_integrity_constraints.sql` 로 제약을 추가했다. **0001 은 손대지 않았다** — 첨부 DDL 과 바이트가 같아야 하므로, 테이블을 다시 정의하지 않고 `ALTER TABLE ... ADD CONSTRAINT` 만 덧붙였다. 원본은 여전히 노션 하나뿐이고, 0002 는 "노션에 아직 반영되지 않은 차이" 를 파일 하나로 모아 보여주는 역할을 한다 |
+| **함께 발견** | 검증 중에 같은 뿌리의 구멍 셋을 더 찾았다 — ① 작성자가 자기 변경을 승인할 수 있었다(§A14 위반) ② 한 전형에 `ACTIVE` 설정이 둘 이상 가능했다(적용 양식이 조회 순서에 달림) ③ `deadline_policy` 는 `DRAFT:` 접두사 상태로도 `activated_at` 을 채울 수 있었다(D-23 의 부작용). 셋 다 0002 에서 막았다 |
+| **검증** | `infra/db/verify-constraints.sql` 8·9·10 — 승인 0명 활성화 / 작성자 자기승인 / 전형당 ACTIVE 중복이 전부 DB 에서 거부됨 |
+| **노션 반영** | ⬜ §02 첨부 DDL 에 0002 내용을 접어 넣고 이 파일을 삭제한다. **반영 전까지 마이그레이션이 두 파일로 나뉜다** |
+| **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
 
 ---
 
@@ -365,9 +368,11 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **문제** | `reconciliation_exception` 에 `(application_id, exception_type)` UNIQUE 가 없다. §B18 의 D+1 대조는 **주기적으로 돈다.** 같은 불일치가 매 실행마다 새 행으로 쌓인다 |
 | **결과** | 하나의 사고가 큐에 수십 건으로 보인다. 운영자가 "몇 건이 남았는가" 를 판단할 수 없고, 해결해도 다음 실행에 다시 생긴다 |
 | **잠정 조치** | 삽입 전에 같은 종류의 OPEN/MANUAL_REVIEW 건이 있는지 조회해 건너뛴다. **경쟁 상태에서는 여전히 중복이 가능하다** — 두 인스턴스가 동시에 대조하면 둘 다 "없음" 을 보고 둘 다 넣는다 |
-| **필요한 DDL** | `CREATE UNIQUE INDEX uq_recon_open ON reconciliation_exception(application_id, exception_type) WHERE state IN ('OPEN','MANUAL_REVIEW');` 부분 유니크 인덱스면 해결된 건은 여러 개 남아도 된다 |
+| **조치 (2026-09-23)** | 0002 마이그레이션에 부분 유니크 인덱스 `uq_recon_open_per_type` 을 추가했다. 동시에 서비스의 조회-후-삽입을 `INSERT ... ON CONFLICT DO NOTHING` 한 방으로 바꿨다. 판정을 코드가 아니라 인덱스가 한다 (§B3 의 "읽고-검사하고-쓰기 금지" 와 같은 원칙) |
+| **범위** | 인덱스는 `OPEN`·`MANUAL_REVIEW` 에만 건다. **해소된 뒤의 재발은 새 사건이라 다시 열려야 한다.** 전체 UNIQUE 로 걸면 두 번째 사고를 놓친다 |
+| **검증** | `verify-constraints.sql` 11 (중복 거부) 과 11b (해소 후 재발 허용) |
 | **노션 반영** | ⬜ §02 첨부 DDL 에 추가 |
-| **상태** | 🔴 OPEN — DDL 변경 필요 |
+| **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
 
 ---
 

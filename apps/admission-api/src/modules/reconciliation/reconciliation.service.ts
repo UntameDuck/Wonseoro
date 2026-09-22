@@ -308,22 +308,25 @@ export class ReconciliationService {
   }
 
   /** 이미 열려 있는 같은 종류의 건이면 새로 만들지 않는다. (D-25 우회) */
+  /**
+   * 이미 열려 있는 같은 불일치는 다시 열지 않는다. 대조는 주기적으로 도는데
+   * 실행할 때마다 쌓이면 큐를 읽을 수 없고, 읽을 수 없는 큐는 없는 큐다.
+   *
+   * 조회한 뒤 없으면 넣는 방식은 쓰지 않는다. 그 사이에 다른 실행이 끼어든다.
+   * 판정은 부분 유니크 인덱스에 맡기고 한 번에 밀어 넣는다. (D-25 / 0002 마이그레이션)
+   */
   private async openIfNew(f: Finding): Promise<boolean> {
-    const existing = await this.db.query(
-      `SELECT 1 FROM reconciliation_exception
-        WHERE application_id = $1 AND exception_type = $2
-          AND state IN ('OPEN','MANUAL_REVIEW')
-        LIMIT 1`,
-      [f.applicationId, f.type],
-    );
-    if ((existing.rowCount ?? 0) > 0) return false;
-
-    await this.db.query(
+    const { rowCount } = await this.db.query(
       `INSERT INTO reconciliation_exception
          (id, application_id, exception_type, severity, state, facts)
-       VALUES ($1,$2,$3,$4,'OPEN',$5)`,
+       VALUES ($1,$2,$3,$4,'OPEN',$5)
+       ON CONFLICT (application_id, exception_type)
+         WHERE state IN ('OPEN','MANUAL_REVIEW')
+       DO NOTHING`,
       [randomUUID(), f.applicationId, f.type, f.severity, JSON.stringify(f.facts)],
     );
+    if (!rowCount) return false;
+
     this.logger.warn(`${f.severity} ${f.type} application=${f.applicationId}`);
     return true;
   }

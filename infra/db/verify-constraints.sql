@@ -11,28 +11,37 @@ SET search_path TO kadmission, public;
 BEGIN;
 
 -- ── 시드 ──────────────────────────────────────────────────────────────
+-- 개발 DB 위에서도 그대로 돌아야 한다. 같은 id 가 이미 있으면 건너뛴다.
+-- 스크립트 전체가 ROLLBACK 으로 끝나므로 기존 데이터는 바뀌지 않는다.
 INSERT INTO university (id, name, status)
-VALUES ('UNIV-A', '검증대학교', 'ACTIVE');
+VALUES ('UNIV-A', '검증대학교', 'ACTIVE') ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO admission_cycle (id, university_id, admission_year, name, opens_at, closes_at, status)
 VALUES ('11111111-1111-1111-1111-111111111111', 'UNIV-A', 2027, '2027 수시',
-        '2026-09-01T00:00:00Z', '2026-09-11T09:00:00Z', 'OPEN');
+        '2026-09-01T00:00:00Z', '2026-09-11T09:00:00Z', 'OPEN') ON CONFLICT (id) DO NOTHING;
+
+-- 설정·마감정책 검증용 별도 전형.
+-- 개발 DB 에 이미 활성 설정이 있는 전형을 쓰면 검증이 엉뚱한 곳에서 걸린다.
+INSERT INTO admission_cycle (id, university_id, admission_year, name, opens_at, closes_at, status)
+VALUES ('99999999-9999-9999-9999-999999999999', 'UNIV-A', 2028, '2028 검증용',
+        '2027-09-01T00:00:00Z', '2027-09-11T09:00:00Z', 'OPEN') ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO admission_type (id, cycle_id, code, name, fee_amount)
 VALUES ('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111',
-        'EARLY', '학생부종합', 55000);
+        'EARLY', '학생부종합', 55000) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO department (id, cycle_id, code, name, quota)
 VALUES ('33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111',
-        'CSE', '컴퓨터공학과', 40);
+        'CSE', '컴퓨터공학과', 40) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO applicant (id, subject_token, pii_ciphertext, pii_key_version)
-VALUES ('44444444-4444-4444-4444-444444444444', 'subj-verify-0001', '\x00', 'v1');
+VALUES ('4a4a4a4a-4444-4444-4444-444444444444', 'subj-constraint-verify', '\x00', 'v1')
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO application (id, cycle_id, applicant_id, admission_type_id, department_id, status)
 VALUES ('55555555-5555-5555-5555-555555555555', '11111111-1111-1111-1111-111111111111',
-        '44444444-4444-4444-4444-444444444444', '22222222-2222-2222-2222-222222222222',
-        '33333333-3333-3333-3333-333333333333', 'PAID');
+        '4a4a4a4a-4444-4444-4444-444444444444', '22222222-2222-2222-2222-222222222222',
+        '33333333-3333-3333-3333-333333333333', 'PAID') ON CONFLICT (id) DO NOTHING;
 
 -- ── 1. 중복 접수 차단 (submission.application_id UNIQUE) ───────────────
 -- v1.1 §01 E: "동일 Finalize 100회 재시도 → Submission 1건"
@@ -62,7 +71,7 @@ DECLARE blocked boolean := false;
 BEGIN
   INSERT INTO application (id, cycle_id, applicant_id, admission_type_id, department_id, status)
   VALUES ('88888888-8888-8888-8888-888888888888', '11111111-1111-1111-1111-111111111111',
-          '44444444-4444-4444-4444-444444444444', '22222222-2222-2222-2222-222222222222',
+          '4a4a4a4a-4444-4444-4444-444444444444', '22222222-2222-2222-2222-222222222222',
           '33333333-3333-3333-3333-333333333333', 'PAID')
   ON CONFLICT DO NOTHING;
   BEGIN
@@ -163,6 +172,100 @@ BEGIN
     first_rows, second_rows,
     CASE WHEN first_rows = 1 AND second_rows = 0 THEN 'PASS' ELSE 'FAIL' END;
   ASSERT first_rows = 1 AND second_rows = 0, '조건부 전이가 중복 적용되었다';
+END $$;
+
+-- ── 8. 승인 없는 설정 활성화 차단 (D-21 / 0002) ────────────────────────
+-- 원서 양식과 전형료가 config_version 안에 있다.
+-- 승인 0명으로 ACTIVE 가 되면 아무도 모르게 전형료가 바뀔 수 있다.
+DO $$
+DECLARE blocked boolean := false;
+BEGIN
+  BEGIN
+    INSERT INTO config_version (id, cycle_id, version, status, config_json,
+                                config_hash, created_by, activated_at)
+    VALUES (gen_random_uuid(), '99999999-9999-9999-9999-999999999999',
+            'v-probe-1', 'ACTIVE', '{}', 'h', 'admin1@univ-a', now());
+  EXCEPTION WHEN check_violation THEN blocked := true;
+  END;
+  RAISE NOTICE '8. 승인 0명 설정 활성화 차단: %', CASE WHEN blocked THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT blocked, '승인 없이 원서 양식을 바꿀 수 있다';
+END $$;
+
+-- ── 9. 작성자 자기승인 차단 (v1.1 §A14 / D-21) ─────────────────────────
+-- 만든 사람이 승인까지 하면 2인 승인은 형식만 남는다.
+DO $$
+DECLARE blocked boolean := false;
+BEGIN
+  BEGIN
+    INSERT INTO config_version (id, cycle_id, version, status, config_json,
+                                config_hash, created_by, approved_by_1, approved_by_2,
+                                activated_at)
+    VALUES (gen_random_uuid(), '99999999-9999-9999-9999-999999999999',
+            'v-probe-2', 'ACTIVE', '{}', 'h',
+            'admin1@univ-a', 'admin1@univ-a', 'admin2@univ-a', now());
+  EXCEPTION WHEN check_violation THEN blocked := true;
+  END;
+  RAISE NOTICE '9. 작성자 자기승인 차단: %', CASE WHEN blocked THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT blocked, '작성자가 자기 변경을 승인할 수 있다';
+END $$;
+
+-- ── 10. 전형당 ACTIVE 설정은 하나 (D-21 / 0002) ────────────────────────
+-- 둘이면 어느 양식이 적용되는지가 조회 순서에 달린다.
+DO $$
+DECLARE blocked boolean := false;
+BEGIN
+  INSERT INTO config_version (id, cycle_id, version, status, config_json,
+                              config_hash, created_by, approved_by_1, approved_by_2,
+                              approved_at, activated_at)
+  VALUES (gen_random_uuid(), '99999999-9999-9999-9999-999999999999',
+          'v-probe-3', 'ACTIVE', '{}', 'h',
+          'admin1@univ-a', 'admin2@univ-a', 'admin3@univ-a', now(), now());
+  BEGIN
+    INSERT INTO config_version (id, cycle_id, version, status, config_json,
+                                config_hash, created_by, approved_by_1, approved_by_2,
+                                approved_at, activated_at)
+    VALUES (gen_random_uuid(), '99999999-9999-9999-9999-999999999999',
+            'v-probe-4', 'ACTIVE', '{}', 'h',
+            'admin1@univ-a', 'admin2@univ-a', 'admin3@univ-a', now(), now());
+  EXCEPTION WHEN unique_violation THEN blocked := true;
+  END;
+  RAISE NOTICE '10. 전형당 ACTIVE 설정 1건: %', CASE WHEN blocked THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT blocked, '한 전형에 활성 설정이 둘이 됐다';
+END $$;
+
+-- ── 11. 같은 불일치 중복 등록 차단 (D-25 / 0002) ───────────────────────
+-- 대조는 주기적으로 돈다. 매 실행마다 쌓이면 큐를 읽을 수 없고,
+-- 읽을 수 없는 큐는 없는 큐다.
+DO $$
+DECLARE blocked boolean := false; reopened boolean := false;
+BEGIN
+  INSERT INTO reconciliation_exception (id, application_id, exception_type,
+                                        severity, state, facts)
+  VALUES (gen_random_uuid(), '55555555-5555-5555-5555-555555555555',
+          'PROBE_TYPE', 'HIGH', 'OPEN', '{}');
+  BEGIN
+    INSERT INTO reconciliation_exception (id, application_id, exception_type,
+                                          severity, state, facts)
+    VALUES (gen_random_uuid(), '55555555-5555-5555-5555-555555555555',
+            'PROBE_TYPE', 'HIGH', 'OPEN', '{}');
+  EXCEPTION WHEN unique_violation THEN blocked := true;
+  END;
+  RAISE NOTICE '11. 미해결 불일치 중복 차단: %', CASE WHEN blocked THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT blocked, '같은 불일치가 실행마다 쌓인다';
+
+  -- 다만 해소된 뒤의 재발은 새 사건이다. 이것까지 막으면 두 번째 사고를 놓친다.
+  UPDATE reconciliation_exception
+     SET state = 'RESOLVED', resolved_at = now(), resolution_code = 'PROBE',
+         resolved_by = 'verifier'
+   WHERE application_id = '55555555-5555-5555-5555-555555555555'
+     AND exception_type = 'PROBE_TYPE';
+  INSERT INTO reconciliation_exception (id, application_id, exception_type,
+                                        severity, state, facts)
+  VALUES (gen_random_uuid(), '55555555-5555-5555-5555-555555555555',
+          'PROBE_TYPE', 'HIGH', 'OPEN', '{}');
+  reopened := true;
+  RAISE NOTICE '11b. 해소 후 재발 등록 허용: %', CASE WHEN reopened THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT reopened, '재발한 불일치를 등록할 수 없다';
 END $$;
 
 ROLLBACK;

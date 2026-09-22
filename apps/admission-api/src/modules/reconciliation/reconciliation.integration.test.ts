@@ -175,7 +175,7 @@ describe('4-way 대조 (v1.1 §A4·§B18)', () => {
 });
 
 describe('Exception Queue 운영 (v1.1 §C2·§B16)', () => {
-  it('같은 불일치를 두 번 열지 않는다 (D-25 우회)', async (t) => {
+  it('같은 불일치를 두 번 열지 않는다 (D-25 — 부분 유니크 인덱스)', async (t) => {
     if (!available) return t.skip('DATABASE_URL 없음');
     const appId = await seedApplication('PAID');
     await seedPayment(appId);
