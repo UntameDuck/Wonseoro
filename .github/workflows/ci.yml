@@ -34,6 +34,35 @@ jobs:
       - run: npm run typecheck -w @wonseoro/admission-api -w @wonseoro/central-api -w @wonseoro/document-service -w @wonseoro/event-relay
       - run: npm run test -w @wonseoro/admission-api --if-present
 
+  integration:
+    name: integration (실 PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wonseoro
+          POSTGRES_PASSWORD: wonseoro
+          POSTGRES_DB: univ_a
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wonseoro -d univ_a"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://wonseoro:wonseoro@localhost:5432/univ_a
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # canonical DDL 을 그대로 적용한다. 저장소에서 따로 쓴 스키마가 아니다.
+      - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0001_init.sql
+      # 제약이 실제로 막는지 먼저 확인한다
+      - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/verify-constraints.sql
+      - run: npm run test -w @wonseoro/admission-api
+
   frontend:
     name: frontend
     runs-on: ubuntu-latest

@@ -24,11 +24,11 @@
 
 | 구분 | 태스크 |
 |---|---|
-| ✅ 완료 | T-M1-01 · 02 · 03 · 04(로직) · 05 · 07 · 08 · 13 · 14 |
-| 🔴 남음 (저장소 어댑터 필요) | T-M1-04(Postgres) · 06 · 09 · 10 · 11 · 12 |
+| ✅ 완료 | T-M1-01 · 02 · 03 · 04 · 05 · 06 · 07 · 08 · 12 · 13 · 14 |
+| 🔴 남음 | T-M1-09(Profile Snapshot, central-api 필요) · 10(동적 폼 Schema) · 11(Document 파이프라인) |
 
 검증
-- 단위 테스트 **50개 통과** (계약 적합성 17건 포함)
+- 테스트 **60개 통과** (단위 51 + 통합 9). DB 없으면 통합 9건은 skip 되어 CI 를 막지 않는다
 - PostgreSQL 16 에 DDL 적용 → **21개 테이블** 생성
 - 정합성 제약 **행동 검증 7종 통과** (`infra/db/verify-constraints.sql`)
   제약이 "존재하는지"가 아니라 "실제로 막는지"를 확인했다
@@ -43,7 +43,23 @@
 7. 조건부 전이 (1회차 1건, 2회차 0건): PASS
 ```
 
-`admission-api` 기동 및 `/healthz`·`/api/v1/meta/time` 응답 확인.
+**End-to-End (실 DB + 실 HTTP)**
+
+| 확인 | 결과 |
+|---|---|
+| `POST /applications` Idempotency-Key 없이 | 400 |
+| `POST /applications` 정상 | 201 + `ETag: "1"` |
+| 같은 원서 재생성 (키가 달라도) | 200, 기존 원서 반환 — 중복 생성 없음 |
+| `PATCH` If-Match 정확 | 200, version 증가, 한글 본문 DB 저장 확인 |
+| `PATCH` 옛 If-Match 재사용 | **412** (사용자 입력을 덮어쓰지 않음) |
+| `PATCH` If-Match 없음 | 400 |
+| 같은 Idempotency-Key + 다른 본문 | **409** |
+| 감사 hash-chain | GENESIS 시작, 순차 연결, 변조 시 검출 |
+| 원서 삭제로 감사 기록 제거 시도 | FK 로 차단 |
+
+**구현 중 잡은 실제 버그**: Fastify `merge-patch` 파서를 `parseAs: 'string'` 으로 두면
+문자 수와 Content-Length(바이트 수)를 비교해 **한글 본문 요청이 전부 실패**한다.
+원서 본문은 대부분 한글이므로 `parseAs: 'buffer'` 로 바꿨다.
 
 ### 이 단계에서 잡은 설계 드리프트
 
@@ -66,15 +82,15 @@ canonical 첨부와 M1 초안 계약을 대조해 5건을 찾았다. 전부 대�
 | T-M1-01 | DDL 적용 + 마이그레이션 러너 | 송리안 | §02 + 첨부 DDL | 21개 테이블 생성, 정합성 제약 행동검증 7종 | ✅ |
 | T-M1-02 | NestJS 부트스트랩으로 교체 | 송리안 | ADR-0001 | Fastify 어댑터, 전역 필터·인터셉터 | ✅ |
 | T-M1-03 | 공통 에러 모델 `problem+json` | 송리안 | §03, v1.0 §5.2 | 모든 오류가 ProblemDetails로 나감 | ✅ |
-| T-M1-04 | Idempotency 미들웨어 | 송리안 | §01 B12, §02 | 키 없는 mutation 400, 재사용 409, 응답 재생 | ✅ 로직 / 🔴 저장소 |
+| T-M1-04 | Idempotency 미들웨어 | 송리안 | §01 B12, §02 | 키 없는 mutation 400, 재사용 409, 응답 재생 | ✅ Postgres 어댑터 포함 |
 | T-M1-05 | Application 상태머신 | 송리안 | v1.0 §5.6, §02 | 허용 외 전이 거부, 조건부 UPDATE 명세 | ✅ |
-| T-M1-06 | Draft PATCH + ETag/If-Match | 송리안 | §03, §10 §4 | 버전 불일치 시 409 | 🔴 DDL 대기 |
+| T-M1-06 | Draft PATCH + ETag/If-Match | 송리안 | §03, §10 §4 | 버전 불일치 시 412 (OpenAPI 명시) | ✅ |
 | T-M1-07 | `GET /meta/time` | 송리안 | §01 A2 | serverTime·deadlineAt·policyVersion 동시 반환 | ✅ |
 | T-M1-08 | 마감 검증 (서버시간 기준) | 송리안 | §01 A2 | 브라우저 시간 미사용, 경계값 테스트 | ✅ |
-| T-M1-09 | Common Profile Snapshot 복사 | 공동 | §10 §3 | 원서 생성 시 동의 필드만 복사 | 🔴 DDL 대기 |
-| T-M1-10 | 동적 추가문항 Schema Registry | 송리안 | §01 A5 | 대학 차이를 JSON Schema로 흡수 | 🔴 DDL 대기 |
-| T-M1-11 | Document Service 업로드 파이프라인 | 송리안 | v1.0 §5.4, §01 B5 | Presigned → QUARANTINED → AVAILABLE | 🔴 DDL 대기 |
-| T-M1-12 | Audit Event 기록 (hash-chain 준비) | 송리안 | v1.0 §9, §01 A11 | 상태 변경마다 감사 레코드 | 🔴 DDL 대기 |
+| T-M1-09 | Common Profile Snapshot 복사 | 공동 | §10 §3 | 원서 생성 시 동의 필드만 복사 | 🔴 central-api 필요 |
+| T-M1-10 | 동적 추가문항 Schema Registry | 송리안 | §01 A5 | 대학 차이를 JSON Schema로 흡수 | 🔴 |
+| T-M1-11 | Document Service 업로드 파이프라인 | 송리안 | v1.0 §5.4, §01 B5 | Presigned → QUARANTINED → AVAILABLE | 🔴 |
+| T-M1-12 | Audit Event 기록 (hash-chain) | 송리안 | v1.0 §9, §01 A11 | 상태 변경마다 감사 레코드, 변조 검출 | ✅ |
 | T-M1-13 | DB Connection Pool 예산 | 권민준 | §01 B2 | 서비스별 pool 상한 고정 | ✅ |
 | T-M1-14 | 계약 테스트 (OpenAPI ↔ 구현) | 권민준 | §03 | CI에서 계약 이탈 검출 | ✅ DDL·OpenAPI·CloudEvents 대조 17건 |
 

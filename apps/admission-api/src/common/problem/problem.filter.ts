@@ -36,8 +36,13 @@ export class ProblemFilter implements ExceptionFilter {
     const problem = this.toProblem(exception, request);
 
     if (problem.status >= 500) {
-      // 본문은 로깅하지 않는다. 식별은 traceId 로만 한다.
-      this.logger.error(`${problem.status} ${problem.code} trace=${problem.traceId}`);
+      // 요청 본문·개인정보는 로깅하지 않는다. 원인 규명에 필요한
+      // 오류 종류와 메시지만 남긴다. (v1.1 §B8)
+      const cause =
+        exception instanceof Error ? `${exception.name}: ${exception.message}` : 'unknown';
+      this.logger.error(
+        `${problem.status} ${problem.code} trace=${problem.traceId} ${request.method} ${request.url} cause=${cause}`,
+      );
     }
 
     void reply

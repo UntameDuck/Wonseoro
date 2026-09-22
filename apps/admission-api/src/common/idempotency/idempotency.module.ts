@@ -1,11 +1,16 @@
 import { Global, Module } from '@nestjs/common';
-import { IdempotencyStore, InMemoryIdempotencyStore } from './idempotency.store';
+import { Db } from '../../infra/db/db.module';
+import { IdempotencyStore } from './idempotency.store';
+import { PostgresIdempotencyStore } from './postgres-idempotency.store';
 
 @Global()
 @Module({
   providers: [
-    // TODO(T-M1-01 이후): Postgres 어댑터로 교체한다. DDL 배치가 선행 조건.
-    { provide: IdempotencyStore, useClass: InMemoryIdempotencyStore },
+    {
+      provide: IdempotencyStore,
+      useFactory: (db: Db) => new PostgresIdempotencyStore(db),
+      inject: [Db],
+    },
   ],
   exports: [IdempotencyStore],
 })

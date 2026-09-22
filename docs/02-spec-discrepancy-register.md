@@ -177,6 +177,33 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-12. idempotency_record 로는 원서 생성을 멱등화할 수 없다
+
+| | |
+|---|---|
+| **발견** | 2026-09-22 (M1, Postgres 어댑터 구현 중) |
+| **문제** | DDL `idempotency_record.application_id uuid NOT NULL REFERENCES application(id)`. 그런데 `POST /api/v1/applications` 시점에는 아직 application 이 없다. OpenAPI 는 이 엔드포인트에도 `Idempotency-Key` 를 **필수**로 요구한다 |
+| **판정** | **생성의 멱등성은 자연키가 보장한다.** DDL `application UNIQUE (cycle_id, applicant_id, admission_type_id, department_id)` 가 같은 지원자의 같은 전형·모집단위 중복 생성을 막는다 |
+| **구현** | `INSERT ... ON CONFLICT DO NOTHING` 후 기존 행을 조회해 반환한다. 신규 생성은 201, 재시도는 200 |
+| **효과** | 네트워크 재시도로 원서가 두 개 생기지 않는다. Idempotency-Key 가 달라도 막힌다 — 키보다 강한 보장이다 |
+| **남은 선택지** | ① 현행 유지(자연키) ② `application_id` 를 nullable 로 바꿔 생성도 레코드화. ②를 택하면 DDL 변경이므로 **노션 첨부를 먼저 고쳐야 한다** |
+| **상태** | 🟡 판정완료 — 노션 §02·§03에 "생성은 자연키로 멱등" 명시 필요 |
+
+---
+
+## D-13. audit_event 는 application 삭제로 지워지지 않는다 (의도된 설계로 확인)
+
+| | |
+|---|---|
+| **발견** | 2026-09-22 (M1, 통합 테스트 정리 중) |
+| **관찰** | `application_field_value` · `document` · `idempotency_record` 는 `ON DELETE CASCADE` 인데 **`audit_event` 만 CASCADE 가 없다** |
+| **해석** | 의도된 설계로 본다. 원서를 지우는 것으로 감사 기록을 없앨 수 없어야 한다 (v1.1 §A11 — 감사로그 삭제·수정 권한을 운영자에게 주지 않는다) |
+| **조치** | 통합 테스트에 "원서를 지워도 감사 레코드는 FK 로 보호된다"를 인수 항목으로 추가했다 |
+| **확인 필요** | 노션 §02 본문에 이 의도를 명시하면 좋다. 지금은 DDL 에만 암묵적으로 있다 |
+| **상태** | 🟢 CLOSED — 설계 의도 확인, 테스트로 고정 |
+
+---
+
 <!--
 신규 항목 템플릿
 

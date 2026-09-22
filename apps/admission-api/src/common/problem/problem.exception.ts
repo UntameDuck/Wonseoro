@@ -61,6 +61,19 @@ export class ProblemException extends HttpException {
     });
   }
 
+  /**
+   * If-Match 불일치. OpenAPI updateApplication 이 412 를 명시한다.
+   * 409(VERSION_CONFLICT)는 상태 충돌용으로 구분해 쓴다.
+   */
+  static preconditionFailed(detail: string): ProblemException {
+    return new ProblemException({
+      code: ProblemCode.VERSION_CONFLICT,
+      title: '원서가 이미 수정되었습니다',
+      status: 412,
+      detail,
+    });
+  }
+
   static versionConflict(detail: string): ProblemException {
     return new ProblemException({
       code: ProblemCode.VERSION_CONFLICT,
