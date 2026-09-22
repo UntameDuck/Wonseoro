@@ -25,7 +25,7 @@
 | 구분 | 태스크 |
 |---|---|
 | ✅ 완료 (13/14) | T-M1-01 · 02 · 03 · 04 · 05 · 06 · 07 · 08 · 10 · 11 · 12 · 13 · 14 |
-| 🔜 M2 로 이월 | T-M1-09 Common Profile Snapshot — central-api 의 Profile Vault 가 있어야 한다 |
+| ✅ 14/14 완료 | T-M1-09 는 M2 에서 central-api Profile Vault 와 함께 완료 |
 
 검증
 - 테스트 **85개 통과** (단위 64 + 통합 21). DB 없으면 통합분은 skip 되어 CI 를 막지 않는다
@@ -119,7 +119,7 @@ canonical 첨부와 M1 초안 계약을 대조해 5건을 찾았다. 전부 대�
 | T-M1-06 | Draft PATCH + ETag/If-Match | 송리안 | §03, §10 §4 | 버전 불일치 시 412 (OpenAPI 명시) | ✅ |
 | T-M1-07 | `GET /meta/time` | 송리안 | §01 A2 | serverTime·deadlineAt·policyVersion 동시 반환 | ✅ |
 | T-M1-08 | 마감 검증 (서버시간 기준) | 송리안 | §01 A2 | 브라우저 시간 미사용, 경계값 테스트 | ✅ |
-| T-M1-09 | Common Profile Snapshot 복사 | 공동 | §10 §3 | 원서 생성 시 동의 필드만 복사 | 🔴 central-api 필요 |
+| T-M1-09 | Common Profile Snapshot 복사 | 공동 | §10 §3 | 원서 생성 시 동의 필드만 복사 | ✅ |
 | T-M1-10 | 동적 추가문항 Schema Registry | 송리안 | §01 A5 | 대학 차이를 JSON Schema로 흡수, code fork 0 | ✅ |
 | T-M1-11 | Document 업로드 파이프라인 | 송리안 | v1.0 §5.4, §01 B5 | Presigned → QUARANTINED → AVAILABLE | ✅ |
 | T-M1-12 | Audit Event 기록 (hash-chain) | 송리안 | v1.0 §9, §01 A11 | 상태 변경마다 감사 레코드, 변조 검출 | ✅ |

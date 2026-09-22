@@ -7,6 +7,7 @@ import {
   SyncGatewayService,
   SyncRejection,
 } from './modules/sync-gateway/sync-gateway.service';
+import { ProfileVaultService } from './modules/profile-vault/profile-vault.service';
 
 /**
  * 중앙 Sync Gateway 통합 테스트 — 실제 중앙 PostgreSQL 이 필요하다.
@@ -65,6 +66,9 @@ before(async () => {
 
 after(async () => {
   if (!available) return;
+  await db.query(`DELETE FROM kadmission_vault.profile_snapshot_log WHERE subject_token LIKE 'subj-test-%'`);
+  await db.query(`DELETE FROM kadmission_vault.profile_release_consent WHERE subject_token LIKE 'subj-test-%'`);
+  await db.query(`DELETE FROM kadmission_vault.applicant_profile WHERE subject_token LIKE 'subj-test-%'`);
   await db.query(`DELETE FROM sync_gap WHERE university_id = $1`, [UNIV]);
   await db.query(`DELETE FROM application_summary WHERE university_id = $1`, [UNIV]);
   await db.query(`DELETE FROM received_event WHERE university_id = $1`, [UNIV]);
@@ -247,6 +251,110 @@ describe('중앙 저장 범위 (v1.0 §17.1)', () => {
       opaque,
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
       'UUID 원본이 그대로 오면 대학 식별자가 노출된다',
+    );
+  });
+});
+
+describe('Common Profile Vault — 목적 최소화 (v1.0 §17, v1.1 §10 §3)', () => {
+  const token = () => `subj-test-${randomUUID().slice(0, 8)}`;
+
+  it('동의한 필드만 내보낸다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const vault = new ProfileVaultService(db);
+    const subject = token();
+
+    await vault.upsertProfile(subject, {
+      highSchool: '원서로고등학교',
+      graduationYear: 2027,
+      contactEmail: 'me@example.kr',
+      phone: '010-0000-0000',
+    });
+    await vault.grantConsent(subject, UNIV, ['highSchool', 'graduationYear']);
+
+    const result = await vault.release({
+      subjectToken: subject,
+      universityId: UNIV,
+      requestedFields: ['highSchool', 'graduationYear', 'contactEmail', 'phone'],
+    });
+
+    assert.deepEqual(result.releasedFields.sort(), ['graduationYear', 'highSchool']);
+    assert.equal('contactEmail' in result.fields, false, '동의 없는 필드가 나갔다');
+    assert.equal('phone' in result.fields, false, '동의 없는 필드가 나갔다');
+  });
+
+  it('막힌 필드를 숨기지 않고 알려준다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const vault = new ProfileVaultService(db);
+    const subject = token();
+
+    await vault.upsertProfile(subject, { highSchool: 'X', contactEmail: 'a@b.kr' });
+    await vault.grantConsent(subject, UNIV, ['highSchool']);
+
+    const result = await vault.release({
+      subjectToken: subject,
+      universityId: UNIV,
+      requestedFields: ['highSchool', 'contactEmail'],
+    });
+    // 대학이 "왜 비어 있지"를 추측하게 두면 안 된다.
+    assert.deepEqual(result.withheldFields, ['contactEmail']);
+  });
+
+  it('동의가 아예 없으면 아무것도 내보내지 않는다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const vault = new ProfileVaultService(db);
+    const subject = token();
+    await vault.upsertProfile(subject, { highSchool: 'X' });
+
+    const result = await vault.release({
+      subjectToken: subject,
+      universityId: UNIV,
+      requestedFields: ['highSchool'],
+    });
+    assert.deepEqual(result.fields, {});
+    assert.deepEqual(result.withheldFields, ['highSchool']);
+  });
+
+  it('발급 증적에 값이 아니라 필드 코드만 남는다 (v1.0 §8.3)', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const vault = new ProfileVaultService(db);
+    const subject = token();
+
+    await vault.upsertProfile(subject, { highSchool: '원서로고등학교' });
+    await vault.grantConsent(subject, UNIV, ['highSchool']);
+    await vault.release({
+      subjectToken: subject,
+      universityId: UNIV,
+      requestedFields: ['highSchool'],
+    });
+
+    const { rows } = await db.query<{ released_fields: string[] }>(
+      `SELECT released_fields FROM kadmission_vault.profile_snapshot_log
+        WHERE subject_token = $1`,
+      [subject],
+    );
+    assert.deepEqual(rows[0]?.released_fields, ['highSchool']);
+
+    // 로그 테이블 어디에도 값 컬럼이 없어야 한다.
+    const cols = await db.query<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns
+        WHERE table_schema = 'kadmission_vault' AND table_name = 'profile_snapshot_log'`,
+    );
+    const names = cols.rows.map((r) => r.column_name);
+    assert.equal(names.includes('values'), false);
+    assert.equal(names.includes('fields'), false);
+  });
+
+  it('Vault 는 집계 DB 와 다른 스키마에 있다 (v1.0 §5·§8.3)', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const { rows } = await db.query<{ table_schema: string }>(
+      `SELECT DISTINCT table_schema FROM information_schema.tables
+        WHERE table_name IN ('applicant_profile', 'application_summary')`,
+    );
+    const schemas = rows.map((r) => r.table_schema).sort();
+    assert.deepEqual(
+      schemas,
+      ['kadmission_central', 'kadmission_vault'],
+      '공통원서 Vault 와 집계 DB 가 같은 스키마에 있으면 개인정보가 한곳에 집중된다',
     );
   });
 });

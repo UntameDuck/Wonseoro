@@ -6,6 +6,7 @@ import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { AuditService } from '../audit/audit.service';
 import { ApplicationStateService } from './application-state.service';
+import { ProfileVaultClient } from './profile-vault.client';
 
 export interface ApplicationRow {
   id: string;
@@ -25,6 +26,9 @@ export interface CreateApplicationInput {
   applicantId: string;
   admissionTypeId: string;
   departmentId: string;
+  /** 중앙 Vault 조회 키. 없으면 Snapshot 을 건너뛴다. */
+  subjectToken?: string;
+  universityId?: string;
   traceId?: string;
   sourceIp?: string;
 }
@@ -54,6 +58,7 @@ export class ApplicationRepository {
     private readonly db: Db,
     private readonly audit: AuditService,
     private readonly state: ApplicationStateService,
+    private readonly vault: ProfileVaultClient,
   ) {}
 
   /**
@@ -66,6 +71,17 @@ export class ApplicationRepository {
    * 따라서 재시도는 기존 원서를 그대로 돌려준다. 오류가 아니다.
    */
   async create(input: CreateApplicationInput): Promise<{ row: ApplicationRow; created: boolean }> {
+    // ⚠️ 중앙 호출은 트랜잭션 **밖**에서 한다. 락 유지 시간이 중앙 지연에 묶이면 안 된다.
+    // 실패해도 빈 Snapshot 으로 계속 간다. 중앙이 없다고 접수 기회를 잃으면 안 된다. (D-18)
+    const snapshot =
+      input.subjectToken && input.universityId
+        ? await this.vault.fetchSnapshot({
+            subjectToken: input.subjectToken,
+            universityId: input.universityId,
+            applicationRef: `${input.cycleId}:${input.applicantId}`,
+          })
+        : { fields: {}, releasedFields: [], withheldFields: [], available: false };
+
     return this.db.tx(async (client) => {
       const id = randomUUID();
       const inserted = await client.query(
@@ -85,6 +101,29 @@ export class ApplicationRepository {
 
       const created = inserted.rowCount === 1;
       if (created) {
+        // 동의된 공통원서 필드를 시점 Snapshot 으로 복사한다.
+        // 이후 중앙 Profile 이 바뀌어도 이 원서는 바뀌지 않는다. (v1.1 §10 §3)
+        for (const code of snapshot.releasedFields) {
+          await client.query(
+            `INSERT INTO application_field_value
+               (id, application_id, field_code, schema_version, value_json)
+             VALUES ($1,$2,$3,'profile-snapshot',$4)
+             ON CONFLICT (application_id, field_code) DO NOTHING`,
+            [randomUUID(), row.id, code, JSON.stringify(snapshot.fields[code] ?? null)],
+          );
+        }
+
+        // 누가 어떤 필드를 이 대학에 제공했는지 남긴다. (v1.0 §8.3 접근 증적)
+        if (snapshot.releasedFields.length > 0) {
+          await client.query(
+            `INSERT INTO consent_record
+               (id, application_id, consent_code, policy_version, granted, granted_at, evidence_hash)
+             VALUES ($1,$2,'PROFILE_SNAPSHOT','v1',true,now(),$3)
+             ON CONFLICT (application_id, consent_code, policy_version) DO NOTHING`,
+            [randomUUID(), row.id, snapshot.releasedFields.sort().join(',').slice(0, 128)],
+          );
+        }
+
         await this.audit.record(client, {
           applicationId: row.id,
           actorType: 'APPLICANT',
@@ -93,6 +132,12 @@ export class ApplicationRepository {
           result: 'ACCEPTED',
           ...(input.traceId ? { traceId: input.traceId } : {}),
           ...(input.sourceIp ? { sourceIp: input.sourceIp } : {}),
+          // 값은 남기지 않는다. 어떤 필드가 왔고 무엇이 막혔는지만 남긴다.
+          details: {
+            profileSnapshot: snapshot.available ? 'APPLIED' : 'UNAVAILABLE',
+            releasedFields: snapshot.releasedFields,
+            withheldFields: snapshot.withheldFields,
+          },
         });
       }
 

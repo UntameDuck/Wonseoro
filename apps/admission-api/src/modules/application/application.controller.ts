@@ -62,11 +62,14 @@ export class ApplicationController {
     });
 
     const applicantId = this.applicantId(req);
+    const subjectToken = req.headers['x-subject-token'];
     const { row, created } = await this.repo.create({
       cycleId,
       applicantId,
       admissionTypeId,
       departmentId,
+      ...(typeof subjectToken === 'string' && subjectToken ? { subjectToken } : {}),
+      ...(process.env.UNIVERSITY_ID ? { universityId: process.env.UNIVERSITY_ID } : {}),
       ...this.context(req),
     });
 

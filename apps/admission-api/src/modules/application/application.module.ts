@@ -5,11 +5,12 @@ import { DeadlineModule } from '../deadline/deadline.module';
 import { ApplicationStateService } from './application-state.service';
 import { ApplicationController } from './application.controller';
 import { ApplicationRepository } from './application.repository';
+import { ProfileVaultClient } from './profile-vault.client';
 
 @Module({
   imports: [AuditModule, ConfigRegistryModule, DeadlineModule],
   controllers: [ApplicationController],
-  providers: [ApplicationStateService, ApplicationRepository],
+  providers: [ApplicationStateService, ApplicationRepository, ProfileVaultClient],
   exports: [ApplicationStateService, ApplicationRepository],
 })
 export class ApplicationModule {}

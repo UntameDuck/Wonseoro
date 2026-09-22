@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-22
+> 최종 갱신: 2026-09-23
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -9,96 +9,85 @@
 
 ## 현재 지점
 
-**139개 태스크 중 27개 완료.** M0·M1 은 사실상 닫혔고 M2 백엔드 절반을 지났다.
+**M0·M1 완료. M2 백엔드 11개 전부 완료.** 남은 것은 프론트엔드다.
 
 | 단계 | 진행 | 비고 |
 |---|---|---|
 | M0 기반 | 7/8 | 제출문서 정정만 남음 |
-| M1 접수 Core | 13/14 | Profile Snapshot 은 central-api 의존으로 M2 와 묶임 |
-| **M2 결제·Finalize·화면** | **7/24** | ◀ 현재 |
+| M1 접수 Core | **14/14** | ✅ |
+| **M2 결제·Finalize·화면** | **11/24** | ◀ 백엔드 완료, 프론트 13개 남음 |
 | M3 운영 안전장치 | 0/15 | |
 | M4 분산 실증 | 0/28 | |
 | M5 신뢰성·보안·접근성 | 0/35 | |
 | M6 Pilot 준비 | 0/15 | |
 
-동작하는 것: 원서 생성 → 자동저장(ETag) → 추가문항 검증 → 서류 업로드·검사 →
-결제 의도 → 서버측 재검증 → **Finalize → 접수번호 발급**. 테스트 86개 통과.
+동작하는 것 (백엔드 End-to-End)
+```
+공통원서 Vault → 동의 필드만 Snapshot → 원서 생성 → 자동저장(ETag)
+  → 추가문항 검증 → 서류 업로드·magic-byte 검사 → 결제 → 서버측 재검증
+  → Finalize → 접수번호 → Outbox → event-relay → 중앙 Sync Gateway → Dashboard
+```
+테스트 **102개** (대학 86 + 중앙 16). **Demo Gate 1~5 전부 통과.**
 
-아직 없는 것: **중앙(central-api) 전체**, 프론트엔드 전체.
+아직 없는 것: **프론트엔드 전체**. 화면이 없어 사람이 눈으로 보는 데모는 curl 이다.
 
 ---
 
 ## 착수 순서
 
-### 1️⃣ 다음 작업 — event-relay + Sync Gateway (T-M2-07, T-M2-08)
+### 1️⃣ 다음 작업 — 프론트엔드 (T-M2-20 ~ T-M2-32, 13개)
 
-**왜 이것이 먼저인가**: Demo Gate 5 가 이 제품의 차별성이 처음 증명되는 지점이다.
-"중앙이 죽어도 대학 접수는 계속된다"를 보여주려면 중앙이 존재해야 한다.
-지금은 Outbox 가 `PENDING` 으로 쌓이기만 하고 가져가는 쪽이 없다.
+**백엔드 계약이 전부 잠겼다.** 이제 화면을 만들어도 헛일이 되지 않는다.
 
-#### T-M2-07 event-relay 전송 루프
-- 근거: [v1.1 §04](https://app.notion.com/p/3df75ab5debe81d68e37fabd3678dcc4), v1.0 §7.3
-- 위치: `apps/event-relay/`
-- 구현
-  - `outbox_event` 에서 `PENDING` 을 배치로 집어 중앙에 POST
-  - CloudEvents 1.0 envelope + 확장 속성
-    (`kadmissionuniversity`, `kadmissionsequence`, `configversion`, `policyversion`, `traceparent`)
-  - 지수 Backoff + Jitter, 최대 재시도 초과 시 `DEAD`
-  - **중앙 ACK 를 받은 이벤트만 `SENT`** 로 바꾸고 `sync_receipt` 기록
-  - backlog age/size 경보 지표 노출 (v1.1 §B7)
-- 인수기준
-  - 중앙을 내린 채로 접수 → Outbox 누적 → 중앙 복구 → **손실 0으로 전송**
-  - 같은 이벤트를 두 번 보내도 중앙 상태가 두 번 바뀌지 않는다
-  - **전송 실패가 접수 API 로 절대 전파되지 않는다**
+권장 순서
+```
+1. KRDS 토큰·컴포넌트 래퍼 SDK   (T-M2-20)  ← 먼저. 나머지가 전부 이것 위에 얹힌다
+2. Step Indicator + Breadcrumb   (T-M2-21)
+3. 1~6단계 화면                   (T-M2-22~27)
+4. 완료 화면                      (T-M2-28)
+5. 자동저장 클라이언트            (T-M2-29)
+6. 마감 카운트다운                (T-M2-30)
+7. 장애 UX                        (T-M2-31)  ← 경쟁 서비스와 갈리는 지점
+8. 내 원서 Dashboard              (T-M2-32)
+```
 
-#### T-M2-08 central-api Sync Gateway
-- 근거: [v1.1 §04](https://app.notion.com/p/3df75ab5debe81d68e37fabd3678dcc4), [§01 A3](https://app.notion.com/p/3df75ab5debe813c87fceef73f0d74e8)
-- 위치: `apps/central-api/src/modules/sync-gateway/`
-- OpenAPI 계약: `POST /internal/v1/events`, `GET /internal/v1/events/{eventId}/receipt`, `GET /internal/v1/sync/status`
-- 구현
-  - dedup key = **`source` + `id`** (§04 명시)
-  - `kadmissionsequence` 로 gap 탐지 → `SYNC_LAGGING` / `OUT_OF_ORDER` / `MISSING_SEQUENCE` 경보
-  - 중복 수신은 409 + 기존 receipt 반환 (OpenAPI 명시)
-  - 중앙 DB 스키마가 필요하다 → **대학 DDL 을 그대로 쓰지 않는다.** 중앙은 요약만 저장한다
-- 인수기준
-  - 같은 이벤트 100회 수신 → 상태 1회 변경
-  - sequence 2 가 1 보다 먼저 와도 gap 으로 탐지된다
-  - 중앙 DB 에 이름·연락처·주소·원서본문이 **없다**
+붙일 API 는 전부 준비되어 있다.
 
-> ⚠️ 중앙 DB 스키마는 노션에 canonical DDL 이 없다. 새로 설계해야 하므로
-> **먼저 노션 §04·§10 에 중앙 저장 범위를 확정하고 불일치 대장에 등록한 뒤** 만든다.
-> 저장소에서 임의로 만들면 D-5 와 같은 문제가 반복된다.
-
----
-
-### 2️⃣ 그 다음 — Profile Vault + Dashboard (T-M1-09, T-M2-09, T-M2-10)
-
-central-api 가 서면 함께 풀린다.
-
-| 태스크 | 핵심 규칙 |
+| 화면 | 호출 |
 |---|---|
-| T-M1-09 Common Profile Snapshot | 동의한 필드만 복사. **접수완료된 원서는 Profile 변경으로 수정되지 않는다** |
-| T-M2-09 Dashboard Summary Store | 화면조회마다 대학 DB 를 호출하지 않는다. State Event 로 갱신된 요약만 읽고 **마지막 동기화 시각을 함께 표시** |
-| T-M2-10 Support Self-check | 사용자가 "서버가 아는 상태"를 직접 조회. 장애 시 고객센터 폭주 완화 (§B11) |
-
----
-
-### 3️⃣ 마지막 — 프론트엔드 13개 (T-M2-20 ~ T-M2-32)
-
-**백엔드 계약이 다 잠긴 뒤에 시작한다.** 지금 시작하면 API 가 바뀔 때마다 헛일이 된다.
-
-순서: KRDS 래퍼 SDK → Step Indicator → 1~6단계 화면 → 자동저장 클라이언트 →
-마감 카운트다운 → **장애 UX** → Dashboard
+| 공통정보 | `POST /internal/v1/profiles` (중앙) |
+| 대학·전형 | `GET /api/v1/admission-types`, `/departments` |
+| 추가정보 | `PATCH /api/v1/applications/{id}` + `POST .../validate` |
+| 서류 | `POST .../documents/upload-intents` → Object Storage 직접 PUT → `POST /documents/{id}/complete` |
+| 검토·결제 | `POST .../payment-intents` → `POST /payments/{id}/verify` |
+| 최종제출 | `POST .../finalize` |
+| 완료 | `GET .../submission`, `GET /submissions/{id}/receipt` |
+| 마감 표시 | `GET /api/v1/meta/time` ← **브라우저 시간 금지** |
+| 장애 UX | `GET .../self-check` ← 상태·이력·안내문구가 이미 다 온다 |
+| Dashboard | `GET /api/v1/dashboard/applications` (중앙) |
 
 타협 불가 항목 ([§07](https://app.notion.com/p/3df75ab5debe812db3d1e06d0761e38e))
-- 마감 표시는 **서버 시간** 기준 (`GET /api/v1/meta/time`). 브라우저 시간 금지
+- 마감 표시는 **서버 시간** 기준. 브라우저 시간 금지
 - 자동저장 상태를 항상 텍스트로: `저장 중` / `저장 완료 17:42:13` / `저장 실패 — 다시 시도`
 - 오류는 상단 Error Summary + 필드 인접 메시지를 **동시에**
 - 중요 결과를 Toast 만으로 알리지 않는다
 - 장애 시 처음부터 다시 하라고 요구하지 않는다. 요청번호 + 상태 재조회 버튼
 - 중앙 Sync 지연은 접수완료 여부와 **분리 표시**
+  (`self-check` 응답의 `centralSync.guidance` 를 그대로 쓰면 된다)
 
----
+### 2️⃣ 그 다음 — M3 운영 안전장치 (15개)
+
+대회 심사 관점에서 가장 설득력 있는 구간이다. 2026년 장애에서 실제로 문제가 된 지점을 고친다.
+
+우선순위
+1. **Deadline Policy Engine** (T-M3-01) — 마감 판정 기준을 서명된 정책 버전으로
+2. **Config 2인 승인** (T-M3-02) — 운영자 1명이 마감시간을 못 바꾸게
+3. **Evidence Package** (T-M3-07) — 특정 원서의 접수 과정을 재구성
+4. Reconciliation Center (T-M3-04)
+5. Autonomous Mode (T-M3-06)
+
+1·2번의 DB 제약은 이미 들어가 있다 (`CHECK (approved_by_1 <> approved_by_2)`).
+엔진만 얹으면 된다.
 
 ## 기술 채무 (백로그에 안 잡혀 있는 것)
 

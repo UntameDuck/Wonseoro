@@ -37,8 +37,8 @@
 
 | 구분 | 태스크 |
 |---|---|
-| ✅ 완료 | T-M2-01 · 02 · 03 · 04 · 05 · 06 · 07 · 08 · 09 · 11 |
-| 🔜 다음 | T-M2-10 Support Self-check · T-M1-09 Profile Snapshot |
+| ✅ 완료 | **백엔드 11개 전부** (T-M2-01~11) + T-M1-09 |
+| 🔜 남음 | 프론트엔드 13개 (T-M2-20~32) |
 | 🔜 프론트 | T-M2-20~32 (전체) |
 
 ### 🎯 Demo Gate 5 통과 — 이 제품의 핵심 주장이 증명된 지점
@@ -100,7 +100,7 @@ Outbox 가 `PENDING` 으로 남아 있는 것이 정상이다. 중앙 전송은 
 | T-M2-07 | event-relay 전송 루프 | §04, v1.0 §7.3 | 지수 Backoff+Jitter, ACK 후 SENT, Dead Letter | ✅ |
 | T-M2-08 | central-api Sync Gateway | §04, §01 A3 | `source+id` dedup, sequence gap 탐지 | ✅ |
 | T-M2-09 | Dashboard Summary Store | §10 §9 | 대학 DB 실시간 조회 금지, 마지막 동기화 시각 표시 | ✅ |
-| T-M2-10 | Support Self-check API | §01 C7 | 사용자가 서버가 아는 상태를 직접 조회 | ⬜ |
+| T-M2-10 | Support Self-check API | §01 C7 | 사용자가 서버가 아는 상태를 직접 조회 | ✅ |
 | T-M2-11 | 접수증 조회 | §03 | 제출시각·전형·모집단위·상태 | ✅ |
 
 ### 프론트엔드 (권민준)
