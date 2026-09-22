@@ -3,21 +3,11 @@
   "version": "0.0.1",
   "private": true,
   "description": "API 계약 · Event Schema · 상태머신 단일 정의. apps/* 는 서로를 직접 import 하지 않고 이 패키지만 공유한다.",
-  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    }
-  },
   "files": ["dist", "openapi", "events"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
-  },
-  "devDependencies": {
-    "typescript": "^5.6.0"
   }
 }

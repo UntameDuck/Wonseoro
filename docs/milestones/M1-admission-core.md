@@ -17,24 +17,38 @@
 | [v1.0 §5.3·§5.4·§9](https://app.notion.com/p/3de75ab5debe801f99c5fee017130c65) | Application/Document Service, 감사 이벤트 |
 | [10. 트래픽 분산](https://app.notion.com/p/3df75ab5debe8143b651d8aef608a0a5) | 자동저장 구현 규칙(§4), 공통원서 Snapshot(§3) |
 
+## 진행 현황 (2026-09-22)
+
+**T-M1-01(DDL)이 T-M0-06 미완으로 막혀 있다.** 그래서 DDL에 의존하지 않는 태스크부터 진행했다.
+영속 계층은 Port 인터페이스로 열어두고 Postgres 어댑터만 DDL 도착 후 연결한다 — 이렇게 하면
+임의 DDL 작성으로 설계 원본이 갈라지는 일(D-5)이 생기지 않는다.
+
+| 구분 | 태스크 |
+|---|---|
+| ✅ 완료 | T-M1-02 · 03 · 04(로직) · 05 · 07 · 08 · 13 |
+| 🔴 차단 (DDL 대기) | T-M1-01 · 04(Postgres 어댑터) · 06 · 09 · 10 · 11 · 12 |
+| ⬜ 미착수 | T-M1-14 (OpenAPI 첨부 대기) |
+
+검증: 단위 테스트 **33개 전부 통과**, `admission-api` 기동 확인, `/healthz`·`/api/v1/meta/time` 응답 확인.
+
 ## 태스크
 
-| ID | 태스크 | 담당 | 근거 노션 | 인수기준 |
-|---|---|---|---|---|
-| T-M1-01 | DDL 적용 + 마이그레이션 러너 | 송리안 | §02 + 첨부 DDL | 20개 엔티티 생성, 정합성 제약 5종 확인 |
-| T-M1-02 | NestJS 부트스트랩으로 교체 | 송리안 | ADR-0001 | 헬스체크 유지한 채 Nest 모듈 구조 전환 |
-| T-M1-03 | 공통 에러 모델 `problem+json` | 송리안 | §03, v1.0 §5.2 | 모든 오류가 ProblemDetails로 나감 |
-| T-M1-04 | Idempotency 미들웨어 | 송리안 | §01 B12, §02 | 키 없는 mutation 400, 재사용 시 원응답 반환 |
-| T-M1-05 | Application 상태머신 | 송리안 | v1.0 §5.6, §02 | 허용 외 전이 거부, 조건부 UPDATE |
-| T-M1-06 | Draft PATCH + ETag/If-Match | 송리안 | §03, §10 §4 | 버전 불일치 시 409 |
-| T-M1-07 | `GET /meta/time` | 송리안 | §01 A2 | serverTime·deadlineAt·policyVersion 동시 반환 |
-| T-M1-08 | 마감 검증 (서버시간 기준) | 송리안 | §01 A2 | 브라우저 시간 미사용, 경계값 테스트 |
-| T-M1-09 | Common Profile Snapshot 복사 | 공동 | §10 §3 | 원서 생성 시 동의 필드만 복사 |
-| T-M1-10 | 동적 추가문항 Schema Registry | 송리안 | §01 A5 | 대학 차이를 JSON Schema로 흡수, code fork 0 |
-| T-M1-11 | Document Service 업로드 파이프라인 | 송리안 | v1.0 §5.4, §01 B5 | Presigned → QUARANTINED → AVAILABLE |
-| T-M1-12 | Audit Event 기록 (hash-chain 준비) | 송리안 | v1.0 §9, §01 A11 | 상태 변경마다 감사 레코드 |
-| T-M1-13 | DB Connection Pool 예산 | 권민준 | §01 B2 | 서비스별 pool 상한 고정 |
-| T-M1-14 | 계약 테스트 (OpenAPI ↔ 구현) | 권민준 | §03 | CI에서 계약 이탈 검출 |
+| ID | 태스크 | 담당 | 근거 노션 | 인수기준 | 상태 |
+|---|---|---|---|---|---|
+| T-M1-01 | DDL 적용 + 마이그레이션 러너 | 송리안 | §02 + 첨부 DDL | 20개 엔티티 생성, 정합성 제약 5종 확인 | 🔴 T-M0-06 대기 |
+| T-M1-02 | NestJS 부트스트랩으로 교체 | 송리안 | ADR-0001 | Fastify 어댑터, 전역 필터·인터셉터 | ✅ |
+| T-M1-03 | 공통 에러 모델 `problem+json` | 송리안 | §03, v1.0 §5.2 | 모든 오류가 ProblemDetails로 나감 | ✅ |
+| T-M1-04 | Idempotency 미들웨어 | 송리안 | §01 B12, §02 | 키 없는 mutation 400, 재사용 409, 응답 재생 | ✅ 로직 / 🔴 저장소 |
+| T-M1-05 | Application 상태머신 | 송리안 | v1.0 §5.6, §02 | 허용 외 전이 거부, 조건부 UPDATE 명세 | ✅ |
+| T-M1-06 | Draft PATCH + ETag/If-Match | 송리안 | §03, §10 §4 | 버전 불일치 시 409 | 🔴 DDL 대기 |
+| T-M1-07 | `GET /meta/time` | 송리안 | §01 A2 | serverTime·deadlineAt·policyVersion 동시 반환 | ✅ |
+| T-M1-08 | 마감 검증 (서버시간 기준) | 송리안 | §01 A2 | 브라우저 시간 미사용, 경계값 테스트 | ✅ |
+| T-M1-09 | Common Profile Snapshot 복사 | 공동 | §10 §3 | 원서 생성 시 동의 필드만 복사 | 🔴 DDL 대기 |
+| T-M1-10 | 동적 추가문항 Schema Registry | 송리안 | §01 A5 | 대학 차이를 JSON Schema로 흡수 | 🔴 DDL 대기 |
+| T-M1-11 | Document Service 업로드 파이프라인 | 송리안 | v1.0 §5.4, §01 B5 | Presigned → QUARANTINED → AVAILABLE | 🔴 DDL 대기 |
+| T-M1-12 | Audit Event 기록 (hash-chain 준비) | 송리안 | v1.0 §9, §01 A11 | 상태 변경마다 감사 레코드 | 🔴 DDL 대기 |
+| T-M1-13 | DB Connection Pool 예산 | 권민준 | §01 B2 | 서비스별 pool 상한 고정 | ✅ |
+| T-M1-14 | 계약 테스트 (OpenAPI ↔ 구현) | 권민준 | §03 | CI에서 계약 이탈 검출 | ⬜ OpenAPI 첨부 대기 |
 
 ## 태스크 상세
 

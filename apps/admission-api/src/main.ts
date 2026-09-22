@@ -1,24 +1,37 @@
+import 'reflect-metadata';
+import { Logger } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+import { AppModule } from './app.module';
+import { IdempotencyInterceptor } from './common/idempotency/idempotency.interceptor';
+import { IdempotencyStore } from './common/idempotency/idempotency.store';
+import { ProblemFilter } from './common/problem/problem.filter';
+
 /**
  * admission-api — 대학 Data Plane 메인 API
  *
- * M0 상태: 의존성 0의 헬스체크 전용 부트스트랩.
- * M1에서 NestFactory 기반으로 교체한다. (ADR-0001)
+ * 이 서비스에서 커밋된 것만 "접수됨"이다. (기술설계서 v1.1 §02)
+ * 중앙(central-api)은 이 서비스의 Critical Path 에 들어가지 않는다.
  */
-import { createServer } from 'node:http';
+async function bootstrap(): Promise<void> {
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    // trustProxy: Edge/WAF 뒤에 있으므로 원 IP 판단에 필요하다.
+    new FastifyAdapter({ trustProxy: true, bodyLimit: 1_048_576 }),
+  );
 
-const PORT = Number(process.env.PORT ?? 3001);
-const SERVICE = 'admission-api';
+  // 모든 오류를 problem+json 으로 통일한다.
+  app.useGlobalFilters(new ProblemFilter());
 
-const server = createServer((req, res) => {
-  if (req.url === '/healthz' || req.url === '/readyz') {
-    res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ service: SERVICE, status: 'ok', time: new Date().toISOString() }));
-    return;
-  }
-  res.writeHead(404, { 'content-type': 'application/problem+json' });
-  res.end(JSON.stringify({ type: 'about:blank', title: 'Not Found', status: 404 }));
-});
+  // 모든 mutation 에 Idempotency-Key 를 강제한다. 예외 없음.
+  app.useGlobalInterceptors(new IdempotencyInterceptor(app.get(IdempotencyStore)));
 
-server.listen(PORT, () => {
-  console.log(`[${SERVICE}] listening on :${PORT}`);
-});
+  const port = Number(process.env.PORT ?? 3001);
+  await app.listen({ port, host: '0.0.0.0' });
+
+  new Logger('admission-api').log(
+    `listening on :${port} (university=${process.env.UNIVERSITY_ID ?? 'UNSET'})`,
+  );
+}
+
+void bootstrap();
