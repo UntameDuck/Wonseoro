@@ -3,6 +3,10 @@
 > 작성 기준일: 2026-09-22
 > 근거 문서: `04_[개발보고서]_GovTech_창업경진대회_21stARK(제출본)`, Notion `K-Admission 기술설계서 v1.0` / `v1.1 (01~10)`
 > 이 문서는 **설계서를 실행 가능한 개발 계획으로 번역한 것**이다. 아키텍처 원칙은 설계서가 상위 문서이고, 구현 순서·범위·일정은 이 문서가 상위 문서다.
+>
+> ⚠️ **작업 전 필독**: [01-notion-sync-protocol.md](01-notion-sync-protocol.md)
+> 노션 설계서는 살아 있는 문서다. 태스크 착수 전·완료 시·마일스톤 종료 시 **반드시 노션을 다시 읽고 반영한다.**
+> 세부 태스크는 이 문서가 아니라 [`milestones/`](milestones/) 아래 단계별 문서에 있다.
 
 ---
 
@@ -145,21 +149,35 @@ dev-folder/                        ← git repo root (UntameDuck/Wonseoro)
 
 ---
 
-## 5. 마일스톤
+## 5. 마일스톤 — 총 7단계 (M0 ~ M6)
 
-| M | 이름 | 산출물 | 완료 기준 |
+각 단계의 **세부 태스크·개별 목표·인수기준·노션 확인 대상**은 아래 문서에 있다.
+
+| M | 이름 | 1줄 목표 | 완료 기준 | 태스크 문서 |
+|---|---|---|---|---|
+| **M0** | 기반 구축 | 두 사람이 각자 시작할 수 있게 만든다 | `/healthz` 200 | [M0](milestones/M0-foundation.md) · 8개 |
+| **M1** | 접수 Core | 원서를 만들고 저장하고 검증한다 | curl로 전 구간 재현 | [M1](milestones/M1-admission-core.md) · 14개 |
+| **M2** | 결제·Finalize·화면 | **화면에서 접수번호를 받는다** | Demo Gate 1~5 | [M2](milestones/M2-payment-finalize-mvp.md) · 24개 |
+| **M3** | 운영 안전장치 | 장애가 나도 판정이 가능하게 만든다 | v1.1 §01 E 인수기준 | [M3](milestones/M3-operational-safeguards.md) · 15개 |
+| **M4** | 분산 실증 | 장애 격리를 **숫자로** 증명한다 | 3,000 CCU / event loss 0 | [M4](milestones/M4-federated-proof.md) · 25개 |
+| **M5** | 신뢰성·보안·접근성 | 대학에 넣을 수 있는 수준으로 만든다 | 보안 게이트 10종 / 키보드 완주 | [M5](milestones/M5-reliability-security.md) · 33개 |
+| **M6** | Pilot 준비 | 대학 1곳과 Shadow Test | 실 전형·실 PG·런북 완비 | [M6](milestones/M6-pilot-readiness.md) · 15개 |
+
+**M2가 이번 사이클의 1차 목표**다(= 동작 데모). M3~M6은 "완전한 개발 완료"까지의 로드맵이며, M4 이후는 대회 심사보다 Pilot 계약이 트리거다.
+
+### 단계 정의 매핑 — 문서마다 다른 단계 표기
+
+세 문서가 각각 다른 단계 구분을 쓴다. 목적이 달라서 셋 다 유효하다. 대응관계는 다음과 같다. (불일치 대장 D-6)
+
+| 개발보고서 PDF | 노션 v1.0 §20 | 개발 플랜 | 성격 |
 |---|---|---|---|
-| **M0** | 기반 (이번 턴) | 모노레포 골격, git 세팅, contracts 패키지, Compose 스택, CI 골격 | `npm install` → `docker compose up` → 두 API가 `/healthz` 200 |
-| **M1** | 접수 Core | DDL/마이그레이션, Application·Draft·Document, 상태머신, Idempotency | 원서 생성 → 자동저장 → 검증 통과가 API 레벨에서 동작 |
-| **M2** | 결제 + Finalize + 화면 | Payment Adapter(Sandbox), Finalization Service, Outbox/Relay, Applicant Web 전 단계 | **Demo Gate 1~5 전부 통과** ← MVP 완성 |
-| **M3** | 운영 안전장치 | Deadline Policy Engine, Config 2인 승인, Reconciliation Center, Audit hash-chain, Admin Web | 설계서 `E. 핵심 인수기준` 중 소프트웨어 항목 전부 통과 |
-| **M4** | 분산 실증 | Helm 차트, K-PaaS/kind 2~3 Data Plane, Peak Mode, 부하·중앙단절·DB Failover 테스트 | 3,000 CCU / 1,000 RPS, 중앙 2시간 단절 무손실 |
-| **M5** | 신뢰성·보안 | Vault/KMS, mTLS, SAST/SCA/Image Signing, DR 전환 훈련, 접근성(KWCAG) 인증 | 보안 CI 게이트 10종 통과, 키보드만으로 전체 접수 완료 |
-| **M6** | Pilot 준비 | 전형 Schema 온보딩 도구, 실제 PG Sandbox, 운영 런북, Evidence Package | 대학 1곳 Shadow Test 가능 |
+| 1단계 MVP | Phase 1 — Standard Prototype | **M0 + M1 + M2** | 단일 대학 End-to-End |
+| 2단계 분산 실증 | Phase 3 — Production Reliability | **M4** | 중앙단절·Failover·부하 |
+| (명시 없음) | Phase 2 — Security & Payment | **M3 + M5** | 결제·보안·감사 |
+| 3단계 대학 Pilot | Phase 3~4 | **M6** | 실 전형·PG·운영 검증 |
+| 4단계 확산 | Phase 4 — National Scale | (M6 이후) | 다중 대학 Onboarding |
 
-**M2가 이번 사이클의 1차 목표**다. M3 이후는 "완전한 개발 완료"까지의 로드맵이며, M4/M5는 대회 심사보다 Pilot 계약이 트리거다.
-
----
+> 심사에서 "보고서는 4단계인데 왜 7단계인가"를 물으면: **보고서 단계는 사업 진행 단위, M0~M6은 개발 실행 단위**다. 위 표가 대응관계다.
 
 ## 6. 역할 분담
 
@@ -178,29 +196,23 @@ dev-folder/                        ← git repo root (UntameDuck/Wonseoro)
 
 ---
 
-## 7. M0 → M1 즉시 착수 백로그
+## 7. 태스크는 어디에 있는가
 
-### M0 (이번 턴에 골격 생성 완료)
-- [x] T-M0-1 모노레포 구조 + npm workspaces
-- [x] T-M0-2 git 초기화 + `.gitignore` + 커밋 규칙
-- [x] T-M0-3 `packages/contracts` 골격 (OpenAPI 스텁, Event Schema, 상태머신 상수)
-- [x] T-M0-4 `docker-compose.dev.yml` (postgres/redis/minio)
-- [x] T-M0-5 CI 골격 (경로 필터 분리)
-- [ ] T-M0-6 `npm install` 실행 및 두 API `/healthz` 확인 ← **사람이 실행**
-- [ ] T-0 개발보고서의 "Java LTS + Spring Boot" 문구 정정
+**이 문서에는 태스크를 두지 않는다.** 단계별 문서로 이동했다.
 
-### M1 (다음 작업 단위)
-- [ ] T-M1-1 `infra/db/migrations/0001_init.sql` — 설계서 `02. ERD` 15개 엔티티 DDL
-  - `application.version` BIGINT, `submission.application_id` UNIQUE, `outbox_event(aggregate_id, aggregate_sequence)` UNIQUE, `outbox` PENDING partial index
-- [ ] T-M1-2 Application 상태머신 구현 (`DRAFT→READY→PAYMENT_PENDING→PAID→FINALIZING→FINALIZED`, `→EXPIRED`)
-- [ ] T-M1-3 Idempotency 미들웨어 (`Idempotency-Key` 선차단 + 레코드 잠금)
-- [ ] T-M1-4 ETag/If-Match 기반 Draft PATCH
-- [ ] T-M1-5 `GET /api/v1/meta/time` — 서버시간·deadlineAt·policyVersion 동시 반환
-- [ ] T-M1-6 Document Service (Presigned Upload → `QUARANTINED` → `AVAILABLE`)
-- [ ] T-M1-7 동적 폼 Schema Registry (대학별 추가문항 JSON Schema)
-- [ ] T-M1-8 `problem+json` 공통 에러 모델 + traceparent 전파
+| 찾는 것 | 위치 |
+|---|---|
+| 단계별 세부 태스크·담당·인수기준 | [`docs/milestones/M0~M6`](milestones/) |
+| 태스크마다 읽어야 할 노션 절 | 각 마일스톤 문서의 태스크 표 `근거 노션` 열 |
+| 노션을 언제·어떻게 다시 확인하는가 | [01-notion-sync-protocol.md](01-notion-sync-protocol.md) |
+| 설계 문서 간 충돌 기록 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) |
+| 노션 첨부 8종 배치 현황 | [spec-assets/README.md](spec-assets/README.md) |
 
----
+### 지금 당장 할 일 (M0 잔여)
+
+- [ ] **T-M0-06** 설계서 첨부 8종 배치 ← **M1 착수 전 선행**
+- [ ] **T-M0-07** `npm install` + 헬스체크 확인
+- [ ] **T-M0-08** 제출 PDF "Java LTS" 문구 정정
 
 ## 8. Definition of Done
 
@@ -237,18 +249,19 @@ dev-folder/                        ← git repo root (UntameDuck/Wonseoro)
 
 ---
 
-## 11. 설계 문서 간 불일치 점검 (2026-09-22 확인)
+## 11. 설계 문서 간 불일치
 
-노션 v1.0 / v1.1 하위 10종과 제출본 PDF를 대조하면서 발견한 충돌이다. **구현은 아래 "채택" 열을 따른다.**
+전체 목록과 처리 상태는 **[02-spec-discrepancy-register.md](02-spec-discrepancy-register.md)** 로 이동했다.
 
-| # | 항목 | 충돌 | 채택 | 후속 |
-|---|---|---|---|---|
-| D-1 | 이벤트 네임스페이스 | v1.0 §6.2 예시는 `kr.admission.*`, v1.1 §04는 `kr.kadmission.*` | **`kr.kadmission.*`** (v1.1이 canonical) | v1.0 §6.2 예시 JSON 수정 |
-| D-2 | 지원자 단계 수 | PDF 5단계 / v1.0 §12.1 IA 10항목 / v1.1 §07 Step Indicator 6단계 | **6단계** (KRDS 단계 표시기 권장 범위) | v1.0 §12.1과 PDF 문구 통일 |
-| D-3 | 백엔드 런타임 | 설계서 "Java LTS + Spring Boot" vs 팀 역량 Node/TS | **NestJS + TypeScript** | ADR-0001, 제출문서 정정 (T-0) |
+2026-09-22 기준 등록된 6건 요약:
 
-추가로 확인한 사항:
+| # | 항목 | 채택 | 상태 |
+|---|---|---|---|
+| D-1 | 이벤트 네임스페이스 | `kr.kadmission.*` (v1.1 §04) | 🟡 노션 반영 대기 |
+| D-2 | 지원자 흐름 단계 | **6단계** (v1.1 §07) | 🟡 노션·PDF 반영 대기 |
+| D-3 | 백엔드 런타임 | NestJS + TypeScript (ADR-0001) | 🟡 노션·PDF 반영 대기 |
+| D-4 | Finalized 이벤트 sequence 위치 | 확장 속성 `kadmissionsequence` | 🟡 노션 반영 대기 |
+| D-5 | **설계서 첨부 8종 미배치** | 수동 배치 필요 | 🔴 **M1 선행** |
+| D-6 | 단계 정의가 문서마다 다름 | 매핑표로 고정 (§5) | 🟢 완료 |
 
-- **설계서 첨부 8종이 canonical인데 저장소에 없다.** DDL·OpenAPI·CloudEvents Schema·Helm values·NetworkPolicy/RBAC·Vault policy·k6 스크립트·STRIDE register. Notion API로는 내려받을 수 없어(`object_not_found`) 수동 배치가 필요하다. → `docs/spec-assets/README.md`
-  이걸 배치하기 전에 같은 내용을 저장소에서 새로 작성하면 **원본이 둘로 갈라진다.** M1 착수 전 선행 작업이다.
-- v1.0 §6.2의 최소 이벤트 payload에는 `aggregateSequence`가 없지만 v1.1 §A3·§04가 Application별 단조 증가 sequence를 요구한다. → CloudEvents **확장 속성 `kadmissionsequence`** 로 전달한다 (data 본문이 아님).
+새 불일치를 발견하면 **여기가 아니라 대장에 등록한다.** 절차는 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) §4.
