@@ -71,6 +71,14 @@ export class IdempotencyInterceptor implements NestInterceptor {
           }
           if (existing.state === 'COMPLETED') {
             // 저장된 응답 재생 — 핸들러를 다시 실행하지 않는다.
+            // 상태코드도 함께 복원한다. 복원하지 않으면 재시도가 201(신규 생성)로
+            // 보여 OpenAPI 계약(200=재시도, 201=신규)을 어긴다.
+            if (typeof existing.responseStatus === 'number') {
+              context
+                .switchToHttp()
+                .getResponse<{ status: (code: number) => unknown }>()
+                .status(existing.responseStatus);
+            }
             return of(existing.responseBody);
           }
           // FAILED: 같은 키로 재시도를 허용하지 않는다. 새 키를 쓰게 한다.

@@ -99,6 +99,13 @@ describe('계약 적합성 — DDL (k-admission-postgresql-ddl.txt)', () => {
     assert.match(DDL, /idx_outbox_pending .* WHERE status IN \('PENDING','SENDING'\)/);
   });
 
+  it('버전 문자열 길이 제약을 명시한다 — 길면 접수 시점에 INSERT 가 깨진다', () => {
+    // 실제로 여기에 걸려 Finalize 가 500 난 적이 있다. 회귀 방지용.
+    assert.match(DDL, /deadline_policy_version varchar\(64\) NOT NULL/);
+    assert.match(DDL, /config_version varchar\(64\) NOT NULL/);
+    assert.match(DDL, /version varchar\(64\) NOT NULL/);
+  });
+
   it('마감 정책은 2인 승인을 DB 제약으로 강제한다 (v1.1 §A14)', () => {
     assert.match(DDL, /CHECK \(approved_by_1 <> approved_by_2\)/);
   });

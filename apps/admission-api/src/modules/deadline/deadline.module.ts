@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import { DeadlineMode, DeadlinePolicy } from '@wonseoro/contracts';
 import { DeadlinePolicyPort } from './deadline-policy.port';
 import { DeadlineService } from './deadline.service';
@@ -16,8 +17,15 @@ class EnvDeadlinePolicy extends DeadlinePolicyPort {
     const deadlineAt =
       process.env.DEADLINE_AT ?? new Date(Date.now() + 86_400_000).toISOString();
 
+    // DDL: deadline_policy.version varchar(64), submission.deadline_policy_version varchar(64)
+    // 버전 문자열을 길게 만들면 접수 시점에 INSERT 가 깨진다. 짧고 안정적으로 만든다.
+    const fingerprint = createHash('sha256')
+      .update(`${admissionCycleId}|${mode}|${deadlineAt}`)
+      .digest('hex')
+      .slice(0, 12);
+
     return {
-      version: `env-${admissionCycleId}-${deadlineAt}`,
+      version: `env-${fingerprint}`,
       mode,
       deadlineAt,
       // M1 에는 승인자가 없다. M3 에서 실제 2인 승인 기록으로 대체된다.

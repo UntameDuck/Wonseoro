@@ -33,23 +33,58 @@
 | [01. 운영 리스크](https://app.notion.com/p/3df75ab5debe813c87fceef73f0d74e8) | A4(결제/접수 분리) · B4(Callback 유실) · A3(Eventual Consistency) |
 | [10. 트래픽 분산](https://app.notion.com/p/3df75ab5debe8143b651d8aef608a0a5) | §12 접수 Critical Path, §9 Dashboard, §13 장애 시 처리 |
 
+## 진행 현황 (2026-09-22)
+
+| 구분 | 태스크 |
+|---|---|
+| ✅ 완료 | T-M2-01 · 02 · 03 · 04 · 05 · 06 · 11 |
+| 🔜 다음 | T-M2-07 event-relay · 08 Sync Gateway · 09 Dashboard · 10 Self-check |
+| 🔜 프론트 | T-M2-20~32 (전체) |
+
+**Demo Gate 3·4 통과.** 결제 → 서버측 재검증 → Finalize → 접수번호 발급이 실제 DB 위에서 동작한다.
+
+```
+결제 전 Finalize            → 409 PAYMENT_NOT_CONFIRMED
+결제 의도 생성              → 201 (금액은 대학 설정에서, 클라이언트가 보내지 않는다)
+서버측 재검증               → 200 CONFIRMED
+Finalize                    → 201  2027-UNIV-A-4ZCPKYQ9T6
+동일 Idempotency-Key 20회    → 전부 200 (재시도), Submission 1건
+다른 키로 재시도             → 200 (기존 접수 반환)
+```
+
+DB 확인: `submission 1건 / application FINALIZED / outbox 1건 seq=1 PENDING / audit APPLICATION_FINALIZED 1건`
+
+Outbox 가 `PENDING` 으로 남아 있는 것이 정상이다. 중앙 전송은 event-relay 가 맡는다.
+**중앙이 없어도 접수는 이미 완료된 상태다.**
+
+### 구현 중 잡은 버그 3건
+
+| 버그 | 원인 | 영향 |
+|---|---|---|
+| 결제 의도 생성 500 | 트랜잭션 **안**에서 풀의 다른 커넥션으로 읽어 커밋 전 INSERT 를 못 봄 | 결제 시작 자체가 불가 |
+| Finalize 500 | 개발용 마감정책 버전 문자열이 DDL `varchar(64)` 초과 | 접수 전면 실패 |
+| 재시도가 201 반환 | 응답 재생 시 저장된 상태코드를 복원하지 않음 | OpenAPI 계약 위반 (200=재시도, 201=신규) |
+
+세 번째는 데이터는 멀쩡한데 **계약만 어긋난** 경우다. 클라이언트가 재시도를 신규 접수로
+오해하면 "두 번 접수됐다"는 문의가 발생한다.
+
 ## 태스크
 
 ### 백엔드 (송리안)
 
-| ID | 태스크 | 근거 노션 | 인수기준 |
-|---|---|---|---|
-| T-M2-01 | PG Adapter 인터페이스 + Mock Provider | v1.0 §5.5 | 5개 메서드 구현, 실 PG는 교체만으로 가능 |
-| T-M2-02 | 서버측 결제 재검증 | v1.0 §5.5 | 클라이언트 성공값 무시, 서버가 PG 재조회 |
-| T-M2-03 | Payment 상태머신 (UNKNOWN 포함) | §01 A4·B4 | Callback + Polling 이중 확인 |
-| T-M2-04 | **Finalize 트랜잭션** | §02, v1.0 §5.6 | 8단계 순서 준수, 외부 호출 0 |
-| T-M2-05 | 접수번호 발급 | v1.0 §5.6 | 추측 불가 (§09 BOLA) |
-| T-M2-06 | Outbox INSERT (동일 트랜잭션) | v1.0 §7.3 | aggregate_sequence 단조 증가 |
+| ID | 태스크 | 근거 노션 | 인수기준 | 상태 |
+|---|---|---|---|---|
+| T-M2-01 | PG Adapter 인터페이스 + Mock Provider | v1.0 §5.5 | 5개 메서드 구현, 실 PG는 교체만으로 가능 | ✅ |
+| T-M2-02 | 서버측 결제 재검증 | v1.0 §5.5 | 클라이언트 성공값 무시, 서버가 PG 재조회 | ✅ |
+| T-M2-03 | Payment 상태머신 (UNKNOWN 포함) | §01 A4·B4 | Callback + Polling 이중 확인 | ✅ |
+| T-M2-04 | **Finalize 트랜잭션** | §02, v1.0 §5.6 | 8단계 순서 준수, 외부 호출 0 | ✅ |
+| T-M2-05 | 접수번호 발급 | v1.0 §5.6 | 추측 불가 (§09 BOLA) | ✅ |
+| T-M2-06 | Outbox INSERT (동일 트랜잭션) | v1.0 §7.3 | aggregate_sequence 단조 증가 | ✅ |
 | T-M2-07 | event-relay 전송 루프 | §04, v1.0 §7.3 | 지수 Backoff+Jitter, ACK 후 SENT, Dead Letter |
 | T-M2-08 | central-api Sync Gateway | §04, §01 A3 | `source+id` dedup, sequence gap 탐지 |
 | T-M2-09 | Dashboard Summary Store | §10 §9 | 대학 DB 실시간 조회 금지, 마지막 동기화 시각 표시 |
 | T-M2-10 | Support Self-check API | §01 C7 | 사용자가 서버가 아는 상태를 직접 조회 |
-| T-M2-11 | 접수증 조회 | §03 | 제출시각·전형·모집단위·상태 |
+| T-M2-11 | 접수증 조회 | §03 | 제출시각·전형·모집단위·상태 | ✅ |
 
 ### 프론트엔드 (권민준)
 

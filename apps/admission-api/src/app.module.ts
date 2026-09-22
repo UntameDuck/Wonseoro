@@ -6,6 +6,8 @@ import { ApplicationModule } from './modules/application/application.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { DeadlineModule } from './modules/deadline/deadline.module';
 import { DocumentModule } from './modules/document/document.module';
+import { FinalizationModule } from './modules/finalization/finalization.module';
+import { PaymentModule } from './modules/payment/payment.module';
 import { MetaModule } from './modules/meta/meta.module';
 
 @Module({
@@ -17,6 +19,8 @@ import { MetaModule } from './modules/meta/meta.module';
     DeadlineModule,
     ApplicationModule,
     DocumentModule,
+    PaymentModule,
+    FinalizationModule,
     MetaModule,
   ],
 })

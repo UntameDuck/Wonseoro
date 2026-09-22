@@ -119,6 +119,47 @@ export class ProblemException extends HttpException {
     });
   }
 
+  /** 결제가 서버 재검증을 통과하지 않았다. CONFIRMED 만 Finalize 에 쓸 수 있다. */
+  static paymentNotConfirmed(): ProblemException {
+    return new ProblemException({
+      code: ProblemCode.PAYMENT_NOT_CONFIRMED,
+      title: '결제가 확인되지 않았습니다',
+      status: 409,
+      detail:
+        '결제 확인이 끝나야 접수가 완료됩니다. 이미 결제하셨다면 잠시 후 상태를 다시 확인해 주십시오.',
+    });
+  }
+
+  /** 결제 상태를 PG 에서 확인하지 못했다. 재결제를 유도하지 않는다. (v1.1 §B4) */
+  static paymentStateUnknown(): ProblemException {
+    return new ProblemException({
+      code: ProblemCode.PAYMENT_STATE_UNKNOWN,
+      title: '결제 상태를 확인하는 중입니다',
+      status: 202,
+      detail:
+        '결제사 응답을 확인하는 중입니다. 다시 결제하지 마시고 잠시 후 상태를 확인해 주십시오.',
+    });
+  }
+
+  static documentNotAvailable(detail: string): ProblemException {
+    return new ProblemException({
+      code: ProblemCode.DOCUMENT_NOT_AVAILABLE,
+      title: '서류 검사가 완료되지 않았습니다',
+      status: 409,
+      detail,
+    });
+  }
+
+  /** 업무 검증 실패. OpenAPI finalizeApplication 이 422 를 명시한다. */
+  static unprocessable(detail: string): ProblemException {
+    return new ProblemException({
+      code: ProblemCode.VALIDATION_FAILED,
+      title: '원서를 접수할 수 없습니다',
+      status: 422,
+      detail,
+    });
+  }
+
   static retryable(detail: string): ProblemException {
     return new ProblemException({
       code: ProblemCode.RETRYABLE,
