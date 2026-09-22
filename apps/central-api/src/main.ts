@@ -33,6 +33,22 @@ async function bootstrap(): Promise<void> {
     },
   );
 
+  // 대학 Data Plane 과 지원자 웹은 서로 다른 도메인에 있다. (v1.1 §10 §11)
+  // 운영에서는 Edge 라우팅으로 같은 오리진처럼 묶고 Allowlist 를 좁힌다. (v1.1 §06 CORS Allowlist)
+  app.enableCors({
+    origin: (process.env.CORS_ORIGINS ?? 'http://localhost:4000').split(','),
+    credentials: true,
+    allowedHeaders: [
+      'content-type',
+      'idempotency-key',
+      'if-match',
+      'traceparent',
+      'x-applicant-id',
+      'x-subject-token',
+    ],
+    exposedHeaders: ['etag'],
+  });
+
   const port = Number(process.env.PORT ?? 3000);
   await app.listen({ port, host: '0.0.0.0' });
   new Logger('central-api').log(`listening on :${port}`);

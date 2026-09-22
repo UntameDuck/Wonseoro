@@ -46,6 +46,22 @@ async function bootstrap(): Promise<void> {
   // 모든 mutation 에 Idempotency-Key 를 강제한다. 예외 없음.
   app.useGlobalInterceptors(new IdempotencyInterceptor(app.get(IdempotencyStore)));
 
+  // 대학 Data Plane 과 지원자 웹은 서로 다른 도메인에 있다. (v1.1 §10 §11)
+  // 운영에서는 Edge 라우팅으로 같은 오리진처럼 묶고 Allowlist 를 좁힌다. (v1.1 §06 CORS Allowlist)
+  app.enableCors({
+    origin: (process.env.CORS_ORIGINS ?? 'http://localhost:4000').split(','),
+    credentials: true,
+    allowedHeaders: [
+      'content-type',
+      'idempotency-key',
+      'if-match',
+      'traceparent',
+      'x-applicant-id',
+      'x-subject-token',
+    ],
+    exposedHeaders: ['etag'],
+  });
+
   const port = Number(process.env.PORT ?? 3001);
   await app.listen({ port, host: '0.0.0.0' });
 

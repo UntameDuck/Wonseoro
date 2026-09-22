@@ -1,0 +1,130 @@
+/**
+ * KRDS 디자인 토큰 래퍼 — 기술설계서 v1.0 §12, v1.1 §07·§B15
+ *
+ * ⚠️ 이 값들은 **공식 KRDS 토큰이 아니라 근사치다.**
+ * 노션 첨부 `k-admission-krds-wireframe.html` 과 공식 KRDS 컴포넌트 킷을
+ * 배치하면 이 파일 하나만 교체한다. (docs/spec-assets/README.md)
+ *
+ * 이 파일이 존재하는 이유가 §B15 다.
+ * 대학마다 색을 직접 고치기 시작하면 KRDS 가 무너진다.
+ * **대학 브랜딩은 여기 정의된 theme token 범위에서만 바꾼다.**
+ * 핵심 Flow 와 Error Pattern 은 대학이 바꿀 수 없다.
+ */
+
+:root {
+  /* ── 색 ────────────────────────────────────────────────────────────── */
+  /* 대학이 바꿀 수 있는 것: primary 계열만 */
+  --krds-primary: #256ef4;
+  --krds-primary-strong: #1a53c0;
+  --krds-primary-weak: #e8f1ff;
+
+  /* 대학이 바꿀 수 없는 것: 상태색. 의미가 고정되어야 한다 */
+  --krds-danger: #de3412;
+  --krds-danger-weak: #fdf0ee;
+  --krds-warning: #ff8f08;
+  --krds-warning-weak: #fff6e8;
+  --krds-success: #008a3a;
+  --krds-success-weak: #e8f6ee;
+
+  --krds-fg: #1e2124;
+  --krds-fg-muted: #58616a;
+  --krds-fg-subtle: #8a949e;
+  --krds-bg: #ffffff;
+  --krds-bg-muted: #f4f5f6;
+  --krds-border: #cdd1d5;
+  --krds-border-strong: #8a949e;
+
+  /* ── 타이포 ────────────────────────────────────────────────────────── */
+  --krds-font: 'Pretendard GOV', 'Pretendard', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', 'Malgun Gothic', sans-serif;
+  --krds-text-xs: 0.8125rem;
+  --krds-text-sm: 0.875rem;
+  --krds-text-base: 1rem;
+  --krds-text-lg: 1.125rem;
+  --krds-text-xl: 1.375rem;
+  --krds-text-2xl: 1.75rem;
+
+  /* ── 간격 ──────────────────────────────────────────────────────────── */
+  --krds-space-1: 0.25rem;
+  --krds-space-2: 0.5rem;
+  --krds-space-3: 0.75rem;
+  --krds-space-4: 1rem;
+  --krds-space-5: 1.5rem;
+  --krds-space-6: 2rem;
+  --krds-space-7: 3rem;
+
+  --krds-radius: 6px;
+  --krds-radius-lg: 12px;
+
+  /* 터치 대상 최소 크기. 접근성 기준이라 줄이지 않는다. */
+  --krds-tap-min: 44px;
+}
+
+/* ── 기본 리셋 ───────────────────────────────────────────────────────── */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  /* 사용자가 브라우저 글자 크기를 키우면 따라가야 한다. px 고정 금지. */
+  font-size: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--krds-font);
+  font-size: var(--krds-text-base);
+  line-height: 1.6;
+  color: var(--krds-fg);
+  background: var(--krds-bg-muted);
+  /* 320 CSS px 에서도 가로 스크롤이 생기지 않아야 한다. (v1.1 §07) */
+  min-width: 320px;
+}
+
+/* ── Focus ───────────────────────────────────────────────────────────── */
+/**
+ * Visible Focus 는 지우지 않는다. (v1.1 §07 접근성)
+ * outline: none 을 쓰면 키보드 사용자가 자기 위치를 잃는다.
+ */
+:focus-visible {
+  outline: 3px solid var(--krds-primary);
+  outline-offset: 2px;
+}
+
+/* 본문 바로가기. 키보드 사용자가 반복 내비게이션을 건너뛴다. */
+.krds-skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: var(--krds-space-3) var(--krds-space-4);
+  background: var(--krds-primary);
+  color: #fff;
+  font-weight: 700;
+}
+.krds-skip:focus {
+  left: 0;
+}
+
+/* 화면에는 안 보이지만 스크린리더는 읽는 텍스트 */
+.krds-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 움직임을 줄이도록 설정한 사용자를 존중한다 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
