@@ -5,6 +5,7 @@ import { DbModule } from './infra/db/db.module';
 import { ApplicationModule } from './modules/application/application.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { DeadlineModule } from './modules/deadline/deadline.module';
+import { DocumentModule } from './modules/document/document.module';
 import { MetaModule } from './modules/meta/meta.module';
 
 @Module({
@@ -15,6 +16,7 @@ import { MetaModule } from './modules/meta/meta.module';
     AuditModule,
     DeadlineModule,
     ApplicationModule,
+    DocumentModule,
     MetaModule,
   ],
 })

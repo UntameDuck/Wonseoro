@@ -5,6 +5,9 @@ import { Db } from './infra/db/db.module';
 import { AuditService, GENESIS_HASH } from './modules/audit/audit.service';
 import { PostgresIdempotencyStore } from './common/idempotency/postgres-idempotency.store';
 import { FormSchemaService } from './modules/config/form-schema.service';
+import { DocumentService } from './modules/document/document.service';
+import { FileInspector } from './modules/document/file-inspector';
+import { ObjectStorage } from './modules/document/object-storage';
 import { IdempotencyScope } from './common/idempotency/idempotency.store';
 
 /**
@@ -54,6 +57,12 @@ after(async () => {
   // 원서를 지우는 것으로 감사 기록을 없앨 수 없다는 뜻이고, 이는 의도된 설계다.
   // (v1.1 §A11 — 감사로그 삭제·수정 권한을 운영자에게 주지 않는다)
   // 테스트 데이터만 명시적으로 정리한다.
+  await db.query(
+    `DELETE FROM document_scan WHERE document_id IN
+       (SELECT id FROM document WHERE application_id = $1)`,
+    [applicationId],
+  );
+  await db.query(`DELETE FROM document WHERE application_id = $1`, [applicationId]);
   await db.query(`DELETE FROM audit_event WHERE application_id = $1`, [applicationId]);
   await db.query(`DELETE FROM application WHERE id = $1`, [applicationId]);
   await db.query(`DELETE FROM applicant WHERE id = $1`, [applicantId]);
@@ -306,5 +315,73 @@ describe('추가문항 Schema Registry (v1.1 §A5)', () => {
         WHERE cycle_id = $1 AND status = 'ACTIVE'`,
       [CYCLE],
     );
+  });
+});
+
+describe('서류 상태 전이 (v1.0 §5.4 / v1.1 §B5)', () => {
+  const docService = () =>
+    new DocumentService(db, new ObjectStorage(), new FileInspector(), new AuditService());
+
+  /** QUARANTINED 상태의 서류를 직접 만든다. 업로드 자체는 E2E 로 따로 확인했다. */
+  async function seedQuarantined(): Promise<string> {
+    const id = randomUUID();
+    await db.query(
+      `INSERT INTO document (id, application_id, document_type, object_key,
+                             original_filename, media_type, size_bytes, sha256_hex, status)
+       VALUES ($1,$2,'TRANSCRIPT',$3,'생활기록부.pdf','application/pdf',59,$4,'QUARANTINED')`,
+      [id, applicationId, `applications/${applicationId}/${id}.pdf`, 'a'.repeat(64)],
+    );
+    await db.query(
+      `INSERT INTO document_scan (id, document_id, scanner, result)
+       VALUES ($1,$2,'mock-av','PENDING')`,
+      [randomUUID(), id],
+    );
+    return id;
+  }
+
+  it('검사 통과하면 AVAILABLE 로 간다 — 접수 확정에 쓸 수 있는 유일한 상태', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const id = await seedQuarantined();
+    const next = await docService().applyScanResult(id, 'CLEAN');
+    assert.equal(next, 'AVAILABLE');
+  });
+
+  it('악성으로 판정되면 REJECTED 로 간다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const id = await seedQuarantined();
+    const next = await docService().applyScanResult(id, 'MALICIOUS');
+    assert.equal(next, 'REJECTED');
+  });
+
+  it('검사 오류도 AVAILABLE 로 통과시키지 않는다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const id = await seedQuarantined();
+    const next = await docService().applyScanResult(id, 'ERROR');
+    assert.notEqual(next, 'AVAILABLE', '검사 실패를 통과로 처리하면 안 된다');
+  });
+
+  it('같은 검사 결과를 두 번 적용할 수 없다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const id = await seedQuarantined();
+    await docService().applyScanResult(id, 'CLEAN');
+    await assert.rejects(
+      docService().applyScanResult(id, 'MALICIOUS'),
+      '이미 확정된 서류 상태를 뒤집을 수 있으면 안 된다',
+    );
+  });
+
+  it('검사 결과가 감사로그에 남는다 (v1.0 §9 DOCUMENT_VERIFIED)', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const id = await seedQuarantined();
+    await docService().applyScanResult(id, 'CLEAN');
+
+    const { rows } = await db.query<{ action: string; result: string }>(
+      `SELECT action, result FROM audit_event
+        WHERE application_id = $1 AND action = 'DOCUMENT_VERIFIED'
+        ORDER BY occurred_at DESC LIMIT 1`,
+      [applicationId],
+    );
+    assert.equal(rows[0]?.action, 'DOCUMENT_VERIFIED');
+    assert.equal(rows[0]?.result, 'ACCEPTED');
   });
 });

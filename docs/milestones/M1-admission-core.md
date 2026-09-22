@@ -24,11 +24,11 @@
 
 | 구분 | 태스크 |
 |---|---|
-| ✅ 완료 | T-M1-01 · 02 · 03 · 04 · 05 · 06 · 07 · 08 · 10 · 12 · 13 · 14 |
-| 🔴 남음 | T-M1-09(Profile Snapshot, central-api 필요) · 11(Document 파이프라인, MinIO 필요) |
+| ✅ 완료 (13/14) | T-M1-01 · 02 · 03 · 04 · 05 · 06 · 07 · 08 · 10 · 11 · 12 · 13 · 14 |
+| 🔜 M2 로 이월 | T-M1-09 Common Profile Snapshot — central-api 의 Profile Vault 가 있어야 한다 |
 
 검증
-- 테스트 **67개 통과** (단위 51 + 통합 16). DB 없으면 통합분은 skip 되어 CI 를 막지 않는다
+- 테스트 **85개 통과** (단위 64 + 통합 21). DB 없으면 통합분은 skip 되어 CI 를 막지 않는다
 - PostgreSQL 16 에 DDL 적용 → **21개 테이블** 생성
 - 정합성 제약 **행동 검증 7종 통과** (`infra/db/verify-constraints.sql`)
   제약이 "존재하는지"가 아니라 "실제로 막는지"를 확인했다
@@ -71,6 +71,24 @@
 마지막 줄이 §A5 의 핵심이다. 대학이 늘어나도 코드를 fork 하지 않는다는 주장을
 테스트로 고정해 뒀다 (`integration.test.ts` — "대학·전형을 추가해도 코드는 바뀌지 않는다").
 
+**서류 파이프라인 (T-M1-11)**
+
+| 확인 | 결과 |
+|---|---|
+| 허용 목록에 없는 형식 (`.exe`) | 400 — Presigned URL 을 **내주기 전에** 거른다 |
+| 확장자·MIME 불일치 | 400 |
+| 정상 PDF | 201 → 브라우저가 Object Storage 로 직접 PUT → 200 |
+| 잘못된 해시로 complete | 400 + REJECTED — 클라이언트 해시를 믿지 않고 서버가 재계산 |
+| **확장자만 pdf 인 실행파일** | 업로드는 되지만 complete 에서 **400 "실행파일(PE)"** |
+| 정상 파일 complete | 202 QUARANTINED + scan PENDING |
+| 검사 CLEAN | AVAILABLE. `ERROR` 는 통과시키지 않는다 |
+
+위장 파일이 Object Storage 에는 올라가고 서버 검증에서 걸린다는 점이 중요하다.
+파일 바이트는 API 서버를 지나지 않으므로(§B5), 검증은 업로드 **이후**에 할 수밖에 없다.
+그래서 접수 확정은 `AVAILABLE` 상태만 인정한다.
+
+서류 API 와 AV 검사 워커의 분리 기준은 **ADR-0004** 에 있다.
+
 **구현 중 잡은 실제 버그**: Fastify `merge-patch` 파서를 `parseAs: 'string'` 으로 두면
 문자 수와 Content-Length(바이트 수)를 비교해 **한글 본문 요청이 전부 실패**한다.
 원서 본문은 대부분 한글이므로 `parseAs: 'buffer'` 로 바꿨다.
@@ -103,7 +121,7 @@ canonical 첨부와 M1 초안 계약을 대조해 5건을 찾았다. 전부 대�
 | T-M1-08 | 마감 검증 (서버시간 기준) | 송리안 | §01 A2 | 브라우저 시간 미사용, 경계값 테스트 | ✅ |
 | T-M1-09 | Common Profile Snapshot 복사 | 공동 | §10 §3 | 원서 생성 시 동의 필드만 복사 | 🔴 central-api 필요 |
 | T-M1-10 | 동적 추가문항 Schema Registry | 송리안 | §01 A5 | 대학 차이를 JSON Schema로 흡수, code fork 0 | ✅ |
-| T-M1-11 | Document Service 업로드 파이프라인 | 송리안 | v1.0 §5.4, §01 B5 | Presigned → QUARANTINED → AVAILABLE | 🔴 |
+| T-M1-11 | Document 업로드 파이프라인 | 송리안 | v1.0 §5.4, §01 B5 | Presigned → QUARANTINED → AVAILABLE | ✅ |
 | T-M1-12 | Audit Event 기록 (hash-chain) | 송리안 | v1.0 §9, §01 A11 | 상태 변경마다 감사 레코드, 변조 검출 | ✅ |
 | T-M1-13 | DB Connection Pool 예산 | 권민준 | §01 B2 | 서비스별 pool 상한 고정 | ✅ |
 | T-M1-14 | 계약 테스트 (OpenAPI ↔ 구현) | 권민준 | §03 | CI에서 계약 이탈 검출 | ✅ DDL·OpenAPI·CloudEvents 대조 17건 |
@@ -173,10 +191,10 @@ upload-intent 발급 → 브라우저가 Object Storage로 직접 업로드 → 
 
 ## 종료 체크리스트
 
-- [ ] 14개 태스크 전부 완료
-- [ ] curl만으로 "원서 생성 → 자동저장 → 서류 AVAILABLE → validate 통과" 재현
-- [ ] 동일 Idempotency-Key 100회 → 상태 변경 1회 테스트 통과
-- [ ] 마감 경계값(±5초) 테스트 통과
+- [x] 13/14 태스크 완료 (T-M1-09 는 central-api 의존으로 M2 이월)
+- [x] curl만으로 "원서 생성 → 자동저장 → 서류 AVAILABLE → validate 통과" 재현
+- [x] 동일 Idempotency-Key 100회 → 상태 변경 1회 테스트 통과
+- [x] 마감 경계값(±5초) 테스트 통과
 - [ ] **노션 §02·§03을 다시 읽고**, 구현하며 바뀐 부분을 노션에 반영
-- [ ] 이 단계에서 발견한 불일치를 D-N으로 대장에 등록하고 처리
+- [x] 이 단계에서 발견한 불일치를 D-N으로 대장에 등록하고 처리 (D-7~D-13)
 - [ ] `packages/contracts` 변경분을 두 사람이 공동 리뷰
