@@ -3,6 +3,7 @@
 import { use, useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, DescriptionList, ErrorSummary } from '../../../krds/components';
 import { SchemaForm, type JsonSchema } from '../../../krds/schema-form';
+import { DocumentStatusList, FileUpload } from '../../../krds/file-upload';
 import { Breadcrumb, STEPS, StepIndicator, type StepNo } from '../../../krds/navigation';
 import { DeadlineBanner, FailureNotice, SaveStatus } from '../../../krds/status';
 import {
@@ -49,6 +50,13 @@ export default function ApplyPage({
   /** 서버가 준 추가문항 스키마. 화면은 이걸 보고 필드를 그린다. (v1.1 §A5) */
   const [schema, setSchema] = useState<JsonSchema | null>(null);
   const [schemaVersion, setSchemaVersion] = useState<string | null>(null);
+  /** 전형·모집단위·전형료는 대학 설정이 기준이다. 화면에 박지 않는다. (v1.1 §10 §1) */
+  const [catalog, setCatalog] = useState<{
+    universityName: string;
+    typeName: string;
+    departmentName: string;
+    feeAmount: number;
+  } | null>(null);
 
   const deadline = useDeadline(app?.cycleId ?? DEMO_CYCLE);
   const frozen = app?.status === 'FINALIZED';
@@ -93,6 +101,30 @@ export default function ApplyPage({
     void reload();
   }, [reload]);
 
+  // 전형·모집단위 정보를 대학 API 에서 읽는다.
+  useEffect(() => {
+    if (!app) return;
+    void (async () => {
+      try {
+        const [cycle, types, depts] = await Promise.all([
+          api.currentCycle(),
+          api.admissionTypes(app.cycleId),
+          api.departments(app.cycleId),
+        ]);
+        const t = types.data.find((x) => x.id === app.admissionTypeId);
+        const d = depts.data.find((x) => x.id === app.departmentId);
+        setCatalog({
+          universityName: cycle.data.universityId,
+          typeName: t?.name ?? '-',
+          departmentName: d?.name ?? '-',
+          feeAmount: t?.feeAmount ?? 0,
+        });
+      } catch {
+        setCatalog(null);
+      }
+    })();
+  }, [app]);
+
   // 스키마는 원서와 별개로 받는다. Config 가 바뀌면 값도 바뀐다.
   useEffect(() => {
     void api
@@ -116,6 +148,17 @@ export default function ApplyPage({
   const extraCodes = Object.keys(schema?.properties ?? {}).filter(
     (c) => !COMMON_FIELDS.includes(c),
   );
+
+  /** 서류 검사 상태를 다시 읽는다. self-check 가 상태와 안내문구를 함께 준다. */
+  const refreshDocuments = useCallback(async () => {
+    const res = await api.selfCheck(applicationId).catch(() => null);
+    if (res) setSelfCheck(res.data);
+  }, [applicationId]);
+
+  // 4·5단계에 들어갈 때 서류 검사 상태를 읽는다.
+  useEffect(() => {
+    if (step === 4 || step === 5) void refreshDocuments();
+  }, [step, refreshDocuments]);
 
   const recheck = useCallback(async () => {
     const res = await api.selfCheck(applicationId).catch(() => null);
@@ -246,14 +289,17 @@ export default function ApplyPage({
         <Card title="2. 대학·전형">
           <DescriptionList
             items={[
-              ['대학', '원서로대학교'],
-              ['전형', '학생부종합전형'],
-              ['모집단위', '컴퓨터공학과'],
-              ['전형료', '55,000원'],
+              ['대학', catalog?.universityName ?? '불러오는 중…'],
+              ['전형', catalog?.typeName ?? '불러오는 중…'],
+              ['모집단위', catalog?.departmentName ?? '불러오는 중…'],
+              [
+                '전형료',
+                catalog ? `${catalog.feeAmount.toLocaleString('ko-KR')}원` : '불러오는 중…',
+              ],
             ]}
           />
           <Alert tone="info" title="전형을 바꾸면 필요한 서류와 전형료가 달라집니다">
-            이미 작성한 추가정보는 전형에 따라 다시 입력해야 할 수 있습니다.
+            추가로 입력해야 하는 항목도 전형마다 다릅니다.
           </Alert>
           <div style={{ display: 'flex', gap: 'var(--krds-space-3)' }}>
             <Button variant="secondary" onClick={() => setStep(1)}>
@@ -290,16 +336,28 @@ export default function ApplyPage({
       {step === 4 && (
         <Card title="4. 서류">
           <Alert tone="info" title="서류는 검사를 통과해야 접수에 사용됩니다">
-            업로드 후 악성코드 검사가 진행됩니다. 검사 완료 전에는 접수가 완료되지 않습니다.
+            올리신 파일은 악성코드 검사를 거칩니다. 검사 중에는 접수가 완료되지 않습니다.
           </Alert>
-          <p style={{ fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)' }}>
-            M2 데모에서는 서류 업로드 화면을 생략합니다. 업로드 API 는 구현되어 있으며
-            <code> POST /api/v1/applications/{'{id}'}/documents/upload-intents </code>
-            로 호출합니다.
-          </p>
-          <div style={{ display: 'flex', gap: 'var(--krds-space-3)' }}>
+
+          <FileUpload
+            applicationId={applicationId}
+            applicantId={applicantId}
+            documentType="TRANSCRIPT"
+            label="학교생활기록부"
+            onUploaded={() => void refreshDocuments()}
+          />
+
+          <h3 style={{ fontSize: 'var(--krds-text-base)' }}>올린 서류</h3>
+          <DocumentStatusList documents={selfCheck?.documents ?? []} />
+
+          <div
+            style={{ display: 'flex', gap: 'var(--krds-space-3)', marginTop: 'var(--krds-space-4)' }}
+          >
             <Button variant="secondary" onClick={() => setStep(3)}>
               이전
+            </Button>
+            <Button variant="secondary" onClick={() => void refreshDocuments()}>
+              검사 상태 새로고침
             </Button>
             <Button onClick={() => void runValidate()} disabled={busy}>
               {busy ? '검증 중…' : '검토 단계로'}
@@ -312,10 +370,22 @@ export default function ApplyPage({
         <Card title="5. 검토·결제">
           <DescriptionList
             items={[
-              ['출신 고등학교', fields.highSchool || '-'],
-              ['졸업 연도', fields.graduationYear || '-'],
-              ['자기소개', (fields.selfIntro || '-').slice(0, 40) + '…'],
-              ['전형료', '55,000원'],
+              ['대학·전형', `${catalog?.universityName ?? '-'} · ${catalog?.typeName ?? '-'}`],
+              ['모집단위', catalog?.departmentName ?? '-'],
+              [
+                '입력 항목',
+                issues.length === 0 ? '누락 없음' : `${issues.length}건 확인 필요`,
+              ],
+              [
+                '서류',
+                (selfCheck?.documents ?? []).length === 0
+                  ? '올린 서류 없음'
+                  : (selfCheck?.documents ?? []).map((d) => d.guidance).join(', '),
+              ],
+              [
+                '전형료',
+                catalog ? `${catalog.feeAmount.toLocaleString('ko-KR')}원` : '-',
+              ],
               ['결제 상태', payment?.status ?? '결제 전'],
             ]}
           />
@@ -324,7 +394,9 @@ export default function ApplyPage({
               다시 결제하지 마시고 잠시 후 상태를 확인해 주십시오.
             </Alert>
           )}
-          <div style={{ display: 'flex', gap: 'var(--krds-space-3)', marginTop: 'var(--krds-space-4)' }}>
+          <div
+            style={{ display: 'flex', gap: 'var(--krds-space-3)', marginTop: 'var(--krds-space-4)' }}
+          >
             <Button variant="secondary" onClick={() => setStep(4)}>
               이전
             </Button>

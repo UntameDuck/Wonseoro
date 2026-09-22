@@ -4,6 +4,7 @@ import { IdempotencyModule } from './common/idempotency/idempotency.module';
 import { DbModule } from '@wonseoro/server-kit';
 import { ApplicationModule } from './modules/application/application.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { CatalogModule } from './modules/catalog/catalog.module';
 import { DeadlineModule } from './modules/deadline/deadline.module';
 import { DocumentModule } from './modules/document/document.module';
 import { FinalizationModule } from './modules/finalization/finalization.module';
@@ -18,6 +19,7 @@ import { MetaModule } from './modules/meta/meta.module';
     AuditModule,
     DeadlineModule,
     ApplicationModule,
+    CatalogModule,
     DocumentModule,
     PaymentModule,
     FinalizationModule,

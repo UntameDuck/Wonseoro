@@ -243,6 +243,60 @@ export const api = {
 
   submission: (id: string) => call<Submission>(`/api/v1/applications/${id}/submission`),
 
+  /* ── 모집 카탈로그. 하드코딩을 걷어내는 근거다 ─────────────────────── */
+
+  currentCycle: () =>
+    call<{
+      id: string;
+      universityId: string;
+      admissionYear: number;
+      name: string;
+      closesAt: string;
+    }>('/api/v1/admission-cycles/current'),
+
+  admissionTypes: (cycleId: string) =>
+    call<Array<{ id: string; code: string; name: string; feeAmount: number }>>(
+      `/api/v1/admission-types?cycleId=${encodeURIComponent(cycleId)}`,
+    ),
+
+  departments: (cycleId: string) =>
+    call<Array<{ id: string; code: string; name: string; quota: number | null }>>(
+      `/api/v1/departments?cycleId=${encodeURIComponent(cycleId)}`,
+    ),
+
+  /* ── 서류 ─────────────────────────────────────────────────────────── */
+
+  createUploadIntent: (
+    applicationId: string,
+    body: { documentType: string; filename: string; mediaType: string; sizeBytes: number },
+    applicantId: string,
+    key: string,
+  ) =>
+    call<{
+      documentId: string;
+      uploadUrl: string;
+      expiresAt: string;
+      requiredHeaders: Record<string, string>;
+    }>(`/api/v1/applications/${applicationId}/documents/upload-intents`, {
+      method: 'POST',
+      body,
+      idempotencyKey: key,
+      applicantId,
+    }),
+
+  completeUpload: (
+    documentId: string,
+    body: { sha256: string; sizeBytes: number },
+    applicantId: string,
+    key: string,
+  ) =>
+    call<{ id: string; status: string }>(`/api/v1/documents/${documentId}/complete`, {
+      method: 'POST',
+      body,
+      idempotencyKey: key,
+      applicantId,
+    }),
+
   /** 중앙 Dashboard. 중앙이 죽어 있으면 NetworkError 가 난다 — 화면이 그것을 다룬다. */
   dashboard: () =>
     call<{

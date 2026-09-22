@@ -289,6 +289,19 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-20. AV 검사 워커용 내부 API 가 계약에 없다
+
+| | |
+|---|---|
+| **발견** | 2026-09-23 (M2, 서류 파이프라인) |
+| **문제** | v1.0 §5.4 는 "악성코드 검사 완료 전 QUARANTINED, 통과 후 AVAILABLE" 을 규정한다. 그런데 **검사 워커가 결과를 보고할 경로가 계약에 없다.** 그러면 서류는 영원히 QUARANTINED 에 머물고, 접수 확정이 AVAILABLE 기준이므로 필수서류가 있는 전형은 접수가 끝나지 않는다 |
+| **판정** | 내부 API 를 추가한다 — `GET /internal/v1/documents/pending-scan`, `POST /internal/v1/documents/{id}/scan-result` |
+| **왜 워커가 DB 를 직접 고치지 않는가** | 서류 상태의 원장은 대학 DB 이고 상태 전이 규칙은 `admission-api` 한 곳에만 있어야 한다. 워커가 DB 를 직접 쓰면 규칙이 두 곳에 생긴다 (ADR-0004) |
+| **노션 반영** | ⬜ §03 Internal API 에 추가하고 첨부 yaml 갱신 |
+| **상태** | 🟡 판정완료 — 계약 추가 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 

@@ -1,24 +1,27 @@
+import 'reflect-metadata';
+import { Logger } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+import { AppModule } from './app.module';
+
 /**
- * document-service — 서류 서비스
+ * document-service — 악성코드 검사 워커
  *
- * M0 상태: 의존성 0의 헬스체크 전용 부트스트랩.
- * M1에서 NestFactory 기반으로 교체한다. (ADR-0001)
+ * 분리하는 이유는 하나다. **검사는 오래 걸리고 CPU 를 쓴다.**
+ * 마감 피크에 접수 트랜잭션과 자원을 다투면 안 된다. (v1.1 §B5, ADR-0004)
  */
-import { createServer } from 'node:http';
+async function bootstrap(): Promise<void> {
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    new FastifyAdapter({ trustProxy: true }),
+  );
+  app.enableShutdownHooks();
 
-const PORT = Number(process.env.PORT ?? 3002);
-const SERVICE = 'document-service';
+  const port = Number(process.env.PORT ?? 3002);
+  await app.listen({ port, host: '0.0.0.0' });
+  new Logger('document-service').log(
+    `listening on :${port} → ${process.env.ADMISSION_API_URL ?? 'http://localhost:3001'}`,
+  );
+}
 
-const server = createServer((req, res) => {
-  if (req.url === '/healthz' || req.url === '/readyz') {
-    res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ service: SERVICE, status: 'ok', time: new Date().toISOString() }));
-    return;
-  }
-  res.writeHead(404, { 'content-type': 'application/problem+json' });
-  res.end(JSON.stringify({ type: 'about:blank', title: 'Not Found', status: 404 }));
-});
-
-server.listen(PORT, () => {
-  console.log(`[${SERVICE}] listening on :${PORT}`);
-});
+void bootstrap();
