@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 520" role="img" aria-labelledby="title desc">
+  <title id="title">Wonseoro</title>
+  <desc id="desc">Minimal black banner with the Wonseoro project name in white.</desc>
+  <rect width="1600" height="520" fill="#000000" />
+  <text
+    x="800"
+    y="260"
+    fill="#ffffff"
+    font-family="Inter, 'Segoe UI', Arial, sans-serif"
+    font-size="132"
+    font-weight="600"
+    letter-spacing="-4"
+    text-anchor="middle"
+    dominant-baseline="middle"
+  >Wonseoro</text>
+</svg>
