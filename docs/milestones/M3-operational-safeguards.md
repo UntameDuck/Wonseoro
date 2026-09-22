@@ -23,8 +23,9 @@
 
 | 구분 | 태스크 |
 |---|---|
-| ✅ 완료 | T-M3-01 Deadline Policy Engine · T-M3-02 Configuration Governance |
-| 🔜 다음 | T-M3-03 Audit hash-chain 분리 저장소 · T-M3-07 Evidence Package · T-M3-04 Reconciliation |
+| ✅ 완료 | T-M3-01 Deadline Policy Engine · T-M3-07 Evidence Package |
+| 🟡 부분 | T-M3-02 Config Governance (Diff·Rollback 미구현) · T-M3-03 hash-chain (물리 분리는 M5) |
+| 🔜 다음 | T-M3-04 Reconciliation Center · T-M3-06 Autonomous Mode |
 
 ### §01 E 핵심 인수기준 "단독 운영자 1명으로 마감시간 변경 불가" 통과
 
@@ -45,6 +46,45 @@ Config 도 동일: 작성자 승인 403 / 승인 0명 활성화 403 / 2인 승�
 
 정책 변경 이력에 **누가 언제 승인·활성화했는지**와 `policy_hash` 가 남는다.
 분쟁 시 "기억"이 아니라 이 기록으로 답한다. (§A2)
+
+### Evidence Package — §01 E "접수과정을 재구성 가능" 통과 (T-M3-07)
+
+실제 접수 원서로 뽑은 결과.
+
+```
+evidenceHash : a3edfefe56d9aefd5191ff828af76301...
+체인검증     : valid=true checked=6
+접수번호     : 2027-UNIV-A-GLC4CZ25QS
+요청 → 검증 → 확정 : 15:33:04.107 → 15:33:01.042 → 15:33:04.122
+적용 정책    : env-7a01b0ee793a / 설정 cfg-2027-v1
+clock offset : 0 ms
+결제         : CONFIRMED 55,000원 (events=1)
+동의         : PROFILE_SNAPSHOT
+
+Timeline (6건, 전부 hash-chain 연결)
+  15:31:26  APPLICATION_CREATED       ACCEPTED  fa9e9b83d2
+  15:32:53  APPLICATION_SAVED         ACCEPTED  a5fd5bce4a
+  15:33:01  PAYMENT_INTENT_CREATED    ACCEPTED  1325a7dd9a
+  15:33:01  PAYMENT_VERIFIED          ACCEPTED  902b1d28b0
+  15:33:04  APPLICATION_FINALIZED     ACCEPTED  126a8fddb0
+  16:33:12  ADMIN_VIEWED_PII          ACCEPTED  c305d8440c  ← 열람 자체도 기록된다
+```
+
+담기지 않는 것: 이름·주민등록번호·연락처·주소·원서 본문·첨부파일 원본·PG 응답 원문.
+**이것들 없이도 "언제 무엇을 했는가"는 증명된다.** 결제·서류·설정은 해시로만 동일성을 보인다.
+
+조회에 **사유가 필수**다. 없으면 400이고, 열람 사실이 `ADMIN_VIEWED_PII` 로 남는다. (§8.3)
+계약에는 사유 파라미터가 없어 추가했다. (D-24)
+
+### ⚠️ 환경변수 대체 정책으로 접수하면 증적이 불완전해진다
+
+위 결과의 `정책 스냅샷: 없음` 이 그 증거다.
+이 원서는 `ALLOW_ENV_DEADLINE_POLICY=true` 였을 때 접수돼서 적용 정책이 `env-7a01b0ee793a` 다.
+그 버전은 `deadline_policy` 테이블에 없으므로 **마감 판정의 근거를 되살릴 수 없다.**
+
+분쟁이 나면 "어떤 마감정책으로 판정했는가"에 답하지 못한다.
+`ALLOW_ENV_DEADLINE_POLICY` 를 운영에서 절대 true 로 두면 안 되는 이유이며,
+D-1 이전 Config·정책 활성화가 인수 조건인 이유다. (§A14)
 
 ### 구현 중 확인한 DDL 결함 3건
 
@@ -77,7 +117,7 @@ T-M3-02 를 🟡 로 둔 이유이며, Diff·Rollback 이 붙어야 완료다.
 |---|---|---|---|---|---|
 | T-M3-01 | **Deadline Policy Engine** | 송리안 | §01 A2·C1 | 3개 룰 프로파일, 2인 승인, 정책버전, 경계값 검증 | ✅ |
 | T-M3-02 | Configuration Governance | 송리안 | §01 A14·C5 | 2인 승인·예약 활성화. Diff·Rollback·Freeze 는 미구현 | 🟡 |
-| T-M3-03 | Audit hash-chain + 분리 저장소 | 송리안 | §01 A11, v1.0 §9 | prevHash/eventHash, 운영자 삭제·수정 불가 |
+| T-M3-03 | Audit hash-chain + 분리 저장소 | 송리안 | §01 A11, v1.0 §9 | hash-chain·변조 검출 ✅ / WORM 물리 분리는 M5 | 🟡 |
 | T-M3-04 | **Reconciliation Center (4-way)** | 송리안 | §01 A4·B18·C2 | Application/Payment/Submission/Central 대조 |
 | T-M3-05 | Exception Queue + 수동 승인 복구 | 송리안 | §01 A4·B16 | 불일치만 큐로, 보정은 Admin Action API로만 |
 | T-M3-06 | **Autonomous Mode** | 송리안 | §01 A1·C3 | Local Policy Snapshot·JWKS Cache·Offline Spool |

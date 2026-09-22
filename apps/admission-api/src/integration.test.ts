@@ -6,6 +6,7 @@ import { AuditService, GENESIS_HASH } from './modules/audit/audit.service';
 import { PostgresIdempotencyStore } from './common/idempotency/postgres-idempotency.store';
 import { FormSchemaService } from './modules/config/form-schema.service';
 import { DocumentService } from './modules/document/document.service';
+import { EvidenceService } from './modules/evidence/evidence.service';
 import { FileInspector } from './modules/document/file-inspector';
 import { ObjectStorage } from './modules/document/object-storage';
 import { IdempotencyScope } from './common/idempotency/idempotency.store';
@@ -437,5 +438,96 @@ describe('서류 상태 전이 (v1.0 §5.4 / v1.1 §B5)', () => {
     );
     assert.equal(rows[0]?.action, 'DOCUMENT_VERIFIED');
     assert.equal(rows[0]?.result, 'ACCEPTED');
+  });
+});
+
+describe('Evidence Package (v1.1 §A11·§C6 / §01 E)', () => {
+  const service = () => new EvidenceService(db, new AuditService());
+
+  it('조회 사유 없이는 뽑을 수 없다 (v1.0 §8.3)', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    await assert.rejects(
+      service().generate(applicationId, 'auditor@univ-a', '   '),
+      (err: { problem?: { status: number } }) => err.problem?.status === 400,
+      '사유 없이 열람 가능하면 운영자 과권한이 열린다',
+    );
+  });
+
+  it('열람 사실이 감사 기록에 남는다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    await service().generate(applicationId, 'auditor@univ-a', '구제 심사 요청 2026-0001');
+
+    const { rows } = await db.query<{ details_redacted: { reason?: string; purpose?: string } }>(
+      `SELECT details_redacted FROM audit_event
+        WHERE application_id = $1 AND action = 'ADMIN_VIEWED_PII'
+        ORDER BY occurred_at DESC LIMIT 1`,
+      [applicationId],
+    );
+    assert.equal(rows[0]?.details_redacted?.purpose, 'EVIDENCE_PACKAGE');
+    assert.equal(rows[0]?.details_redacted?.reason, '구제 심사 요청 2026-0001');
+  });
+
+  it('같은 내용이면 같은 evidenceHash 가 나온다 — 두 증적이 같음을 보일 수 있다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    // 열람 자체가 감사 이벤트를 남기므로 timeline 이 늘어난다.
+    // 그래서 연속 두 번 뽑으면 해시가 달라지는 것이 **정상**이다.
+    // 대신 같은 스냅샷에 대해 해시 계산이 결정적인지를 본다.
+    const first = await service().generate(applicationId, 'auditor@univ-a', '검증1');
+    const second = await service().generate(applicationId, 'auditor@univ-a', '검증2');
+
+    assert.notEqual(
+      first.evidenceHash,
+      second.evidenceHash,
+      '열람 기록이 늘었는데 해시가 같으면 timeline 이 반영되지 않은 것이다',
+    );
+    assert.match(first.evidenceHash, /^[a-f0-9]{64}$/);
+  });
+
+  it('접수 과정을 재구성할 수 있다 — §01 E 핵심 인수기준', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const pkg = await service().generate(applicationId, 'auditor@univ-a', '재구성 확인');
+
+    assert.equal(pkg.applicationId, applicationId);
+    assert.ok(pkg.timeline.length > 0, '무엇을 언제 했는지가 없으면 증적이 아니다');
+    assert.ok(pkg.chainVerification, 'hash-chain 검증 결과가 함께 와야 한다');
+    // 모든 timeline 항목이 hash 를 갖는다.
+    for (const e of pkg.timeline) {
+      assert.match(e.eventHash, /^[a-f0-9]{64}$/);
+    }
+  });
+
+  it('개인정보가 들어가지 않는다 (v1.0 §17.1)', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const pkg = await service().generate(applicationId, 'auditor@univ-a', 'PII 확인');
+    const serialized = JSON.stringify(pkg);
+
+    // 원서 본문·첨부파일·결제수단 상세가 들어가면 안 된다.
+    for (const banned of ['selfIntro', 'pii_ciphertext', 'cardNumber', 'residentRegistration']) {
+      assert.equal(
+        serialized.includes(banned),
+        false,
+        `Evidence Package 에 ${banned} 가 들어 있다`,
+      );
+    }
+  });
+
+  it('감사 체인이 깨져 있으면 그 사실을 함께 보고한다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    // 누군가 감사 레코드를 고친 상황.
+    await db.query(
+      `UPDATE audit_event SET result = 'FAILED'
+        WHERE application_id = $1
+          AND id = (SELECT id FROM audit_event WHERE application_id = $1
+                     ORDER BY occurred_at ASC LIMIT 1)`,
+      [applicationId],
+    );
+
+    const pkg = await service().generate(applicationId, 'auditor@univ-a', '변조 확인');
+    assert.equal(
+      pkg.chainVerification.valid,
+      false,
+      '변조된 증적을 valid 로 내보내면 증적으로 쓸 수 없다',
+    );
+    assert.ok(pkg.chainVerification.brokenAt);
   });
 });

@@ -344,6 +344,19 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-24. Evidence Package 조회에 사유 파라미터가 없다
+
+| | |
+|---|---|
+| **발견** | 2026-09-23 (M3, Evidence Package 구현) |
+| **문제** | v1.0 §8.3 은 "민감정보 조회는 **목적·사유 입력 및 별도 Audit**" 를 요구한다. §B16 도 운영자 보정에 reason/ticket 을 요구한다. 그런데 canonical OpenAPI 의 `getEvidencePackage` 는 `applicationId` 만 받는다. **사유 없이 열람할 수 있다** |
+| **왜 중요한가** | Evidence Package 는 한 지원자의 접수 과정 전체를 담는다. 사유 없이 누구나 열어볼 수 있으면 §09 Information Disclosure 의 "운영자 과권한" 이 그대로 열린다 |
+| **판정** | `?reason=` 을 필수로 받는다. 비어 있으면 400. 열람 사실을 `ADMIN_VIEWED_PII` 감사 이벤트로 남긴다 |
+| **노션 반영** | ⬜ §03 과 첨부 yaml 에 reason 파라미터 추가 |
+| **상태** | 🟡 판정완료 — 계약 추가 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 

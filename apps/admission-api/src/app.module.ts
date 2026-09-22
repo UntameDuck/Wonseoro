@@ -7,6 +7,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { DeadlineModule } from './modules/deadline/deadline.module';
 import { DocumentModule } from './modules/document/document.module';
+import { EvidenceModule } from './modules/evidence/evidence.module';
 import { FinalizationModule } from './modules/finalization/finalization.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { MetaModule } from './modules/meta/meta.module';
@@ -21,6 +22,7 @@ import { MetaModule } from './modules/meta/meta.module';
     ApplicationModule,
     CatalogModule,
     DocumentModule,
+    EvidenceModule,
     PaymentModule,
     FinalizationModule,
     MetaModule,
