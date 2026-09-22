@@ -1,7 +1,8 @@
 'use client';
 
 import { use, useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, DescriptionList, ErrorSummary, Field } from '../../../krds/components';
+import { Alert, Button, Card, DescriptionList, ErrorSummary } from '../../../krds/components';
+import { SchemaForm, type JsonSchema } from '../../../krds/schema-form';
 import { Breadcrumb, STEPS, StepIndicator, type StepNo } from '../../../krds/navigation';
 import { DeadlineBanner, FailureNotice, SaveStatus } from '../../../krds/status';
 import {
@@ -45,6 +46,9 @@ export default function ApplyPage({
   );
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [busy, setBusy] = useState(false);
+  /** 서버가 준 추가문항 스키마. 화면은 이걸 보고 필드를 그린다. (v1.1 §A5) */
+  const [schema, setSchema] = useState<JsonSchema | null>(null);
+  const [schemaVersion, setSchemaVersion] = useState<string | null>(null);
 
   const deadline = useDeadline(app?.cycleId ?? DEMO_CYCLE);
   const frozen = app?.status === 'FINALIZED';
@@ -89,6 +93,30 @@ export default function ApplyPage({
     void reload();
   }, [reload]);
 
+  // 스키마는 원서와 별개로 받는다. Config 가 바뀌면 값도 바뀐다.
+  useEffect(() => {
+    void api
+      .formSchema(applicationId)
+      .then(({ data }) => {
+        setSchema(data.schema as JsonSchema);
+        setSchemaVersion(data.schemaVersion);
+      })
+      .catch(() => setSchema(null));
+  }, [applicationId]);
+
+  /**
+   * 어떤 필드를 어느 단계에 보여줄지.
+   * 공통원서에서 넘어오는 항목은 1단계, 나머지는 3단계다.
+   * 스키마에 없는 필드는 어느 단계에도 나타나지 않는다.
+   */
+  const COMMON_FIELDS = ['highSchool', 'graduationYear', 'contactEmail'];
+  const commonCodes = Object.keys(schema?.properties ?? {}).filter((c) =>
+    COMMON_FIELDS.includes(c),
+  );
+  const extraCodes = Object.keys(schema?.properties ?? {}).filter(
+    (c) => !COMMON_FIELDS.includes(c),
+  );
+
   const recheck = useCallback(async () => {
     const res = await api.selfCheck(applicationId).catch(() => null);
     if (res) setSelfCheck(res.data);
@@ -99,7 +127,7 @@ export default function ApplyPage({
     const next = { ...fields, [code]: value };
     setFields(next);
     // 숫자 필드는 서버 스키마가 integer 를 요구한다.
-    autosave.schedule(coerce(next));
+    autosave.schedule(coerce(next, schema));
   }
 
   async function runValidate() {
@@ -209,22 +237,7 @@ export default function ApplyPage({
           <p style={{ marginTop: 0, color: 'var(--krds-fg-muted)', fontSize: 'var(--krds-text-sm)' }}>
             공통원서에서 가져온 정보입니다. 동의하신 항목만 이 대학으로 전달됩니다.
           </p>
-          <Field
-            label="출신 고등학교"
-            value={fields.highSchool ?? ''}
-            onChange={(v) => update('highSchool', v)}
-            hint="학력 확인을 위해 수집합니다."
-            required
-            maxLength={100}
-          />
-          <Field
-            label="졸업(예정) 연도"
-            value={fields.graduationYear ?? ''}
-            onChange={(v) => update('graduationYear', v)}
-            hint="지원 자격 확인을 위해 수집합니다. 예: 2027"
-            type="number"
-            required
-          />
+          <SchemaForm schema={schema} values={fields} onChange={update} only={commonCodes} />
           <Button onClick={() => setStep(2)}>다음 단계</Button>
         </Card>
       )}
@@ -254,24 +267,17 @@ export default function ApplyPage({
       {step === 3 && (
         <Card title="3. 추가정보">
           <p style={{ marginTop: 0, color: 'var(--krds-fg-muted)', fontSize: 'var(--krds-text-sm)' }}>
-            이 대학이 추가로 요구하는 항목입니다. 대학마다 다릅니다.
+            이 대학이 추가로 요구하는 항목입니다. 대학·전형마다 다릅니다.
+            {schemaVersion && (
+              <>
+                {' '}
+                <span style={{ color: 'var(--krds-fg-subtle)' }}>
+                  (양식 버전 {schemaVersion})
+                </span>
+              </>
+            )}
           </p>
-          <Field
-            label="자기소개"
-            value={fields.selfIntro ?? ''}
-            onChange={(v) => update('selfIntro', v)}
-            hint="지원 동기와 학업 계획을 작성해 주십시오. 10자 이상."
-            required
-            multiline
-            maxLength={1500}
-          />
-          <Field
-            label="내신 성적 (선택)"
-            value={fields.gpa ?? ''}
-            onChange={(v) => update('gpa', v)}
-            hint="0 이상 5 이하"
-            type="number"
-          />
+          <SchemaForm schema={schema} values={fields} onChange={update} only={extraCodes} />
           <div style={{ display: 'flex', gap: 'var(--krds-space-3)' }}>
             <Button variant="secondary" onClick={() => setStep(2)}>
               이전
@@ -389,12 +395,20 @@ export default function ApplyPage({
   );
 }
 
-/** 서버 스키마가 숫자를 요구하는 필드는 숫자로 바꿔 보낸다. */
-function coerce(fields: Record<string, string>): Record<string, unknown> {
+/**
+ * 서버 스키마가 숫자를 요구하는 필드는 숫자로 바꿔 보낸다.
+ * **어느 필드가 숫자인지도 스키마에서 읽는다.** 필드명을 코드에 박지 않는다.
+ */
+function coerce(
+  fields: Record<string, string>,
+  schema: JsonSchema | null,
+): Record<string, unknown> {
+  const props = schema?.properties ?? {};
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(fields)) {
     if (v === '') continue;
-    out[k] = k === 'graduationYear' || k === 'gpa' ? Number(v) : v;
+    const type = props[k]?.type;
+    out[k] = type === 'integer' || type === 'number' ? Number(v) : v;
   }
   return out;
 }

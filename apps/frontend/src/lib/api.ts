@@ -226,6 +226,21 @@ export const api = {
 
   selfCheck: (id: string) => call<SelfCheck>(`/api/v1/applications/${id}/self-check`),
 
+  /**
+   * 추가문항 스키마. 화면은 이것을 보고 입력 필드를 그린다.
+   * 전형이 늘어도 프론트 코드를 고치지 않는 근거다. (v1.1 §A5)
+   */
+  formSchema: (id: string) =>
+    call<{
+      admissionTypeCode: string;
+      schemaVersion: string;
+      schema: {
+        type?: string;
+        properties?: Record<string, Record<string, unknown>>;
+        required?: string[];
+      };
+    }>(`/api/v1/applications/${id}/form-schema`),
+
   submission: (id: string) => call<Submission>(`/api/v1/applications/${id}/submission`),
 
   /** 중앙 Dashboard. 중앙이 죽어 있으면 NetworkError 가 난다 — 화면이 그것을 다룬다. */

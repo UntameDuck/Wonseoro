@@ -105,8 +105,13 @@ export class FormSchemaService {
       );
     }
 
-    // 값 타입은 부분 저장이어도 확인한다. required 만 건너뛴다.
-    const partial = { ...schema, required: [] as string[] };
+    // 값 타입은 부분 저장이어도 확인한다.
+    // 다만 "더 입력하면 충족될 수 있는" 제약은 검사하지 않는다.
+    //
+    // minLength 8 인 필드를 검사하면 사용자가 1자, 2자… 를 칠 때마다 저장이 실패해
+    // **그 필드를 영원히 채울 수 없다.** required·minimum·pattern·format 도 같다.
+    // 반대로 maxLength 초과는 더 쳐도 나아지지 않으므로 지금 막는다.
+    const partial = relaxForPartialInput(schema);
     const result = this.runValidation(
       `${cycleId}::${admissionTypeCode}::partial`,
       schemaVersion,
@@ -189,4 +194,22 @@ export class FormSchemaService {
       message: e.message ?? '값이 올바르지 않습니다',
     };
   }
+}
+
+/** 작성 도중에는 충족될 수 없는 제약을 걷어낸다. 최종검증에서는 그대로 본다. */
+function relaxForPartialInput(schema: Record<string, unknown>): Record<string, unknown> {
+  const properties = (schema.properties ?? {}) as Record<string, Record<string, unknown>>;
+  const relaxed: Record<string, unknown> = {};
+
+  for (const [code, prop] of Object.entries(properties)) {
+    const { minLength, minimum, pattern, format, ...keep } = prop;
+    // 참조만 하고 버린다. lint 가 미사용 변수를 잡지 않도록 void 처리한다.
+    void minLength;
+    void minimum;
+    void pattern;
+    void format;
+    relaxed[code] = keep;
+  }
+
+  return { ...schema, required: [], properties: relaxed };
 }
