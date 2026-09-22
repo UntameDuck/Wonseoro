@@ -1,0 +1,168 @@
+-- 정합성 제약 행동 검증 (T-M1-01 인수)
+--
+-- DDL 에 제약이 "존재하는지"가 아니라 "실제로 막는지"를 확인한다.
+-- 접수 중복·이벤트 중복·단독 승인은 코드가 아니라 DB 가 막아야 한다.
+--
+-- 실행: docker exec -i wonseoro-dev-postgres-univ-a-1 \
+--         psql -U wonseoro -d univ_a -v ON_ERROR_STOP=1 < infra/db/verify-constraints.sql
+
+SET search_path TO kadmission, public;
+
+BEGIN;
+
+-- ── 시드 ──────────────────────────────────────────────────────────────
+INSERT INTO university (id, name, status)
+VALUES ('UNIV-A', '검증대학교', 'ACTIVE');
+
+INSERT INTO admission_cycle (id, university_id, admission_year, name, opens_at, closes_at, status)
+VALUES ('11111111-1111-1111-1111-111111111111', 'UNIV-A', 2027, '2027 수시',
+        '2026-09-01T00:00:00Z', '2026-09-11T09:00:00Z', 'OPEN');
+
+INSERT INTO admission_type (id, cycle_id, code, name, fee_amount)
+VALUES ('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111',
+        'EARLY', '학생부종합', 55000);
+
+INSERT INTO department (id, cycle_id, code, name, quota)
+VALUES ('33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111',
+        'CSE', '컴퓨터공학과', 40);
+
+INSERT INTO applicant (id, subject_token, pii_ciphertext, pii_key_version)
+VALUES ('44444444-4444-4444-4444-444444444444', 'subj-verify-0001', '\x00', 'v1');
+
+INSERT INTO application (id, cycle_id, applicant_id, admission_type_id, department_id, status)
+VALUES ('55555555-5555-5555-5555-555555555555', '11111111-1111-1111-1111-111111111111',
+        '44444444-4444-4444-4444-444444444444', '22222222-2222-2222-2222-222222222222',
+        '33333333-3333-3333-3333-333333333333', 'PAID');
+
+-- ── 1. 중복 접수 차단 (submission.application_id UNIQUE) ───────────────
+-- v1.1 §01 E: "동일 Finalize 100회 재시도 → Submission 1건"
+DO $$
+DECLARE blocked boolean := false;
+BEGIN
+  INSERT INTO submission (id, application_id, application_number, requested_at,
+                          payment_verified_at, finalized_at, deadline_policy_version,
+                          config_version, evidence_hash)
+  VALUES ('66666666-6666-6666-6666-666666666666', '55555555-5555-5555-5555-555555555555',
+          '2027-A-000001', now(), now(), now(), 'p-v1', 'c-v1', 'h1');
+  BEGIN
+    INSERT INTO submission (id, application_id, application_number, requested_at,
+                            payment_verified_at, finalized_at, deadline_policy_version,
+                            config_version, evidence_hash)
+    VALUES ('77777777-7777-7777-7777-777777777777', '55555555-5555-5555-5555-555555555555',
+            '2027-A-000002', now(), now(), now(), 'p-v1', 'c-v1', 'h2');
+  EXCEPTION WHEN unique_violation THEN blocked := true;
+  END;
+  RAISE NOTICE '1. 중복 Submission 차단: %', CASE WHEN blocked THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT blocked, '같은 원서에 Submission 이 두 건 생성되었다';
+END $$;
+
+-- ── 2. 접수번호 중복 차단 (application_number UNIQUE) ──────────────────
+DO $$
+DECLARE blocked boolean := false;
+BEGIN
+  INSERT INTO application (id, cycle_id, applicant_id, admission_type_id, department_id, status)
+  VALUES ('88888888-8888-8888-8888-888888888888', '11111111-1111-1111-1111-111111111111',
+          '44444444-4444-4444-4444-444444444444', '22222222-2222-2222-2222-222222222222',
+          '33333333-3333-3333-3333-333333333333', 'PAID')
+  ON CONFLICT DO NOTHING;
+  BEGIN
+    INSERT INTO submission (id, application_id, application_number, requested_at,
+                            payment_verified_at, finalized_at, deadline_policy_version,
+                            config_version, evidence_hash)
+    VALUES ('99999999-9999-9999-9999-999999999999', '88888888-8888-8888-8888-888888888888',
+            '2027-A-000001', now(), now(), now(), 'p-v1', 'c-v1', 'h3');
+  EXCEPTION WHEN unique_violation THEN blocked := true;
+  END;
+  RAISE NOTICE '2. 접수번호 중복 차단: %', CASE WHEN blocked THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT blocked, '접수번호가 중복 발급되었다';
+END $$;
+
+-- ── 3. 이벤트 중복·순서 보장 (aggregate_id, aggregate_sequence) ────────
+-- v1.1 §A3: sequence gap 탐지의 전제
+DO $$
+DECLARE blocked boolean := false;
+BEGIN
+  INSERT INTO outbox_event (id, aggregate_id, aggregate_sequence, event_type,
+                            schema_version, payload, payload_hash)
+  VALUES (gen_random_uuid(), '55555555-5555-5555-5555-555555555555', 1,
+          'kr.kadmission.application.finalized.v1', 'v1', '{}'::jsonb, 'h');
+  BEGIN
+    INSERT INTO outbox_event (id, aggregate_id, aggregate_sequence, event_type,
+                              schema_version, payload, payload_hash)
+    VALUES (gen_random_uuid(), '55555555-5555-5555-5555-555555555555', 1,
+            'kr.kadmission.application.finalized.v1', 'v1', '{}'::jsonb, 'h');
+  EXCEPTION WHEN unique_violation THEN blocked := true;
+  END;
+  RAISE NOTICE '3. Outbox sequence 중복 차단: %', CASE WHEN blocked THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT blocked, '같은 sequence 이벤트가 두 건 생성되었다';
+END $$;
+
+-- ── 4. PG 거래 재사용 차단 (provider, provider_tx_id) ──────────────────
+-- v1.1 §09 고위험 Abuse Case: "동일 PG 거래 재사용"
+DO $$
+DECLARE blocked boolean := false;
+BEGIN
+  INSERT INTO payment (id, application_id, provider, provider_tx_id, amount, status)
+  VALUES (gen_random_uuid(), '55555555-5555-5555-5555-555555555555', 'mock-pg', 'TX-1', 55000, 'CONFIRMED');
+  BEGIN
+    INSERT INTO payment (id, application_id, provider, provider_tx_id, amount, status)
+    VALUES (gen_random_uuid(), '88888888-8888-8888-8888-888888888888', 'mock-pg', 'TX-1', 55000, 'CONFIRMED');
+  EXCEPTION WHEN unique_violation THEN blocked := true;
+  END;
+  RAISE NOTICE '4. PG 거래 재사용 차단: %', CASE WHEN blocked THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT blocked, '같은 PG 거래가 두 원서에 재사용되었다';
+END $$;
+
+-- ── 5. 단독 승인 차단 (approved_by_1 <> approved_by_2) ─────────────────
+-- v1.1 §01 E: "단독 운영자 1명으로 마감시간 변경 불가"
+DO $$
+DECLARE blocked boolean := false;
+BEGIN
+  BEGIN
+    INSERT INTO deadline_policy (id, cycle_id, version, mode, deadline_at,
+                                 approved_by_1, approved_by_2, approved_at,
+                                 policy_hash, immutable_snapshot)
+    VALUES (gen_random_uuid(), '11111111-1111-1111-1111-111111111111', 'v1',
+            'FINALIZED_COMMIT_BEFORE_DEADLINE', '2026-09-11T09:00:00Z',
+            'admin@univ-a', 'admin@univ-a', now(), 'h', '{}'::jsonb);
+  EXCEPTION WHEN check_violation THEN blocked := true;
+  END;
+  RAISE NOTICE '5. 단독 승인 마감정책 차단: %', CASE WHEN blocked THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT blocked, '한 사람이 마감정책을 단독 승인할 수 있다';
+END $$;
+
+-- ── 6. 허용되지 않은 상태값 차단 (application.status CHECK) ────────────
+DO $$
+DECLARE blocked boolean := false;
+BEGIN
+  BEGIN
+    UPDATE application SET status = 'WHATEVER'
+     WHERE id = '55555555-5555-5555-5555-555555555555';
+  EXCEPTION WHEN check_violation THEN blocked := true;
+  END;
+  RAISE NOTICE '6. 미정의 상태값 차단: %', CASE WHEN blocked THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT blocked, '상태머신에 없는 값이 DB 에 들어갔다';
+END $$;
+
+-- ── 7. 조건부 전이 (v1.1 §B3 — 읽고-검사하고-쓰기 금지) ────────────────
+-- 같은 전이를 두 번 시도하면 두 번째는 0건이어야 한다.
+DO $$
+DECLARE first_rows int; second_rows int;
+BEGIN
+  UPDATE application SET status = 'FINALIZING', version = version + 1
+   WHERE id = '55555555-5555-5555-5555-555555555555'
+     AND status = 'PAID' AND version = 1;
+  GET DIAGNOSTICS first_rows = ROW_COUNT;
+
+  UPDATE application SET status = 'FINALIZING', version = version + 1
+   WHERE id = '55555555-5555-5555-5555-555555555555'
+     AND status = 'PAID' AND version = 1;
+  GET DIAGNOSTICS second_rows = ROW_COUNT;
+
+  RAISE NOTICE '7. 조건부 전이 (1회차 %건, 2회차 %건): %',
+    first_rows, second_rows,
+    CASE WHEN first_rows = 1 AND second_rows = 0 THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT first_rows = 1 AND second_rows = 0, '조건부 전이가 중복 적용되었다';
+END $$;
+
+ROLLBACK;
