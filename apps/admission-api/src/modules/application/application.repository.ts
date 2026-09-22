@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { ApplicationStatus } from '@wonseoro/contracts';
-import { Db } from '../../infra/db/db.module';
+import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { AuditService } from '../audit/audit.service';
 import { ApplicationStateService } from './application-state.service';

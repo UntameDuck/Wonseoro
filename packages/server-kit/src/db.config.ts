@@ -37,6 +37,13 @@ export const DB_POOL_BUDGET: Record<string, DbPoolBudget> = {
     acquireTimeoutMs: 3_000,
     startupJitterMs: 2_000,
   },
+  // 중앙은 조회가 많고 쓰기는 이벤트 수신뿐이다.
+  'central-api': {
+    max: 10,
+    idleTimeoutMs: 10_000,
+    acquireTimeoutMs: 3_000,
+    startupJitterMs: 2_000,
+  },
   // Relay 는 배치 처리라 커넥션이 적어도 된다. 접수 API 의 몫을 뺏지 않는다.
   'event-relay': {
     max: 3,

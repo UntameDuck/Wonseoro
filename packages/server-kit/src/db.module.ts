@@ -1,8 +1,6 @@
-import { Global, Logger, Module, OnApplicationShutdown } from '@nestjs/common';
+import { DynamicModule, Global, Logger, Module, OnApplicationShutdown } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { poolBudgetFor, startupJitter } from './db.config';
-
-export const SERVICE_NAME = 'admission-api';
 
 /**
  * PostgreSQL 접근 계층.
@@ -14,16 +12,23 @@ export class Db implements OnApplicationShutdown {
   private readonly logger = new Logger(Db.name);
   readonly pool: Pool;
 
-  constructor() {
-    const budget = poolBudgetFor(SERVICE_NAME);
+  /**
+   * @param service  커넥션 예산을 고르는 키. db.config.ts 의 DB_POOL_BUDGET 에 있어야 한다.
+   * @param schema   search_path. 대학은 kadmission, 중앙은 kadmission_central.
+   */
+  constructor(
+    private readonly service: string,
+    schema = 'kadmission',
+  ) {
+    const budget = poolBudgetFor(service);
     this.pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       // v1.1 §B2 Connection Storm 차단 — Pod 당 상한을 고정한다.
       max: budget.max,
       idleTimeoutMillis: budget.idleTimeoutMs,
       connectionTimeoutMillis: budget.acquireTimeoutMs,
-      // 모든 세션이 kadmission 스키마를 보게 한다.
-      options: '-c search_path=kadmission,public',
+      // 모든 세션이 같은 스키마를 보게 한다.
+      options: `-c search_path=${schema},public`,
     });
 
     this.pool.on('error', (err) => {
@@ -33,8 +38,8 @@ export class Db implements OnApplicationShutdown {
   }
 
   /** 기동 시 여러 Pod 가 동시에 커넥션을 열지 않게 한다. (v1.1 §B2) */
-  static async jitter(): Promise<void> {
-    const ms = startupJitter(SERVICE_NAME);
+  async jitter(): Promise<void> {
+    const ms = startupJitter(this.service);
     if (ms > 0) await new Promise((r) => setTimeout(r, ms));
   }
 
@@ -78,9 +83,19 @@ export class Db implements OnApplicationShutdown {
   }
 }
 
+/**
+ * 앱마다 서비스명·스키마가 다르므로 forRoot 로 만든다.
+ *   DbModule.forRoot('admission-api')
+ *   DbModule.forRoot('central-api', 'kadmission_central')
+ */
 @Global()
-@Module({
-  providers: [{ provide: Db, useFactory: () => new Db() }],
-  exports: [Db],
-})
-export class DbModule {}
+@Module({})
+export class DbModule {
+  static forRoot(service: string, schema = 'kadmission'): DynamicModule {
+    return {
+      module: DbModule,
+      providers: [{ provide: Db, useFactory: () => new Db(service, schema) }],
+      exports: [Db],
+    };
+  }
+}

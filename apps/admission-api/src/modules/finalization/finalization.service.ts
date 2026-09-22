@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { EVENT_TYPE, ApplicationFinalizedData } from '@wonseoro/contracts';
-import { Db } from '../../infra/db/db.module';
+import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { AuditService } from '../audit/audit.service';
 import { DeadlineService } from '../deadline/deadline.service';

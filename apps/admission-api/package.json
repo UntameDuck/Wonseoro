@@ -23,7 +23,8 @@
     "ajv-formats": "^3.0.1",
     "pg": "^8.23.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "@wonseoro/server-kit": "*"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.0",

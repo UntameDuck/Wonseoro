@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { Db } from '../../infra/db/db.module';
+import { Db } from '@wonseoro/server-kit';
 import {
   IdempotencyRecord,
   IdempotencyScope,

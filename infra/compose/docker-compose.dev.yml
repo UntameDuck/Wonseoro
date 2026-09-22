@@ -29,13 +29,16 @@ services:
     ports: ['5442:5432']
     volumes: ['./.data/pg-univ-b:/var/lib/postgresql/data']
 
+  # 중앙 Plane 전용 DB. 대학 DB 와 **같은 인스턴스를 쓰지 않는다.**
+  # 중앙이 죽어도 대학 접수가 계속되는지 확인하려면 물리적으로 분리되어야 한다.
   postgres-central:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: wonseoro
       POSTGRES_PASSWORD: wonseoro
       POSTGRES_DB: central
-    ports: ['5433:5432']
+    # 5433 은 다른 프로젝트가 쓰는 경우가 있어 5434 를 쓴다.
+    ports: ['5434:5432']
     volumes: ['./.data/pg-central:/var/lib/postgresql/data']
 
   redis:

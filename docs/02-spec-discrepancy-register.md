@@ -204,6 +204,34 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-14. 중앙 DB 스키마에 canonical DDL 이 없다
+
+| | |
+|---|---|
+| **발견** | 2026-09-22 (M2, Sync Gateway 착수) |
+| **문제** | 노션 첨부 `k-admission-postgresql-ddl.txt` 는 **대학 Data Plane 전용**이다. 중앙(central-api)이 무엇을 어떤 스키마로 저장하는지 DDL 이 없다 |
+| **근거는 있다** | v1.0 §17.1 이 중앙 수집 범위를 규정한다 — 대학 ID / 전형연도·전형·모집단위 코드 / Opaque Application ID / 상태 / 제출시각 / Event 무결성 값. §3.1 이 Sync Gateway·Aggregate Store 역할을, §04 가 dedup 키(`source`+`id`)와 sequence 규칙을 정한다 |
+| **판정** | 위 문서들이 정한 범위 **안에서만** 중앙 스키마를 작성한다. 대학 DDL 을 복사하지 않는다 |
+| **저장소** | `infra/db/central/0001_init.sql` — 저장소가 1차 작성했음을 파일 상단에 명시 |
+| **노션 반영** | ⬜ 중앙 DDL 을 §04 또는 새 절의 첨부로 추가해야 한다. 그래야 다음부터 저장소가 원본이 되지 않는다 |
+| **상태** | 🟡 판정완료 — 노션 첨부 추가 필요 |
+
+---
+
+## D-15. 접수번호가 중앙에 가는지 문서마다 다르다
+
+| | |
+|---|---|
+| **발견** | 2026-09-22 (M2) |
+| **충돌** | v1.0 §17.1 "중앙 기본 수집" 목록에 **접수번호가 없다** / canonical CloudEvents 스키마는 `ApplicationFinalizedData.required` 에 **`applicationNumber` 를 포함**한다 |
+| **판정** | **첨부(CloudEvents 스키마)를 채택한다.** 판정 우선순위상 첨부가 본문 서술보다 위다 (§4) |
+| **근거** | 내 원서 Dashboard 가 접수번호를 보여주려면 중앙에 있어야 한다. 접수번호는 지원자 본인에게 이미 노출되는 값이고, 무작위라 다른 지원자를 훑는 데 쓸 수 없다 (§09 BOLA 대응 완료) |
+| **주의** | 그래도 접수번호는 **식별자**다. 중앙 로그·Metrics Label 에 넣지 않는다 |
+| **노션 반영** | ⬜ v1.0 §17.1 의 중앙 수집 목록에 접수번호를 추가하고, 왜 포함되는지 한 줄 근거를 붙인다 |
+| **상태** | 🟡 판정완료 |
+
+---
+
 <!--
 신규 항목 템플릿
 

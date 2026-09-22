@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
 import { PaymentStatus, PAYMENT_FINALIZABLE } from '@wonseoro/contracts';
-import { Db } from '../../infra/db/db.module';
+import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { AuditService } from '../audit/audit.service';
 import { PaymentProviderPort } from './payment.provider';

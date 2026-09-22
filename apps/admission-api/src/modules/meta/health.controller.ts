@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import { Db } from '../../infra/db/db.module';
+import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
 
 /**

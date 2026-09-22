@@ -24,7 +24,9 @@
     "build:contracts": "npm run build -w @wonseoro/contracts",
     "db:migrate": "docker exec -i wonseoro-dev-postgres-univ-a-1 psql -U wonseoro -d univ_a -v ON_ERROR_STOP=1 < infra/db/migrations/0001_init.sql",
     "db:verify": "docker exec -i wonseoro-dev-postgres-univ-a-1 psql -U wonseoro -d univ_a -v ON_ERROR_STOP=1 < infra/db/verify-constraints.sql",
-    "db:seed": "docker exec -i wonseoro-dev-postgres-univ-a-1 psql -U wonseoro -d univ_a -v ON_ERROR_STOP=1 < infra/db/seed-dev.sql"
+    "db:seed": "docker exec -i wonseoro-dev-postgres-univ-a-1 psql -U wonseoro -d univ_a -v ON_ERROR_STOP=1 < infra/db/seed-dev.sql",
+    "db:migrate:central": "docker exec -i wonseoro-dev-postgres-central-1 psql -U wonseoro -d central -v ON_ERROR_STOP=1 < infra/db/central/0001_init.sql",
+    "dev:relay": "npm run dev -w @wonseoro/event-relay"
   },
   "devDependencies": {
     "typescript": "^5.6.3",

@@ -1,5 +1,5 @@
 import { Global, Module } from '@nestjs/common';
-import { Db } from '../../infra/db/db.module';
+import { Db } from '@wonseoro/server-kit';
 import { IdempotencyStore } from './idempotency.store';
 import { PostgresIdempotencyStore } from './postgres-idempotency.store';
 

@@ -18,6 +18,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck -w @wonseoro/contracts
+      - run: npm run typecheck -w @wonseoro/server-kit
       # TODO(M1): OpenAPI lint + breaking-change 검사 (첨부 배치 후)
       # TODO(M1): CloudEvents JSON Schema 검증
 
@@ -31,6 +32,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run build -w @wonseoro/contracts -w @wonseoro/server-kit
       - run: npm run typecheck -w @wonseoro/admission-api -w @wonseoro/central-api -w @wonseoro/document-service -w @wonseoro/event-relay
       - run: npm run test -w @wonseoro/admission-api --if-present
 
@@ -62,6 +64,12 @@ jobs:
       # 제약이 실제로 막는지 먼저 확인한다
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/verify-constraints.sql
       - run: npm run test -w @wonseoro/admission-api
+      # 중앙 Plane 은 스키마가 다르다. 같은 인스턴스에 별도 DB 로 올린다.
+      - run: psql "$DATABASE_URL" -c 'CREATE DATABASE central'
+      - run: psql "${DATABASE_URL%/*}/central" -v ON_ERROR_STOP=1 -f infra/db/central/0001_init.sql
+      - run: npm run test -w @wonseoro/central-api
+        env:
+          DATABASE_URL: postgresql://wonseoro:wonseoro@localhost:5432/central
 
   frontend:
     name: frontend

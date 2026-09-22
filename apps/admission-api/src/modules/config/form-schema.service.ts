@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import Ajv, { ErrorObject, ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
-import { Db } from '../../infra/db/db.module';
+import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
 
 export interface ValidationIssue {

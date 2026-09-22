@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { after, before, describe, it } from 'node:test';
-import { Db } from './infra/db/db.module';
+import { Db } from '@wonseoro/server-kit';
 import { AuditService, GENESIS_HASH } from './modules/audit/audit.service';
 import { PostgresIdempotencyStore } from './common/idempotency/postgres-idempotency.store';
 import { FormSchemaService } from './modules/config/form-schema.service';
@@ -32,7 +32,7 @@ let applicationId: string;
 
 before(async () => {
   if (!DB_URL) return;
-  db = new Db();
+  db = new Db('admission-api', 'kadmission');
   available = await db.healthy();
   if (!available) return;
 

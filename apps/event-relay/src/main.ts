@@ -1,24 +1,27 @@
+import 'reflect-metadata';
+import { Logger } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+import { AppModule } from './app.module';
+
 /**
- * event-relay — Outbox Relay
+ * event-relay — Outbox 를 중앙으로 보낸다.
  *
- * M0 상태: 의존성 0의 헬스체크 전용 부트스트랩.
- * M1에서 NestFactory 기반으로 교체한다. (ADR-0001)
+ * 별도 프로세스인 이유는 하나다.
+ * **중앙 장애가 접수 API 로 전파되지 않게 하기 위함이다.** (v1.1 §10 §12)
  */
-import { createServer } from 'node:http';
+async function bootstrap(): Promise<void> {
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    new FastifyAdapter({ trustProxy: true }),
+  );
+  app.enableShutdownHooks();
 
-const PORT = Number(process.env.PORT ?? 3003);
-const SERVICE = 'event-relay';
+  const port = Number(process.env.PORT ?? 3003);
+  await app.listen({ port, host: '0.0.0.0' });
+  new Logger('event-relay').log(
+    `listening on :${port} (university=${process.env.UNIVERSITY_ID ?? 'UNSET'} → ${process.env.CENTRAL_SYNC_URL ?? 'http://localhost:3000'})`,
+  );
+}
 
-const server = createServer((req, res) => {
-  if (req.url === '/healthz' || req.url === '/readyz') {
-    res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ service: SERVICE, status: 'ok', time: new Date().toISOString() }));
-    return;
-  }
-  res.writeHead(404, { 'content-type': 'application/problem+json' });
-  res.end(JSON.stringify({ type: 'about:blank', title: 'Not Found', status: 404 }));
-});
-
-server.listen(PORT, () => {
-  console.log(`[${SERVICE}] listening on :${PORT}`);
-});
+void bootstrap();

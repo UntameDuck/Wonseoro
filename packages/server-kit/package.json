@@ -1,0 +1,16 @@
+{
+  "name": "@wonseoro/server-kit",
+  "version": "0.0.1",
+  "private": true,
+  "description": "세 서비스가 공유하는 서버 인프라. apps/* 는 서로를 import 하지 않고 이 패키지를 쓴다.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@wonseoro/contracts": "*"
+  }
+}

@@ -37,9 +37,26 @@
 
 | 구분 | 태스크 |
 |---|---|
-| ✅ 완료 | T-M2-01 · 02 · 03 · 04 · 05 · 06 · 11 |
-| 🔜 다음 | T-M2-07 event-relay · 08 Sync Gateway · 09 Dashboard · 10 Self-check |
+| ✅ 완료 | T-M2-01 · 02 · 03 · 04 · 05 · 06 · 07 · 08 · 09 · 11 |
+| 🔜 다음 | T-M2-10 Support Self-check · T-M1-09 Profile Snapshot |
 | 🔜 프론트 | T-M2-20~32 (전체) |
+
+### 🎯 Demo Gate 5 통과 — 이 제품의 핵심 주장이 증명된 지점
+
+```
+중앙(central-api) 정지 상태에서
+  원서 생성 → 자동저장 → 결제 → 재검증 → Finalize  → 201  2027-UNIV-A-CV7PST4HPC
+  대학 DB: submission 2건 / outbox PENDING 2건
+  relay:   ECONNREFUSED 로 지수 Backoff 재시도 (접수 API 에 영향 0)
+
+중앙 기동 후
+  relay 자동 재전송  → outbox pending=0, dead=0
+  중앙:  received_event 2건 / application_summary 2건 / sync_gap OPEN 0건
+  Dashboard: 접수번호 + 마지막 동기화 시각 표시
+  중앙 테이블 컬럼: 이름·연락처·주소·원서본문 **없음**
+```
+
+**중앙이 죽어 있는 동안에도 접수번호가 발급됐고, 복구 후 손실 0으로 반영됐다.**
 
 **Demo Gate 3·4 통과.** 결제 → 서버측 재검증 → Finalize → 접수번호 발급이 실제 DB 위에서 동작한다.
 
@@ -80,10 +97,10 @@ Outbox 가 `PENDING` 으로 남아 있는 것이 정상이다. 중앙 전송은 
 | T-M2-04 | **Finalize 트랜잭션** | §02, v1.0 §5.6 | 8단계 순서 준수, 외부 호출 0 | ✅ |
 | T-M2-05 | 접수번호 발급 | v1.0 §5.6 | 추측 불가 (§09 BOLA) | ✅ |
 | T-M2-06 | Outbox INSERT (동일 트랜잭션) | v1.0 §7.3 | aggregate_sequence 단조 증가 | ✅ |
-| T-M2-07 | event-relay 전송 루프 | §04, v1.0 §7.3 | 지수 Backoff+Jitter, ACK 후 SENT, Dead Letter |
-| T-M2-08 | central-api Sync Gateway | §04, §01 A3 | `source+id` dedup, sequence gap 탐지 |
-| T-M2-09 | Dashboard Summary Store | §10 §9 | 대학 DB 실시간 조회 금지, 마지막 동기화 시각 표시 |
-| T-M2-10 | Support Self-check API | §01 C7 | 사용자가 서버가 아는 상태를 직접 조회 |
+| T-M2-07 | event-relay 전송 루프 | §04, v1.0 §7.3 | 지수 Backoff+Jitter, ACK 후 SENT, Dead Letter | ✅ |
+| T-M2-08 | central-api Sync Gateway | §04, §01 A3 | `source+id` dedup, sequence gap 탐지 | ✅ |
+| T-M2-09 | Dashboard Summary Store | §10 §9 | 대학 DB 실시간 조회 금지, 마지막 동기화 시각 표시 | ✅ |
+| T-M2-10 | Support Self-check API | §01 C7 | 사용자가 서버가 아는 상태를 직접 조회 | ⬜ |
 | T-M2-11 | 접수증 조회 | §03 | 제출시각·전형·모집단위·상태 | ✅ |
 
 ### 프론트엔드 (권민준)
