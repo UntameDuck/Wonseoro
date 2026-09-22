@@ -23,9 +23,9 @@
 
 | 구분 | 태스크 |
 |---|---|
-| ✅ 완료 | T-M3-01 Deadline Policy Engine · T-M3-07 Evidence Package |
+| ✅ 완료 | T-M3-01 Deadline Policy · T-M3-04 Reconciliation · T-M3-05 Exception Queue · T-M3-07 Evidence Package |
 | 🟡 부분 | T-M3-02 Config Governance (Diff·Rollback 미구현) · T-M3-03 hash-chain (물리 분리는 M5) |
-| 🔜 다음 | T-M3-04 Reconciliation Center · T-M3-06 Autonomous Mode |
+| 🔜 다음 | T-M3-06 Autonomous Mode · T-M3-08 Circuit Breaker · T-M3-11~13 Admin Web |
 
 ### §01 E 핵심 인수기준 "단독 운영자 1명으로 마감시간 변경 불가" 통과
 
@@ -46,6 +46,42 @@ Config 도 동일: 작성자 승인 403 / 승인 0명 활성화 403 / 2인 승�
 
 정책 변경 이력에 **누가 언제 승인·활성화했는지**와 `policy_hash` 가 남는다.
 분쟁 시 "기억"이 아니라 이 기록으로 답한다. (§A2)
+
+### Reconciliation Center — 4-way 대조 (T-M3-04·05)
+
+불일치를 일부러 만들어 확인했다.
+
+```
+1. 결제 CONFIRMED + 접수 기록 없음  ← 돈은 나갔는데 접수가 안 된 상태
+2. 대조 실행       → {"checked":1,"opened":1,"stillOpen":1}
+3. Exception Queue → CRITICAL  PAYMENT_CONFIRMED_WITHOUT_SUBMISSION
+                     facts: {amount, payment_id, verified_at}
+4. 사유 없이 해소 시도 → 400
+5. 늦게 접수 완료 (PG 콜백 지연 상황)
+6. 대조 재실행     → {"autoResolved":1,"stillOpen":0}
+7. 상태            → AUTO_RESOLVED / SELF_HEALED
+```
+
+검사 7종
+
+| 종류 | 심각도 | 의미 |
+|---|---|---|
+| `PAYMENT_CONFIRMED_WITHOUT_SUBMISSION` | CRITICAL | 돈은 나갔는데 접수가 없다 |
+| `SUBMISSION_WITHOUT_CONFIRMED_PAYMENT` | CRITICAL | 접수됐는데 확인된 결제가 없다 |
+| `FINALIZED_WITHOUT_SUBMISSION` | CRITICAL | 같은 트랜잭션이라 정상적으로는 불가능. 나오면 DB 손상 |
+| `SUBMISSION_WITHOUT_FINALIZED_STATUS` | CRITICAL | 상태와 접수 원장이 어긋났다 |
+| `CENTRAL_ACK_MISSING` | HIGH | 통합 조회 반영만 늦다. **접수 실패가 아니다** |
+| `OUTBOX_DEAD_LETTER` | HIGH | 재시도 한도를 넘겨 버려진 이벤트 |
+| `PAYMENT_STATE_UNKNOWN_STALE` | HIGH | 확인 못 한 결제 방치. 두면 재결제 문의가 몰린다 |
+
+원칙 두 가지를 코드에 박았다.
+
+**정상 건은 큐에 올리지 않는다.** (§B18) 목록에 정상 건이 섞이면 실제 사고가 묻힌다.
+**자동으로 고치지 않는다.** 돈과 접수 기회가 걸린 상태를 코드가 임의로 바꾸면 안 된다.
+발견하고 사람에게 넘긴다. 다만 **저절로 풀린 건은 AUTO_RESOLVED 로 닫는다** —
+해소된 건을 큐에 두는 것도 신호를 묻는 일이다.
+
+수동 해소에는 처리 코드와 **사유가 필수**이고, before/after 가 감사에 남는다. (§B16)
 
 ### Evidence Package — §01 E "접수과정을 재구성 가능" 통과 (T-M3-07)
 
@@ -118,8 +154,8 @@ T-M3-02 를 🟡 로 둔 이유이며, Diff·Rollback 이 붙어야 완료다.
 | T-M3-01 | **Deadline Policy Engine** | 송리안 | §01 A2·C1 | 3개 룰 프로파일, 2인 승인, 정책버전, 경계값 검증 | ✅ |
 | T-M3-02 | Configuration Governance | 송리안 | §01 A14·C5 | 2인 승인·예약 활성화. Diff·Rollback·Freeze 는 미구현 | 🟡 |
 | T-M3-03 | Audit hash-chain + 분리 저장소 | 송리안 | §01 A11, v1.0 §9 | hash-chain·변조 검출 ✅ / WORM 물리 분리는 M5 | 🟡 |
-| T-M3-04 | **Reconciliation Center (4-way)** | 송리안 | §01 A4·B18·C2 | Application/Payment/Submission/Central 대조 |
-| T-M3-05 | Exception Queue + 수동 승인 복구 | 송리안 | §01 A4·B16 | 불일치만 큐로, 보정은 Admin Action API로만 |
+| T-M3-04 | **Reconciliation Center (4-way)** | 송리안 | §01 A4·B18·C2 | Application/Payment/Submission/Central 대조 | ✅ |
+| T-M3-05 | Exception Queue + 수동 승인 복구 | 송리안 | §01 A4·B16 | 불일치만 큐로, 보정은 Admin Action API로만 | ✅ |
 | T-M3-06 | **Autonomous Mode** | 송리안 | §01 A1·C3 | Local Policy Snapshot·JWKS Cache·Offline Spool |
 | T-M3-07 | Evidence Package 생성 | 송리안 | §01 A11·C6 | 상태 Timeline·정책·결제증적·config·clock·hash 검증 |
 | T-M3-08 | Dependency Circuit Breaker | 송리안 | §01 C8 | PG/중앙/문자/메일 장애 전파 차단 |

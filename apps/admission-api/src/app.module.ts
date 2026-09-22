@@ -10,6 +10,7 @@ import { DocumentModule } from './modules/document/document.module';
 import { EvidenceModule } from './modules/evidence/evidence.module';
 import { FinalizationModule } from './modules/finalization/finalization.module';
 import { PaymentModule } from './modules/payment/payment.module';
+import { ReconciliationModule } from './modules/reconciliation/reconciliation.module';
 import { MetaModule } from './modules/meta/meta.module';
 
 @Module({
@@ -25,6 +26,7 @@ import { MetaModule } from './modules/meta/meta.module';
     EvidenceModule,
     PaymentModule,
     FinalizationModule,
+    ReconciliationModule,
     MetaModule,
   ],
 })

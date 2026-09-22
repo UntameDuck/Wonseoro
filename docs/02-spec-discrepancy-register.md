@@ -357,6 +357,33 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-25. reconciliation_exception 에 중복 방지 제약이 없다
+
+| | |
+|---|---|
+| **발견** | 2026-09-23 (M3, Reconciliation Center 구현) |
+| **문제** | `reconciliation_exception` 에 `(application_id, exception_type)` UNIQUE 가 없다. §B18 의 D+1 대조는 **주기적으로 돈다.** 같은 불일치가 매 실행마다 새 행으로 쌓인다 |
+| **결과** | 하나의 사고가 큐에 수십 건으로 보인다. 운영자가 "몇 건이 남았는가" 를 판단할 수 없고, 해결해도 다음 실행에 다시 생긴다 |
+| **잠정 조치** | 삽입 전에 같은 종류의 OPEN/MANUAL_REVIEW 건이 있는지 조회해 건너뛴다. **경쟁 상태에서는 여전히 중복이 가능하다** — 두 인스턴스가 동시에 대조하면 둘 다 "없음" 을 보고 둘 다 넣는다 |
+| **필요한 DDL** | `CREATE UNIQUE INDEX uq_recon_open ON reconciliation_exception(application_id, exception_type) WHERE state IN ('OPEN','MANUAL_REVIEW');` 부분 유니크 인덱스면 해결된 건은 여러 개 남아도 된다 |
+| **노션 반영** | ⬜ §02 첨부 DDL 에 추가 |
+| **상태** | 🔴 OPEN — DDL 변경 필요 |
+
+---
+
+## D-26. Reconciliation 수동 실행 경로가 계약에 없다
+
+| | |
+|---|---|
+| **발견** | 2026-09-23 (M3) |
+| **문제** | §B18 은 "D+1 에 자동 대조" 를 규정하고 OpenAPI 는 목록 조회와 해소만 제공한다. **대조를 지금 돌리는 경로가 없다** |
+| **왜 필요한가** | 장애 대응 중에는 다음 배치를 기다릴 수 없다. SEV1 런북의 `Reconciliation` 단계(§14.3)는 즉시 실행을 전제로 한다. 배치 주기가 하루면 그 사이 운영자는 상태를 확인할 방법이 없다 |
+| **판정** | `POST /admin/v1/reconciliation/run` 추가 |
+| **노션 반영** | ⬜ §03 과 첨부 yaml 에 추가 |
+| **상태** | 🟡 판정완료 — 계약 추가 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 
