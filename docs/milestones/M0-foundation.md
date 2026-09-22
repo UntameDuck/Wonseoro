@@ -25,7 +25,7 @@
 | T-M0-04 | 로컬 Compose 스택 | 권민준 | v1.0 §4 | postgres(대학/중앙 분리)·redis·minio 기동 | ✅ |
 | T-M0-05 | CI 골격 (앱별 독립 잡) | 권민준 | v1.0 §13.1 | contracts/backend/frontend 잡 분리 | ✅ |
 | T-M0-06 | **설계서 첨부 8종 배치** | 송리안 | 전 문서 | `docs/spec-assets/README.md` 10행 전부 ✅ | ⬜ |
-| T-M0-07 | `npm install` + 헬스체크 확인 | 권민준 | — | 두 API `/healthz` 200 | ⬜ |
+| T-M0-07 | `npm install` + 헬스체크 확인 | 권민준 | — | 두 API `/healthz` 200 | ✅ |
 | T-M0-08 | 제출 PDF "Java LTS" 문구 정정 | 송리안 | ADR-0001, D-3 | 정정본 확보 | ⬜ |
 
 ## 태스크 상세
@@ -52,8 +52,8 @@ ADR-0001의 기술적 동등성 논거를 그대로 쓴다. Java를 못 해서�
 
 ## 종료 체크리스트
 
-- [ ] 첨부 8종 전부 배치 완료 (`docs/spec-assets/README.md` 전 행 ✅)
-- [ ] `npm install` → `/healthz` 200 확인
+- [~] 첨부 배치 3/10 (DDL·OpenAPI·CloudEvents 완료. 나머지 7종은 M4/M5 착수 전까지)
+- [x] `npm install` → `/healthz` 200 확인
 - [ ] 노션 v1.0 §4 기술 스택 표 Backend 행 수정 (D-3)
 - [ ] 불일치 대장 D-1·D-2·D-3·D-4의 "노션 반영" 열 처리
 - [ ] 두 사람이 각자 로컬에서 동일하게 기동되는지 교차 확인
