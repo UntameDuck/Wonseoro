@@ -1,0 +1,25 @@
+{
+  "name": "wonseoro",
+  "version": "0.0.1",
+  "private": true,
+  "description": "원서로 / K-Admission — K-PaaS 기반 분산형 대학입학 원서접수 표준 플랫폼",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:infra": "docker compose -f infra/compose/docker-compose.dev.yml up -d",
+    "dev:infra:down": "docker compose -f infra/compose/docker-compose.dev.yml down",
+    "dev:university": "npm run dev -w @wonseoro/university-api",
+    "dev:central": "npm run dev -w @wonseoro/central-api",
+    "dev:web": "npm run dev -w @wonseoro/applicant-web",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  }
+}

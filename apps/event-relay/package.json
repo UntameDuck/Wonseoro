@@ -1,0 +1,17 @@
+{
+  "name": "@wonseoro/event-relay",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Outbox Relay — 대학 Outbox를 중앙 Sync Gateway로 at-least-once 전송",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --experimental-strip-types src/main.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@wonseoro/contracts": "*"
+  }
+}

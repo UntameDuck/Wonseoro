@@ -1,0 +1,24 @@
+{
+  "name": "@wonseoro/frontend",
+  "version": "0.0.1",
+  "private": true,
+  "description": "지원자 웹 — KRDS 기반 6단계 원서접수 흐름",
+  "scripts": {
+    "dev": "next dev -p 4000",
+    "build": "next build",
+    "start": "next start -p 4000",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@wonseoro/contracts": "*",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "typescript": "^5.6.0"
+  }
+}

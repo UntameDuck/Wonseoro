@@ -1,0 +1,17 @@
+{
+  "name": "@wonseoro/central-api",
+  "version": "0.0.1",
+  "private": true,
+  "description": "중앙 Control + Convenience Plane — Registry/GitOps/Sync Gateway/Catalog/Dashboard",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --experimental-strip-types src/main.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@wonseoro/contracts": "*"
+  }
+}

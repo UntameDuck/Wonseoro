@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 앱별로 잡을 분리한다. 프론트 수정이 백엔드 테스트를 돌리지 않는다. (ADR-0002)
+jobs:
+  contracts:
+    name: contracts (계약 — 변경 시 두 사람 리뷰 필수)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck -w @wonseoro/contracts
+      # TODO(M1): OpenAPI lint + breaking-change 검사 (첨부 배치 후)
+      # TODO(M1): CloudEvents JSON Schema 검증
+
+  backend:
+    name: backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck -w @wonseoro/admission-api -w @wonseoro/central-api -w @wonseoro/document-service -w @wonseoro/event-relay
+      - run: npm run test -w @wonseoro/admission-api --if-present
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck -w @wonseoro/frontend
+
+  # M5에서 활성화 — 기술설계서 v1.0 §8.4 CI/CD Security Gate 10종
+  # security:
+  #   1. Secret Scan  2. SAST  3. SCA/CVE  4. SBOM  5. Container Image Scan
+  #   6. IaC/K8s Manifest Scan  7. Unit/Integration Security Test  8. DAST
+  #   9. Image Signing  10. Admission Controller에서 미서명 이미지 배포 거부

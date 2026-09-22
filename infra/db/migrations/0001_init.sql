@@ -1,0 +1,15 @@
+-- 0001_init.sql
+--
+-- ⚠️ 이 파일은 아직 비어 있다.
+-- canonical DDL은 노션 v1.1 §02의 첨부 `k-admission-postgresql-ddl.txt` 다.
+-- 해당 첨부를 내려받아 이 파일로 옮긴 뒤 커밋한다.
+--
+-- 직접 새로 작성하지 말 것. 설계 원본이 둘로 갈라지면
+-- v1.1 §A5(표준 붕괴) / §A16(Breaking Change) 위험이 그대로 발생한다.
+--
+-- 옮긴 뒤 아래 제약이 실제로 들어갔는지 확인한다 (infra/db/README.md):
+--   - submission.application_id UNIQUE
+--   - outbox_event(aggregate_id, aggregate_sequence) UNIQUE
+--   - payment(provider, provider_tx_id) UNIQUE
+--   - application.version BIGINT NOT NULL
+--   - outbox_event(status) WHERE status = 'PENDING' partial index

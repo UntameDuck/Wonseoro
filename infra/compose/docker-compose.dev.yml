@@ -1,0 +1,60 @@
+# 로컬 개발 스택.
+# 대학 Data Plane 격리 원칙을 로컬에서도 지킨다: 대학마다 별도 DB를 쓴다.
+# M4에서 K-PaaS/kind 기반 실제 다중 클러스터로 교체한다.
+name: wonseoro-dev
+
+services:
+  postgres-univ-a:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: wonseoro
+      POSTGRES_PASSWORD: wonseoro
+      POSTGRES_DB: univ_a
+    ports: ['5432:5432']
+    volumes: ['./.data/pg-univ-a:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U wonseoro -d univ_a']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # M4 분산 실증용. 평소에는 `--profile multi` 로만 띄운다.
+  postgres-univ-b:
+    image: postgres:16-alpine
+    profiles: ['multi']
+    environment:
+      POSTGRES_USER: wonseoro
+      POSTGRES_PASSWORD: wonseoro
+      POSTGRES_DB: univ_b
+    ports: ['5442:5432']
+    volumes: ['./.data/pg-univ-b:/var/lib/postgresql/data']
+
+  postgres-central:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: wonseoro
+      POSTGRES_PASSWORD: wonseoro
+      POSTGRES_DB: central
+    ports: ['5433:5432']
+    volumes: ['./.data/pg-central:/var/lib/postgresql/data']
+
+  redis:
+    image: redis:7-alpine
+    ports: ['6379:6379']
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
+
+  # S3 호환 Object Storage. 서류는 브라우저에서 여기로 직접 업로드한다.
+  minio:
+    image: minio/minio:latest
+    command: ['server', '/data', '--console-address', ':9001']
+    environment:
+      MINIO_ROOT_USER: wonseoro
+      MINIO_ROOT_PASSWORD: wonseoro123
+    ports: ['9000:9000', '9001:9001']
+    volumes: ['./.data/minio:/data']
+
+  # PG Sandbox 대체. M2까지는 Mock Provider로 개발한다.
+  pg-mock:
+    image: mockserver/mockserver:latest
+    profiles: ['payment']
+    ports: ['1080:1080']
