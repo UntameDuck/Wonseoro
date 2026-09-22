@@ -297,6 +297,7 @@ k-admission/
 
 ## References
 
+- [다음 단계 및 현재 진행 현황](docs/03-next-steps.md)
 - [K-Admission 기술설계서](https://efficient-rook-e79.notion.site/K-Admission-K-PaaS-3de75ab5debe801f99c5fee017130c65)
 - [Wonseoro GitHub Repository](https://github.com/UntameDuck/Wonseoro)
 - 2026년 GovTech 창업경진대회 제품·서비스 개발 분야 제출본

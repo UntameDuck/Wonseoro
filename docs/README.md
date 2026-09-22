@@ -4,12 +4,13 @@
 
 | 순서 | 문서 | 언제 읽나 |
 |---|---|---|
-| 0 | **[01-notion-sync-protocol.md](01-notion-sync-protocol.md)** | **작업 시작 전 무조건.** 노션을 언제·어떻게 확인하고 고치는지 |
-| 1 | [00-development-plan.md](00-development-plan.md) | 전체 그림 — 7단계 구성, 역할 분담, MVP 범위, DoD |
-| 2 | [milestones/](milestones/) | 지금 하는 단계의 세부 태스크 |
-| 3 | [adr/](adr/) | 왜 이렇게 정했는지 |
-| 4 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) | 문서 간 충돌이 의심될 때 |
-| 5 | [spec-assets/README.md](spec-assets/README.md) | 노션 첨부 배치 현황 |
+| 0 | **[03-next-steps.md](03-next-steps.md)** | **지금 무엇을 할 차례인가.** 이어받을 때 여기부터 |
+| 1 | **[01-notion-sync-protocol.md](01-notion-sync-protocol.md)** | **작업 시작 전 무조건.** 노션을 언제·어떻게 확인하고 고치는지 |
+| 2 | [00-development-plan.md](00-development-plan.md) | 전체 그림 — 7단계 구성, 역할 분담, MVP 범위, DoD |
+| 3 | [milestones/](milestones/) | 지금 하는 단계의 세부 태스크 |
+| 4 | [adr/](adr/) | 왜 이렇게 정했는지 |
+| 5 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) | 문서 간 충돌이 의심될 때 |
+| 6 | [spec-assets/README.md](spec-assets/README.md) | 노션 첨부 배치 현황 |
 
 ## 마일스톤 (총 7단계)
 
@@ -23,7 +24,9 @@
 | M5 | [신뢰성·보안·접근성](milestones/M5-reliability-security.md) | 33 | 대학에 넣을 수 있는 수준 |
 | M6 | [Pilot 준비](milestones/M6-pilot-readiness.md) | 15 | 대학 1곳 Shadow Test |
 
-총 **134개 태스크**. 각 태스크에 담당·근거 노션 절·인수기준이 붙어 있다.
+총 **139개 태스크, 27개 완료 (2026-09-22)**. 각 태스크에 담당·근거 노션 절·인수기준이 붙어 있다.
+
+진행 현황과 다음 착수 순서는 **[03-next-steps.md](03-next-steps.md)** 를 본다.
 
 ## 각 마일스톤 문서의 구조
 
