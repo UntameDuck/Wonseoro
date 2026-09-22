@@ -4,6 +4,7 @@ import { after, before, describe, it } from 'node:test';
 import { Db } from './infra/db/db.module';
 import { AuditService, GENESIS_HASH } from './modules/audit/audit.service';
 import { PostgresIdempotencyStore } from './common/idempotency/postgres-idempotency.store';
+import { FormSchemaService } from './modules/config/form-schema.service';
 import { IdempotencyScope } from './common/idempotency/idempotency.store';
 
 /**
@@ -210,5 +211,100 @@ describe('Postgres Idempotency Store', () => {
 
     assert.equal(await store.acquire({ applicationId, operation: 'op-a', key }, 'h'), null);
     assert.equal(await store.acquire({ applicationId, operation: 'op-b', key }, 'h'), null);
+  });
+});
+
+describe('추가문항 Schema Registry (v1.1 §A5)', () => {
+  it('활성 Config 에서 전형별 스키마를 읽는다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const forms = new FormSchemaService(db);
+    const loaded = await forms.load(CYCLE, 'EARLY');
+    assert.equal(loaded.schemaVersion, 'cfg-2027-v1', 'seed-dev.sql 의 활성 Config');
+    assert.ok((loaded.schema.properties as Record<string, unknown>)['selfIntro']);
+  });
+
+  it('자동저장은 부분 입력을 허용한다 — required 를 걸지 않는다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const forms = new FormSchemaService(db);
+    const version = await forms.assertKnownFields(CYCLE, 'EARLY', { highSchool: '원서로고등학교' });
+    assert.equal(version, 'cfg-2027-v1');
+  });
+
+  it('스키마에 없는 항목은 자동저장 단계에서 거부한다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const forms = new FormSchemaService(db);
+    await assert.rejects(
+      forms.assertKnownFields(CYCLE, 'EARLY', { 잘못된항목: 'x' }),
+      (err: { problem?: { status: number } }) => err.problem?.status === 400,
+    );
+  });
+
+  it('타입이 틀린 값은 부분 저장에서도 거부한다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const forms = new FormSchemaService(db);
+    await assert.rejects(
+      forms.assertKnownFields(CYCLE, 'EARLY', { graduationYear: '이천이십칠' }),
+      (err: { problem?: { status: number } }) => err.problem?.status === 400,
+    );
+  });
+
+  it('최종검증은 누락 항목을 모아서 돌려준다 — 던지지 않는다 (v1.1 §07)', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const forms = new FormSchemaService(db);
+    const result = await forms.validate(CYCLE, 'EARLY', { highSchool: '원서로고등학교' });
+    assert.equal(result.valid, false);
+    const missing = result.issues.filter((i) => i.code === 'REQUIRED').map((i) => i.path);
+    assert.ok(missing.length >= 2, '누락 항목을 하나만 알려주면 사용자가 여러 번 왕복한다');
+  });
+
+  it('모두 채우면 통과한다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const forms = new FormSchemaService(db);
+    const result = await forms.validate(CYCLE, 'EARLY', {
+      highSchool: '원서로고등학교',
+      graduationYear: 2027,
+      selfIntro: '저는 분산 시스템에 관심이 있습니다.',
+    });
+    assert.deepEqual(result, { valid: true, issues: [] });
+  });
+
+  it('대학·전형을 추가해도 코드는 바뀌지 않는다 — Config 만 바꾼다 (§A5 핵심)', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const forms = new FormSchemaService(db);
+
+    // 새 전형 REGULAR 를 Config 에만 추가한다. apps/ 아래는 건드리지 않는다.
+    await db.query(
+      `UPDATE config_version
+          SET config_json = jsonb_set(config_json, '{forms,REGULAR}', $2::jsonb),
+              version = 'cfg-2027-v2'
+        WHERE cycle_id = $1 AND status = 'ACTIVE'`,
+      [
+        CYCLE,
+        JSON.stringify({
+          type: 'object',
+          additionalProperties: false,
+          required: ['csatNumber'],
+          properties: { csatNumber: { type: 'string', pattern: '^[0-9]{8}$' } },
+        }),
+      ],
+    );
+
+    const regular = await forms.validate(CYCLE, 'REGULAR', { csatNumber: '12345678' });
+    assert.deepEqual(regular, { valid: true, issues: [] }, '새 전형이 코드 변경 없이 동작해야 한다');
+
+    const bad = await forms.validate(CYCLE, 'REGULAR', { csatNumber: 'abc' });
+    assert.equal(bad.valid, false, '새 전형의 제약도 그대로 적용되어야 한다');
+
+    // 기존 전형은 영향받지 않는다.
+    const early = await forms.validate(CYCLE, 'EARLY', { highSchool: '원서로고등학교' });
+    assert.equal(early.valid, false);
+
+    // 되돌린다.
+    await db.query(
+      `UPDATE config_version
+          SET config_json = config_json #- '{forms,REGULAR}', version = 'cfg-2027-v1'
+        WHERE cycle_id = $1 AND status = 'ACTIVE'`,
+      [CYCLE],
+    );
   });
 });

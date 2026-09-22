@@ -24,11 +24,11 @@
 
 | 구분 | 태스크 |
 |---|---|
-| ✅ 완료 | T-M1-01 · 02 · 03 · 04 · 05 · 06 · 07 · 08 · 12 · 13 · 14 |
-| 🔴 남음 | T-M1-09(Profile Snapshot, central-api 필요) · 10(동적 폼 Schema) · 11(Document 파이프라인) |
+| ✅ 완료 | T-M1-01 · 02 · 03 · 04 · 05 · 06 · 07 · 08 · 10 · 12 · 13 · 14 |
+| 🔴 남음 | T-M1-09(Profile Snapshot, central-api 필요) · 11(Document 파이프라인, MinIO 필요) |
 
 검증
-- 테스트 **60개 통과** (단위 51 + 통합 9). DB 없으면 통합 9건은 skip 되어 CI 를 막지 않는다
+- 테스트 **67개 통과** (단위 51 + 통합 16). DB 없으면 통합분은 skip 되어 CI 를 막지 않는다
 - PostgreSQL 16 에 DDL 적용 → **21개 테이블** 생성
 - 정합성 제약 **행동 검증 7종 통과** (`infra/db/verify-constraints.sql`)
   제약이 "존재하는지"가 아니라 "실제로 막는지"를 확인했다
@@ -56,6 +56,20 @@
 | 같은 Idempotency-Key + 다른 본문 | **409** |
 | 감사 hash-chain | GENESIS 시작, 순차 연결, 변조 시 검출 |
 | 원서 삭제로 감사 기록 제거 시도 | FK 로 차단 |
+
+**추가문항 (T-M1-10)**
+
+| 확인 | 결과 |
+|---|---|
+| 스키마에 없는 항목 저장 | 400 — 모르는 필드를 받아두면 최종검증에서 원인을 못 찾는다 |
+| 타입이 틀린 값 | 400 + 경로 표시 (`/graduationYear must be integer`) |
+| 부분 저장 (required 미충족) | 200 — 작성 중에 required 를 걸면 한 글자도 저장 못 한다 |
+| 최종검증 `/validate` | 누락 항목을 **모아서** 반환 (한 화면 Error Summary) |
+| 전부 채운 뒤 재검증 | `valid: true` |
+| 새 전형 추가 | **Config 만 바꿔 동작.** `apps/` 아래 코드 변경 0 |
+
+마지막 줄이 §A5 의 핵심이다. 대학이 늘어나도 코드를 fork 하지 않는다는 주장을
+테스트로 고정해 뒀다 (`integration.test.ts` — "대학·전형을 추가해도 코드는 바뀌지 않는다").
 
 **구현 중 잡은 실제 버그**: Fastify `merge-patch` 파서를 `parseAs: 'string'` 으로 두면
 문자 수와 Content-Length(바이트 수)를 비교해 **한글 본문 요청이 전부 실패**한다.
@@ -88,7 +102,7 @@ canonical 첨부와 M1 초안 계약을 대조해 5건을 찾았다. 전부 대�
 | T-M1-07 | `GET /meta/time` | 송리안 | §01 A2 | serverTime·deadlineAt·policyVersion 동시 반환 | ✅ |
 | T-M1-08 | 마감 검증 (서버시간 기준) | 송리안 | §01 A2 | 브라우저 시간 미사용, 경계값 테스트 | ✅ |
 | T-M1-09 | Common Profile Snapshot 복사 | 공동 | §10 §3 | 원서 생성 시 동의 필드만 복사 | 🔴 central-api 필요 |
-| T-M1-10 | 동적 추가문항 Schema Registry | 송리안 | §01 A5 | 대학 차이를 JSON Schema로 흡수 | 🔴 |
+| T-M1-10 | 동적 추가문항 Schema Registry | 송리안 | §01 A5 | 대학 차이를 JSON Schema로 흡수, code fork 0 | ✅ |
 | T-M1-11 | Document Service 업로드 파이프라인 | 송리안 | v1.0 §5.4, §01 B5 | Presigned → QUARANTINED → AVAILABLE | 🔴 |
 | T-M1-12 | Audit Event 기록 (hash-chain) | 송리안 | v1.0 §9, §01 A11 | 상태 변경마다 감사 레코드, 변조 검출 | ✅ |
 | T-M1-13 | DB Connection Pool 예산 | 권민준 | §01 B2 | 서비스별 pool 상한 고정 | ✅ |

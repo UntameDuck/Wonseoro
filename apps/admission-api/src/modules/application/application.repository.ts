@@ -12,6 +12,8 @@ export interface ApplicationRow {
   cycleId: string;
   applicantId: string;
   admissionTypeId: string;
+  /** 추가문항 스키마를 고르는 키. (v1.1 §A5) */
+  admissionTypeCode: string;
   departmentId: string;
   status: ApplicationStatus;
   version: string;
@@ -39,8 +41,12 @@ export interface PatchApplicationInput {
 }
 
 const SELECT_COLS = `
-  id, cycle_id, applicant_id, admission_type_id, department_id,
-  status, version, last_saved_at`;
+  a.id, a.cycle_id, a.applicant_id, a.admission_type_id, a.department_id,
+  a.status, a.version, a.last_saved_at, t.code AS admission_type_code`;
+
+const FROM_APPLICATION = `
+  FROM application a
+  JOIN admission_type t ON t.id = a.admission_type_id`;
 
 @Injectable()
 export class ApplicationRepository {
@@ -96,7 +102,7 @@ export class ApplicationRepository {
 
   async findById(applicationId: string): Promise<ApplicationRow | null> {
     const { rows } = await this.db.query<Record<string, unknown>>(
-      `SELECT ${SELECT_COLS} FROM application WHERE id = $1`,
+      `SELECT ${SELECT_COLS} ${FROM_APPLICATION} WHERE a.id = $1`,
       [applicationId],
     );
     return rows[0] ? this.toRow(rows[0]) : null;
@@ -121,7 +127,7 @@ export class ApplicationRepository {
     return this.db.tx(async (client) => {
       // 잠금과 함께 현재 상태를 읽는다. 수정 가능 상태인지 먼저 본다.
       const { rows } = await client.query<Record<string, unknown>>(
-        `SELECT ${SELECT_COLS} FROM application WHERE id = $1 FOR UPDATE`,
+        `SELECT ${SELECT_COLS} ${FROM_APPLICATION} WHERE a.id = $1 FOR UPDATE OF a`,
         [input.applicationId],
       );
       const current = rows[0] ? this.toRow(rows[0]) : null;
@@ -193,7 +199,7 @@ export class ApplicationRepository {
       });
 
       const after = await client.query<Record<string, unknown>>(
-        `SELECT ${SELECT_COLS} FROM application WHERE id = $1`,
+        `SELECT ${SELECT_COLS} ${FROM_APPLICATION} WHERE a.id = $1`,
         [input.applicationId],
       );
       return this.toRow(after.rows[0] as Record<string, unknown>);
@@ -210,9 +216,9 @@ export class ApplicationRepository {
     },
   ): Promise<ApplicationRow> {
     const { rows } = await client.query<Record<string, unknown>>(
-      `SELECT ${SELECT_COLS} FROM application
-        WHERE cycle_id = $1 AND applicant_id = $2
-          AND admission_type_id = $3 AND department_id = $4`,
+      `SELECT ${SELECT_COLS} ${FROM_APPLICATION}
+        WHERE a.cycle_id = $1 AND a.applicant_id = $2
+          AND a.admission_type_id = $3 AND a.department_id = $4`,
       [key.cycleId, key.applicantId, key.admissionTypeId, key.departmentId],
     );
     const row = rows[0];
@@ -226,6 +232,7 @@ export class ApplicationRepository {
       cycleId: String(r.cycle_id),
       applicantId: String(r.applicant_id),
       admissionTypeId: String(r.admission_type_id),
+      admissionTypeCode: String(r.admission_type_code),
       departmentId: String(r.department_id),
       status: r.status as ApplicationStatus,
       // bigint 는 pg 가 문자열로 준다. 정밀도 손실을 막기 위해 문자열로 유지한다.
