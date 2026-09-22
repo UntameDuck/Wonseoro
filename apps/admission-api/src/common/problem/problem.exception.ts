@@ -160,6 +160,16 @@ export class ProblemException extends HttpException {
     });
   }
 
+  /** 권한·절차 위반. 2인 승인 규칙 위반이 여기로 온다. */
+  static forbidden(detail: string): ProblemException {
+    return new ProblemException({
+      code: ProblemCode.FORBIDDEN,
+      title: '허용되지 않은 요청입니다',
+      status: 403,
+      detail,
+    });
+  }
+
   static retryable(detail: string): ProblemException {
     return new ProblemException({
       code: ProblemCode.RETRYABLE,

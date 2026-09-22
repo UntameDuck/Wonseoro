@@ -19,12 +19,64 @@
 | [v1.0 §9 감사로그](https://app.notion.com/p/3de75ab5debe801f99c5fee017130c65) | 감사 이벤트 목록, hash-chain, WORM |
 | [09. STRIDE](https://app.notion.com/p/3df75ab5debe81e4bff5f44e1e3112d4) | Repudiation·Tampering 대응이 이 단계 기능과 직결 |
 
+## 진행 현황 (2026-09-23)
+
+| 구분 | 태스크 |
+|---|---|
+| ✅ 완료 | T-M3-01 Deadline Policy Engine · T-M3-02 Configuration Governance |
+| 🔜 다음 | T-M3-03 Audit hash-chain 분리 저장소 · T-M3-07 Evidence Package · T-M3-04 Reconciliation |
+
+### §01 E 핵심 인수기준 "단독 운영자 1명으로 마감시간 변경 불가" 통과
+
+실제로 막히는 것을 End-to-End 로 확인했다.
+
+```
+활성 정책 없음 → 마감 판정 거부                      503 (추측하지 않는다)
+정책 초안 생성 (admin1)                              201
+작성자 본인이 승인 시도                              403  ← 자기 변경을 혼자 통과시킬 수 없다
+승인 1명만 받고 활성화 시도                          403
+두 번째 담당자 승인                                  200  complete
+과거 시각으로 예약 활성화                            400  ← 승인 절차 소급 우회 차단
+정상 활성화                                          200
+마감 판정 동작                                       정책버전 pol-2027-v1
+
+Config 도 동일: 작성자 승인 403 / 승인 0명 활성화 403 / 2인 승인 후 ACTIVE
+```
+
+정책 변경 이력에 **누가 언제 승인·활성화했는지**와 `policy_hash` 가 남는다.
+분쟁 시 "기억"이 아니라 이 기록으로 답한다. (§A2)
+
+### 구현 중 확인한 DDL 결함 3건
+
+| # | 내용 | 영향 |
+|---|---|---|
+| **D-21** | `config_version` 에 승인 관련 DB 제약이 **없다** | 승인 0명으로 ACTIVE 가능. 현재는 코드만 막는다 |
+| D-22 | Deadline Policy 에 activate API 가 계약에 없다 | 승인과 활성화 분리(예약 활성화)가 불가능 |
+| D-23 | `deadline_policy` 에 status·created_at 이 없다 | 초안 상태를 표현할 수 없어 문자열 규약으로 우회 |
+
+### Diff 가 없으면 무슨 일이 생기는가 — 직접 겪었다
+
+구현 검증 중 **빈 Config(`{"forms":{}}`)를 2인 승인 절차대로 활성화했다.**
+절차는 전부 정상이었다. 승인 두 명, 활성화 성공.
+
+그런데 그 순간 모든 전형의 추가문항 스키마가 사라졌다.
+화면은 입력 항목이 하나도 없는 원서를 그렸고, 검증은 전부 통과했다.
+**절차를 지켰는데 서비스가 망가졌다.**
+
+§A14 가 2인 승인과 함께 **Diff** 를 요구하는 이유가 이것이다.
+승인자가 "무엇이 바뀌는가"를 보지 못하면 두 명이 승인해도 사고를 막지 못한다.
+T-M3-02 를 🟡 로 둔 이유이며, Diff·Rollback 이 붙어야 완료다.
+
+**D-21 이 가장 중요하다.** §A14 가 2인 승인을 요구하는 마감시각·전형료·모집단위·
+지원자격·PG 설정이 전부 `config_json` 에 들어가는데, DB 가 그것을 지키지 않는다.
+코드는 우회 가능하고 DB 는 아니다.
+
 ## 태스크
 
-| ID | 태스크 | 담당 | 근거 노션 | 인수기준 |
-|---|---|---|---|---|
-| T-M3-01 | **Deadline Policy Engine** | 송리안 | §01 A2·C1 | 3개 룰 프로파일, 2인 승인, 정책버전, 경계값 검증 |
-| T-M3-02 | Configuration Governance | 송리안 | §01 A14·C5 | Diff·2인 승인·예약 활성화·Rollback·Freeze |
+| ID | 태스크 | 담당 | 근거 노션 | 인수기준 | 상태 |
+|---|---|---|---|---|---|
+| T-M3-01 | **Deadline Policy Engine** | 송리안 | §01 A2·C1 | 3개 룰 프로파일, 2인 승인, 정책버전, 경계값 검증 | ✅ |
+| T-M3-02 | Configuration Governance | 송리안 | §01 A14·C5 | 2인 승인·예약 활성화. Diff·Rollback·Freeze 는 미구현 | 🟡 |
 | T-M3-03 | Audit hash-chain + 분리 저장소 | 송리안 | §01 A11, v1.0 §9 | prevHash/eventHash, 운영자 삭제·수정 불가 |
 | T-M3-04 | **Reconciliation Center (4-way)** | 송리안 | §01 A4·B18·C2 | Application/Payment/Submission/Central 대조 |
 | T-M3-05 | Exception Queue + 수동 승인 복구 | 송리안 | §01 A4·B16 | 불일치만 큐로, 보정은 Admin Action API로만 |
