@@ -62,3 +62,21 @@ ALTER TABLE deadline_policy
 CREATE UNIQUE INDEX uq_recon_open_per_type
   ON reconciliation_exception(application_id, exception_type)
   WHERE state IN ('OPEN','MANUAL_REVIEW');
+
+-- ── D-29 ─────────────────────────────────────────────────────────────────────
+-- 취소한 원서가 재지원을 영구히 막고 있었다.
+--
+-- 자연키 UNIQUE (cycle_id, applicant_id, admission_type_id, department_id) 에는
+-- 상태 조건이 없다. 그래서 착오로 취소한 지원자가 **마감 전인데도** 같은 전형에
+-- 다시 지원할 수 없다. 접수 기간 중에 이건 기능이 아니라 사고다.
+--
+-- 지키려던 규칙은 "같은 지원자가 같은 전형·모집단위에 두 번 넣을 수 없다" 였고,
+-- 그 규칙은 **유효한 원서** 사이에서만 의미가 있다. 취소된 원서는 유효하지 않다.
+-- EXPIRED 는 그대로 둔다 — 마감이 지난 것이라 어차피 재지원이 불가능하고,
+-- 범위를 넓힐수록 원래 보장에서 멀어진다.
+ALTER TABLE application
+  DROP CONSTRAINT application_cycle_id_applicant_id_admission_type_id_departm_key;
+
+CREATE UNIQUE INDEX uq_application_active_natural_key
+  ON application(cycle_id, applicant_id, admission_type_id, department_id)
+  WHERE status <> 'CANCELLED';

@@ -92,6 +92,22 @@ export class ProblemException extends HttpException {
     });
   }
 
+  /**
+   * 접수 완료 후 취소 시도. (불일치 대장 D-7)
+   * "불가능" 이 아니라 "이 경로로는 안 된다" 로 말한다 —
+   * 실제로 취소·환불이 필요한 사정이 있을 수 있고, 그때 갈 곳을 알려줘야 한다.
+   */
+  static cancellationAfterFinalize(): ProblemException {
+    return new ProblemException({
+      code: ProblemCode.ALREADY_FINALIZED,
+      title: '접수가 완료된 원서입니다',
+      status: 409,
+      detail:
+        '접수가 완료된 원서는 이 경로로 취소할 수 없습니다. ' +
+        '취소와 환불은 입학처에 문의해 주십시오.',
+    });
+  }
+
   static alreadyFinalized(): ProblemException {
     return new ProblemException({
       code: ProblemCode.ALREADY_FINALIZED,

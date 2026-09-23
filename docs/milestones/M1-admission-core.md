@@ -99,7 +99,7 @@ canonical 첨부와 M1 초안 계약을 대조해 5건을 찾았다. 전부 대�
 
 | # | 내용 | 처리 |
 |---|---|---|
-| D-7 | `CANCELLED` 상태가 DDL·OpenAPI에는 있으나 상태머신 정의가 없음 | 🔴 **설계 결정 필요** |
+| D-7 | `CANCELLED` 상태가 DDL·OpenAPI에는 있으나 상태머신 정의가 없음 | 🟡 판정완료 — 접수 성립 전만 취소, 환불은 사람이 승인 |
 | D-8 | Payment 상태값 불일치 (`INTENT_CREATED`/`APPROVED` → `CREATED`, `APPROVED` 없음) | 🟢 반영 |
 | D-9 | Deadline Policy 필드명 (`rule` → `mode`, 승인자 배열 → 2컬럼) | 🟢 반영 |
 | D-10 | Problem에 `code`·`traceId`가 필수였음 | 🟢 반영 |

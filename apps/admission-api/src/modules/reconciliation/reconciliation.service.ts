@@ -65,8 +65,23 @@ export class ReconciliationService {
     const byKey = new Set(findings.map((f) => `${f.applicationId}::${f.type}`));
 
     let opened = 0;
+    let skipped = 0;
     for (const f of findings) {
-      if (await this.openIfNew(f)) opened += 1;
+      // 한 건이 실패해도 대조 전체를 멈추지 않는다.
+      // 배치가 통째로 죽으면 나머지 불일치는 아무도 못 본다 —
+      // 그게 원래 이 배치가 막으려던 상황이다.
+      try {
+        if (await this.openIfNew(f)) opened += 1;
+      } catch (err) {
+        skipped += 1;
+        this.logger.error(
+          `대조 항목 등록 실패 (계속 진행): ${f.type} application=${f.applicationId} ` +
+            `- ${(err as Error).name}`,
+        );
+      }
+    }
+    if (skipped > 0) {
+      this.logger.warn(`대조 중 ${skipped}건을 등록하지 못했다. 다음 실행에서 다시 시도한다.`);
     }
 
     // 더 이상 성립하지 않는 미해결 건을 닫는다.
@@ -188,6 +203,23 @@ export class ReconciliationService {
             AND p.updated_at > now() - $2::interval`,
         [String(PAYMENT_UNKNOWN_GRACE_MINUTES), since],
         'PAYMENT_STATE_UNKNOWN_STALE',
+        'HIGH',
+      )),
+    );
+
+    // 8. 취소됐는데 확정 결제가 환불되지 않았다. (D-7)
+    //    취소 시점에도 큐에 올리지만, 그게 실패했을 때를 위한 그물이다.
+    //    지원자 돈이 대학에 남아 있는 상태라 오래 두면 민원이 아니라 분쟁이 된다.
+    findings.push(
+      ...(await this.query(
+        `SELECT a.id AS application_id, p.id AS payment_id, p.amount, a.updated_at
+           FROM application a
+           JOIN payment p ON p.application_id = a.id
+          WHERE a.status = 'CANCELLED'
+            AND p.status = 'CONFIRMED'
+            AND a.updated_at > now() - $1::interval`,
+        [since],
+        'REFUND_REQUIRED_AFTER_CANCEL',
         'HIGH',
       )),
     );

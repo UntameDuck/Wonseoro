@@ -65,8 +65,8 @@ export class ApplicationRepository {
    * 원서 생성.
    *
    * 생성의 멱등성은 idempotency_record 가 아니라 **자연키**가 보장한다.
-   * DDL: UNIQUE (cycle_id, applicant_id, admission_type_id, department_id)
-   * 같은 지원자가 같은 전형·모집단위에 두 번 넣을 수 없다. (D-12)
+   * UNIQUE (cycle_id, applicant_id, admission_type_id, department_id) WHERE status <> 'CANCELLED'
+   * 같은 지원자가 같은 전형·모집단위에 **유효한** 원서를 둘 가질 수 없다. (D-12, D-29)
    *
    * 따라서 재시도는 기존 원서를 그대로 돌려준다. 오류가 아니다.
    */
@@ -88,7 +88,11 @@ export class ApplicationRepository {
         `INSERT INTO application
            (id, cycle_id, applicant_id, admission_type_id, department_id, status)
          VALUES ($1,$2,$3,$4,$5,'DRAFT')
-         ON CONFLICT (cycle_id, applicant_id, admission_type_id, department_id) DO NOTHING`,
+         -- 취소된 원서는 자연키에서 빠진다. 착오로 취소한 지원자가 마감 전에
+         -- 다시 지원할 수 있어야 한다. (D-29 / 0002 마이그레이션)
+         ON CONFLICT (cycle_id, applicant_id, admission_type_id, department_id)
+           WHERE status <> 'CANCELLED'
+         DO NOTHING`,
         [id, input.cycleId, input.applicantId, input.admissionTypeId, input.departmentId],
       );
 
@@ -261,9 +265,11 @@ export class ApplicationRepository {
     },
   ): Promise<ApplicationRow> {
     const { rows } = await client.query<Record<string, unknown>>(
+      // 취소된 원서는 제외한다. 포함하면 재지원 직후 옛 취소 건이 돌아올 수 있다.
       `SELECT ${SELECT_COLS} ${FROM_APPLICATION}
         WHERE a.cycle_id = $1 AND a.applicant_id = $2
-          AND a.admission_type_id = $3 AND a.department_id = $4`,
+          AND a.admission_type_id = $3 AND a.department_id = $4
+          AND a.status <> 'CANCELLED'`,
       [key.cycleId, key.applicantId, key.admissionTypeId, key.departmentId],
     );
     const row = rows[0];
