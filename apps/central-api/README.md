@@ -20,5 +20,10 @@
 
 1. **중앙 DB로 접수 여부를 판정하지 않는다.** 표시할 때는 `observed status + sync lag`를 함께 보여준다.
 2. **Dashboard는 대학 DB를 화면조회마다 호출하지 않는다.** State Event로 갱신된 Summary Store를 읽는다.
+2-1. **Dashboard는 본인 것만 돌려준다.** `applicantToken` 없는 요청은 400이다.
+     요약에는 `subject_ref`(= sha256(subject_token))가 붙고 그것으로 거른다.
+     원문 토큰이 아니라 해시라 요약이 Vault와 직접 조인되지 않고, 대학별 소금을
+     섞지 않아 같은 사람이면 대학이 달라도 같은 값이 나온다. (D-27)
+     빈 목록을 주지 않는 이유는 "접수된 원서가 없다"로 읽혀 재접수를 시도하기 때문이다.
 3. **경쟁률은 Snapshot/Cache에서만.** 대학 Application DB에 COUNT를 날리지 않는다.
 4. **중앙에 PII를 모으지 않는다.** 원본 식별자 검색 기능을 만들지 않는다.

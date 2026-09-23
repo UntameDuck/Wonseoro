@@ -10,7 +10,8 @@
 | 3 | [milestones/](milestones/) | 지금 하는 단계의 세부 태스크 |
 | 4 | [adr/](adr/) | 왜 이렇게 정했는지 |
 | 5 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) | 문서 간 충돌이 의심될 때 |
-| 6 | [spec-assets/README.md](spec-assets/README.md) | 노션 첨부 배치 현황 |
+| 6 | [04-production-readiness.md](04-production-readiness.md) | 운영에 올리기 전 무엇을 점검했는지 |
+| 7 | [spec-assets/README.md](spec-assets/README.md) | 노션 첨부 배치 현황 |
 
 ## 마일스톤 (총 7단계)
 
@@ -24,7 +25,15 @@
 | M5 | [신뢰성·보안·접근성](milestones/M5-reliability-security.md) | 33 | 대학에 넣을 수 있는 수준 |
 | M6 | [Pilot 준비](milestones/M6-pilot-readiness.md) | 15 | 대학 1곳 Shadow Test |
 
-총 **139개 태스크, 27개 완료 (2026-09-22)**. 각 태스크에 담당·근거 노션 절·인수기준이 붙어 있다.
+총 **139개 태스크, 50개 완료 (2026-09-23)**. 각 태스크에 담당·근거 노션 절·인수기준이 붙어 있다.
+
+| 단계 | 진행 |
+|---|---|
+| M0 기반 | 7/8 |
+| M1 접수 Core | 14/14 ✅ |
+| M2 결제·Finalize·화면 | 24/24 ✅ |
+| M3 운영 안전장치 | 6/15 ◀ 진행 중 |
+| M4~M6 | 0/78 |
 
 진행 현황과 다음 착수 순서는 **[03-next-steps.md](03-next-steps.md)** 를 본다.
 

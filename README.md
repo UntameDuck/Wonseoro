@@ -17,7 +17,8 @@
 </p>
 
 <p align="center">
-  <img alt="Status" src="https://img.shields.io/badge/Status-Design_%26_MVP-2563EB?style=flat-square" />
+  <img alt="Status" src="https://img.shields.io/badge/Status-Working_MVP-2563EB?style=flat-square" />
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-191_passing-16A34A?style=flat-square" />
   <img alt="K-PaaS" src="https://img.shields.io/badge/Platform-K--PaaS-0F766E?style=flat-square" />
   <img alt="Kubernetes" src="https://img.shields.io/badge/Runtime-Kubernetes-326CE5?style=flat-square&amp;logo=kubernetes&amp;logoColor=white" />
   <img alt="KRDS" src="https://img.shields.io/badge/UI-KRDS-4F46E5?style=flat-square" />
@@ -144,7 +145,15 @@ stateDiagram-v2
     FINALIZING --> PAID: retryable failure
     DRAFT --> EXPIRED: deadline
     READY --> EXPIRED: deadline
+    DRAFT --> CANCELLED: 지원자 취소
+    READY --> CANCELLED: 지원자 취소
+    PAYMENT_PENDING --> CANCELLED: 취소 · 환불 대기
+    PAID --> CANCELLED: 취소 · 환불 대기
 ```
+
+`FINALIZED`는 종착 상태입니다. 접수 원장(Submission)을 고쳐 쓰면 "무엇이 접수되었는가"에 답할 수 없고, 감사 해시체인과 증적 재구성이 서 있는 전제가 무너지기 때문입니다. 접수 완료 후의 취소는 상태를 덮는 것이 아니라 별도 기록으로 다루어야 하며, 현재는 입학처 문의로 안내합니다. `FINALIZING` 중에도 취소하지 않습니다 — 취소와 커밋이 경합하면 "취소했는데 접수됨"이 생깁니다.
+
+확정된 결제가 있는 취소는 **자동 환불하지 않습니다.** 환불 대기 항목으로 운영 큐에 올리고 사람이 승인합니다.
 
 최종화 Transaction은 다음 순서를 따릅니다.
 
@@ -157,16 +166,17 @@ stateDiagram-v2
 
 ## Service Modules
 
-| 모듈 | 역할 |
-| --- | --- |
-| Applicant Web | 공통원서, 전형 선택, 자동저장, 서류, 결제, 접수상태 UX |
-| Admission API | Schema·권한 검증, ETag/Optimistic Lock, 표준 Error Model |
-| Application Service | Draft와 대학별 추가필드, 마감·전형 유효성 검증 |
-| Document Service | Presigned Upload, 파일 검증, 악성코드 격리, 권한 기반 다운로드 |
-| Payment Adapter | 대학별 PG 연계, Webhook 서명 검증, 재조회와 정산 |
-| Finalization Service | 멱등성, 접수원장 확정, 접수번호와 Outbox 생성 |
-| Event Relay | At-least-once 전달, 재시도, Dead Letter, 중앙 ACK 처리 |
-| Control Plane | 표준·정책·Release·관제·최소 이벤트 집계 |
+| 서비스 | 경로 | 역할 |
+| --- | --- | --- |
+| Applicant Web | `apps/frontend` | 공통원서, 전형 선택, 자동저장, 서류, 결제, 접수상태 UX (KRDS) |
+| Admission API | `apps/admission-api` | 대학 Data Plane 본체. 원서·서류·결제·Finalize·감사·대조·설정 |
+| Document Service | `apps/document-service` | 악성코드 검사 워커. 검사는 오래 걸리므로 접수 트랜잭션과 분리 |
+| Event Relay | `apps/event-relay` | At-least-once 전달, 지수 Backoff, Dead Letter, 중앙 ACK 처리 |
+| Central API | `apps/central-api` | Sync Gateway, Common Profile Vault, 내 원서 Dashboard |
+| Contracts | `packages/contracts` | 상태머신·이벤트·오류 모델의 단일 출처 |
+| Server Kit | `packages/server-kit` | DB Pool 예산, 설정 계약(기동 시 검증) |
+
+Admission API 내부 모듈은 [apps/admission-api/README.md](apps/admission-api/README.md) 참조.
 
 ## Technology
 
@@ -174,8 +184,8 @@ stateDiagram-v2
 | --- | --- |
 | Platform | K-PaaS Container Platform / Kubernetes |
 | Deployment | OCI Image · Helm · GitOps |
-| Frontend | React · TypeScript · KRDS Component Kit |
-| Backend | Java LTS · Spring Boot |
+| Frontend | Next.js · React · TypeScript · KRDS Component Kit |
+| Backend | Node LTS · NestJS · TypeScript |
 | Data | PostgreSQL HA · Redis HA · S3-compatible Object Storage |
 | Security | Vault/KMS/HSM · mTLS · NetworkPolicy · Signed Image |
 | Registry | Harbor 또는 동등한 OCI Registry |
@@ -183,6 +193,8 @@ stateDiagram-v2
 | Contracts | OpenAPI 3.x · CloudEvents · JSON Schema |
 
 특정 제품은 구현 기본안입니다. 실제 도입에서는 기관의 보안정책과 인증 요건을 만족하는 동등 제품으로 대체할 수 있으며, 플랫폼 표준은 제품명이 아니라 인터페이스와 정책으로 정의합니다.
+
+> **Backend 선택에 대하여** — 초기 설계서는 Java LTS · Spring Boot를 기본안으로 적었습니다. 설계가 요구하는 실질은 ① ACID 트랜잭션 ② Transactional Outbox ③ 관측성 ④ 장기지원 런타임이며, Node LTS + PostgreSQL이 이를 모두 충족합니다. 팀의 실제 역량을 반영해 NestJS · TypeScript로 확정했습니다. 근거는 [ADR-0001](docs/adr/ADR-0001-backend-stack.md), 불일치 기록은 [D-3](docs/02-spec-discrepancy-register.md).
 
 ## Reliability & Security
 
@@ -261,27 +273,62 @@ stateDiagram-v2
 - Schema Governance와 다중 CSP Profile
 - 연간 보안·감사·DR 증적 자동화
 
-## Planned Repository Layout
+## Repository Layout
 
 ```text
-k-admission/
-├── platform/                 # 공통 정책, 관측성, K-PaaS 기반 구성
+dev-folder/
 ├── apps/
-│   ├── applicant-web/        # 지원자 Web
-│   ├── admission-api/        # 공개 API Gateway
-│   ├── application-service/  # 원서 상태와 검증
-│   ├── document-service/     # 서류 업로드와 검사
-│   ├── payment-adapter/      # 대학별 PG Adapter
-│   └── event-relay/          # 중앙 비동기 동기화
-├── schemas/                  # OpenAPI, JSON Schema, CloudEvents
-├── charts/                   # Helm Chart
-├── universities/             # 대학별 Values와 정책
-└── docs/                     # ADR, Threat Model, Runbook
+│   ├── frontend/             # 지원자 Web (Next.js · KRDS)
+│   ├── admission-api/        # 대학 Data Plane 본체
+│   ├── document-service/     # 악성코드 검사 워커
+│   ├── event-relay/          # 중앙 비동기 동기화
+│   └── central-api/          # 중앙 Control + Convenience Plane
+├── packages/
+│   ├── contracts/            # 상태머신 · CloudEvents · Problem · OpenAPI
+│   └── server-kit/           # DB Pool 예산 · 설정 계약
+├── infra/
+│   ├── db/                   # DDL, 마이그레이션, 정합성 제약 검증
+│   └── compose/              # 로컬 개발 인프라
+├── deploy/                   # K-PaaS 배포 (M4에서 채운다)
+├── tests/load/               # 부하 시험 (M4)
+└── docs/                     # 계획 · 마일스톤 · ADR · 불일치 대장 · 런북
 ```
 
 ## Project Status
 
-현재 저장소는 **설계 정리 및 MVP 준비 단계**입니다. 아키텍처, 데이터·API 계약, 배포·보안·장애검증 기준을 구현 단위로 구체화하고 있으며, 실행 가능한 코드와 배포 구성이 공개되는 시점에 설치, 로컬 개발, 테스트, 기여 방법을 순차적으로 추가할 예정입니다.
+> 기준일 2026-09-23 · 전체 139개 태스크 중 **50개 완료** · 테스트 **191개 통과**
+
+지원자가 화면에서 원서를 만들어 서류를 올리고 결제한 뒤 **접수번호를 받는 전 과정이 동작합니다.**
+
+```text
+공통원서 Vault → 동의 필드만 Snapshot → 원서 생성 → 자동저장(ETag)
+  → 추가문항 동적 검증 → 서류 업로드·magic-byte 검사 → AV 검사 → 결제
+  → 서버측 재검증 → Finalize(단일 트랜잭션) → 접수번호 → Outbox
+  → Event Relay → 중앙 Sync Gateway → 내 원서 Dashboard
+```
+
+| 단계 | 진행 | 내용 |
+| --- | --- | --- |
+| M0 기반 | 7/8 | 모노레포, 계약, ADR, 로컬 인프라 |
+| M1 접수 Core | **14/14** | 원서 생성·자동저장·추가문항·서류·감사 hash-chain |
+| M2 결제·Finalize·화면 | **24/24** | 결제 재검증, Finalize 트랜잭션, KRDS 6단계 화면, Dashboard |
+| M3 운영 안전장치 | **6/15** | 마감 정책 엔진, 설정 거버넌스, 4-way 대조, 증적 재구성 |
+| M4 분산 실증 | 0/28 | K-PaaS 배포, 장애 격리 실증, 부하 시험 |
+| M5 신뢰성·보안·접근성 | 0/35 | OIDC·MFA, 실 PG, 실 AV, WORM 감사 |
+| M6 Pilot 준비 | 0/15 | 대학 1곳 Shadow Test |
+
+### 검증된 것
+
+- **중앙 단절 중에도 접수가 계속된다.** 중앙을 내린 상태에서 Finalize가 성공하고 접수번호가 발급되며, Outbox에 쌓인 이벤트가 중앙 복구 후 자동 재전송됩니다. Dashboard는 조회가 지연되고 있음을 사용자에게 알리되 "접수 실패"로 보이지 않습니다.
+- **설정만 바꿔 새 전형을 받는다.** 프론트엔드 코드 변경 없이 새 전형의 추가문항과 전형료가 화면에 반영됩니다.
+- **단독 운영자 1명으로 마감시간을 바꿀 수 없다.** 작성자 자기승인 차단, 2인 승인, 과거 시각 예약 차단이 코드와 DB 제약 양쪽에서 막힙니다.
+- **재시도해도 접수는 한 건이다.** DB 제약 12종이 실제로 막는 것을 행동으로 검증합니다.
+
+### 아직 없는 것
+
+인증(`AUTH_MODE=dev-headers`), 실 PG 연동, 실 안티바이러스, WORM 감사 저장소 물리 분리, K-PaaS 배포 구성, 부하·장애 시험 실측치. **흉내 구현은 운영 모드에서 선택되면 프로세스가 기동하지 않습니다.**
+
+자세한 현황과 다음 착수 순서는 [docs/03-next-steps.md](docs/03-next-steps.md), 운영 준비 점검 내역은 [docs/04-production-readiness.md](docs/04-production-readiness.md)를 참조하십시오.
 
 이 문서의 성능·가용성 수치는 목표값이며 검증 결과가 아닙니다. 법률·보안·공공 클라우드 기준은 2026-09-17 설계 기준선을 바탕으로 정리했으며, 실제 도입 전 각 대학의 법적 지위와 시스템 등급에 따른 보안성 검토, 개인정보 영향평가, 법무 검토가 필요합니다.
 
@@ -298,6 +345,9 @@ k-admission/
 ## References
 
 - [다음 단계 및 현재 진행 현황](docs/03-next-steps.md)
+- [운영 준비 점검 — 하드코딩·기본값·인가](docs/04-production-readiness.md)
+- [설계 불일치 대장](docs/02-spec-discrepancy-register.md) — 설계서와 구현이 어긋난 30건의 판정 기록
+- [문서 인덱스](docs/README.md)
 - [K-Admission 기술설계서](https://efficient-rook-e79.notion.site/K-Admission-K-PaaS-3de75ab5debe801f99c5fee017130c65)
 - [Wonseoro GitHub Repository](https://github.com/UntameDuck/Wonseoro)
 - 2026년 GovTech 창업경진대회 제품·서비스 개발 분야 제출본

@@ -17,6 +17,11 @@
 | Outbox 조회 성능 | `outbox_event(status) WHERE status='PENDING'` partial index |
 | Finalized 불변 | 일반 사용자 API에 업무필드 UPDATE 경로를 만들지 않음 |
 | PII 분리 | PII 컬럼을 일반 업무필드와 분리, 중앙 기본 이벤트에 미포함 |
+| 설정 2인 승인 | `config_version` CHECK — 승인자 둘, 서로 다름, 작성자 아님 (D-21) |
+| 전형당 활성 설정 1건 | `config_version(cycle_id) WHERE status='ACTIVE'` 부분 유니크 (D-21) |
+| 미승인 마감정책 활성화 차단 | `deadline_policy` CHECK — 활성화됐으면 실제 승인자 둘 (D-21) |
+| 불일치 중복 등록 차단 | `reconciliation_exception(application_id, exception_type) WHERE state IN ('OPEN','MANUAL_REVIEW')` (D-25) |
+| 취소 후 재지원 허용 | `application` 자연키에서 `CANCELLED` 제외 (D-29) |
 
 ## 엔티티 (v1.0 §6 + v1.1 §02 ERD)
 
@@ -35,9 +40,13 @@
 `migrations/0001_init.sql` — **노션 첨부 `k-admission-postgresql-ddl.txt`가 canonical이다.**
 docs/spec-assets/README.md 참조. 별도로 DDL을 새로 쓰지 말 것 (이중 원본 방지).
 
-`migrations/0002_integrity_constraints.sql` — 제약만 덧붙이는 임시 파일. (D-21·D-25)
-테이블을 다시 정의하지 않는다. 0001 은 첨부와 바이트가 같아야 하기 때문이다.
-노션 §02 에 접어 넣은 뒤 이 파일은 삭제한다.
+`migrations/0002_integrity_constraints.sql` — **임시 파일이다.** (D-21 · D-25 · D-29)
+0001 은 노션 첨부와 바이트가 같아야 하므로 테이블을 다시 정의하지 않고
+제약만 덧붙인다. 원본은 여전히 노션 하나뿐이고, 이 파일은 "아직 반영되지 않은
+차이" 를 한곳에 모아 보여주는 역할이다. 노션 §02 에 접어 넣은 뒤 삭제한다.
+
+⚠️ D-29 는 다른 둘과 성격이 다르다. **제약을 약화**하는 변경이라
+(취소된 원서를 자연키에서 제외) 노션 확인이 특히 필요하다.
 
 ### 적용
 
