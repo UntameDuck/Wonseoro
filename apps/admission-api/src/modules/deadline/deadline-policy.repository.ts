@@ -144,11 +144,24 @@ export class DeadlinePolicyRepository extends DeadlinePolicyPort {
     assertApproved(state);
     assertActivationTime(activateAt);
 
-    const at = activateAt ?? new Date();
-    await this.db.query(`UPDATE deadline_policy SET activated_at = $2 WHERE id = $1`, [
-      policyId,
-      at,
-    ]);
+    /**
+     * 즉시 활성화면 **DB 가 시각을 찍는다.**
+     *
+     * 애플리케이션 서버의 `new Date()` 를 쓰면, 그 시각이 DB 시계보다 조금이라도
+     * 앞설 때 `activated_at <= now()` 가 잠시 거짓이 된다. 그 사이 조회에는
+     * "활성 정책 없음" 으로 보이고, 마감 판정이 거부된다.
+     * 밀리초 단위 어긋남이지만 마감 직전에는 그 밀리초가 사람의 접수다.
+     *
+     * 예약 활성화는 지정한 시각을 그대로 쓴다 — 미래 시각이라 경합이 없다.
+     */
+    const { rows } = await this.db.query<{ activated_at: Date }>(
+      `UPDATE deadline_policy
+          SET activated_at = COALESCE($2::timestamptz, now())
+        WHERE id = $1
+        RETURNING activated_at`,
+      [policyId, activateAt],
+    );
+    const at = rows[0]?.activated_at ?? new Date();
 
     this.logger.log(`deadline policy ${policyId} activated at ${at.toISOString()}`);
     return { activatedAt: at.toISOString() };

@@ -165,9 +165,13 @@ export class ConfigVersionService {
           WHERE cycle_id = $1 AND status = 'ACTIVE' AND id <> $2`,
         [cycleId, configId],
       );
+      // 즉시 활성화면 DB 가 시각을 찍는다. 애플리케이션 시계가 DB 보다 앞서면
+      // 방금 활성화한 설정이 잠시 "아직 적용 전" 으로 보인다.
       await client.query(
-        `UPDATE config_version SET status = 'ACTIVE', activated_at = $2 WHERE id = $1`,
-        [configId, activateAt ?? new Date()],
+        `UPDATE config_version
+            SET status = 'ACTIVE', activated_at = COALESCE($2::timestamptz, now())
+          WHERE id = $1`,
+        [configId, activateAt],
       );
     });
 

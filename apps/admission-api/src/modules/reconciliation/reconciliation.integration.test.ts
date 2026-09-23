@@ -48,17 +48,27 @@ async function seedSubmission(appId: string): Promise<void> {
   );
 }
 
+/**
+ * 정리.
+ *
+ * 원서 행을 먼저 잠근다. 다른 테스트의 대조가 동시에 돌면서 이 원서에 예외를
+ * 새로 달 수 있고, 그러면 예외를 지운 뒤 원서를 지우는 사이에 새 예외가 끼어들어
+ * 외래키 위반이 난다. 부모 행을 FOR UPDATE 로 잡으면 그 틈이 닫힌다.
+ */
 async function cleanup(appId: string): Promise<void> {
-  await db.query(`DELETE FROM reconciliation_exception WHERE application_id = $1`, [appId]);
-  await db.query(`DELETE FROM audit_event WHERE application_id = $1`, [appId]);
-  await db.query(
-    `DELETE FROM payment_event WHERE payment_id IN
-       (SELECT id FROM payment WHERE application_id = $1)`,
-    [appId],
-  );
-  await db.query(`DELETE FROM payment WHERE application_id = $1`, [appId]);
-  await db.query(`DELETE FROM submission WHERE application_id = $1`, [appId]);
-  await db.query(`DELETE FROM application WHERE id = $1`, [appId]);
+  await db.tx(async (client) => {
+    await client.query(`SELECT id FROM application WHERE id = $1 FOR UPDATE`, [appId]);
+    await client.query(`DELETE FROM reconciliation_exception WHERE application_id = $1`, [appId]);
+    await client.query(`DELETE FROM audit_event WHERE application_id = $1`, [appId]);
+    await client.query(
+      `DELETE FROM payment_event WHERE payment_id IN
+         (SELECT id FROM payment WHERE application_id = $1)`,
+      [appId],
+    );
+    await client.query(`DELETE FROM payment WHERE application_id = $1`, [appId]);
+    await client.query(`DELETE FROM submission WHERE application_id = $1`, [appId]);
+    await client.query(`DELETE FROM application WHERE id = $1`, [appId]);
+  });
 }
 
 before(async () => {
