@@ -298,7 +298,7 @@ export const api = {
     }),
 
   /** 중앙 Dashboard. 중앙이 죽어 있으면 NetworkError 가 난다 — 화면이 그것을 다룬다. */
-  dashboard: () =>
+  dashboard: (applicantToken: string) =>
     call<{
       serverTime: string;
       applications: Array<{
@@ -309,7 +309,10 @@ export const api = {
         departmentCode: string;
         lastSyncedAt: string;
       }>;
-    }>('/api/v1/dashboard/applications', { base: 'central' }),
+    }>(
+      `/api/v1/dashboard/applications?applicantToken=${encodeURIComponent(applicantToken)}`,
+      { base: 'central' },
+    ),
 
   saveProfile: (body: {
     subjectToken: string;

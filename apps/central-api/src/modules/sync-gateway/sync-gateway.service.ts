@@ -263,10 +263,13 @@ export class SyncGatewayService {
       `INSERT INTO application_summary
          (university_id, application_id, admission_year, admission_type_code,
           department_code, status, application_number, submitted_at,
-          last_sequence, last_synced_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,now())
+          last_sequence, subject_ref, last_synced_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now())
        ON CONFLICT (university_id, application_id) DO UPDATE
          SET status = EXCLUDED.status,
+             -- 한 번 들어온 참조는 덮지 않는다. 이후 이벤트에 빠져 있어도
+             -- 이미 연결된 원서가 Dashboard 에서 사라지면 안 된다.
+             subject_ref = COALESCE(EXCLUDED.subject_ref, application_summary.subject_ref),
              application_number = COALESCE(EXCLUDED.application_number,
                                            application_summary.application_number),
              submitted_at = COALESCE(EXCLUDED.submitted_at, application_summary.submitted_at),
@@ -284,6 +287,11 @@ export class SyncGatewayService {
         data.applicationNumber ? String(data.applicationNumber) : null,
         data.finalizedAt ? String(data.finalizedAt) : (data.submittedAt as string) ?? null,
         sequence,
+        // 대학이 보내주지 않으면 null 이다. 그 원서는 Dashboard 에 뜨지 않는다 —
+        // 잘못된 사람에게 보여주는 것보다 안 보여주는 쪽이 낫다. (D-27)
+        typeof data.subjectRef === 'string' && /^[0-9a-f]{64}$/.test(data.subjectRef)
+          ? data.subjectRef
+          : null,
       ],
     );
   }

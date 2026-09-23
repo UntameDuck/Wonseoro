@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 import { CACHE_CONTROL_PII } from '@wonseoro/contracts';
+import { applicantFrom } from '../../common/identity/identity';
+import { Ownership } from '../../common/identity/ownership.service';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { DocumentService } from './document.service';
 
@@ -33,7 +35,10 @@ interface CompleteBody {
  */
 @Controller('api/v1')
 export class DocumentController {
-  constructor(private readonly documents: DocumentService) {}
+  constructor(
+    private readonly documents: DocumentService,
+    private readonly ownership: Ownership,
+  ) {}
 
   @Post('applications/:applicationId/documents/upload-intents')
   @HttpCode(201)
@@ -50,9 +55,12 @@ export class DocumentController {
       throw ProblemException.validationFailed('sizeBytes 가 필요합니다.');
     }
 
+    const { applicantId } = applicantFrom(req);
+    await this.ownership.assertApplication(applicationId, applicantId);
+
     return this.documents.createIntent({
       applicationId,
-      applicantId: this.applicantId(req),
+      applicantId,
       documentType,
       filename,
       mediaType,
@@ -77,6 +85,10 @@ export class DocumentController {
       throw ProblemException.validationFailed('sizeBytes 가 필요합니다.');
     }
 
+    // 업로드 완료 보고도 소유자만 할 수 있다. 남의 서류 상태를 바꿀 수 있으면
+    // 검사 대기 중인 서류를 임의로 확정시킬 수 있다.
+    await this.ownership.assertDocument(documentId, applicantFrom(req).applicantId);
+
     const doc = await this.documents.complete({
       documentId,
       sha256,
@@ -96,20 +108,14 @@ export class DocumentController {
   @Delete('documents/:documentId')
   @HttpCode(204)
   async remove(@Param('documentId') documentId: string, @Req() req: FastifyRequest) {
-    await this.documents.remove(documentId, this.applicantId(req));
+    const { applicantId } = applicantFrom(req);
+    await this.ownership.assertDocument(documentId, applicantId);
+    await this.documents.remove(documentId, applicantId);
   }
 
   private required(value: string | undefined, name: string): string {
     if (!value) throw ProblemException.validationFailed(`${name} 가 필요합니다.`);
     return value;
-  }
-
-  private applicantId(req: FastifyRequest): string {
-    const id = req.headers['x-applicant-id'];
-    if (typeof id !== 'string' || !id) {
-      throw ProblemException.validationFailed('지원자를 식별할 수 없습니다.');
-    }
-    return id;
   }
 
   private context(req: FastifyRequest): { traceId?: string; sourceIp?: string } {

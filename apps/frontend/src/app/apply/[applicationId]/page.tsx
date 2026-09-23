@@ -17,7 +17,7 @@ import {
 } from '../../../lib/api';
 import { useAutosave } from '../../../lib/use-autosave';
 import { formatKst, useDeadline } from '../../../lib/use-deadline';
-import { DEMO_CYCLE, loadSession } from '../../../lib/session';
+import { loadSession } from '../../../lib/session';
 
 /**
  * 원서 작성 6단계 — 기술설계서 v1.1 §07
@@ -58,7 +58,8 @@ export default function ApplyPage({
     feeAmount: number;
   } | null>(null);
 
-  const deadline = useDeadline(app?.cycleId ?? DEMO_CYCLE);
+  // 원서를 불러오기 전에는 전형을 모른다. 그때는 마감을 판단하지 않는다.
+  const deadline = useDeadline(app?.cycleId ?? null);
   const frozen = app?.status === 'FINALIZED';
 
   const autosave = useAutosave({

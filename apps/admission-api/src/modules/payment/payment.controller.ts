@@ -1,7 +1,8 @@
 import { Controller, Get, Header, HttpCode, Param, Post, Req, Res } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { CACHE_CONTROL_PII } from '@wonseoro/contracts';
-import { ProblemException } from '../../common/problem/problem.exception';
+import { applicantFrom } from '../../common/identity/identity';
+import { Ownership } from '../../common/identity/ownership.service';
 import { PaymentRow, PaymentService } from './payment.service';
 
 /**
@@ -10,7 +11,10 @@ import { PaymentRow, PaymentService } from './payment.service';
  */
 @Controller('api/v1')
 export class PaymentController {
-  constructor(private readonly payments: PaymentService) {}
+  constructor(
+    private readonly payments: PaymentService,
+    private readonly ownership: Ownership,
+  ) {}
 
   @Post('applications/:applicationId/payment-intents')
   @HttpCode(201)
@@ -19,9 +23,12 @@ export class PaymentController {
     @Param('applicationId') applicationId: string,
     @Req() req: FastifyRequest,
   ) {
+    const { applicantId } = applicantFrom(req);
+    await this.ownership.assertApplication(applicationId, applicantId);
+
     const { payment, providerPayload } = await this.payments.createIntent(
       applicationId,
-      this.applicantId(req),
+      applicantId,
       this.context(req),
     );
     return {
@@ -35,7 +42,8 @@ export class PaymentController {
 
   @Get('payments/:paymentId')
   @Header('cache-control', CACHE_CONTROL_PII)
-  async get(@Param('paymentId') paymentId: string) {
+  async get(@Param('paymentId') paymentId: string, @Req() req: FastifyRequest) {
+    await this.ownership.assertPayment(paymentId, applicantFrom(req).applicantId);
     return this.present(await this.payments.load(paymentId));
   }
 
@@ -55,6 +63,9 @@ export class PaymentController {
     @Req() req: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
+    // 재검증은 상태를 바꾼다. 남의 결제를 건드릴 수 있으면 안 된다.
+    await this.ownership.assertPayment(paymentId, applicantFrom(req).applicantId);
+
     const payment = await this.payments.verify(paymentId, this.context(req));
     if (payment.status === 'UNKNOWN' || payment.status === 'PENDING') {
       reply.status(202);
@@ -72,14 +83,6 @@ export class PaymentController {
       providerApprovedAt: p.providerApprovedAt,
       verifiedAt: p.verifiedAt,
     };
-  }
-
-  private applicantId(req: FastifyRequest): string {
-    const id = req.headers['x-applicant-id'];
-    if (typeof id !== 'string' || !id) {
-      throw ProblemException.validationFailed('지원자를 식별할 수 없습니다.');
-    }
-    return id;
   }
 
   private context(req: FastifyRequest): { traceId?: string; sourceIp?: string } {

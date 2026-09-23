@@ -31,7 +31,12 @@ export interface DeadlineView {
  * 서버와 통신이 끊기면 `stale` 을 세운다.
  * 이때 화면은 남은 시간을 단정하지 말고 "확인 중"으로 표시해야 한다.
  */
-export function useDeadline(cycleId: string, resyncMs = 60_000): DeadlineView {
+/**
+ * `cycleId` 를 아직 모르면 null 을 넘긴다.
+ * 임의의 전형으로 대신 물어보지 않는다 — 남의 마감시각을 보여주는 셈이고,
+ * 그 값으로 화면이 "마감됨" 을 그리면 사용자는 접수를 포기한다.
+ */
+export function useDeadline(cycleId: string | null, resyncMs = 60_000): DeadlineView {
   const [view, setView] = useState<DeadlineView>({
     remainingMs: 0,
     deadlineAt: null,
@@ -45,6 +50,7 @@ export function useDeadline(cycleId: string, resyncMs = 60_000): DeadlineView {
   const anchorRef = useRef<{ browserAt: number; remainingMs: number } | null>(null);
 
   useEffect(() => {
+    if (!cycleId) return;
     let cancelled = false;
 
     const sync = async () => {

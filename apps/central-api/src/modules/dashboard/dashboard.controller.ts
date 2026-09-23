@@ -1,4 +1,5 @@
-import { Controller, Get, Header, Query } from '@nestjs/common';
+import { Controller, Get, Header, HttpException, Query } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import { Db } from '@wonseoro/server-kit';
 
 /**
@@ -11,6 +12,9 @@ import { Db } from '@wonseoro/server-kit';
  *
  * 응답에 **마지막 동기화 시각**을 반드시 함께 준다.
  * 중앙은 언제나 뒤처질 수 있고, 그 사실을 숨기면 안 된다. (v1.1 §A3)
+ *
+ * 본인 것만 돌려준다. 전에는 요약 테이블에 지원자 참조가 없어 전체를 돌려주고 있었다.
+ * 그건 조회가 아니라 유출이다. (불일치 대장 D-27)
  */
 @Controller('api/v1/dashboard')
 export class DashboardController {
@@ -19,17 +23,32 @@ export class DashboardController {
   @Get('applications')
   @Header('cache-control', 'no-store')
   async list(@Query('applicantToken') applicantToken?: string) {
-    // M2 임시: 중앙에는 지원자 식별자가 없으므로 전체를 돌려준다.
-    // T-M1-09 Profile Vault 가 붙으면 applicantSubjectToken 으로 거른다.
-    void applicantToken;
+    if (!applicantToken) {
+      throw new HttpException(
+        {
+          type: 'https://wonseoro.kr/problems/validation-failed',
+          title: '요청이 올바르지 않습니다',
+          status: 400,
+          code: 'APPLICANT_TOKEN_REQUIRED',
+          traceId: '',
+          detail: 'applicantToken 이 필요합니다.',
+        },
+        400,
+      );
+    }
+
+    // 대학이 보낸 것과 같은 방식으로 참조를 만든다. 원문 토큰은 저장하지 않는다.
+    const subjectRef = createHash('sha256').update(applicantToken).digest('hex');
 
     const { rows } = await this.db.query<Record<string, unknown>>(
       `SELECT university_id, application_id, admission_year, admission_type_code,
               department_code, status, application_number, submitted_at,
               last_sequence, last_synced_at
          FROM application_summary
+        WHERE subject_ref = $1
         ORDER BY last_synced_at DESC
         LIMIT 100`,
+      [subjectRef],
     );
 
     return {

@@ -3,6 +3,8 @@ import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
+import { CORS_ORIGINS, PORT } from './config';
+import { assertConfigured } from '@wonseoro/server-kit';
 
 /**
  * central-api — 중앙 Control + Convenience Plane
@@ -12,6 +14,9 @@ import { AppModule } from './app.module';
  * 그것을 증명하는 것이 M2 Demo Gate 5 다.
  */
 async function bootstrap(): Promise<void> {
+  // 설정을 먼저 확인한다. 잘못된 설정으로 뜨는 것보다 안 뜨는 것이 낫다.
+  assertConfigured();
+
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({ trustProxy: true, bodyLimit: 1_048_576 }),
@@ -36,7 +41,7 @@ async function bootstrap(): Promise<void> {
   // 대학 Data Plane 과 지원자 웹은 서로 다른 도메인에 있다. (v1.1 §10 §11)
   // 운영에서는 Edge 라우팅으로 같은 오리진처럼 묶고 Allowlist 를 좁힌다. (v1.1 §06 CORS Allowlist)
   app.enableCors({
-    origin: (process.env.CORS_ORIGINS ?? 'http://localhost:4000').split(','),
+    origin: CORS_ORIGINS,
     credentials: true,
     allowedHeaders: [
       'content-type',
@@ -49,7 +54,7 @@ async function bootstrap(): Promise<void> {
     exposedHeaders: ['etag'],
   });
 
-  const port = Number(process.env.PORT ?? 3000);
+  const port = PORT;
   await app.listen({ port, host: '0.0.0.0' });
   new Logger('central-api').log(`listening on :${port}`);
 }

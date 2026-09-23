@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card } from '../../krds/components';
 import { Breadcrumb } from '../../krds/navigation';
 import { NetworkError, api } from '../../lib/api';
+import { loadSession } from '../../lib/session';
 import { formatKst } from '../../lib/use-deadline';
 
 interface Row {
@@ -31,8 +32,13 @@ export default function DashboardPage() {
   const [serverTime, setServerTime] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    const session = loadSession();
+    if (!session) {
+      setRows([]);
+      return;
+    }
     try {
-      const { data } = await api.dashboard();
+      const { data } = await api.dashboard(session.subjectToken);
       setRows(data.applications);
       setServerTime(data.serverTime);
       setCentralDown(false);

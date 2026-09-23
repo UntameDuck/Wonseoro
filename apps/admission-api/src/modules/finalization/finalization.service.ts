@@ -3,6 +3,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { EVENT_TYPE, ApplicationFinalizedData } from '@wonseoro/contracts';
 import { Db } from '@wonseoro/server-kit';
+import { CENTRAL_ID_SALT } from '../../config';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { AuditService } from '../audit/audit.service';
 import { DeadlineService } from '../deadline/deadline.service';
@@ -164,6 +165,7 @@ export class FinalizationService {
       await this.enqueueFinalizedEvent(client, {
         applicationId: input.applicationId,
         universityId: app.universityId,
+        subjectToken: app.subjectToken,
         admissionYear: app.admissionYear,
         admissionTypeCode: app.admissionTypeCode,
         departmentCode: app.departmentCode,
@@ -247,6 +249,7 @@ export class FinalizationService {
     src: {
       applicationId: string;
       universityId: string;
+      subjectToken: string;
       admissionYear: number;
       admissionTypeCode: string;
       departmentCode: string;
@@ -275,6 +278,11 @@ export class FinalizationService {
     } = {
       universityId: src.universityId,
       applicationId: this.opaqueId(src.applicationId),
+      // 중앙이 "내 원서"를 추려주려면 어느 지원자의 것인지 알아야 한다.
+      // 대학마다 값이 같아야 하므로 대학별 소금을 쓰지 않는다. subject_token 자체가
+      // 중앙이 발급한 고엔트로피 가명 식별자이고, 중앙은 이미 Vault 에서 그것을 안다.
+      // 원문 대신 해시를 보내 요약 테이블이 Vault 와 직접 조인되지 않게 한다. (D-27)
+      subjectRef: subjectRefOf(src.subjectToken),
       admissionYear: src.admissionYear,
       admissionTypeCode: src.admissionTypeCode,
       departmentCode: src.departmentCode,
@@ -329,9 +337,13 @@ export class FinalizationService {
   }
 
   /** 중앙에 대학 원본 식별자를 그대로 노출하지 않는다. (v1.1 §A12) */
+  /**
+   * 중앙에는 원서 UUID 를 그대로 주지 않는다. (v1.1 §A3 최소 정보)
+   * 소금이 고정값이면 중앙이 대학 내부 식별자를 역산할 수 있어
+   * 가명처리의 의미가 사라진다. 운영에서는 필수다.
+   */
   private opaqueId(applicationId: string): string {
-    const salt = process.env.CENTRAL_ID_SALT ?? 'dev-salt';
-    return createHash('sha256').update(`${salt}|${applicationId}`).digest('hex');
+    return createHash('sha256').update(`${CENTRAL_ID_SALT}|${applicationId}`).digest('hex');
   }
 
   private async assertRequiredDocuments(
@@ -375,8 +387,10 @@ export class FinalizationService {
     const { rows } = await this.db.query<Record<string, unknown>>(
       `SELECT a.id, a.cycle_id, a.status, a.version,
               c.admission_year, c.university_id,
-              t.code AS admission_type_code, d.code AS department_code
+              t.code AS admission_type_code, d.code AS department_code,
+              p.subject_token
          FROM application a
+         JOIN applicant p ON p.id = a.applicant_id
          JOIN admission_cycle c ON c.id = a.cycle_id
          JOIN admission_type t ON t.id = a.admission_type_id
          JOIN department d ON d.id = a.department_id
@@ -394,6 +408,7 @@ export class FinalizationService {
       universityId: String(r.university_id),
       admissionTypeCode: String(r.admission_type_code),
       departmentCode: String(r.department_code),
+      subjectToken: String(r.subject_token),
     };
   }
 
@@ -404,4 +419,17 @@ export class FinalizationService {
     );
     return Object.fromEntries(rows.map((r) => [r.field_code, r.value_json]));
   }
+}
+
+/**
+ * 중앙에 보내는 지원자 참조. (불일치 대장 D-27)
+ *
+ * `subject_token` 은 중앙이 발급한 가명 식별자다. 그대로 보내면 요약 테이블이
+ * Vault 와 바로 조인되어, 분리해 둔 의미가 사라진다. 그래서 해시를 보낸다.
+ *
+ * 대학별 소금을 섞지 않는다. 섞으면 같은 사람이 대학마다 다른 값이 되어
+ * "내 원서" 를 한 화면에 모을 수 없다 — 그게 중앙이 존재하는 이유다.
+ */
+function subjectRefOf(subjectToken: string): string {
+  return createHash('sha256').update(subjectToken).digest('hex');
 }

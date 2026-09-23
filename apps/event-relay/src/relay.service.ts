@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { Db } from '@wonseoro/server-kit';
+import { CENTRAL_SYNC_URL, RELAY, UNIVERSITY_ID } from './config';
 
 /** 재시도 상한. 넘으면 DEAD 로 보내고 사람이 본다. */
 export const MAX_ATTEMPTS = 10;
@@ -48,11 +49,11 @@ export class RelayService implements OnModuleInit, OnApplicationShutdown {
   constructor(private readonly db: Db) {}
 
   onModuleInit(): void {
-    if (process.env.RELAY_AUTOSTART === 'false') {
+    if (!RELAY.autostart) {
       this.logger.log('relay loop disabled (RELAY_AUTOSTART=false)');
       return;
     }
-    const interval = Number(process.env.RELAY_INTERVAL_MS ?? 2000);
+    const interval = RELAY.intervalMs;
     this.timer = setInterval(() => void this.tick(), interval);
     this.logger.log(`relay loop started (every ${interval}ms)`);
   }
@@ -78,7 +79,7 @@ export class RelayService implements OnModuleInit, OnApplicationShutdown {
   }
 
   async drainOnce(): Promise<RelayStats> {
-    const batchSize = Number(process.env.RELAY_BATCH_SIZE ?? 100);
+    const batchSize = RELAY.batchSize;
     const stats: RelayStats = { sent: 0, failed: 0, dead: 0 };
 
     // 보낼 것을 집는다. next_attempt_at 이 지난 것만.
@@ -123,18 +124,17 @@ export class RelayService implements OnModuleInit, OnApplicationShutdown {
   }
 
   private async send(row: OutboxRow): Promise<boolean> {
-    const universityId = process.env.UNIVERSITY_ID ?? 'UNKNOWN';
     const envelope = {
       specversion: '1.0',
       id: row.id,
-      source: `urn:k-admission:university:${universityId}`,
+      source: `urn:k-admission:university:${UNIVERSITY_ID}`,
       type: row.event_type,
       subject: row.aggregate_id,
       time: new Date().toISOString(),
       datacontenttype: 'application/json',
       dataschema: 'https://schemas.k-admission.kr/events/bundle/v1.json',
       // 확장 속성. §04 가 규정한 이름 그대로여야 한다.
-      kadmissionuniversity: universityId,
+      kadmissionuniversity: UNIVERSITY_ID,
       kadmissionsequence: Number(row.aggregate_sequence),
       configversion: String(row.payload.configVersion ?? ''),
       policyversion: String(row.payload.policyVersion ?? ''),
@@ -146,7 +146,7 @@ export class RelayService implements OnModuleInit, OnApplicationShutdown {
         method: 'POST',
         headers: { 'content-type': 'application/cloudevents+json' },
         body: JSON.stringify(envelope),
-        signal: AbortSignal.timeout(Number(process.env.RELAY_TIMEOUT_MS ?? 5000)),
+        signal: AbortSignal.timeout(RELAY.timeoutMs),
       });
 
       // 202 = 새로 받음, 409 = 이미 받음. 둘 다 "중앙이 알고 있다"는 뜻이므로 성공이다.
@@ -239,7 +239,7 @@ export class RelayService implements OnModuleInit, OnApplicationShutdown {
     );
     const r = rows[0] ?? {};
     return {
-      universityId: process.env.UNIVERSITY_ID ?? 'UNKNOWN',
+      universityId: UNIVERSITY_ID,
       pendingCount: Number(r.pending ?? 0),
       oldestPendingAgeSeconds: Math.floor(Number(r.oldest ?? 0)),
       deadCount: Number(r.dead ?? 0),
@@ -247,7 +247,7 @@ export class RelayService implements OnModuleInit, OnApplicationShutdown {
   }
 
   private centralUrl(): string {
-    return process.env.CENTRAL_SYNC_URL ?? 'http://localhost:3000';
+    return CENTRAL_SYNC_URL;
   }
 }
 

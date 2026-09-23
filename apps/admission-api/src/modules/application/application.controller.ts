@@ -13,6 +13,9 @@ import {
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { CACHE_CONTROL_PII, HEADER_IF_MATCH } from '@wonseoro/contracts';
 import { ProblemException } from '../../common/problem/problem.exception';
+import { UNIVERSITY_ID } from '../../config';
+import { applicantFrom } from '../../common/identity/identity';
+import { Ownership } from '../../common/identity/ownership.service';
 import { FormSchemaService } from '../config/form-schema.service';
 import { DeadlineService } from '../deadline/deadline.service';
 import { ApplicationRepository, ApplicationRow } from './application.repository';
@@ -41,6 +44,7 @@ export class ApplicationController {
     private readonly repo: ApplicationRepository,
     private readonly deadline: DeadlineService,
     private readonly forms: FormSchemaService,
+    private readonly ownership: Ownership,
   ) {}
 
   @Post()
@@ -61,15 +65,16 @@ export class ApplicationController {
       commitAt: new Date(),
     });
 
-    const applicantId = this.applicantId(req);
-    const subjectToken = req.headers['x-subject-token'];
+    const { applicantId, subjectToken } = applicantFrom(req);
     const { row, created } = await this.repo.create({
       cycleId,
       applicantId,
       admissionTypeId,
       departmentId,
-      ...(typeof subjectToken === 'string' && subjectToken ? { subjectToken } : {}),
-      ...(process.env.UNIVERSITY_ID ? { universityId: process.env.UNIVERSITY_ID } : {}),
+      ...(subjectToken ? { subjectToken } : {}),
+      // 대학 식별자가 없으면 공통원서 Snapshot 조회가 조용히 건너뛰어진다.
+      // 그래서 설정값이 아니라 기동 조건으로 둔다. (config.ts)
+      universityId: UNIVERSITY_ID,
       ...this.context(req),
     });
 
@@ -83,8 +88,12 @@ export class ApplicationController {
   @Header('cache-control', CACHE_CONTROL_PII)
   async get(
     @Param('applicationId') applicationId: string,
+    @Req() req: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
+    // 원서 본문에는 자기소개서가 들어 있다. 식별자를 안다고 열람할 수 있으면 안 된다.
+    await this.ownership.assertApplication(applicationId, applicantFrom(req).applicantId);
+
     const row = await this.repo.findById(applicationId);
     if (!row) throw ProblemException.validationFailed('존재하지 않는 원서입니다.');
     const fields = await this.repo.fields(applicationId);
@@ -105,6 +114,8 @@ export class ApplicationController {
     @Req() req: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
+    await this.ownership.assertApplication(applicationId, applicantFrom(req).applicantId);
+
     const expectedVersion = this.ifMatch(req);
 
     const current = await this.repo.findById(applicationId);
@@ -147,7 +158,9 @@ export class ApplicationController {
   @Post(':applicationId/validate')
   @HttpCode(200)
   @Header('cache-control', CACHE_CONTROL_PII)
-  async validate(@Param('applicationId') applicationId: string) {
+  async validate(@Param('applicationId') applicationId: string, @Req() req: FastifyRequest) {
+    await this.ownership.assertApplication(applicationId, applicantFrom(req).applicantId);
+
     const row = await this.repo.findById(applicationId);
     if (!row) throw ProblemException.validationFailed('존재하지 않는 원서입니다.');
 
@@ -198,18 +211,6 @@ export class ApplicationController {
       throw ProblemException.validationFailed('If-Match 형식이 올바르지 않습니다.');
     }
     return BigInt(parsed);
-  }
-
-  /**
-   * M1 임시 — 인증 연동 전까지 헤더에서 지원자를 읽는다.
-   * M2 에서 세션/OIDC 로 교체한다. 운영에서는 이 경로가 존재하면 안 된다.
-   */
-  private applicantId(req: FastifyRequest): string {
-    const id = req.headers['x-applicant-id'];
-    if (typeof id !== 'string' || !id) {
-      throw ProblemException.validationFailed('지원자를 식별할 수 없습니다.');
-    }
-    return id;
   }
 
   private context(req: FastifyRequest): { traceId?: string; sourceIp?: string } {

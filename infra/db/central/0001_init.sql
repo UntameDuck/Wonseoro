@@ -101,3 +101,12 @@ CREATE TABLE university_sync_state (
   clock_offset_ms integer,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- ── 지원자 참조 (불일치 대장 D-27) ───────────────────────────────────────
+-- 요약만 가지고는 "내 원서" 를 추려줄 수 없다. 지원자 식별자가 없기 때문에
+-- Dashboard 가 전체를 돌려주는 상태였다. 그건 조회가 아니라 유출이다.
+--
+-- 원문 대신 sha256(subject_token) 을 받는다. Vault 와 직접 조인되지 않으면서
+-- 대학이 달라도 같은 사람이면 같은 값이 나온다.
+ALTER TABLE application_summary ADD COLUMN subject_ref varchar(64);
+CREATE INDEX idx_summary_subject ON application_summary(subject_ref, last_synced_at DESC);

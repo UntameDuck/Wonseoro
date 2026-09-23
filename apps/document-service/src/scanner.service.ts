@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
+import { ADMISSION_API_URL, SCANNER } from './config';
 
 export interface ScanTarget {
   documentId: string;
@@ -40,11 +41,11 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
   private stopped = false;
 
   onModuleInit(): void {
-    if (process.env.SCANNER_AUTOSTART === 'false') {
+    if (!SCANNER.autostart) {
       this.logger.log('scanner loop disabled (SCANNER_AUTOSTART=false)');
       return;
     }
-    const interval = Number(process.env.SCANNER_INTERVAL_MS ?? 3000);
+    const interval = SCANNER.intervalMs;
     this.timer = setInterval(() => void this.tick(), interval);
     this.logger.log(`scanner loop started (every ${interval}ms)`);
   }
@@ -102,7 +103,7 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
    * 판정 규칙은 파일명·크기로 고정한다. 무작위면 재현이 안 된다.
    */
   private async scan(target: ScanTarget): Promise<ScanVerdict> {
-    const delay = Number(process.env.SCANNER_DELAY_MS ?? 1500);
+    const delay = SCANNER.delayMs;
     await new Promise((r) => setTimeout(r, delay));
 
     // 시험용 판정. objectKey 에 표식이 있으면 그 결과를 낸다.
@@ -118,7 +119,7 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
   private async fetchPending(): Promise<ScanTarget[]> {
     try {
       const res = await fetch(`${this.apiUrl()}/internal/v1/documents/pending-scan?limit=25`, {
-        signal: AbortSignal.timeout(Number(process.env.SCANNER_TIMEOUT_MS ?? 5000)),
+        signal: AbortSignal.timeout(SCANNER.timeoutMs),
       });
       if (!res.ok) return [];
       const body = (await res.json()) as { documents?: ScanTarget[] };
@@ -146,9 +147,9 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
           body: JSON.stringify({
             result,
             scanner: 'mock-av',
-            engineVersion: process.env.SCANNER_VERSION ?? 'dev-0',
+            engineVersion: SCANNER.version,
           }),
-          signal: AbortSignal.timeout(Number(process.env.SCANNER_TIMEOUT_MS ?? 5000)),
+          signal: AbortSignal.timeout(SCANNER.timeoutMs),
         },
       );
       if (res.ok) return true;
@@ -171,7 +172,7 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
   }
 
   private apiUrl(): string {
-    return process.env.ADMISSION_API_URL ?? 'http://localhost:3001';
+    return ADMISSION_API_URL;
   }
 }
 

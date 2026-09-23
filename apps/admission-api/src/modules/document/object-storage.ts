@@ -9,6 +9,8 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { envBool, secretOrDev } from '@wonseoro/server-kit';
+import { S3 } from '../../config';
 
 /** Presigned URL 유효시간. 짧게 둔다. (v1.0 §7.1 단기 Signed URL) */
 export const UPLOAD_URL_TTL_SECONDS = 600;
@@ -35,15 +37,19 @@ export class ObjectStorage implements OnModuleInit {
   private readonly bucket: string;
 
   constructor() {
-    this.bucket = process.env.S3_BUCKET ?? 'univ-a-documents';
+    // 버킷 이름에 대학을 박아두지 않는다. 대학마다 다른 값이고, 기본값이 있으면
+    // 설정을 빠뜨린 배포가 남의 대학 버킷 이름으로 뜬다.
+    this.bucket = S3.bucket;
     this.client = new S3Client({
-      region: process.env.S3_REGION ?? 'us-east-1',
-      endpoint: process.env.S3_ENDPOINT ?? 'http://localhost:9000',
-      // MinIO 는 path-style 을 쓴다. 운영 CSP 에서는 값만 바꾼다. (v1.1 §A8)
-      forcePathStyle: true,
+      region: S3.region,
+      endpoint: S3.endpoint,
+      // MinIO 는 path-style 을 쓴다. 운영 CSP 는 대개 virtual-host 다. (v1.1 §A8)
+      forcePathStyle: envBool('S3_FORCE_PATH_STYLE', true),
       credentials: {
-        accessKeyId: process.env.S3_ACCESS_KEY ?? 'wonseoro',
-        secretAccessKey: process.env.S3_SECRET_KEY ?? 'wonseoro123',
+        // 운영에서 이 값이 없으면 기동하지 않는다.
+        // 기본 자격증명이 소스에 있으면 그건 자격증명이 아니다.
+        accessKeyId: secretOrDev('S3_ACCESS_KEY', 'wonseoro', 'Object Storage 접근키'),
+        secretAccessKey: secretOrDev('S3_SECRET_KEY', 'wonseoro123', 'Object Storage 비밀키'),
       },
     });
   }
@@ -54,7 +60,7 @@ export class ObjectStorage implements OnModuleInit {
    * 애플리케이션에 버킷 생성 권한을 주면 최소권한 원칙에 어긋난다. (v1.0 §8.2)
    */
   async onModuleInit(): Promise<void> {
-    if (process.env.S3_AUTO_CREATE_BUCKET !== 'true') return;
+    if (!S3.autoCreateBucket) return;
     try {
       await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
     } catch {

@@ -1,6 +1,9 @@
-import { Controller, Get, Header, Param } from '@nestjs/common';
+import { Controller, Get, Header, Param, Req } from '@nestjs/common';
+import type { FastifyRequest } from 'fastify';
 import { CACHE_CONTROL_PII } from '@wonseoro/contracts';
 import { Db } from '@wonseoro/server-kit';
+import { applicantFrom } from '../../common/identity/identity';
+import { Ownership } from '../../common/identity/ownership.service';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { FormSchemaService } from './form-schema.service';
 
@@ -21,11 +24,16 @@ export class FormSchemaController {
   constructor(
     private readonly db: Db,
     private readonly forms: FormSchemaService,
+    private readonly ownership: Ownership,
   ) {}
 
   @Get(':applicationId/form-schema')
   @Header('cache-control', CACHE_CONTROL_PII)
-  async get(@Param('applicationId') applicationId: string) {
+  async get(@Param('applicationId') applicationId: string, @Req() req: FastifyRequest) {
+    // 스키마 자체는 비밀이 아니지만, 원서 단위로 주는 API 다.
+    // 남의 원서 식별자로 그 사람이 어느 전형에 지원했는지 알 수 있으면 안 된다.
+    await this.ownership.assertApplication(applicationId, applicantFrom(req).applicantId);
+
     const { rows } = await this.db.query<{ cycle_id: string; code: string }>(
       `SELECT a.cycle_id, t.code
          FROM application a

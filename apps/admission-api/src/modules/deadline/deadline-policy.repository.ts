@@ -8,6 +8,7 @@ import {
   assertActivationTime,
   assertApproved,
 } from '../config/two-person-rule';
+import { ALLOW_ENV_DEADLINE_POLICY } from '../../config';
 import { DeadlinePolicyPort } from './deadline-policy.port';
 
 /**
@@ -54,7 +55,7 @@ export class DeadlinePolicyRepository extends DeadlinePolicyPort {
 
     // 개발 편의용 대체 경로. 운영에서는 열어두지 않는다.
     // 활성 정책 없이 마감을 판정하면 그 판정의 근거가 남지 않는다.
-    if (process.env.ALLOW_ENV_DEADLINE_POLICY === 'true') {
+    if (ALLOW_ENV_DEADLINE_POLICY) {
       return this.envPolicy(admissionCycleId);
     }
 

@@ -4,9 +4,11 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { MEDIA_MERGE_PATCH } from '@wonseoro/contracts';
 import { AppModule } from './app.module';
+import { ADMIN_API_TOKEN, AUTH_MODE, CORS_ORIGINS, PORT, UNIVERSITY_ID } from './config';
 import { IdempotencyInterceptor } from './common/idempotency/idempotency.interceptor';
 import { IdempotencyStore } from './common/idempotency/idempotency.store';
 import { ProblemFilter } from './common/problem/problem.filter';
+import { assertConfigured, isProduction } from '@wonseoro/server-kit';
 
 /**
  * admission-api — 대학 Data Plane 메인 API
@@ -15,6 +17,12 @@ import { ProblemFilter } from './common/problem/problem.filter';
  * 중앙(central-api)은 이 서비스의 Critical Path 에 들어가지 않는다.
  */
 async function bootstrap(): Promise<void> {
+/**
+ * 설정을 먼저 확인한다. 빠진 것이 있으면 뜨지 않는다.
+ * 잘못된 설정으로 뜨는 것보다 안 뜨는 것이 낫다 — 접수 서버는 특히 그렇다.
+ */
+  assertConfigured();
+
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     // trustProxy: Edge/WAF 뒤에 있으므로 원 IP 판단에 필요하다.
@@ -49,25 +57,32 @@ async function bootstrap(): Promise<void> {
   // 대학 Data Plane 과 지원자 웹은 서로 다른 도메인에 있다. (v1.1 §10 §11)
   // 운영에서는 Edge 라우팅으로 같은 오리진처럼 묶고 Allowlist 를 좁힌다. (v1.1 §06 CORS Allowlist)
   app.enableCors({
-    origin: (process.env.CORS_ORIGINS ?? 'http://localhost:4000').split(','),
+    origin: CORS_ORIGINS,
     credentials: true,
     allowedHeaders: [
       'content-type',
       'idempotency-key',
       'if-match',
       'traceparent',
-      'x-applicant-id',
-      'x-subject-token',
+      // 개발용 신원 헤더. gateway 모드에서는 받지 않는다 — 브라우저가 신원을
+      // 직접 주장할 수 있는 통로를 열어둘 이유가 없다.
+      ...(AUTH_MODE === 'dev-headers' ? ['x-applicant-id', 'x-subject-token'] : []),
     ],
     exposedHeaders: ['etag'],
   });
 
-  const port = Number(process.env.PORT ?? 3001);
-  await app.listen({ port, host: '0.0.0.0' });
+  await app.listen({ port: PORT, host: '0.0.0.0' });
 
-  new Logger('admission-api').log(
-    `listening on :${port} (university=${process.env.UNIVERSITY_ID ?? 'UNSET'})`,
-  );
+  const logger = new Logger('admission-api');
+  logger.log(`listening on :${PORT} (university=${UNIVERSITY_ID}, auth=${AUTH_MODE})`);
+  if (!isProduction() && AUTH_MODE === 'dev-headers') {
+    logger.warn(
+      '개발 인증 모드입니다. 헤더만 바꾸면 남의 원서를 열람·수정할 수 있습니다. 운영 배포 금지.',
+    );
+  }
+  if (!ADMIN_API_TOKEN) {
+    logger.warn('ADMIN_API_TOKEN 미설정 — /admin/v1 이 열려 있습니다. 개발 환경에서만 허용됩니다.');
+  }
 }
 
 void bootstrap();

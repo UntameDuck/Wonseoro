@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { AuditAction } from '@wonseoro/contracts';
+import { AUDIT_IP_SALT } from '../../config';
 
 export interface AuditInput {
   applicationId?: string;
@@ -161,8 +162,12 @@ export class AuditService {
   }
 
   /** IP 원문을 저장하지 않는다. (v1.0 §9 sourceIpHash) */
+  /**
+   * IP 는 원문으로 남기지 않는다. 소금이 고정값이면 가명처리가 아니다 —
+   * IPv4 전체를 해시해 대조하면 몇 초면 원본이 나온다.
+   * 그래서 운영에서는 소금이 없으면 기동하지 않는다.
+   */
   private hashIp(ip: string): string {
-    const salt = process.env.AUDIT_IP_SALT ?? 'dev-salt';
-    return createHash('sha256').update(`${salt}|${ip}`).digest('hex');
+    return createHash('sha256').update(`${AUDIT_IP_SALT}|${ip}`).digest('hex');
   }
 }

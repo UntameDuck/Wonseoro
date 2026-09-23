@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { CENTRAL_SYNC_URL, VAULT_TIMEOUT_MS } from '../../config';
 
 export interface ProfileSnapshot {
   fields: Record<string, unknown>;
@@ -44,7 +45,7 @@ export class ProfileVaultClient {
       available: false,
     };
 
-    const url = process.env.CENTRAL_SYNC_URL;
+    const url = CENTRAL_SYNC_URL;
     if (!url) return empty;
 
     try {
@@ -58,7 +59,7 @@ export class ProfileVaultClient {
           applicationRef: args.applicationRef,
         }),
         // 짧게 끊는다. 중앙이 느리다고 원서 생성이 느려지면 안 된다.
-        signal: AbortSignal.timeout(Number(process.env.VAULT_TIMEOUT_MS ?? 2000)),
+        signal: AbortSignal.timeout(VAULT_TIMEOUT_MS),
       });
 
       if (!res.ok) {

@@ -389,6 +389,37 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-27. 중앙 요약에 지원자 참조가 없어 Dashboard 가 전체를 돌려준다 🔴
+
+| | |
+|---|---|
+| **발견** | 2026-09-23 (프로덕션 점검) |
+| **문제** | v1.1 §10 §9 는 "내 원서" Dashboard 를 규정한다. 그런데 `application_summary` 에는 지원자를 가리키는 컬럼이 없다. 구현은 `applicantToken` 파라미터를 받아놓고 **무시한 채 전체 100건을 돌려주고 있었다** |
+| **왜 중대한가** | 인증이 붙어도 이 경로는 막히지 않는다. 로그인한 **누구나** 다른 지원자의 대학·전형·모집단위·접수번호·접수시각을 본다. 조회가 아니라 유출이다 |
+| **설계 긴장** | §A3 은 중앙에 최소 정보만 두라고 한다. 그래서 지원자 식별자를 안 보낸 것이 의도적이었을 수 있다. 하지만 식별자가 없으면 "내 원서" 기능 자체가 성립하지 않는다. **둘 중 하나는 포기해야 한다** |
+| **판정** | `sha256(subject_token)` 을 `subjectRef` 로 보낸다. ① 원문이 아니라 해시라 요약 테이블이 Vault 와 직접 조인되지 않는다 ② 대학별 소금을 섞지 않아 같은 사람이면 대학이 달라도 같은 값이다 — 그게 통합 조회의 전제다 ③ CloudEvents optional 필드 추가라 §04 Schema Evolution 상 호환 변경이다 |
+| **함께 결정** | `applicantToken` 없는 요청은 400 이다. 빈 목록을 주면 "접수된 원서가 없다"로 읽혀 지원자가 재접수를 시도한다 |
+| **저장소 반영** | ✅ `packages/contracts/src/events.ts` (optional `subjectRef`) · `infra/db/central/0001_init.sql` (`subject_ref` + 인덱스) · sync-gateway upsert · dashboard 필터 |
+| **노션 반영** | ⬜ §04 이벤트 스키마와 §10 §9 Dashboard 계약에 반영. **중앙에 가명 식별자를 두는 결정이라 §A3 과 함께 재검토해야 한다** |
+| **상태** | 🟡 저장소 해소 — 노션 확인 필요 (설계 결정이 걸려 있다) |
+
+---
+
+## D-28. 지원자 API 에 소유권 검사가 없었다 🔴
+
+| | |
+|---|---|
+| **발견** | 2026-09-23 (프로덕션 점검) |
+| **문제** | 조회·수정 경로 전부가 `applicationId` 만으로 동작했다. `x-applicant-id` 는 **감사 기록의 actor 로만** 쓰였고 인가에는 전혀 쓰이지 않았다. 헤더를 바꾸면 남의 원서를 읽고, 자기소개서를 덮어쓰고, 서류를 지우고, 최종접수까지 할 수 있었다 |
+| **영향 경로** | `GET /applications/{id}` · `PATCH /applications/{id}` · `POST /{id}/validate` · `GET /{id}/form-schema` · `GET /payments/{id}` · `POST /payments/{id}/verify` · `GET /{id}/submission` · `GET /submissions/{id}/receipt` · `POST /documents/{id}/complete` · `DELETE /documents/{id}` |
+| **왜 계약만 봐서는 안 잡히나** | OpenAPI 는 `security: [{ oidc: [] }]` 로 "인증"을 규정하지만 **인가는 규정하지 않는다.** 인증만 붙이면 로그인한 지원자 전원이 서로의 원서를 볼 수 있다. 계약이 맞아도 제품이 틀릴 수 있는 자리다 |
+| **판정** | 자원마다 소유자를 확인한다. 없는 자원과 남의 자원을 **같은 응답**으로 돌려준다 — 구분해 주면 식별자를 훑어 유효한 원서를 찾아낼 수 있다 |
+| **저장소 반영** | ✅ `common/identity/ownership.service.ts` + 전 경로 적용 · 통합 테스트 6종 |
+| **노션 반영** | ⬜ §03 에 소유권 규칙을 명시하고, §09 STRIDE 의 Information Disclosure 항목에 이 경로를 추가 |
+| **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 

@@ -198,6 +198,96 @@ export function Field({
  * 사용자가 무엇을 고쳐야 하는지 **한 화면에서 전부** 봐야 한다.
  * 백엔드 `/validate` 가 issues 를 모아서 주는 이유가 이것이다.
  */
+export interface SelectOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * 선택 입력. Field 와 같은 규칙을 따른다 — Label 은 항상 보이고,
+ * 힌트는 label 과 controls 사이에 둔다. (KRDS 입력 패턴)
+ */
+export function Select({
+  label,
+  value,
+  options,
+  onChange,
+  hint,
+  required,
+  disabled,
+}: {
+  label: string;
+  value: string;
+  options: readonly SelectOption[];
+  onChange: (v: string) => void;
+  hint?: string;
+  required?: boolean;
+  disabled?: boolean;
+}) {
+  const id = useId();
+  const hintId = `${id}-hint`;
+
+  return (
+    <div style={{ marginBottom: 'var(--krds-space-5)' }}>
+      <label
+        htmlFor={id}
+        style={{
+          display: 'block',
+          marginBottom: 'var(--krds-space-2)',
+          fontWeight: 700,
+          fontSize: 'var(--krds-text-sm)',
+        }}
+      >
+        {label}
+        {required && (
+          <span style={{ color: 'var(--krds-danger)', marginLeft: 4 }}>
+            *<span className="krds-sr-only">필수 입력</span>
+          </span>
+        )}
+      </label>
+
+      {hint && (
+        <p
+          id={hintId}
+          style={{
+            margin: '0 0 var(--krds-space-2)',
+            fontSize: 'var(--krds-text-sm)',
+            color: 'var(--krds-fg-muted)',
+          }}
+        >
+          {hint}
+        </p>
+      )}
+
+      <select
+        id={id}
+        value={value}
+        required={required}
+        disabled={disabled}
+        aria-describedby={hint ? hintId : undefined}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          width: '100%',
+          minHeight: 'var(--krds-tap-min)',
+          padding: 'var(--krds-space-3)',
+          fontSize: 'var(--krds-text-base)',
+          fontFamily: 'inherit',
+          color: 'var(--krds-fg)',
+          background: 'var(--krds-bg)',
+          border: '1px solid var(--krds-border-strong)',
+          borderRadius: 'var(--krds-radius)',
+        }}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export function ErrorSummary({
   issues,
 }: {

@@ -1,6 +1,8 @@
 import { Controller, Get, Header, Param, Post, Req, Res } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { CACHE_CONTROL_PII } from '@wonseoro/contracts';
+import { applicantFrom } from '../../common/identity/identity';
+import { Ownership } from '../../common/identity/ownership.service';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { FinalizationService, SubmissionRow } from './finalization.service';
 
@@ -12,7 +14,10 @@ import { FinalizationService, SubmissionRow } from './finalization.service';
  */
 @Controller('api/v1')
 export class FinalizationController {
-  constructor(private readonly finalization: FinalizationService) {}
+  constructor(
+    private readonly finalization: FinalizationService,
+    private readonly ownership: Ownership,
+  ) {}
 
   @Post('applications/:applicationId/finalize')
   @Header('cache-control', CACHE_CONTROL_PII)
@@ -21,9 +26,12 @@ export class FinalizationController {
     @Req() req: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
+    const { applicantId } = applicantFrom(req);
+    await this.ownership.assertApplication(applicationId, applicantId);
+
     const { submission, created } = await this.finalization.finalize({
       applicationId,
-      applicantId: this.applicantId(req),
+      applicantId,
       // 요청이 서버에 도달한 시각. 마감 정책이 이 값을 쓸 수 있다. (v1.1 §A2)
       requestedAt: new Date(),
       ...this.context(req),
@@ -35,7 +43,9 @@ export class FinalizationController {
 
   @Get('applications/:applicationId/submission')
   @Header('cache-control', CACHE_CONTROL_PII)
-  async get(@Param('applicationId') applicationId: string) {
+  async get(@Param('applicationId') applicationId: string, @Req() req: FastifyRequest) {
+    await this.ownership.assertApplication(applicationId, applicantFrom(req).applicantId);
+
     const submission = await this.finalization.findSubmission(applicationId);
     if (!submission) {
       throw ProblemException.validationFailed('아직 접수되지 않은 원서입니다.');
@@ -45,7 +55,10 @@ export class FinalizationController {
 
   @Get('submissions/:submissionId/receipt')
   @Header('cache-control', CACHE_CONTROL_PII)
-  async receipt(@Param('submissionId') submissionId: string) {
+  async receipt(@Param('submissionId') submissionId: string, @Req() req: FastifyRequest) {
+    // 접수증에는 접수번호가 있다. 남의 접수번호를 알 수 있으면 안 된다.
+    await this.ownership.assertSubmission(submissionId, applicantFrom(req).applicantId);
+
     const submission = await this.finalization.findBySubmissionId(submissionId);
     if (!submission) {
       throw ProblemException.validationFailed('존재하지 않는 접수입니다.');

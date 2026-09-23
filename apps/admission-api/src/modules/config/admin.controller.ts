@@ -1,6 +1,19 @@
-import { Body, Controller, Get, Header, HttpCode, Param, Post, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 import { DeadlineMode } from '@wonseoro/contracts';
+import { AdminGuard } from '../../common/identity/admin.guard';
+import { adminFrom } from '../../common/identity/identity';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { DeadlinePolicyRepository } from '../deadline/deadline-policy.repository';
 import { ConfigVersionService } from './config-version.service';
@@ -12,10 +25,12 @@ import { ConfigVersionService } from './config-version.service';
  * **"단독 운영자 1명으로 마감시간 변경 불가"** 가 이 컨트롤러의 존재 이유다.
  *
  * ⚠️ 인증은 M5 다. (T-M5-10 Admin MFA + Step-up)
- * 지금은 `x-admin-id` 헤더로 담당자를 식별한다. 운영에 이대로 노출하면 안 된다.
+ * 그때까지는 AdminGuard 의 공유 비밀이 문을 지키고, `x-admin-id` 는 감사 기록용으로만 쓴다.
+ * 공유 비밀은 누가 했는지 구분하지 못한다 — 문과 기록은 다른 문제다.
  *
  * ⚠️ `deadline-policies/{id}/activate` 는 계약에 없는 경로다. (불일치 대장 D-22)
  */
+@UseGuards(AdminGuard)
 @Controller('admin/v1')
 export class AdminController {
   constructor(
@@ -126,12 +141,8 @@ export class AdminController {
     return v;
   }
 
-  /** M5 에서 OIDC + MFA 로 교체된다. (T-M5-10) */
+  /** 감사에 남길 담당자. 인증이 아니라 기록이다. (T-M5-10 에서 OIDC 신원으로 교체) */
   private admin(req: FastifyRequest): string {
-    const id = req.headers['x-admin-id'];
-    if (typeof id !== 'string' || !id) {
-      throw ProblemException.forbidden('담당자를 식별할 수 없습니다.');
-    }
-    return id;
+    return adminFrom(req).adminId;
   }
 }
