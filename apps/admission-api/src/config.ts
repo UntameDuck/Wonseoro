@@ -98,6 +98,17 @@ export const ALLOW_ENV_DEADLINE_POLICY = devOnlyFlag(
   '승인 기록 없는 마감 판정은 근거를 남기지 못한다',
 );
 
+/**
+ * 마감 임박 구간에는 설정을 바꾸지 않는다. (v1.1 §A14 Freeze)
+ *
+ * 마지막 몇 시간에 지원자가 몰리고, 그때의 설정 변경은 검증할 시간이 없다.
+ * 전형료·양식이 이 시점에 바뀌면 이미 작성 중인 원서가 무효가 된다.
+ *
+ * 마감 **연장**은 이 잠금과 무관하다. 연장은 `deadline_policy` 의 일이고
+ * `config_version` 을 건드리지 않는다. (§B17)
+ */
+export const CONFIG_FREEZE_HOURS = envInt('CONFIG_FREEZE_HOURS', 24, { min: 0, max: 720 });
+
 export const S3 = {
   bucket: envOrDev('S3_BUCKET', 'univ-a-documents', '서류를 저장할 버킷'),
   region: envOrDev('S3_REGION', 'us-east-1', 'Object Storage 리전'),

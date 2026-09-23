@@ -2,6 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
 import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
+import { CONFIG_FREEZE_HOURS } from '../../config';
+import { DeadlineService } from '../deadline/deadline.service';
+import { ConfigDiff, diffConfig } from './config-diff';
 import { addApproval, assertActivationTime, assertApproved } from './two-person-rule';
 
 export interface ConfigVersionRow {
@@ -24,14 +27,28 @@ export interface ConfigVersionRow {
  *   DRAFT → (서로 다른 2인 승인) → APPROVED → (활성화) → ACTIVE
  *   기존 ACTIVE 는 RETIRED 로 물러난다
  *
- * ⚠️ `config_version` 에는 승인 관련 DB 제약이 없다. (불일치 대장 D-21)
- * 지금은 이 서비스가 유일한 방어선이다. DDL 제약이 들어가야 한다.
+ * 2인 승인만으로는 부족하다
+ *   빈 Config 를 절차대로 활성화해 모든 양식이 사라진 적이 있다. 승인 두 명,
+ *   활성화 성공 — 절차는 정상이었다. 승인자가 **무엇이 바뀌는지** 보지 못하면
+ *   사람이 둘이어도 사고를 막지 못한다. 그래서 승인에 Diff 확인을 묶는다.
+ *
+ * 되돌리기
+ *   Rollback 은 새 버전을 만들지 않는다. **전에 ACTIVE 였던 그 버전을 다시 올린다.**
+ *   그 행에는 이미 두 명의 실제 승인이 기록돼 있다. 새로 만들면 승인자를 지어내야 하고,
+ *   그건 D-21 로 막은 것을 코드로 우회하는 일이다.
+ *
+ * Freeze
+ *   마감이 임박하면 설정을 바꾸지 않는다. 다만 **되돌리기는 막지 않는다** —
+ *   Freeze 는 새 변경을 멈추는 장치이지 복구를 멈추는 장치가 아니다.
  */
 @Injectable()
 export class ConfigVersionService {
   private readonly logger = new Logger(ConfigVersionService.name);
 
-  constructor(private readonly db: Db) {}
+  constructor(
+    private readonly db: Db,
+    private readonly deadline: DeadlineService,
+  ) {}
 
   async createDraft(input: {
     cycleId: string;
@@ -55,11 +72,41 @@ export class ConfigVersionService {
     return this.load(id);
   }
 
-  async approve(configId: string, approver: string): Promise<ConfigVersionRow> {
+  /**
+   * 승인. **본 Diff 의 digest 를 함께 받는다.**
+   *
+   * 승인은 "이 설정 ID 에 동의한다" 가 아니라 "이 변경에 동의한다" 는 뜻이다.
+   * 승인자가 화면을 본 뒤에 초안이나 기준이 바뀌면 같은 승인이 다른 의미가 된다.
+   * digest 가 어긋나면 다시 보라고 돌려보낸다.
+   */
+  async approve(
+    configId: string,
+    approver: string,
+    acknowledgedDiffDigest: string,
+  ): Promise<ConfigVersionRow> {
     const row = await this.load(configId);
     if (row.status !== 'DRAFT' && row.status !== 'APPROVED') {
       throw ProblemException.validationFailed(
         `승인할 수 없는 상태입니다. (현재: ${row.status})`,
+      );
+    }
+
+    const diff = await this.diff(configId);
+    if (!acknowledgedDiffDigest) {
+      throw ProblemException.validationFailed(
+        '변경 내역(Diff)을 확인한 뒤 승인해 주십시오.',
+      );
+    }
+    if (acknowledgedDiffDigest !== diff.digest) {
+      // 본 뒤에 초안이나 현재 설정이 바뀌었다.
+      throw ProblemException.versionConflict(
+        '확인하신 변경 내역이 바뀌었습니다. 변경 내역을 다시 확인한 뒤 승인해 주십시오.',
+      );
+    }
+    if (diff.identical) {
+      // 아무것도 바뀌지 않는 설정을 올리는 것은 대개 잘못 만든 초안이다.
+      throw ProblemException.validationFailed(
+        '현재 설정과 동일합니다. 바뀌는 내용이 없는 설정은 승인하지 않습니다.',
       );
     }
 
@@ -99,6 +146,12 @@ export class ConfigVersionService {
     });
     assertActivationTime(activateAt);
 
+    const { rows: cyc } = await this.db.query<{ cycle_id: string }>(
+      `SELECT cycle_id FROM config_version WHERE id = $1`,
+      [configId],
+    );
+    await this.assertNotFrozen(String(cyc[0]?.cycle_id), activateAt ?? new Date());
+
     await this.db.tx(async (client) => {
       const { rows } = await client.query<{ cycle_id: string }>(
         `SELECT cycle_id FROM config_version WHERE id = $1 FOR UPDATE`,
@@ -120,6 +173,138 @@ export class ConfigVersionService {
 
     this.logger.log(`config ${row.version} activated`);
     return this.load(configId);
+  }
+
+  /**
+   * 이 초안이 현재 활성 설정과 무엇이 다른가.
+   * 승인 화면이 그대로 그려서 보여준다.
+   */
+  async diff(configId: string): Promise<ConfigDiff> {
+    const { rows } = await this.db.query<{ cycle_id: string; config_json: Record<string, unknown> }>(
+      `SELECT cycle_id, config_json FROM config_version WHERE id = $1`,
+      [configId],
+    );
+    const target = rows[0];
+    if (!target) throw ProblemException.validationFailed('존재하지 않는 설정입니다.');
+
+    const { rows: base } = await this.db.query<{ config_json: Record<string, unknown> }>(
+      `SELECT config_json FROM config_version
+        WHERE cycle_id = $1 AND status = 'ACTIVE' AND id <> $2
+        LIMIT 1`,
+      [target.cycle_id, configId],
+    );
+
+    // 활성 설정이 없으면 빈 것과 비교한다. 첫 설정은 전부 추가다.
+    return diffConfig(base[0]?.config_json ?? {}, target.config_json);
+  }
+
+  /**
+   * 되돌리기.
+   *
+   * **새 버전을 만들지 않는다.** 전에 ACTIVE 였던 그 버전을 다시 올린다.
+   * 그 행에는 이미 서로 다른 두 명의 실제 승인이 기록돼 있다.
+   * 새로 만들면 승인자를 지어내야 하고, 그건 D-21 로 막은 것을 코드로 우회하는 일이다.
+   *
+   * 그래서 되돌릴 수 있는 대상은 **한 번이라도 실제로 적용된 적이 있는 설정**뿐이다.
+   * 활성화된 적 없는 초안으로 가는 것은 되돌리기가 아니라 새 변경이다.
+   *
+   * 마감 임박 잠금(Freeze)은 여기 적용하지 않는다.
+   * Freeze 는 새 변경을 멈추는 장치이지 복구를 멈추는 장치가 아니다.
+   * 잘못된 설정으로 마감을 맞는 것이 훨씬 큰 사고다.
+   */
+  async rollback(input: {
+    targetConfigId: string;
+    operator: string;
+    reason: string;
+  }): Promise<{ restored: ConfigVersionRow; retired: string | null }> {
+    const reason = input.reason?.trim() ?? '';
+    if (reason.length < 2) {
+      throw ProblemException.validationFailed('되돌리는 사유를 입력해 주십시오.');
+    }
+
+    const { rows } = await this.db.query<Record<string, unknown>>(
+      `SELECT cycle_id, version, status, activated_at, created_by,
+              approved_by_1, approved_by_2
+         FROM config_version WHERE id = $1`,
+      [input.targetConfigId],
+    );
+    const target = rows[0];
+    if (!target) throw ProblemException.validationFailed('존재하지 않는 설정입니다.');
+
+    if (!target.activated_at) {
+      throw ProblemException.validationFailed(
+        '한 번도 적용된 적이 없는 설정입니다. 되돌리기 대상이 아닙니다.',
+      );
+    }
+    if (target.status === 'ACTIVE') {
+      throw ProblemException.validationFailed('이미 활성화된 설정입니다.');
+    }
+
+    // 이 행의 승인 기록이 온전한지 다시 본다. 되돌리기가 승인 규칙의 뒷문이 되면 안 된다.
+    assertApproved({
+      createdBy: String(target.created_by ?? ''),
+      approvedBy1: asApprover(target.approved_by_1),
+      approvedBy2: asApprover(target.approved_by_2),
+    });
+
+    const retired = await this.db.tx(async (client) => {
+      const { rows: cur } = await client.query<{ id: string; version: string }>(
+        `SELECT id, version FROM config_version
+          WHERE cycle_id = $1 AND status = 'ACTIVE'
+          FOR UPDATE`,
+        [String(target.cycle_id)],
+      );
+      await client.query(
+        `UPDATE config_version SET status = 'RETIRED'
+          WHERE cycle_id = $1 AND status = 'ACTIVE'`,
+        [String(target.cycle_id)],
+      );
+      await client.query(
+        `UPDATE config_version SET status = 'ACTIVE', activated_at = now() WHERE id = $1`,
+        [input.targetConfigId],
+      );
+      return cur[0]?.version ?? null;
+    });
+
+    this.logger.warn(
+      `config rolled back to ${String(target.version)} by ${input.operator} ` +
+        `(from ${retired ?? 'none'}): ${reason}`,
+    );
+    return { restored: await this.load(input.targetConfigId), retired };
+  }
+
+  /**
+   * 마감 임박 구간인가. (§A14 Freeze)
+   *
+   * 마지막 몇 시간에 지원자가 몰리고, 그때의 설정 변경은 검증할 시간이 없다.
+   * 활성 마감정책이 없으면 판단하지 않고 통과시킨다 — 그 경우는 마감 판정 자체가
+   * 이미 거부되고 있어서, 여기서 또 막으면 원인이 가려진다.
+   */
+  private async assertNotFrozen(cycleId: string, activateAt: Date): Promise<void> {
+    if (CONFIG_FREEZE_HOURS <= 0) return;
+
+    let deadlineAt: Date;
+    try {
+      const snapshot = await this.deadline.snapshot(cycleId);
+      deadlineAt = new Date(snapshot.deadlineAt);
+    } catch (err) {
+      // 통과시키되 조용히 넘어가지 않는다. 잠금이 꺼진 채로 도는 것을
+      // 아무도 모르면, 잠금이 있다고 믿고 다른 판단을 하게 된다.
+      this.logger.warn(
+        `마감 정책을 읽지 못해 설정 잠금을 판정하지 못했습니다 (cycle=${cycleId}): ` +
+          `${(err as Error).message}`,
+      );
+      return;
+    }
+
+    const freezeFrom = new Date(deadlineAt.getTime() - CONFIG_FREEZE_HOURS * 3_600_000);
+    if (activateAt < freezeFrom) return;
+
+    throw ProblemException.forbidden(
+      `마감 ${CONFIG_FREEZE_HOURS}시간 전부터는 설정을 변경할 수 없습니다. ` +
+        `(잠금 시작 ${freezeFrom.toISOString()}, 마감 ${deadlineAt.toISOString()}) ` +
+        `마감 연장이 필요하면 마감 정책으로 처리해 주십시오.`,
+    );
   }
 
   async active(cycleId: string): Promise<ConfigVersionRow | null> {
@@ -150,4 +335,9 @@ export class ConfigVersionService {
       activatedAt: r.activated_at ? (r.activated_at as Date).toISOString() : null,
     };
   }
+}
+
+/** 'DRAFT:' 같은 자리표시자는 승인자가 아니다. */
+function asApprover(v: unknown): string | null {
+  return typeof v === 'string' && v.length > 0 && !v.startsWith('DRAFT:') ? v : null;
 }

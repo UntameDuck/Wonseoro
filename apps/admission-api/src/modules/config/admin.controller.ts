@@ -64,16 +64,57 @@ export class AdminController {
     });
   }
 
+  /**
+   * 승인 전에 무엇이 바뀌는지 본다. (§A14)
+   * 이 응답의 `digest` 를 그대로 승인 요청에 실어 보낸다.
+   */
+  @Get('config/versions/:configId/diff')
+  @Header('cache-control', 'no-store')
+  async configDiff(@Param('configId') configId: string) {
+    return this.configs.diff(configId);
+  }
+
+  /**
+   * 승인. 본 Diff 의 digest 를 함께 받는다.
+   * 승인자가 무엇이 바뀌는지 보지 못하면 두 명이 승인해도 사고를 막지 못한다.
+   */
   @Post('config/versions/:configId/approve')
   @HttpCode(200)
   @Header('cache-control', 'no-store')
-  async approveConfig(@Param('configId') configId: string, @Req() req: FastifyRequest) {
-    const row = await this.configs.approve(configId, this.admin(req));
+  async approveConfig(
+    @Param('configId') configId: string,
+    @Body() body: { acknowledgedDiffDigest?: string },
+    @Req() req: FastifyRequest,
+  ) {
+    const row = await this.configs.approve(
+      configId,
+      this.admin(req),
+      this.required(body?.acknowledgedDiffDigest, 'acknowledgedDiffDigest'),
+    );
     return {
       ...row,
       // 승인이 몇 명 남았는지 화면이 그대로 보여줄 수 있게 준다.
       remainingApprovals: Math.max(0, 2 - row.approvedBy.length),
     };
+  }
+
+  /**
+   * 되돌리기. 전에 적용된 적이 있는 설정으로만 갈 수 있다.
+   * 마감 임박 잠금은 여기 걸지 않는다 — 잘못된 설정으로 마감을 맞는 쪽이 더 큰 사고다.
+   */
+  @Post('config/versions/:configId/rollback')
+  @HttpCode(200)
+  @Header('cache-control', 'no-store')
+  async rollbackConfig(
+    @Param('configId') configId: string,
+    @Body() body: { reason?: string },
+    @Req() req: FastifyRequest,
+  ) {
+    return this.configs.rollback({
+      targetConfigId: configId,
+      operator: this.admin(req),
+      reason: body?.reason ?? '',
+    });
   }
 
   @Post('config/versions/:configId/activate')

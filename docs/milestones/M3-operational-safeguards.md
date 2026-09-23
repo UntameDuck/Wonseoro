@@ -23,8 +23,8 @@
 
 | 구분 | 태스크 |
 |---|---|
-| ✅ 완료 | T-M3-01 Deadline Policy · T-M3-04 Reconciliation · T-M3-05 Exception Queue · T-M3-07 Evidence Package |
-| 🟡 부분 | T-M3-02 Config Governance (Diff·Rollback 미구현) · T-M3-03 hash-chain (물리 분리는 M5) |
+| ✅ 완료 | T-M3-01 Deadline Policy · **T-M3-02 Config Governance** · T-M3-04 Reconciliation · T-M3-05 Exception Queue · T-M3-07 Evidence Package |
+| 🟡 부분 | T-M3-03 hash-chain (물리 분리는 M5) |
 | 🔜 다음 | T-M3-06 Autonomous Mode · T-M3-08 Circuit Breaker · T-M3-11~13 Admin Web |
 
 ### §01 E 핵심 인수기준 "단독 운영자 1명으로 마감시간 변경 불가" 통과
@@ -141,7 +141,60 @@ D-1 이전 Config·정책 활성화가 인수 조건인 이유다. (§A14)
 
 §A14 가 2인 승인과 함께 **Diff** 를 요구하는 이유가 이것이다.
 승인자가 "무엇이 바뀌는가"를 보지 못하면 두 명이 승인해도 사고를 막지 못한다.
-T-M3-02 를 🟡 로 둔 이유이며, Diff·Rollback 이 붙어야 완료다.
+
+### 그래서 붙인 것 — Diff · Rollback · Freeze (T-M3-02 완료)
+
+**Diff 를 확인해야 승인할 수 있다.**
+승인 요청에 자기가 본 Diff 의 digest 를 함께 싣는다. 서버가 지금 계산한 값과
+다르면 거부한다. 승인은 "이 설정 ID 에 동의한다" 가 아니라 **"이 변경에 동의한다"** 는
+뜻이고, 본 뒤에 내용이나 기준이 바뀌면 같은 승인이 다른 의미가 되기 때문이다.
+
+digest 에는 경로뿐 아니라 **값도 넣는다.** 경로만 넣으면 전형료가 60,000 에서
+99,000 으로 바뀌어도 같은 digest 가 나와, 60,000 을 보고 한 승인이 99,000 을
+통과시킨다.
+
+위험도는 **방향**으로 나눈다. 더하는 변경은 대개 화면에 칸이 하나 느는 정도지만,
+없애는 변경은 이미 작성 중인 입력을 무효로 만들고 검증을 통과시켜 버린다.
+
+| 변경 | 위험도 |
+|---|---|
+| 전형 양식·전형료·모집단위 삭제 | DESTRUCTIVE |
+| 전형료 값 변경 | DESTRUCTIVE — 이미 결제한 사람과 앞으로 결제할 사람이 다른 금액을 낸다 |
+| 길이·범위 상한을 줄이거나 하한을 올림 | DESTRUCTIVE — 이미 통과한 입력이 오류가 된다 |
+| `type`·`pattern`·`enum` 변경 | DESTRUCTIVE |
+| 필수 항목 추가 | WARN — 이미 작성한 지원자가 다시 입력해야 한다 |
+| 항목·전형 추가 | INFO — §A5 가 바라는 변경이다 |
+
+**되돌리기는 새 버전을 만들지 않는다.**
+전에 ACTIVE 였던 **그 행**을 다시 올린다. 그 행에는 서로 다른 두 명의 실제 승인이
+이미 기록돼 있다. 새로 만들면 승인자를 지어내야 하고, 그건 D-21 로 막은 것을
+코드로 우회하는 일이다. 그래서 되돌릴 수 있는 대상은 **한 번이라도 실제로 적용된
+적이 있는 설정**뿐이다 — 활성화된 적 없는 초안으로 가는 것은 되돌리기가 아니라
+새 변경이다. 사유는 필수다.
+
+**Freeze 는 변경을 막고 복구는 막지 않는다.**
+마감 24시간 전부터(`CONFIG_FREEZE_HOURS`) 설정 활성화를 막는다. 마지막 몇 시간에
+지원자가 몰리고, 그때의 변경은 검증할 시간이 없다. 다만 **되돌리기에는 걸지 않는다** —
+Freeze 는 새 변경을 멈추는 장치이지 복구를 멈추는 장치가 아니고, 잘못된 설정으로
+마감을 맞는 쪽이 훨씬 큰 사고다.
+
+마감 **연장**은 이 잠금과 무관하다. 연장은 `deadline_policy` 의 일이고
+`config_version` 을 건드리지 않는다. (§B17)
+
+```
+초안 생성                          201
+Diff 조회                          200  변경 2건 / 파괴적 0건
+Diff 확인 없이 승인                400
+Diff 확인 후 1차 승인              200  남은 승인 1
+2차 승인                           200  남은 승인 0
+활성화                             200  ACTIVE
+빈 설정 Diff                       파괴적 2건 (forms.EARLY · fees.EARLY 삭제)
+다른 Diff 를 본 채 승인            409
+적용된 적 없는 설정으로 되돌리기    400
+잘못된 운영 토큰                   403
+마감 임박 시 새 설정 활성화        403
+마감 임박 시 되돌리기              허용
+```
 
 **D-21 이 가장 중요하다.** §A14 가 2인 승인을 요구하는 마감시각·전형료·모집단위·
 지원자격·PG 설정이 전부 `config_json` 에 들어가는데, DB 가 그것을 지키지 않는다.
@@ -152,7 +205,7 @@ T-M3-02 를 🟡 로 둔 이유이며, Diff·Rollback 이 붙어야 완료다.
 | ID | 태스크 | 담당 | 근거 노션 | 인수기준 | 상태 |
 |---|---|---|---|---|---|
 | T-M3-01 | **Deadline Policy Engine** | 송리안 | §01 A2·C1 | 3개 룰 프로파일, 2인 승인, 정책버전, 경계값 검증 | ✅ |
-| T-M3-02 | Configuration Governance | 송리안 | §01 A14·C5 | 2인 승인·예약 활성화. Diff·Rollback·Freeze 는 미구현 | 🟡 |
+| T-M3-02 | **Configuration Governance** | 송리안 | §01 A14·C5 | 2인 승인·예약 활성화·Diff 확인 승인·Rollback·Freeze | ✅ |
 | T-M3-03 | Audit hash-chain + 분리 저장소 | 송리안 | §01 A11, v1.0 §9 | hash-chain·변조 검출 ✅ / WORM 물리 분리는 M5 | 🟡 |
 | T-M3-04 | **Reconciliation Center (4-way)** | 송리안 | §01 A4·B18·C2 | Application/Payment/Submission/Central 대조 | ✅ |
 | T-M3-05 | Exception Queue + 수동 승인 복구 | 송리안 | §01 A4·B16 | 불일치만 큐로, 보정은 Admin Action API로만 | ✅ |
