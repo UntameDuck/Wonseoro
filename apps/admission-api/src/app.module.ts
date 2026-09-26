@@ -15,6 +15,7 @@ import { EvidenceModule } from './modules/evidence/evidence.module';
 import { FinalizationModule } from './modules/finalization/finalization.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { ReconciliationModule } from './modules/reconciliation/reconciliation.module';
+import { RetentionModule } from './modules/retention/retention.module';
 import { MetaModule } from './modules/meta/meta.module';
 import { OperatingModeModule } from './modules/operating-mode/operating-mode.module';
 
@@ -36,6 +37,7 @@ import { OperatingModeModule } from './modules/operating-mode/operating-mode.mod
     PaymentModule,
     FinalizationModule,
     ReconciliationModule,
+    RetentionModule,
     MetaModule,
     OperatingModeModule,
   ],

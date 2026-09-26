@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
+import { validateRetention } from '@wonseoro/contracts';
 import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { CONFIG_FREEZE_HOURS } from '../../config';
@@ -63,6 +64,7 @@ export class ConfigVersionService {
     config: Record<string, unknown>;
     createdBy: string;
   }): Promise<ConfigVersionRow> {
+    assertRetention(input.config);
     const id = randomUUID();
     const configHash = createHash('sha256')
       .update(JSON.stringify(input.config))
@@ -156,6 +158,8 @@ export class ConfigVersionService {
       approvedBy2: row.approvedBy[1] ?? null,
     });
     assertActivationTime(activateAt);
+    // 초안을 만든 뒤 법정 기준이 올라갔을 수 있다. 적용하는 순간 다시 본다.
+    assertRetention(await this.configJson(configId));
 
     const { rows: cyc } = await this.db.query<{ cycle_id: string }>(
       `SELECT cycle_id FROM config_version WHERE id = $1`,
@@ -278,6 +282,9 @@ export class ConfigVersionService {
       throw ProblemException.validationFailed('이미 활성화된 설정입니다.');
     }
 
+    // 되돌리기도 법정 보존기준을 넘을 수 없다. 복구가 파기의 뒷문이 되면 안 된다.
+    assertRetention(await this.configJson(input.targetConfigId));
+
     // 이 행의 승인 기록이 온전한지 다시 본다. 되돌리기가 승인 규칙의 뒷문이 되면 안 된다.
     assertApproved({
       createdBy: String(target.created_by ?? ''),
@@ -365,6 +372,14 @@ export class ConfigVersionService {
     );
   }
 
+  private async configJson(configId: string): Promise<Record<string, unknown>> {
+    const { rows } = await this.db.query<{ config_json: Record<string, unknown> }>(
+      `SELECT config_json FROM config_version WHERE id = $1`,
+      [configId],
+    );
+    return rows[0]?.config_json ?? {};
+  }
+
   async active(cycleId: string): Promise<ConfigVersionRow | null> {
     const { rows } = await this.db.query<Record<string, unknown>>(
       `SELECT id FROM config_version WHERE cycle_id = $1 AND status = 'ACTIVE' LIMIT 1`,
@@ -398,4 +413,22 @@ export class ConfigVersionService {
 /** 'DRAFT:' 같은 자리표시자는 승인자가 아니다. */
 function asApprover(v: unknown): string | null {
   return typeof v === 'string' && v.length > 0 && !v.startsWith('DRAFT:') ? v : null;
+}
+
+/**
+ * 보존 정책 검증 (v1.1 §A15, T-M3-10).
+ *
+ * `retention` 섹션이 없으면 통과시킨다 — 아직 정하지 않은 대학이 있고, 없는 동안은
+ * 아무것도 파기 대상이 되지 않는다(파기 계획이 "미설정" 으로 보여준다).
+ * 있으면 법정 하한·불변 기록·누락·정합성을 전부 본다. 문제는 한 번에 모두 알려준다.
+ */
+function assertRetention(config: Record<string, unknown>): void {
+  if (config.retention === undefined) return;
+  const problems = validateRetention(config.retention);
+  if (problems.length === 0) return;
+  throw ProblemException.validationFailed(
+    `보존 정책이 기준에 맞지 않습니다. ${problems
+      .map((p) => `[${p.category}] ${p.message}`)
+      .join(' ')}`,
+  );
 }

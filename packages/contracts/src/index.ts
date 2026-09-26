@@ -5,3 +5,4 @@ export * from './problem';
 export * from './events';
 export * from './audit';
 export * from './deadline-policy';
+export * from './retention';

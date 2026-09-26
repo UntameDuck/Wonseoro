@@ -23,9 +23,9 @@
 
 | 구분 | 태스크 |
 |---|---|
-| ✅ 완료 | T-M3-01 Deadline Policy · T-M3-02 Config Governance · T-M3-04 Reconciliation · T-M3-05 Exception Queue · T-M3-07 Evidence Package · T-M3-08 Circuit Breaker · **T-M3-15 서명된 활성화 기록** |
+| ✅ 완료 | T-M3-01 Deadline Policy · T-M3-02 Config Governance · T-M3-04 Reconciliation · T-M3-05 Exception Queue · T-M3-07 Evidence Package · T-M3-08 Circuit Breaker · T-M3-15 서명된 활성화 기록 · **T-M3-10 Retention Matrix** |
 | 🟡 부분 | T-M3-03 hash-chain (물리 분리는 M5) · T-M3-06 Autonomous Mode (JWKS 캐시는 T-M5-02) · **T-M3-14 마감 연장** (화면은 Admin Web) |
-| 🔜 다음 | T-M3-09 Purpose-scoped Token · T-M3-10 Retention · T-M3-11~13 Admin Web |
+| 🔜 다음 | T-M3-09 Purpose-scoped Token · T-M3-11~13 Admin Web |
 
 ### §01 E 핵심 인수기준 "단독 운영자 1명으로 마감시간 변경 불가" 통과
 
@@ -345,6 +345,48 @@ Demo Gate 5 에서 **중앙을 내린 채 생성→저장→결제→제출이 �
 신원 증명이 아니다. 다만 서로 다른 두 승인자와 적용자가 서명된 기록에 함께 묶이므로
 "한 사람이 혼자 바꿨다" 는 구별된다. 역할(입학처 정책담당) 강제는 T-M5-10 에서 붙인다.
 
+### Retention Matrix — 숫자를 지어내지 않는다 (T-M3-10 ✅)
+
+설계서가 **숫자로** 준 보존 기준은 하나다 — 개인정보 관리자 접속기록 2년 이상
+(v1.0 §2.2, 개인정보의 안전성 확보조치 기준 제8조). 원서 데이터는 "각 대학 개인정보처리방침·
+입시업무 규정에 따라 별도 Retention Matrix" 라고만 적혀 있고, 그 매트릭스는 어디에도 없다.
+
+여기서 그럴듯한 숫자를 박으면, 틀렸을 때 **플랫폼이 법보다 짧은 보존을 강제**한다.
+그래서 하한을 세 종류로 나눴다.
+
+| 하한 | 항목 | 규칙 |
+|---|---|---|
+| **LEGAL** | 관리자 접속기록 | 730일 미만 거절 |
+| **INSTITUTION** | 접수 전·접수 원서, 지원자 신원, 서류 파일, 결제, 동의 | 플랫폼 하한 없음. **반드시 명시** — 빠진 항목을 기본값으로 채우지 않는다 |
+| **IMMUTABLE** | 감사 체인, 적용 기록 | 보존기간을 정하는 것 자체를 거절 |
+
+정합성 규칙 둘 — 법이 아니라 증적의 구조에서 나온다.
+
+- **동의 기록은 그 동의로 처리한 데이터보다 오래 남아야 한다.** 데이터만 남고 동의가 사라지면
+  적법하게 갖고 있다는 것을 증명하지 못한다
+- **결제 기록은 접수 원서보다 오래 남아야 한다.** Evidence Package 가 결제를 잃으면
+  "전형료를 내고 접수했다" 를 증명하지 못한다
+
+보존정책은 새 저장소를 만들지 않고 **설정(config)의 `retention` 섹션**이다. 그래서 2인 승인·
+Diff·서명된 적용 기록을 그대로 탄다. 보존기간을 **줄이는** 변경은 파기를 앞당기므로 Diff 에서
+DESTRUCTIVE, 늘리는 변경은 INFO. 초안·적용·되돌리기 모두에서 검증한다 — 되돌리기가 파기의
+뒷문이 되면 안 된다.
+
+**파기는 계획만 보여주고 실행하지 않는다.** (`GET /admin/v1/retention/plan`)
+파기는 되돌릴 수 없다. 계획 없이 지우는 코드부터 만들면 보존정책 오타 하나가 한 해 입시 기록을
+지운다. 실행은 WORM 이관(M5)과 사람이 계획을 승인하는 절차와 함께 붙인다.
+
+**구현하며 DB 에서 확인한 것** — 원서 "파기" 는 행 삭제일 수 없다.
+
+```
+DELETE FROM application …  → ERROR: violates foreign key "audit_event_application_id_fkey"
+consent_record FK           → ON DELETE CASCADE
+```
+
+감사 체인이 원서 행을 참조해 행을 지울 수 없고, 억지로 지우면 동의 기록이 함께 사라진다.
+그래서 원서·신원·결제·동의의 파기 방식은 **내용 제거(CONTENT)** — 행과 해시는 두고 본문·PII 만
+비운다. 서류는 파일만 지우고(OBJECT) 해시는 남아 "무엇이 제출됐는가" 는 계속 증명된다. (D-38)
+
 ## 태스크
 
 | ID | 태스크 | 담당 | 근거 노션 | 인수기준 | 상태 |
@@ -358,7 +400,7 @@ Demo Gate 5 에서 **중앙을 내린 채 생성→저장→결제→제출이 �
 | T-M3-07 | **Evidence Package 생성** | 송리안 | §01 A11·C6 | 상태 Timeline·정책·결제증적·config·clock·hash 검증 | ✅ |
 | T-M3-08 | **Dependency Circuit Breaker** | 송리안 | §01 C8 | PG/중앙/문자/메일 장애 전파 차단 (문자·메일은 붙일 때) | ✅ |
 | T-M3-09 | Purpose-scoped Token | 송리안 | §01 A12 | 중앙 토큰으로 원본 재식별 불가, key rotation |
-| T-M3-10 | Retention Matrix + Policy Validation | 송리안 | §01 A15 | 법정·기관 기준보다 짧게 설정 불가 |
+| T-M3-10 | Retention Matrix + Policy Validation | 송리안 | §01 A15 | 법정·기관 기준보다 짧게 설정 불가 | ✅ |
 | T-M3-11 | Admin Web — Config 승인 화면 | 권민준 | §01 A14 | 단독 승인 불가가 UI에서 강제됨 |
 | T-M3-12 | Admin Web — Reconciliation 콘솔 | 권민준 | §01 C2 | 불일치 목록·사유 입력·before/after |
 | T-M3-13 | Admin Web — Evidence 조회 | 권민준 | §01 C6 | 특정 원서의 접수과정 재구성 |
