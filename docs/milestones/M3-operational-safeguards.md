@@ -23,9 +23,9 @@
 
 | 구분 | 태스크 |
 |---|---|
-| ✅ 완료 | T-M3-01 Deadline Policy · T-M3-02 Config Governance · T-M3-04 Reconciliation · T-M3-05 Exception Queue · T-M3-07 Evidence Package · T-M3-08 Circuit Breaker · T-M3-15 서명된 활성화 기록 · **T-M3-10 Retention Matrix** |
+| ✅ 완료 | T-M3-01 Deadline Policy · T-M3-02 Config Governance · T-M3-04 Reconciliation · T-M3-05 Exception Queue · T-M3-07 Evidence Package · T-M3-08 Circuit Breaker · T-M3-15 서명된 활성화 기록 · T-M3-10 Retention Matrix · **T-M3-09 Purpose-scoped Token** |
 | 🟡 부분 | T-M3-03 hash-chain (물리 분리는 M5) · T-M3-06 Autonomous Mode (JWKS 캐시는 T-M5-02) · **T-M3-14 마감 연장** (화면은 Admin Web) |
-| 🔜 다음 | T-M3-09 Purpose-scoped Token · T-M3-11~13 Admin Web |
+| 🔜 다음 | T-M3-11~13 Admin Web (+ T-M3-14 화면) · M3 종료 게이트 |
 
 ### §01 E 핵심 인수기준 "단독 운영자 1명으로 마감시간 변경 불가" 통과
 
@@ -387,6 +387,31 @@ consent_record FK           → ON DELETE CASCADE
 그래서 원서·신원·결제·동의의 파기 방식은 **내용 제거(CONTENT)** — 행과 해시는 두고 본문·PII 만
 비운다. 서류는 파일만 지우고(OBJECT) 해시는 남아 "무엇이 제출됐는가" 는 계속 증명된다. (D-38)
 
+### Purpose-scoped Token — "분리" 가 분리가 아니었다 (T-M3-09 ✅)
+
+§A12: 목적별 토큰 · 대학 원본 식별자와 중앙 토큰 매핑 분리 · 키 교체 · 중앙에서 원본 PII 검색 금지.
+코드를 따라가 보니 세 군데가 어긋나 있었다. (D-39)
+
+| 발견 | 왜 문제인가 | 고친 것 |
+|---|---|---|
+| 중앙 요약의 `subjectRef = sha256(subject_token)` | 중앙 Vault 가 토큰을 기본키로 갖고 있다. 키 없는 해시는 다시 계산하면 그대로 조인된다. 주석의 "Vault 와 직접 조인되지 않으면서" 는 사실이 아니었다 | **목적 키 HMAC** `k1.<base64url>`. Vault 는 이 키를 갖지 않는다 |
+| Vault 로 가는 `applicationRef = cycleId:applicantId` | **대학 내부 지원자 UUID 원문**이 중앙에 쌓였다. 중앙 DDL 주석은 "opaque id 를 받는다" 였다 | 대학 소금으로 만든 opaque 값 |
+| 대시보드가 토큰을 **URL 쿼리**로 받음 | 프록시·접근 로그·브라우저 기록에 식별자가 남는다 (§B8) | `x-subject-token` 헤더. 쿼리로 오면 400 |
+
+**D-27 의 결정은 바꾸지 않았다.** 중앙에 가명 참조를 둔다는 것은 그대로고, 그 참조를 목적 키로
+만들었을 뿐이다. D-27 이 "두지 않는다" 로 결론 나도 제거는 똑같이 쉽다 — 되돌리기 쉬운 쪽으로
+더 안전해지는 변경이라 확인을 기다리지 않았다.
+
+**키 교체** — 참조 앞에 키 ID 가 붙는다. 중앙은 키 목록(`SUBJECT_REF_KEYS=k2=…,k1=…`) 전부로
+참조를 만들어 찾으므로, 대학이 새 키로 옮겨 가는 동안 옛 키로 만든 "내 원서" 도 사라지지 않는다.
+
+**목적 이름을 HMAC 입력에 넣는다.** 같은 키가 실수로 두 목적에 쓰여도 값이 달라 목적 사이에
+참조가 이어지지 않는다. 지금 목적은 `DASHBOARD` 하나다. v1.0 §6.2 의 중복지원 검증(법정 업무)이
+필요해지면 **별도 키**로 `DEDUP` 을 더한다.
+
+⚠️ 개발 DB 의 기존 요약은 옛 무키 해시라 "내 원서" 에 더 이상 나오지 않는다. 운영 데이터는 아직
+없으므로 이관 대상은 없다. 남은 것 — 키 보관은 M5 Vault(§06), 대학·중앙 키 배포 절차.
+
 ## 태스크
 
 | ID | 태스크 | 담당 | 근거 노션 | 인수기준 | 상태 |
@@ -399,7 +424,7 @@ consent_record FK           → ON DELETE CASCADE
 | T-M3-06 | **Autonomous Mode** | 송리안 | §01 A1·C3 | Local Policy Snapshot·JWKS Cache·Offline Spool | 🟡 |
 | T-M3-07 | **Evidence Package 생성** | 송리안 | §01 A11·C6 | 상태 Timeline·정책·결제증적·config·clock·hash 검증 | ✅ |
 | T-M3-08 | **Dependency Circuit Breaker** | 송리안 | §01 C8 | PG/중앙/문자/메일 장애 전파 차단 (문자·메일은 붙일 때) | ✅ |
-| T-M3-09 | Purpose-scoped Token | 송리안 | §01 A12 | 중앙 토큰으로 원본 재식별 불가, key rotation |
+| T-M3-09 | Purpose-scoped Token | 송리안 | §01 A12 | 중앙 토큰으로 원본 재식별 불가, key rotation | ✅ |
 | T-M3-10 | Retention Matrix + Policy Validation | 송리안 | §01 A15 | 법정·기관 기준보다 짧게 설정 불가 | ✅ |
 | T-M3-11 | Admin Web — Config 승인 화면 | 권민준 | §01 A14 | 단독 승인 불가가 UI에서 강제됨 |
 | T-M3-12 | Admin Web — Reconciliation 콘솔 | 권민준 | §01 C2 | 불일치 목록·사유 입력·before/after |

@@ -3,7 +3,8 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { EVENT_TYPE, ApplicationFinalizedData } from '@wonseoro/contracts';
 import { Db } from '@wonseoro/server-kit';
-import { CENTRAL_ID_SALT } from '../../config';
+import { purposeRef } from '@wonseoro/server-kit';
+import { CENTRAL_ID_SALT, CENTRAL_SUBJECT_KEY, CENTRAL_SUBJECT_KEY_ID } from '../../config';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { AuditService } from '../audit/audit.service';
 import { DeadlineService } from '../deadline/deadline.service';
@@ -278,10 +279,9 @@ export class FinalizationService {
     } = {
       universityId: src.universityId,
       applicationId: this.opaqueId(src.applicationId),
-      // 중앙이 "내 원서"를 추려주려면 어느 지원자의 것인지 알아야 한다.
-      // 대학마다 값이 같아야 하므로 대학별 소금을 쓰지 않는다. subject_token 자체가
-      // 중앙이 발급한 고엔트로피 가명 식별자이고, 중앙은 이미 Vault 에서 그것을 안다.
-      // 원문 대신 해시를 보내 요약 테이블이 Vault 와 직접 조인되지 않게 한다. (D-27)
+      // 중앙이 "내 원서"를 추려주려면 어느 지원자의 것인지 알아야 한다. (D-27)
+      // 대학마다 값이 같아야 하므로 대학별 소금은 쓰지 않고, 목적 키로 HMAC 한다.
+      // 키 없는 해시는 Vault 의 토큰으로 다시 만들 수 있어 분리가 아니었다. (D-39)
       subjectRef: subjectRefOf(src.subjectToken),
       admissionYear: src.admissionYear,
       admissionTypeCode: src.admissionTypeCode,
@@ -422,14 +422,20 @@ export class FinalizationService {
 }
 
 /**
- * 중앙에 보내는 지원자 참조. (불일치 대장 D-27)
+ * 중앙에 보내는 지원자 참조. (불일치 대장 D-27 · D-39, v1.1 §A12)
  *
  * `subject_token` 은 중앙이 발급한 가명 식별자다. 그대로 보내면 요약 테이블이
- * Vault 와 바로 조인되어, 분리해 둔 의미가 사라진다. 그래서 해시를 보낸다.
+ * Vault 와 바로 조인된다. 키 없는 해시도 마찬가지다 — Vault 는 토큰을 갖고 있으니
+ * 해시를 다시 계산하면 된다. 그래서 **"내 원서" 조회 목적의 키로 HMAC** 한다.
+ * Vault 를 읽을 수 있어도 이 키가 없으면 조인되지 않는다.
  *
  * 대학별 소금을 섞지 않는다. 섞으면 같은 사람이 대학마다 다른 값이 되어
  * "내 원서" 를 한 화면에 모을 수 없다 — 그게 중앙이 존재하는 이유다.
  */
 function subjectRefOf(subjectToken: string): string {
-  return createHash('sha256').update(subjectToken).digest('hex');
+  return purposeRef(
+    'DASHBOARD',
+    { id: CENTRAL_SUBJECT_KEY_ID, secret: CENTRAL_SUBJECT_KEY },
+    subjectToken,
+  );
 }

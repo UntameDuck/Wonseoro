@@ -52,6 +52,25 @@ export const CENTRAL_ID_SALT = secretOrDev(
   'dev-salt',
   '중앙 전달용 식별자 가명처리 소금',
 );
+/**
+ * "내 원서" 통합 조회용 지원자 참조 키. (v1.1 §A12, T-M3-09)
+ *
+ * 중앙에 보내는 지원자 참조는 이 키로 만든 HMAC 이다. 키 없는 해시였을 때는 중앙 Vault 의
+ * 토큰을 해시하기만 하면 요약과 조인됐다 (D-39). 모든 대학과 중앙 대시보드가 같은 키를
+ * 쓴다 — 같은 사람이면 대학이 달라도 같은 참조가 나와야 한다. Vault 는 이 키를 갖지 않는다.
+ * 키 보관은 M5 Vault(§06).
+ */
+export const CENTRAL_SUBJECT_KEY = secretOrDev(
+  'CENTRAL_SUBJECT_KEY',
+  'dev-dashboard-subject-key',
+  '"내 원서" 조회용 지원자 참조 키. 없으면 중앙에서 지원자 참조가 Vault 와 조인된다',
+);
+export const CENTRAL_SUBJECT_KEY_ID = envOrDev(
+  'CENTRAL_SUBJECT_KEY_ID',
+  'k1',
+  '지원자 참조 키 식별자. 키를 바꾸면 이 값도 바꾼다',
+);
+
 export const VAULT_TIMEOUT_MS = envInt('VAULT_TIMEOUT_MS', 2000, { min: 100, max: 30_000 });
 
 /**

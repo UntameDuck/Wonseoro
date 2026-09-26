@@ -1,6 +1,6 @@
-import { Controller, Get, Header, HttpException, Query } from '@nestjs/common';
-import { createHash } from 'node:crypto';
-import { Db } from '@wonseoro/server-kit';
+import { Controller, Get, Header, Headers, HttpException, Query } from '@nestjs/common';
+import { Db, purposeRef } from '@wonseoro/server-kit';
+import { SUBJECT_REF_KEYS } from '../../config';
 
 /**
  * 내 원서 Dashboard — 기술설계서 v1.1 §10 §9
@@ -22,7 +22,24 @@ export class DashboardController {
 
   @Get('applications')
   @Header('cache-control', 'no-store')
-  async list(@Query('applicantToken') applicantToken?: string) {
+  async list(
+    @Headers('x-subject-token') applicantToken?: string,
+    @Query('applicantToken') inQuery?: string,
+  ) {
+    // 식별자를 URL 에 싣지 않는다. 프록시·접근 로그·브라우저 기록에 남는다. (§B8, D-39)
+    if (inQuery) {
+      throw new HttpException(
+        {
+          type: 'https://wonseoro.kr/problems/validation-failed',
+          title: '요청이 올바르지 않습니다',
+          status: 400,
+          code: 'APPLICANT_TOKEN_IN_URL',
+          traceId: '',
+          detail: '지원자 식별자는 URL 이 아니라 x-subject-token 헤더로 보내야 합니다.',
+        },
+        400,
+      );
+    }
     if (!applicantToken) {
       throw new HttpException(
         {
@@ -38,17 +55,18 @@ export class DashboardController {
     }
 
     // 대학이 보낸 것과 같은 방식으로 참조를 만든다. 원문 토큰은 저장하지 않는다.
-    const subjectRef = createHash('sha256').update(applicantToken).digest('hex');
+    // 키 목록 전부로 만든다 — 키를 바꾸는 동안 옛 키로 만든 참조도 찾아져야 한다.
+    const subjectRefs = SUBJECT_REF_KEYS.map((k) => purposeRef('DASHBOARD', k, applicantToken));
 
     const { rows } = await this.db.query<Record<string, unknown>>(
       `SELECT university_id, application_id, admission_year, admission_type_code,
               department_code, status, application_number, submitted_at,
               last_sequence, last_synced_at
          FROM application_summary
-        WHERE subject_ref = $1
+        WHERE subject_ref = ANY($1::text[])
         ORDER BY last_synced_at DESC
         LIMIT 100`,
-      [subjectRef],
+      [subjectRefs],
     );
 
     return {

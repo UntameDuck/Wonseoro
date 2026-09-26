@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
+import { CENTRAL_ID_SALT } from '../../config';
 import { ApplicationStatus } from '@wonseoro/contracts';
 import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
@@ -78,7 +79,10 @@ export class ApplicationRepository {
         ? await this.vault.fetchSnapshot({
             subjectToken: input.subjectToken,
             universityId: input.universityId,
-            applicationRef: `${input.cycleId}:${input.applicantId}`,
+            // 대학 내부 지원자 UUID 를 중앙에 보내지 않는다. (§A12, D-39)
+            // Vault 는 "어느 원서에 무엇을 내줬는지" 만 알면 된다 — 대학 쪽에서 되짚을 수 있는
+            // opaque 값이면 충분하다. 전에는 cycleId:applicantId 원문이 그대로 갔다.
+            applicationRef: vaultApplicationRef(input.cycleId, input.applicantId),
           })
         : { fields: {}, releasedFields: [], withheldFields: [], available: false };
 
@@ -291,4 +295,14 @@ export class ApplicationRepository {
       lastSavedAt: r.last_saved_at ? (r.last_saved_at as Date).toISOString() : null,
     };
   }
+}
+
+/**
+ * Vault 스냅샷 발급 기록에 남길 원서 참조. 소금이 있어 중앙은 되짚을 수 없고,
+ * 대학은 같은 입력으로 다시 만들어 대조할 수 있다.
+ */
+function vaultApplicationRef(cycleId: string, applicantId: string): string {
+  return createHash('sha256')
+    .update(`${CENTRAL_ID_SALT}|vault-snapshot|${cycleId}|${applicantId}`)
+    .digest('hex');
 }

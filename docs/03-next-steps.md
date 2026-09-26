@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-26 (T-M3-10 Retention Matrix 완료)
+> 최종 갱신: 2026-09-26 (T-M3-09 Purpose-scoped Token · T-M3-10 Retention Matrix 완료)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -9,20 +9,20 @@
 
 ## 현재 지점
 
-**M0·M1·M2 완료, M3 9/15.** MVP 가 화면에서 끝까지 동작하고, 운영 안전장치의 핵심이 붙었다.
+**M0·M1·M2 완료, M3 10/15.** MVP 가 화면에서 끝까지 동작하고, 운영 안전장치의 핵심이 붙었다.
 
 | 단계 | 진행 | 비고 |
 |---|---|---|
 | M0 기반 | 7/8 | 제출문서 정정(T-M0-08)만 남음 |
 | M1 접수 Core | **14/14** | ✅ |
 | M2 결제·Finalize·화면 | **24/24** | ✅ Demo Gate 1~5 통과 |
-| **M3 운영 안전장치** | **9/15** | ◀ 진행 중 (🟡 2건 별도) |
+| **M3 운영 안전장치** | **10/15** | ◀ 진행 중 (🟡 2건 별도) |
 | M4 분산 실증 | 0/28 | |
 | M5 신뢰성·보안·접근성 | 0/35 | |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 53/139 태스크** (T-M3-06·14 🟡 부분 완료 별도). 테스트 파일 23개 / **244개 테스트**
-(admission-api 202 · server-kit 22 · central-api 16 · event-relay 4) 전부 통과, DB 정합성 제약 14종 PASS.
+**총 54/139 태스크** (T-M3-06·14 🟡 부분 완료 별도). 테스트 파일 25개 / **252개 테스트**
+(admission-api 202 · server-kit 27 · central-api 19 · event-relay 4) 전부 통과, DB 정합성 제약 14종 PASS.
 
 ### 동작하는 것 — End-to-End
 
@@ -50,6 +50,7 @@
 | T-M3-08 Dependency Circuit Breaker | ✅ | 중앙·PG·AV 보고 경로 차단. **PG 는 끊겨도 UNKNOWN** · 중앙 장애가 이벤트를 DEAD 로 만들지 않음 |
 | T-M3-06 Autonomous Mode | 🟡 | Health Gate · 자율 운영 배너 · Sync Lag 경보 · 서명된 Policy Snapshot. **JWKS 캐시만 T-M5-02 로** (D-34) |
 | T-M3-15 서명된 활성화 기록 | ✅ | 마감·설정의 모든 적용을 Ed25519 로 서명, **추가만 가능한 기록** + 운영자 감사 체인. 공개키로 대학 밖에서 검증 |
+| T-M3-09 Purpose-scoped Token | ✅ | 중앙 지원자 참조를 **목적 키 HMAC** 로 — Vault 접근만으로는 조인 불가, 키 교체 지원. 대학 내부 UUID 유출·URL 토큰 제거 |
 | T-M3-10 Retention Matrix | ✅ | 데이터 종류별 하한 — **법정 기간을 지어내지 않는다**. 근거 있는 2년만 박고 나머지는 대학이 명시. 설정 승인 절차를 탄다 |
 | T-M3-14 마감 연장 워크플로 | 🟡 | 백엔드 완료 — **입학처 결정 문서번호 필수** · 기준 정책이 바뀌면 적용 거부. 화면은 Admin Web 과 함께 |
 
@@ -66,13 +67,14 @@
 
 ## 착수 순서
 
-### 1️⃣ 다음 작업 — T-M3-09 Purpose-scoped Token
+### 1️⃣ 다음 작업 — Admin Web (T-M3-11~13 + T-M3-14 화면) · M3 종료 게이트
 
-**근거 노션**: §01 A12
+**M3 백엔드 태스크는 전부 끝났다.** 남은 것은 화면과 종료 체크리스트다.
 
-남은 M3 백엔드 태스크다. 중앙 토큰으로 대학 원본을 재식별할 수 없어야 한다.
-지금 중앙 요약의 `subjectRef = sha256(subject_token)` (D-27) 은 목적별로 나뉘어 있지 않고
-키 교체도 없다. **D-27 확인과 맞물린다** — 중앙에 가명 식별자를 둘지부터 정해야 한다.
+- Admin Web 은 권민준 담당이다. 필요한 API 는 아래 2️⃣ 표에 전부 있다
+- M3 종료 전 **노션 §01 을 다시 읽고 C 8종을 대조**한다 (M3 문서 하단 체크리스트).
+  C4 Admission Peak Mode 는 M3 태스크에 없다 — 어디서 할지 정해야 한다
+- 노션 반영 대기가 쌓였다. 특히 **D-27 · D-29 · D-7 · D-38** 은 확인받아야 방향이 확정된다
 
 ### ⚠️ 보존기간 하한값 확인 필요 (D-38)
 
@@ -116,10 +118,10 @@ Diff 를 읽히게 그리는 것이 핵심이다 — 읽히지 않는 Diff 는 �
 
 ---
 
-## 노션 반영 대기 (33건)
+## 노션 반영 대기 (34건)
 
-불일치 대장 38건 중 **🔴 OPEN 은 0건** — 전부 판정됐다.
-5건 CLOSED, 나머지 33건이 노션 반영 대기다. 전체는
+불일치 대장 39건 중 **🔴 OPEN 은 0건** — 전부 판정됐다.
+5건 CLOSED, 나머지 34건이 노션 반영 대기다. 전체는
 [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md).
 
 ### 먼저 확인받아야 하는 것
@@ -127,7 +129,7 @@ Diff 를 읽히게 그리는 것이 핵심이다 — 읽히지 않는 Diff 는 �
 | # | 내용 | 왜 먼저인가 |
 |---|---|---|
 | **D-29** | `application` 자연키를 부분 유니크로 바꿔 취소된 원서를 제외 | **canonical DDL 의 제약을 약화**하는 변경이다. 다른 항목처럼 덧붙이는 것이 아니다 |
-| **D-27** | 중앙 요약에 `subjectRef`(= sha256(subject_token)) 추가 | 중앙에 가명 식별자를 두는 결정이라 §A3 "최소 정보" 와 함께 봐야 한다 |
+| **D-27** | 중앙 요약에 지원자 참조 `subjectRef` 추가 (D-39 로 목적 키 HMAC 로 바뀜) | 중앙에 가명 식별자를 두는 결정이라 §A3 "최소 정보" 와 함께 봐야 한다 |
 | **D-7** | 접수 성립 **후** 취소를 별도 레코드로 둘지 | 지금은 409 로 거부하고 입학처 안내. 실제 운영 규칙이 필요하다 |
 
 ### DDL 에 접어 넣어야 하는 것
@@ -140,7 +142,7 @@ Diff 를 읽히게 그리는 것이 핵심이다 — 읽히지 않는 Diff 는 �
 D-16 self-check · D-19 form-schema · D-20 scan-result · D-22 policy activate ·
 D-24 evidence reason · D-26 reconciliation run · **원서 취소(D-7)** ·
 **Config diff/rollback(T-M3-02)** · D-32 dependencies · D-34 operating-mode ·
-**D-35 마감 연장 · 적용 이력 · 서명 공개키** · D-37 본문 인코딩 400 · D-38 retention matrix·plan
+**D-35 마감 연장 · 적용 이력 · 서명 공개키** · D-37 본문 인코딩 400 · D-38 retention matrix·plan · D-39 대시보드 토큰 헤더
 
 ---
 

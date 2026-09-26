@@ -593,6 +593,23 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-39. 중앙의 지원자 참조가 Vault 와 조인됐고, 대학 내부 UUID 가 중앙에 갔다 🔴
+
+| | |
+|---|---|
+| **발견** | 2026-09-26 (T-M3-09 착수 전 식별자 추적) |
+| **문제 ①** | D-27 의 `subjectRef = sha256(subject_token)`. 중앙 Vault 는 `subject_token` 을 기본키로 갖는다 — 키 없는 해시는 누구나 다시 계산하므로 Vault 를 읽으면 요약과 그대로 조인된다. 주석의 "Vault 와 직접 조인되지 않으면서" 는 사실이 아니었다 |
+| **문제 ②** | 원서 생성 시 Vault 로 보내는 `applicationRef` 가 `${cycleId}:${applicantId}` — **대학 내부 지원자 UUID 원문**이다. 중앙 DDL 주석은 "opaque id 를 받는다" 였다. §A12 "대학 원본 식별자와 중앙 토큰 매핑 분리" 위반 |
+| **문제 ③** | 대시보드가 `applicantToken` 을 **URL 쿼리**로 받았다. 프록시·접근 로그·브라우저 기록에 식별자가 남는다 (§B8) |
+| **판정** | ① 목적 키 HMAC `<keyId>.<base64url(HMAC("DASHBOARD"|token))>` — Vault 는 키를 갖지 않는다. 키 목록으로 교체 지원 ② 대학 소금으로 만든 opaque 값 ③ `x-subject-token` 헤더, 쿼리는 400 |
+| **D-27 과의 관계** | 가명 참조를 둔다는 결정은 유지했다. 참조를 만드는 방법만 바꿨다. D-27 이 "두지 않는다" 로 결론 나도 제거는 똑같이 쉽다 |
+| **남은 것** | 키 보관(M5 Vault) · 대학·중앙 키 배포 절차 · 중복지원 검증(v1.0 §6.2)이 필요해지면 별도 키의 `DEDUP` 목적 |
+| **저장소 반영** | ✅ `server-kit/purpose-ref.ts` · finalization · application.repository · central dashboard · frontend |
+| **노션 반영** | ⬜ §A12 에 참조 형식·키 교체 규칙 · §04 `subjectRef` 형식 · 대시보드 조회 경로(헤더) |
+| **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 

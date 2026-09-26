@@ -58,13 +58,14 @@ export interface ApplicationFinalizedData {
   submittedAt: string;
   integrityHash: string;
   /**
-   * 지원자 참조 — sha256(subject_token). (불일치 대장 D-27)
+   * 지원자 참조 — `<keyId>.<HMAC-SHA256("DASHBOARD"|subject_token)>`. (D-27 · D-39, §A12)
    *
    * 중앙이 "내 원서" 를 추려주려면 어느 지원자의 것인지 알아야 한다. 이게 없으면
    * Dashboard 는 전체를 돌려주거나 아무것도 못 돌려준다. 둘 다 답이 아니다.
    *
-   * 원문 토큰이 아니라 해시다. 요약 테이블이 Vault 와 바로 조인되면
-   * 둘을 분리해 둔 의미가 사라진다.
+   * 원문 토큰도, 키 없는 해시도 아니다. 중앙 Vault 는 토큰을 갖고 있어 키 없는 해시는
+   * 다시 계산하면 그대로 조인된다. "내 원서" 목적 키로 HMAC 해서, Vault 접근만으로는
+   * 요약과 이어지지 않게 한다. 키 ID 가 앞에 붙어 키를 바꿔도 옛 참조를 찾을 수 있다.
    *
    * optional 이다 — §04 의 Schema Evolution 규칙상 optional 추가는 호환 변경이고,
    * 이 필드를 모르는 기존 대학 릴리스도 계속 이벤트를 보낼 수 있어야 한다.

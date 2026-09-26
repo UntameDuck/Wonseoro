@@ -330,8 +330,9 @@ export const api = {
         lastSyncedAt: string;
       }>;
     }>(
-      `/api/v1/dashboard/applications?applicantToken=${encodeURIComponent(applicantToken)}`,
-      { base: 'central' },
+      // 식별자를 URL 에 싣지 않는다. 프록시·접근 로그·브라우저 기록에 남는다. (D-39)
+      '/api/v1/dashboard/applications',
+      { base: 'central', subjectToken: applicantToken },
     ),
 
   saveProfile: (body: {
