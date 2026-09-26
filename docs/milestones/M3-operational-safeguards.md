@@ -19,13 +19,13 @@
 | [v1.0 §9 감사로그](https://app.notion.com/p/3de75ab5debe801f99c5fee017130c65) | 감사 이벤트 목록, hash-chain, WORM |
 | [09. STRIDE](https://app.notion.com/p/3df75ab5debe81e4bff5f44e1e3112d4) | Repudiation·Tampering 대응이 이 단계 기능과 직결 |
 
-## 진행 현황 (2026-09-23)
+## 진행 현황 (2026-09-26)
 
 | 구분 | 태스크 |
 |---|---|
-| ✅ 완료 | T-M3-01 Deadline Policy · **T-M3-02 Config Governance** · T-M3-04 Reconciliation · T-M3-05 Exception Queue · T-M3-07 Evidence Package |
+| ✅ 완료 | T-M3-01 Deadline Policy · T-M3-02 Config Governance · T-M3-04 Reconciliation · T-M3-05 Exception Queue · T-M3-07 Evidence Package · **T-M3-08 Circuit Breaker** |
 | 🟡 부분 | T-M3-03 hash-chain (물리 분리는 M5) |
-| 🔜 다음 | T-M3-06 Autonomous Mode · T-M3-08 Circuit Breaker · T-M3-11~13 Admin Web |
+| 🔜 다음 | T-M3-06 Autonomous Mode · T-M3-11~13 Admin Web |
 
 ### §01 E 핵심 인수기준 "단독 운영자 1명으로 마감시간 변경 불가" 통과
 
@@ -200,6 +200,42 @@ Diff 확인 후 1차 승인              200  남은 승인 1
 지원자격·PG 설정이 전부 `config_json` 에 들어가는데, DB 가 그것을 지키지 않는다.
 코드는 우회 가능하고 DB 는 아니다.
 
+### Dependency Circuit Breaker — 끊긴 뒤의 규칙이 의존성마다 다르다 (T-M3-08)
+
+§01 C8 은 "외부 장애의 전파 차단" 한 줄이다. 끊는 장치는 하나로 만들 수 있지만,
+**끊긴 뒤 무엇을 하는지는 의존성마다 정반대다.** 그래서 규칙을 따로 정했다. (D-32)
+
+| 의존성 | 끊기면 | 이유 |
+|---|---|---|
+| 중앙 Profile Vault | 빈 Snapshot 으로 원서 생성 계속 | 중앙은 편의 계층이다 (D-18). Breaker 는 **타임아웃 대기만** 없앤다 |
+| PG 결제 확인 | CREATED·PENDING → **UNKNOWN**, Reconciliation 으로 | fail-open 하면 돈을 안 받고 접수시킨다. FAILED 로 떨어뜨리면 재결제로 중복 결제가 된다 |
+| PG 결제 의도 생성 | 503 | 결제창이 열리기 전이다. 돈도 기록도 없다 |
+| 중앙 Sync Gateway | 행을 집지 않음, **재시도 횟수를 쓰지 않음** | 중앙 장애는 이벤트의 잘못이 아니다 (D-33) |
+| 접수 API (AV 보고) | 검사하지 않음 | 보고 못 할 판정에 CPU 를 쓰지 않는다 |
+
+공통: 연속 5회 실패로 열고 30초 뒤 **탐침 1건**. 4xx 는 세지 않는다 — 상대가 살아서 거절한 것이다.
+상태는 Pod 안에만 둔다. 공유 저장소에 두면 그게 새 의존성이 된다.
+
+**readiness 에 넣지 않는다.** 중앙이 죽었다고 `readyz` 가 실패하면 모든 Pod 가 트래픽에서 빠져
+접수 전체가 멈춘다. 끊는 이유가 그걸 막는 것이다. 상태는 `GET /healthz/dependencies` 로 본다.
+
+**구현 중 발견한 것 — 중앙이 2분 반만 죽어도 이벤트가 버려졌다.** (D-33)
+relay 는 실패마다 재시도 횟수를 올려 10회에 DEAD 로 보냈고, Backoff 누적이 약 142초였다.
+재시도 횟수가 "이 이벤트가 문제인가" 와 "중앙이 살아 있는가" 를 섞어 세고 있었다.
+
+가짜 중앙을 끄고 켜며 확인한 결과 (`relay.integration.test.ts`)
+
+```
+중앙 503        relay: sent=0 failed=1 dead=0 held=4 circuit=OPEN   ← 2번째 실패에서 열림
+열린 동안       행을 집지 않음, 중앙 요청 0
+탐침 ×3         held=1 circuit=OPEN (매번 1건만, attempt_count 증가 없음)
+중앙 복구       HALF_OPEN -> CLOSED  sent=1 → sent=4
+결과            5건 전부 SENT, DEAD 0
+```
+
+PG 쪽은 `payment-circuit.integration.test.ts` — 끊기면 UNKNOWN 과 원인(`ECONNREFUSED`/`CIRCUIT_OPEN`)이
+`payment_event` 와 감사에 남고, 열린 뒤에는 PG 호출 0, 복구되면 같은 결제가 CONFIRMED 로 확정된다.
+
 ## 태스크
 
 | ID | 태스크 | 담당 | 근거 노션 | 인수기준 | 상태 |
@@ -211,7 +247,7 @@ Diff 확인 후 1차 승인              200  남은 승인 1
 | T-M3-05 | Exception Queue + 수동 승인 복구 | 송리안 | §01 A4·B16 | 불일치만 큐로, 보정은 Admin Action API로만 | ✅ |
 | T-M3-06 | **Autonomous Mode** | 송리안 | §01 A1·C3 | Local Policy Snapshot·JWKS Cache·Offline Spool |
 | T-M3-07 | **Evidence Package 생성** | 송리안 | §01 A11·C6 | 상태 Timeline·정책·결제증적·config·clock·hash 검증 | ✅ |
-| T-M3-08 | Dependency Circuit Breaker | 송리안 | §01 C8 | PG/중앙/문자/메일 장애 전파 차단 |
+| T-M3-08 | **Dependency Circuit Breaker** | 송리안 | §01 C8 | PG/중앙/문자/메일 장애 전파 차단 (문자·메일은 붙일 때) | ✅ |
 | T-M3-09 | Purpose-scoped Token | 송리안 | §01 A12 | 중앙 토큰으로 원본 재식별 불가, key rotation |
 | T-M3-10 | Retention Matrix + Policy Validation | 송리안 | §01 A15 | 법정·기관 기준보다 짧게 설정 불가 |
 | T-M3-11 | Admin Web — Config 승인 화면 | 권민준 | §01 A14 | 단독 승인 불가가 UI에서 강제됨 |

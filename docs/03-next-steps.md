@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-23 (M3 과반 완료 · 프로덕션 점검 완료)
+> 최종 갱신: 2026-09-26 (T-M3-08 Circuit Breaker 완료)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -9,20 +9,20 @@
 
 ## 현재 지점
 
-**M0·M1·M2 완료, M3 6/15.** MVP 가 화면에서 끝까지 동작하고, 운영 안전장치의 핵심이 붙었다.
+**M0·M1·M2 완료, M3 7/15.** MVP 가 화면에서 끝까지 동작하고, 운영 안전장치의 핵심이 붙었다.
 
 | 단계 | 진행 | 비고 |
 |---|---|---|
 | M0 기반 | 7/8 | 제출문서 정정(T-M0-08)만 남음 |
 | M1 접수 Core | **14/14** | ✅ |
 | M2 결제·Finalize·화면 | **24/24** | ✅ Demo Gate 1~5 통과 |
-| **M3 운영 안전장치** | **6/15** | ◀ 진행 중 |
+| **M3 운영 안전장치** | **7/15** | ◀ 진행 중 |
 | M4 분산 실증 | 0/28 | |
 | M5 신뢰성·보안·접근성 | 0/35 | |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 50/139 태스크.** 소스 약 14,900줄, 테스트 파일 15개 / **191개 테스트 통과**
-(admission-api 163 · central-api 16 · server-kit 12), DB 정합성 제약 12종 PASS.
+**총 51/139 태스크.** 테스트 파일 18개 / **210개 테스트 통과**
+(admission-api 168 · server-kit 22 · central-api 16 · event-relay 4), DB 정합성 제약 12종 PASS.
 
 ### 동작하는 것 — End-to-End
 
@@ -47,6 +47,7 @@
 | T-M3-04 Reconciliation Center | ✅ | Application·Payment·Submission·Central ACK 4-way 대조 |
 | T-M3-05 Exception Queue | ✅ | 불일치만 큐로, 보정은 사유·before/after 와 함께 |
 | T-M3-07 Evidence Package | ✅ | 한 원서의 접수 과정 재구성 + 체인 검증 |
+| T-M3-08 Dependency Circuit Breaker | ✅ | 중앙·PG·AV 보고 경로 차단. **PG 는 끊겨도 UNKNOWN** · 중앙 장애가 이벤트를 DEAD 로 만들지 않음 |
 
 ### 프로덕션 점검 (2026-09-23)
 
@@ -61,31 +62,7 @@
 
 ## 착수 순서
 
-### 1️⃣ 다음 작업 — T-M3-08 Dependency Circuit Breaker
-
-**근거 노션**: §01 C8
-
-지금은 타임아웃과 개별 실패 처리는 있지만, **반복 실패하는 의존성을 끊는 장치가 없다.**
-중앙이 느려지면 매 요청이 타임아웃까지 기다렸다가 실패한다. 그 대기가 쌓이면
-접수 API 의 커넥션과 스레드를 먹고, 중앙 장애가 결국 접수 장애로 번진다.
-**그걸 막는 것이 이 저장소의 존재 이유다.**
-
-끊어야 할 대상
-- 중앙 Sync Gateway (event-relay · Profile Vault 조회)
-- PG (결제 생성·재검증)
-- document-service 보고 경로
-- 문자·메일 (아직 없음. 붙을 때 함께)
-
-주의할 것
-- **Profile Vault 는 이미 fail-open 이다.** 끊겨도 빈 Snapshot 으로 접수가 계속된다 (D-18).
-  Breaker 가 이 성질을 바꾸면 안 된다
-- **PG 는 fail-open 하면 안 된다.** 확인 못 한 결제를 CONFIRMED 로 넘기면
-  돈을 안 받고 접수시키는 것이다. Breaker 가 열리면 `UNKNOWN` 으로 두고
-  Reconciliation 에 맡긴다 (§B4)
-- 열린 뒤 반열림(half-open) 복구를 반드시 둔다. 한 번 열리고 안 닫히면
-  중앙이 살아나도 통합 조회가 영원히 죽는다
-
-### 2️⃣ T-M3-06 Autonomous Mode
+### 1️⃣ 다음 작업 — T-M3-06 Autonomous Mode
 
 **근거 노션**: §01 A1·C3
 
@@ -95,7 +72,11 @@ Local Policy Snapshot · JWKS 로컬 캐시 · Offline Spool.
 남은 것은 인증 키(JWKS) 캐시인데, 이것은 실제 인증(T-M5-02)과 맞물린다.
 **T-M5-02 보다 먼저 하면 헛일이 될 수 있다** — 순서를 검토할 것.
 
-### 3️⃣ T-M3-11~13 Admin Web (권민준)
+Offline Event Spool 은 T-M3-08 에서 일부 풀렸다. 중앙이 죽어 있는 동안 Outbox 가
+DEAD 로 떨어지지 않고 대학 DB 에 그대로 쌓인다 (D-33). 남은 것은 **장기 장애 시
+Outbox 용량**이다 — 파티션·SENT 아카이브·적체 경보 (§B7).
+
+### 2️⃣ T-M3-11~13 Admin Web (권민준)
 
 백엔드 API 는 전부 준비돼 있다.
 
@@ -113,10 +94,10 @@ Diff 를 읽히게 그리는 것이 핵심이다 — 읽히지 않는 Diff 는 �
 
 ---
 
-## 노션 반영 대기 (26건)
+## 노션 반영 대기 (28건)
 
-불일치 대장 31건 중 **🔴 OPEN 은 0건** — 전부 판정됐다.
-5건 CLOSED, 나머지 26건이 노션 반영 대기다. 전체는
+불일치 대장 33건 중 **🔴 OPEN 은 0건** — 전부 판정됐다.
+5건 CLOSED, 나머지 28건이 노션 반영 대기다. 전체는
 [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md).
 
 ### 먼저 확인받아야 하는 것

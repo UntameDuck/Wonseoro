@@ -296,7 +296,7 @@ dev-folder/
 
 ## Project Status
 
-> 기준일 2026-09-23 · 전체 139개 태스크 중 **50개 완료** · 테스트 **191개 통과**
+> 기준일 2026-09-26 · 전체 139개 태스크 중 **51개 완료** · 테스트 **210개 통과**
 
 지원자가 화면에서 원서를 만들어 서류를 올리고 결제한 뒤 **접수번호를 받는 전 과정이 동작합니다.**
 
@@ -312,7 +312,7 @@ dev-folder/
 | M0 기반 | 7/8 | 모노레포, 계약, ADR, 로컬 인프라 |
 | M1 접수 Core | **14/14** | 원서 생성·자동저장·추가문항·서류·감사 hash-chain |
 | M2 결제·Finalize·화면 | **24/24** | 결제 재검증, Finalize 트랜잭션, KRDS 6단계 화면, Dashboard |
-| M3 운영 안전장치 | **6/15** | 마감 정책 엔진, 설정 거버넌스, 4-way 대조, 증적 재구성 |
+| M3 운영 안전장치 | **7/15** | 마감 정책 엔진, 설정 거버넌스, 4-way 대조, 증적 재구성, 의존성 차단 |
 | M4 분산 실증 | 0/28 | K-PaaS 배포, 장애 격리 실증, 부하 시험 |
 | M5 신뢰성·보안·접근성 | 0/35 | OIDC·MFA, 실 PG, 실 AV, WORM 감사 |
 | M6 Pilot 준비 | 0/15 | 대학 1곳 Shadow Test |
@@ -346,7 +346,7 @@ dev-folder/
 
 - [다음 단계 및 현재 진행 현황](docs/03-next-steps.md)
 - [운영 준비 점검 — 하드코딩·기본값·인가](docs/04-production-readiness.md)
-- [설계 불일치 대장](docs/02-spec-discrepancy-register.md) — 설계서와 구현이 어긋난 31건의 판정 기록
+- [설계 불일치 대장](docs/02-spec-discrepancy-register.md) — 설계서와 구현이 어긋난 33건의 판정 기록
 - [문서 인덱스](docs/README.md)
 - [K-Admission 기술설계서](https://efficient-rook-e79.notion.site/K-Admission-K-PaaS-3de75ab5debe801f99c5fee017130c65)
 - [Wonseoro GitHub Repository](https://github.com/UntameDuck/Wonseoro)

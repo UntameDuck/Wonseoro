@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { IdempotencyModule } from './common/idempotency/idempotency.module';
 import { IdentityModule } from './common/identity/identity.module';
+import { ResilienceModule } from './common/resilience/dependency-breakers';
 import { DbModule } from '@wonseoro/server-kit';
 import { ApplicationModule } from './modules/application/application.module';
 import { AuditModule } from './modules/audit/audit.module';
@@ -19,6 +20,7 @@ import { MetaModule } from './modules/meta/meta.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DbModule.forRoot('admission-api', 'kadmission'),
+    ResilienceModule,
     IdempotencyModule,
     IdentityModule,
     AuditModule,

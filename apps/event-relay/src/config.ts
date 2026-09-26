@@ -26,3 +26,14 @@ export const RELAY = {
   batchSize: envInt('RELAY_BATCH_SIZE', 100, { min: 1, max: 1000 }),
   timeoutMs: envInt('RELAY_TIMEOUT_MS', 5000, { min: 100, max: 60_000 }),
 } as const;
+
+/**
+ * 중앙 Circuit Breaker. (v1.1 §01 C8)
+ *
+ * 열려 있는 동안은 행을 집지 않고, 재시도 횟수도 쓰지 않는다.
+ * 중앙이 죽은 것은 이벤트의 잘못이 아니다.
+ */
+export const BREAKER = {
+  failureThreshold: envInt('BREAKER_FAILURE_THRESHOLD', 5, { min: 1, max: 100 }),
+  openMs: envInt('BREAKER_OPEN_MS', 30_000, { min: 1000, max: 600_000 }),
+} as const;

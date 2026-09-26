@@ -49,6 +49,7 @@ export class MockPaymentProvider extends PaymentProviderPort {
   private readonly polls = new Map<string, number>();
 
   async createIntent(applicationId: string, amount: number): Promise<IntentResult> {
+    if (process.env.MOCK_PG_BEHAVIOUR === 'DOWN') throw pgUnreachable();
     const providerTxId = `MOCK-${randomUUID().replace(/-/g, '').slice(0, 20).toUpperCase()}`;
     return {
       providerTxId,
@@ -65,6 +66,7 @@ export class MockPaymentProvider extends PaymentProviderPort {
 
   async verify(providerTxId: string): Promise<VerifyResult> {
     const behaviour = this.behaviourOf(providerTxId);
+    if (behaviour === 'DOWN') throw pgUnreachable();
     const count = (this.polls.get(providerTxId) ?? 0) + 1;
     this.polls.set(providerTxId, count);
 
@@ -98,9 +100,15 @@ export class MockPaymentProvider extends PaymentProviderPort {
    * 테스트가 결과를 고를 수 있게 한다.
    * providerTxId 에 표식을 넣거나, 환경변수로 전체 동작을 고정한다.
    */
-  private behaviourOf(providerTxId: string): 'OK' | 'SLOW' | 'FAIL' | 'UNKNOWN' {
+  private behaviourOf(providerTxId: string): 'OK' | 'SLOW' | 'FAIL' | 'UNKNOWN' | 'DOWN' {
     const forced = process.env.MOCK_PG_BEHAVIOUR;
-    if (forced === 'SLOW' || forced === 'FAIL' || forced === 'UNKNOWN' || forced === 'OK') {
+    if (
+      forced === 'SLOW' ||
+      forced === 'FAIL' ||
+      forced === 'UNKNOWN' ||
+      forced === 'OK' ||
+      forced === 'DOWN'
+    ) {
       return forced;
     }
     if (providerTxId.includes('SLOW')) return 'SLOW';
@@ -110,4 +118,13 @@ export class MockPaymentProvider extends PaymentProviderPort {
     createHash('sha256').update(providerTxId).digest();
     return 'OK';
   }
+}
+
+/**
+ * PG 에 닿지 않는 상황. UNKNOWN 응답과 다르다 — 그건 PG 가 "모른다"고 답한 것이고,
+ * 이건 대답 자체가 없는 것이다. Circuit Breaker 는 이것을 장애로 센다.
+ * (`MOCK_PG_BEHAVIOUR=DOWN`)
+ */
+function pgUnreachable(): Error {
+  return Object.assign(new TypeError('fetch failed'), { cause: { code: 'ECONNREFUSED' } });
 }

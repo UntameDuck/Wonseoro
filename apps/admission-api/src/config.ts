@@ -54,6 +54,18 @@ export const CENTRAL_ID_SALT = secretOrDev(
 export const VAULT_TIMEOUT_MS = envInt('VAULT_TIMEOUT_MS', 2000, { min: 100, max: 30_000 });
 
 /**
+ * 외부 의존성 Circuit Breaker. (v1.1 §01 C8)
+ *
+ * 연속 몇 번 실패하면 끊고, 얼마 뒤에 탐침을 보낼지.
+ * 너무 짧게 잡으면 죽은 의존성에 계속 탐침이 가고, 너무 길게 잡으면
+ * 살아난 뒤에도 그만큼 통합 조회·결제 확인이 멈춰 있다.
+ */
+export const BREAKER = {
+  failureThreshold: envInt('BREAKER_FAILURE_THRESHOLD', 5, { min: 1, max: 100 }),
+  openMs: envInt('BREAKER_OPEN_MS', 30_000, { min: 1000, max: 600_000 }),
+} as const;
+
+/**
  * 인증 방식.
  *   dev-headers — x-applicant-id / x-admin-id 헤더를 그대로 신뢰한다. **개발 전용**
  *   gateway     — 앞단 인증 게이트웨이가 검증해 넣어준 신원을 쓴다 (T-M5-02)

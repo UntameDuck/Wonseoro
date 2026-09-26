@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
 import { PaymentStatus, PAYMENT_FINALIZABLE } from '@wonseoro/contracts';
-import { Db } from '@wonseoro/server-kit';
+import { CircuitOpenError, Db, describeFailure } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
+import { DependencyBreakers } from '../../common/resilience/dependency-breakers';
 import { AuditService } from '../audit/audit.service';
-import { PaymentProviderPort } from './payment.provider';
+import { PaymentProviderPort, VerifyResult } from './payment.provider';
 
 export interface PaymentRow {
   id: string;
@@ -30,6 +31,8 @@ export interface PaymentRow {
  *   2. 응답을 못 받으면 UNKNOWN 이다. FAILED 로 떨어뜨리지 않는다.
  *      사용자에게 재결제를 유도하면 중복 결제가 된다. 그게 더 큰 사고다.
  *   3. Finalize 에 쓸 수 있는 상태는 CONFIRMED 하나뿐이다.
+ *   4. PG 가 끊겨도(Circuit Breaker OPEN) **fail-open 하지 않는다.** (v1.1 §01 C8)
+ *      확인 못 한 결제는 UNKNOWN 이고, 그 뒤는 Reconciliation 이 맡는다.
  */
 @Injectable()
 export class PaymentService {
@@ -39,7 +42,11 @@ export class PaymentService {
     private readonly db: Db,
     private readonly provider: PaymentProviderPort,
     private readonly audit: AuditService,
+    private readonly breakers: DependencyBreakers,
   ) {}
+
+  /** 확인하지 못한 결제를 UNKNOWN 으로 내려도 되는 상태. 이미 결론이 난 결제는 건드리지 않는다. */
+  private static readonly UNVERIFIED_TO_UNKNOWN: readonly PaymentStatus[] = ['CREATED', 'PENDING'];
 
   /**
    * 전형료 결제 의도 생성.
@@ -62,7 +69,16 @@ export class PaymentService {
     if (found.status === 'FINALIZED') throw ProblemException.alreadyFinalized();
 
     const amount = Number(found.fee_amount);
-    const intent = await this.provider.createIntent(applicationId, amount);
+    // 결제창을 열기 전 단계라 아직 돈이 움직이지 않았다. 끊겼으면 503 으로
+    // 다시 시도하게 하는 것이 안전하다. 기록할 결제도 없다.
+    const intent = await this.breakers.paymentGateway
+      .run(() => this.provider.createIntent(applicationId, amount))
+      .catch((err: unknown) => {
+        this.logger.warn(`payment intent unavailable (${describeCause(err)})`);
+        throw ProblemException.retryable(
+          '결제사 연결이 원활하지 않습니다. 잠시 후 다시 시도해 주십시오. 결제는 진행되지 않았습니다.',
+        );
+      });
     const paymentId = randomUUID();
 
     const payment = await this.db.tx(async (client) => {
@@ -117,7 +133,19 @@ export class PaymentService {
     // 이미 확정된 결제는 다시 묻지 않는다.
     if (payment.status === 'CONFIRMED') return payment;
 
-    const result = await this.provider.verify(payment.providerTxId);
+    const providerTxId = payment.providerTxId;
+    let result: VerifyResult;
+    try {
+      result = await this.breakers.paymentGateway.run(() => this.provider.verify(providerTxId));
+    } catch (err) {
+      // PG 에 묻지 못했다. 결제가 됐는지 안 됐는지 **모른다.**
+      // CONFIRMED 로 넘기면 돈을 안 받고 접수시키고, FAILED 로 떨어뜨리면
+      // 재결제를 유도해 중복 결제가 된다. 둘 다 아니므로 UNKNOWN 이다. (§B4)
+      const cause = describeCause(err);
+      this.logger.warn(`payment ${paymentId} unverified (${cause}) — UNKNOWN 으로 두고 대조에 맡긴다`);
+      if (!PaymentService.UNVERIFIED_TO_UNKNOWN.includes(payment.status)) return payment;
+      return this.apply(payment, 'UNKNOWN', undefined, context, { unverifiedCause: cause });
+    }
 
     // 금액이 다르면 확정하지 않는다. 결제창에서 금액이 바뀐 경우를 잡는다.
     if (
@@ -173,6 +201,7 @@ export class PaymentService {
     status: PaymentStatus,
     providerApprovedAt: string | undefined,
     context: { traceId?: string },
+    extra: { unverifiedCause?: string } = {},
   ): Promise<PaymentRow> {
     return this.db.tx(async (client) => {
       await client.query(
@@ -198,7 +227,7 @@ export class PaymentService {
           createHash('sha256')
             .update(`${payment.providerTxId}|${status}|${providerApprovedAt ?? ''}`)
             .digest('hex'),
-          JSON.stringify({ status, providerApprovedAt: providerApprovedAt ?? null }),
+          JSON.stringify({ status, providerApprovedAt: providerApprovedAt ?? null, ...extra }),
         ],
       );
 
@@ -209,7 +238,8 @@ export class PaymentService {
         action: 'PAYMENT_VERIFIED',
         result: status === 'CONFIRMED' ? 'ACCEPTED' : 'REJECTED',
         ...(context.traceId ? { traceId: context.traceId } : {}),
-        details: { paymentId: payment.id, status },
+        // 왜 UNKNOWN 인지 남긴다. PG 가 그렇게 답했는지, 묻지도 못했는지는 분쟁에서 다른 이야기다.
+        details: { paymentId: payment.id, status, ...extra },
       });
 
       return {
@@ -236,4 +266,9 @@ export class PaymentService {
       verifiedAt: r.verified_at ? (r.verified_at as Date).toISOString() : null,
     };
   }
+}
+
+/** 끊겨서 묻지 않았는지, 물었는데 실패했는지. 관제에서 둘은 다른 신호다. */
+function describeCause(err: unknown): string {
+  return err instanceof CircuitOpenError ? 'CIRCUIT_OPEN' : describeFailure(err);
 }

@@ -472,6 +472,44 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-32. Circuit Breaker 가 열렸을 때의 규칙이 의존성마다 정해져 있지 않다
+
+| | |
+|---|---|
+| **발견** | 2026-09-26 (T-M3-08 착수 전 §01 C8 재확인) |
+| **문제** | §01 C8 은 "PG/중앙/문자/메일 등 외부 장애의 전파 차단" 한 줄이다. **끊긴 뒤 무엇을 하는지**가 없다. 그런데 의존성마다 답이 정반대다 |
+| **판정** | 규칙을 의존성별로 정해 코드에 박았다 (`common/resilience/dependency-breakers.ts`) |
+| | **중앙 Profile Vault** — fail-open. 빈 Snapshot 으로 원서 생성 계속 (D-18 유지) |
+| | **PG 결제 확인** — **fail-open 금지.** CREATED·PENDING 은 `UNKNOWN` 으로 두고 Reconciliation(`PAYMENT_STATE_UNKNOWN_STALE`)에 맡긴다. 이미 결론 난 결제(FAILED 등)는 건드리지 않는다 |
+| | **PG 결제 의도 생성** — 503. 결제창이 열리기 전이라 돈이 움직이지 않았고 남길 결제도 없다 |
+| | **중앙 Sync Gateway (relay)** — 행을 집지 않는다. 재시도 횟수를 쓰지 않는다 (D-33) |
+| | **접수 API (AV 워커 보고)** — 검사하지 않는다. 보고 못 할 판정에 CPU 를 쓰지 않는다 |
+| **공통** | 연속 실패 기준(기본 5회), 30초 뒤 반열림 탐침 **1건**. 4xx 는 세지 않는다 — 상대가 살아서 거절한 것이다. 상태는 Pod 안에만 둔다 (공유 저장소는 새 의존성이 된다) |
+| **readiness 와 분리** | Breaker 상태를 `readyz` 에 넣지 않는다. 중앙이 죽었다고 Pod 가 트래픽에서 빠지면 끊는 의미가 없다. 조회는 `GET /healthz/dependencies` |
+| **계약 추가** | `getSyncStatus` 응답에 `circuit` (optional, §A16 상 호환) · `GET /healthz/dependencies` (probe 계열이라 OpenAPI 대상인지 확인 필요) |
+| **저장소 반영** | ✅ `server-kit/circuit-breaker.ts` 외 |
+| **노션 반영** | ⬜ §01 C8 에 의존성별 끊김 규칙 표 추가 · §03 OpenAPI 에 위 두 항목 |
+| **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
+
+---
+
+## D-33. 중앙이 2분 반만 죽어도 Outbox 이벤트가 DEAD 로 떨어졌다 🔴
+
+| | |
+|---|---|
+| **발견** | 2026-09-26 (T-M3-08 구현 중 relay 코드 검토) |
+| **문제** | relay 는 실패마다 `attempt_count` 를 올리고 10회에 DEAD 로 보낸다. Backoff 가 attempt² × 500ms 라 누적 대기가 **약 142초**다. 중앙이 그보다 오래 죽으면 그동안 쌓인 이벤트가 **전부 DEAD** 가 된다. DEAD 는 사람이 다시 보내야 한다 |
+| **충돌** | §B7 은 "중앙 장기장애 시 별도 spool" 을, relay 주석은 "중앙 장기 장애에도 Outbox 는 계속 쌓일 수 있어야 한다" 를 요구한다. 재시도 한도가 그 요구를 조용히 뒤집고 있었다 |
+| **원인** | 재시도 횟수 하나가 두 가지를 섞어 셌다. "이 이벤트가 문제인가" 와 "중앙이 살아 있는가" |
+| **판정** | **중앙 장애 중의 실패는 이벤트의 재시도 횟수를 쓰지 않는다.** 회로가 닫혀 있을 때의 실패만 센다 (이벤트 고유 문제일 수 있으므로). 열리면 행을 집지 않고, 이미 집은 행은 횟수 그대로 PENDING 으로 되돌린다 |
+| **검증** | `relay.integration.test.ts` — 가짜 중앙을 끄고 탐침 3주기를 돌린 뒤 켰다. DEAD 0, 최대 attempt_count 1, 5건 전부 SENT |
+| **남은 것** | 개발 DB 에 기존 DEAD 6건이 있다. 원인은 DB 에 남지 않아 이 결함 때문인지 단정할 수 없다. DEAD 사유를 컬럼으로 남기는 것은 DDL 변경이라 별도 판단 |
+| **저장소 반영** | ✅ `apps/event-relay/src/relay.service.ts` |
+| **노션 반영** | ⬜ §04 또는 §B7 에 "재시도 한도는 이벤트 단위 실패만 센다" 명시 |
+| **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 

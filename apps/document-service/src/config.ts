@@ -33,3 +33,12 @@ export const SCANNER = {
   timeoutMs: envInt('SCANNER_TIMEOUT_MS', 5000, { min: 100, max: 60_000 }),
   version: envOrDev('SCANNER_VERSION', 'dev-0', '검사 엔진 버전. 감사 기록에 남는다'),
 } as const;
+
+/**
+ * 접수 API Circuit Breaker. (v1.1 §01 C8)
+ * 열려 있는 동안은 검사 대상을 가져오지 않는다.
+ */
+export const BREAKER = {
+  failureThreshold: envInt('BREAKER_FAILURE_THRESHOLD', 5, { min: 1, max: 100 }),
+  openMs: envInt('BREAKER_OPEN_MS', 30_000, { min: 1000, max: 600_000 }),
+} as const;

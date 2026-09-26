@@ -1,5 +1,11 @@
 import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
-import { ADMISSION_API_URL, SCANNER } from './config';
+import {
+  CircuitBreaker,
+  CircuitOpenError,
+  describeFailure,
+  httpServerError,
+} from '@wonseoro/server-kit';
+import { ADMISSION_API_URL, BREAKER, SCANNER } from './config';
 
 export interface ScanTarget {
   documentId: string;
@@ -32,6 +38,10 @@ export interface ScanStats {
  * ⚠️ M2 의 엔진은 Mock 이다. 실제 안티바이러스 연동은 M5. (T-M5-08)
  * 다만 **상태 전이와 보고 경로는 실제로 동작한다.** 접수 확정이 AVAILABLE 기준이므로
  * 이 경로가 없으면 서류가 필요한 전형은 접수가 끝나지 않는다.
+ *
+ * **접수 API 가 끊기면 검사하지 않는다.** (v1.1 §01 C8)
+ * 보고 경로가 막힌 채 검사를 계속하면 CPU 를 써서 얻은 판정을 버리게 된다.
+ * 서류는 QUARANTINED 로 남아 있으므로, 접수 API 가 돌아오면 다시 가져온다.
  */
 @Injectable()
 export class ScannerService implements OnModuleInit, OnApplicationShutdown {
@@ -39,6 +49,18 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
   private timer: NodeJS.Timeout | null = null;
   private running = false;
   private stopped = false;
+
+  /** 접수 API 보고 경로. 상태는 이 프로세스 안에만 있다. */
+  readonly admissionApi = new CircuitBreaker({
+    name: 'admission-api',
+    failureThreshold: BREAKER.failureThreshold,
+    openMs: BREAKER.openMs,
+    onStateChange: (c) => {
+      const line = `circuit ${c.name} ${c.from} -> ${c.to} (consecutiveFailures=${c.consecutiveFailures})`;
+      if (c.to === 'OPEN') this.logger.error(`${line} — 검사를 멈춘다`);
+      else this.logger.warn(line);
+    },
+  });
 
   onModuleInit(): void {
     if (!SCANNER.autostart) {
@@ -63,7 +85,7 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
       return await this.drainOnce();
     } catch (err) {
       // 워커가 죽으면 서류가 영원히 QUARANTINED 로 남는다. 루프를 지킨다.
-      this.logger.error(`scan tick failed: ${describeError(err)}`);
+      this.logger.error(`scan tick failed: ${describeFailure(err)}`);
       return empty;
     } finally {
       this.running = false;
@@ -72,10 +94,12 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
 
   async drainOnce(): Promise<ScanStats> {
     const stats: ScanStats = { scanned: 0, clean: 0, malicious: 0, errors: 0 };
+    if (!this.admissionApi.allowsRequest()) return stats;
     const targets = await this.fetchPending();
 
     for (const target of targets) {
-      if (this.stopped) break;
+      // 보고할 수 없으면 검사하지 않는다. 판정을 버리게 된다.
+      if (this.stopped || !this.admissionApi.allowsRequest()) break;
       const verdict = await this.scan(target);
       const reported = await this.report(target.documentId, verdict);
       if (!reported) continue;
@@ -118,39 +142,45 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
 
   private async fetchPending(): Promise<ScanTarget[]> {
     try {
-      const res = await fetch(`${this.apiUrl()}/internal/v1/documents/pending-scan?limit=25`, {
-        signal: AbortSignal.timeout(SCANNER.timeoutMs),
-      });
+      const res = await this.admissionApi.run(
+        () =>
+          fetch(`${this.apiUrl()}/internal/v1/documents/pending-scan?limit=25`, {
+            signal: AbortSignal.timeout(SCANNER.timeoutMs),
+          }),
+        { isFailure: httpServerError },
+      );
       if (!res.ok) return [];
       const body = (await res.json()) as { documents?: ScanTarget[] };
       return body.documents ?? [];
     } catch (err) {
+      if (err instanceof CircuitOpenError) return [];
       // 접수 API 가 재기동 중일 수 있다. 다음 주기에 다시 온다.
-      this.logger.warn(`pending-scan unavailable: ${describeError(err)}`);
+      this.logger.warn(`pending-scan unavailable: ${describeFailure(err)}`);
       return [];
     }
   }
 
   private async report(documentId: string, result: ScanVerdict): Promise<boolean> {
     try {
-      const res = await fetch(
-        `${this.apiUrl()}/internal/v1/documents/${documentId}/scan-result`,
-        {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            // 내부 API 도 mutation 이므로 Idempotency-Key 를 요구한다. 예외 없다.
-            // **문서 단위로 고정된 키**를 쓴다. 같은 서류의 검사 결과를 다시 보고해도
-            // 상태가 두 번 바뀌면 안 된다.
-            'idempotency-key': `scan-${documentId}`,
-          },
-          body: JSON.stringify({
-            result,
-            scanner: 'mock-av',
-            engineVersion: SCANNER.version,
-          }),
-          signal: AbortSignal.timeout(SCANNER.timeoutMs),
-        },
+      const res = await this.admissionApi.run(
+        () =>
+          fetch(`${this.apiUrl()}/internal/v1/documents/${documentId}/scan-result`, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              // 내부 API 도 mutation 이므로 Idempotency-Key 를 요구한다. 예외 없다.
+              // **문서 단위로 고정된 키**를 쓴다. 같은 서류의 검사 결과를 다시 보고해도
+              // 상태가 두 번 바뀌면 안 된다.
+              'idempotency-key': `scan-${documentId}`,
+            },
+            body: JSON.stringify({
+              result,
+              scanner: 'mock-av',
+              engineVersion: SCANNER.version,
+            }),
+            signal: AbortSignal.timeout(SCANNER.timeoutMs),
+        }),
+        { isFailure: httpServerError },
       );
       if (res.ok) return true;
 
@@ -166,7 +196,8 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
       this.logger.warn(`scan-result rejected ${res.status}/${code} document=${documentId}`);
       return false;
     } catch (err) {
-      this.logger.warn(`scan-result failed: ${describeError(err)}`);
+      if (err instanceof CircuitOpenError) return false;
+      this.logger.warn(`scan-result failed: ${describeFailure(err)}`);
       return false;
     }
   }
@@ -174,14 +205,4 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
   private apiUrl(): string {
     return ADMISSION_API_URL;
   }
-}
-
-/** fetch 실패는 전부 TypeError 로 온다. cause 를 꺼내야 원인을 알 수 있다. */
-function describeError(err: unknown): string {
-  if (err instanceof Error) {
-    if (err.name === 'TimeoutError' || err.name === 'AbortError') return 'TIMEOUT';
-    const cause = (err as { cause?: { code?: string } }).cause;
-    return cause?.code ?? err.name;
-  }
-  return 'UNKNOWN';
 }
