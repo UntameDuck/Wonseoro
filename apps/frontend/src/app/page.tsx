@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, Field, Select } from '../krds/components';
 import { ApiError, NetworkError, api } from '../lib/api';
 import { loadSession, saveSession } from '../lib/session';
+import { useOperatingMode } from '../lib/use-operating-mode';
+import { OperatingModeBanner } from '../krds/status';
 
 /**
  * 접수 홈 — 기술설계서 v1.0 §12.1 "① 접수 홈"
@@ -38,6 +40,7 @@ interface Department {
 export default function Home() {
   const router = useRouter();
   const [applicantId, setApplicantId] = useState(loadSession()?.applicantId ?? '');
+  const operatingMode = useOperatingMode();
 
   const [cycle, setCycle] = useState<Cycle | null>(null);
   const [types, setTypes] = useState<AdmissionType[]>([]);
@@ -117,6 +120,8 @@ export default function Home() {
         <strong>각 대학 서버에서 처리</strong>합니다. 중앙에 장애가 생겨도 이미 시작한 대학 접수는
         계속 진행됩니다.
       </Alert>
+
+      <OperatingModeBanner view={operatingMode} />
 
       {loading && <Card title="모집 정보를 불러오는 중입니다">잠시만 기다려 주십시오.</Card>}
 

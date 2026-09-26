@@ -21,9 +21,19 @@ export class DependencyBreakers {
 
   readonly centralVault = this.create('central-profile-vault');
   readonly paymentGateway = this.create('payment-gateway');
+  /**
+   * 중앙 생존 확인 전용. Health Gate 의 주기 확인만 이것을 쓴다.
+   * Vault 회로와 나누는 이유 — 중앙은 살아 있는데 Vault 경로만 고장 날 수 있다.
+   * 둘을 섞으면 한쪽 성공이 다른 쪽 회로를 닫아 열림·닫힘이 반복된다.
+   */
+  readonly centralHealth = this.create('central-health');
 
   snapshot(): CircuitSnapshot[] {
-    return [this.centralVault.snapshot(), this.paymentGateway.snapshot()];
+    return [
+      this.centralHealth.snapshot(),
+      this.centralVault.snapshot(),
+      this.paymentGateway.snapshot(),
+    ];
   }
 
   private create(name: string): CircuitBreaker {

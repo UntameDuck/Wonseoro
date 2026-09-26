@@ -296,7 +296,7 @@ dev-folder/
 
 ## Project Status
 
-> 기준일 2026-09-26 · 전체 139개 태스크 중 **51개 완료** · 테스트 **210개 통과**
+> 기준일 2026-09-26 · 전체 139개 태스크 중 **51개 완료** · 테스트 **216개 통과**
 
 지원자가 화면에서 원서를 만들어 서류를 올리고 결제한 뒤 **접수번호를 받는 전 과정이 동작합니다.**
 
@@ -346,7 +346,7 @@ dev-folder/
 
 - [다음 단계 및 현재 진행 현황](docs/03-next-steps.md)
 - [운영 준비 점검 — 하드코딩·기본값·인가](docs/04-production-readiness.md)
-- [설계 불일치 대장](docs/02-spec-discrepancy-register.md) — 설계서와 구현이 어긋난 33건의 판정 기록
+- [설계 불일치 대장](docs/02-spec-discrepancy-register.md) — 설계서와 구현이 어긋난 34건의 판정 기록
 - [문서 인덱스](docs/README.md)
 - [K-Admission 기술설계서](https://efficient-rook-e79.notion.site/K-Admission-K-PaaS-3de75ab5debe801f99c5fee017130c65)
 - [Wonseoro GitHub Repository](https://github.com/UntameDuck/Wonseoro)

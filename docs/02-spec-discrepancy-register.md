@@ -510,6 +510,25 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-34. Autonomous Mode 의 구성요소가 서로 다른 단계에 걸쳐 있다
+
+| | |
+|---|---|
+| **발견** | 2026-09-26 (T-M3-06 착수 전 순서 검토) |
+| **문제** | §01 A1 은 Autonomous Mode 의 기능으로 Local Policy Snapshot · Local JWKS Cache · Offline Event Spool · Central Dependency Health Gate · 운영배너/Sync Lag 를 한 묶음으로 적는다. 그런데 이들이 기대는 것이 서로 다른 단계에 있다 |
+| **판정** | 인증과 무관한 것만 T-M3-06 에서 한다. |
+| | **Health Gate · 배너 · Sync Lag 경보** — ✅ 이번에 |
+| | **Offline Event Spool** — ✅ T-M3-08 (D-33). 장기 적체 **용량**(파티션·아카이브)은 DDL 변경이라 M4 §B7 |
+| | **Local JWKS Cache** — ⏭ **T-M5-02**. 지금은 `AUTH_MODE=dev-headers` 라 검증할 토큰도 발급자도 없다. 먼저 만들면 형식을 추측해 짓게 된다 |
+| | **서명된 Local Policy Snapshot** — ⏭ **T-M3-15**. 정책·설정은 이미 대학 DB 에 있고 2인 승인·`policy_hash` 가 남는다. 빠진 것은 **서명**이고, 그건 signed config version 과 같은 일이다 |
+| **시간 기준도 둘이다** | A1 해결은 "최소 **24시간** 단절", §E 인수기준은 "**2시간** 단절" 이다. 기능 자체는 시간과 무관하게 동작하므로(Demo Gate 5), 어느 쪽을 인수기준으로 할지는 M4 장애 시험에서 정한다 |
+| **계약 추가** | `GET /api/v1/meta/operating-mode` — 공개 조회, 개인정보·운영정보 없음. 메모리의 마지막 확인 결과만 돌려준다 |
+| **저장소 반영** | ✅ `modules/operating-mode/` · 프론트 `OperatingModeBanner` |
+| **노션 반영** | ⬜ §01 A1 의 기능 목록에 단계 표기 · §03 OpenAPI 에 operating-mode · A1/§E 의 단절 시간 기준 통일 |
+| **상태** | 🟡 판정완료 — 노션 반영 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 

@@ -24,8 +24,8 @@
 | 구분 | 태스크 |
 |---|---|
 | ✅ 완료 | T-M3-01 Deadline Policy · T-M3-02 Config Governance · T-M3-04 Reconciliation · T-M3-05 Exception Queue · T-M3-07 Evidence Package · **T-M3-08 Circuit Breaker** |
-| 🟡 부분 | T-M3-03 hash-chain (물리 분리는 M5) |
-| 🔜 다음 | T-M3-06 Autonomous Mode · T-M3-11~13 Admin Web |
+| 🟡 부분 | T-M3-03 hash-chain (물리 분리는 M5) · **T-M3-06 Autonomous Mode** (JWKS 캐시는 T-M5-02) |
+| 🔜 다음 | T-M3-14·15 마감 연장 + signed config · T-M3-11~13 Admin Web |
 
 ### §01 E 핵심 인수기준 "단독 운영자 1명으로 마감시간 변경 불가" 통과
 
@@ -236,6 +236,49 @@ relay 는 실패마다 재시도 횟수를 올려 10회에 DEAD 로 보냈고, B
 PG 쪽은 `payment-circuit.integration.test.ts` — 끊기면 UNKNOWN 과 원인(`ECONNREFUSED`/`CIRCUIT_OPEN`)이
 `payment_event` 와 감사에 남고, 열린 뒤에는 PG 호출 0, 복구되면 같은 결제가 CONFIRMED 로 확정된다.
 
+### Autonomous Mode — 무엇을 지금 하고 무엇을 미뤘나 (T-M3-06 🟡)
+
+Demo Gate 5 에서 **중앙을 내린 채 생성→저장→결제→제출이 이미 통과**했다. 접수 경로는 원래
+중앙을 거치지 않는다. 그래서 이 태스크에서 남은 것은 두 종류였다.
+
+| 항목 | 결정 | 이유 |
+|---|---|---|
+| Central Dependency Health Gate | ✅ 이번에 | 인증과 무관 |
+| Autonomous 운영 배너 · Sync Lag 표시 | ✅ 이번에 | 화면 어디에도 없었다 |
+| Offline Event Spool | ✅ T-M3-08 | 중앙 장애 중 Outbox 가 DEAD 로 떨어지지 않음 (D-33). 적체 경보 추가 |
+| Local JWKS Cache | ⏭ T-M5-02 | 검증할 토큰이 아직 없다 (`AUTH_MODE=dev-headers`) |
+| 서명된 Local Policy Snapshot | ⏭ T-M3-15 | signed config version 과 같은 일 |
+
+**판단이 바꾸는 것은 안내뿐이다.** AUTONOMOUS 라고 막히는 기능은 없다. 필요한 이유는 사람 쪽이다 —
+지원자는 "내 원서" 에 접수가 안 보이면 접수가 안 된 줄 알고 **다시 결제하거나 처음부터 다시 한다.**
+그래서 배너 문구의 순서를 정했다. ① 무엇이 정상인지 ② 접수 완료를 무엇으로 확인하는지(접수번호)
+③ 무엇이 늦는지. 경고가 아니라 안내 톤이다.
+
+설계 결정
+
+- **화면 조회는 메모리만 읽는다.** Gate 가 10초마다 중앙과 Outbox 를 확인해 두고,
+  `GET /api/v1/meta/operating-mode` 는 그 결과만 돌려준다. 마감 피크에 수천 명이 30초마다 물어도
+  DB·중앙 부하는 늘지 않는다
+- **한 번 실패로 넘어가지 않는다.** 확인 5회 연속 실패로 회로가 열려야 AUTONOMOUS. 순간 장애에
+  배너가 깜빡이면 지원자는 그때마다 불안해진다
+- **첫 확인 전에는 연결됐다고 말하지 않는다.** 모르는 것을 정상으로 표시하지 않는다
+- **적체는 relay 에 묻지 않고 DB 를 직접 센다.** relay 가 죽으면 relay 에 물은 적체도 함께 안 보인다
+- **공개 조회에 운영 정보를 싣지 않는다.** DEAD 건수·회로 상태·실패 원인은 `/healthz/dependencies` 에만
+
+실제로 끄고 켜며 확인한 결과
+
+```
+중앙 없이 기동          AUTONOMOUS  (배너: 시각 표시 없음 — 끊긴 적이 아니라 연결된 적이 없다)
+중앙 기동 후 약 18초    CONNECTED   로그: CONNECTED 복귀 — 자율 운영 71s, 미전송 0건
+                                    배너 사라짐
+중앙 정지 후 약 46초    AUTONOMOUS  로그: AUTONOMOUS (CENTRAL_UNREACHABLE) — 접수는 계속된다
+                                    배너: "… (17:18부터)"
+```
+
+첫 구현은 **기동할 때부터 중앙이 없으면 경보를 한 번도 내지 않았다.** 초기 상태가 이미 AUTONOMOUS 라
+"전환" 이 일어나지 않았기 때문이다. 운영자가 가장 알아야 할 경우라, 전환이 아니라 **확정 시점에
+한 번** 내도록 고쳤다.
+
 ## 태스크
 
 | ID | 태스크 | 담당 | 근거 노션 | 인수기준 | 상태 |
@@ -245,7 +288,7 @@ PG 쪽은 `payment-circuit.integration.test.ts` — 끊기면 UNKNOWN 과 원인
 | T-M3-03 | Audit hash-chain + 분리 저장소 | 송리안 | §01 A11, v1.0 §9 | hash-chain·변조 검출 ✅ / WORM 물리 분리는 M5 | 🟡 |
 | T-M3-04 | **Reconciliation Center (4-way)** | 송리안 | §01 A4·B18·C2 | Application/Payment/Submission/Central 대조 | ✅ |
 | T-M3-05 | Exception Queue + 수동 승인 복구 | 송리안 | §01 A4·B16 | 불일치만 큐로, 보정은 Admin Action API로만 | ✅ |
-| T-M3-06 | **Autonomous Mode** | 송리안 | §01 A1·C3 | Local Policy Snapshot·JWKS Cache·Offline Spool |
+| T-M3-06 | **Autonomous Mode** | 송리안 | §01 A1·C3 | Local Policy Snapshot·JWKS Cache·Offline Spool | 🟡 |
 | T-M3-07 | **Evidence Package 생성** | 송리안 | §01 A11·C6 | 상태 Timeline·정책·결제증적·config·clock·hash 검증 | ✅ |
 | T-M3-08 | **Dependency Circuit Breaker** | 송리안 | §01 C8 | PG/중앙/문자/메일 장애 전파 차단 (문자·메일은 붙일 때) | ✅ |
 | T-M3-09 | Purpose-scoped Token | 송리안 | §01 A12 | 중앙 토큰으로 원본 재식별 불가, key rotation |

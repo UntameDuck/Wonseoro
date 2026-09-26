@@ -6,6 +6,18 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "-w", "@wonseoro/frontend"],
       "port": 4000
+    },
+    {
+      "name": "admission-api",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--env-file=apps/admission-api/.env.example", "apps/admission-api/dist/main.js"],
+      "port": 3001
+    },
+    {
+      "name": "central-api",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--env-file=apps/central-api/.env.example", "apps/central-api/dist/main.js"],
+      "port": 3000
     }
   ]
 }

@@ -5,7 +5,7 @@ import { Alert, Button, Card, DescriptionList, ErrorSummary } from '../../../krd
 import { SchemaForm, type JsonSchema } from '../../../krds/schema-form';
 import { DocumentStatusList, FileUpload } from '../../../krds/file-upload';
 import { Breadcrumb, STEPS, StepIndicator, type StepNo } from '../../../krds/navigation';
-import { DeadlineBanner, FailureNotice, SaveStatus } from '../../../krds/status';
+import { DeadlineBanner, FailureNotice, OperatingModeBanner, SaveStatus } from '../../../krds/status';
 import {
   ApiError,
   NetworkError,
@@ -18,6 +18,7 @@ import {
 import { useAutosave } from '../../../lib/use-autosave';
 import { formatKst, useDeadline } from '../../../lib/use-deadline';
 import { loadSession } from '../../../lib/session';
+import { useOperatingMode } from '../../../lib/use-operating-mode';
 
 /**
  * 원서 작성 6단계 — 기술설계서 v1.1 §07
@@ -60,6 +61,7 @@ export default function ApplyPage({
 
   // 원서를 불러오기 전에는 전형을 모른다. 그때는 마감을 판단하지 않는다.
   const deadline = useDeadline(app?.cycleId ?? null);
+  const operatingMode = useOperatingMode();
   const frozen = app?.status === 'FINALIZED';
 
   const autosave = useAutosave({
@@ -269,6 +271,7 @@ export default function ApplyPage({
       <h1 style={{ fontSize: 'var(--krds-text-2xl)', marginTop: 0 }}>원서 작성</h1>
 
       <DeadlineBanner deadline={deadline} />
+      <OperatingModeBanner view={operatingMode} />
       <div style={{ margin: 'var(--krds-space-3) 0' }}>
         <SaveStatus state={autosave.state} onRetry={() => void autosave.saveNow()} />
       </div>

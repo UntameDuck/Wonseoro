@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-26 (T-M3-08 Circuit Breaker 완료)
+> 최종 갱신: 2026-09-26 (T-M3-08 완료 · T-M3-06 부분 완료)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -21,8 +21,8 @@
 | M5 신뢰성·보안·접근성 | 0/35 | |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 51/139 태스크.** 테스트 파일 18개 / **210개 테스트 통과**
-(admission-api 168 · server-kit 22 · central-api 16 · event-relay 4), DB 정합성 제약 12종 PASS.
+**총 51/139 태스크** (T-M3-06 🟡 부분 완료 별도). 테스트 파일 19개 / **216개 테스트**
+(admission-api 174 · server-kit 22 · central-api 16 · event-relay 4) 전부 통과, DB 정합성 제약 12종 PASS.
 
 ### 동작하는 것 — End-to-End
 
@@ -48,6 +48,7 @@
 | T-M3-05 Exception Queue | ✅ | 불일치만 큐로, 보정은 사유·before/after 와 함께 |
 | T-M3-07 Evidence Package | ✅ | 한 원서의 접수 과정 재구성 + 체인 검증 |
 | T-M3-08 Dependency Circuit Breaker | ✅ | 중앙·PG·AV 보고 경로 차단. **PG 는 끊겨도 UNKNOWN** · 중앙 장애가 이벤트를 DEAD 로 만들지 않음 |
+| T-M3-06 Autonomous Mode | 🟡 | Health Gate · 자율 운영 배너 · Sync Lag 경보. **JWKS 캐시는 T-M5-02 로** (D-34) |
 
 ### 프로덕션 점검 (2026-09-23)
 
@@ -62,19 +63,30 @@
 
 ## 착수 순서
 
-### 1️⃣ 다음 작업 — T-M3-06 Autonomous Mode
+### 1️⃣ 다음 작업 — T-M3-14·15 마감 연장 워크플로 + signed config version
 
-**근거 노션**: §01 A1·C3
+**근거 노션**: §01 B17 · A1 · A14
 
-중앙이 장기 단절돼도 대학이 **혼자 판단할 수 있어야 한다.**
-Local Policy Snapshot · JWKS 로컬 캐시 · Offline Spool.
-현재 마감 정책은 이미 대학 DB 에 있어 절반은 되어 있다.
-남은 것은 인증 키(JWKS) 캐시인데, 이것은 실제 인증(T-M5-02)과 맞물린다.
-**T-M5-02 보다 먼저 하면 헛일이 될 수 있다** — 순서를 검토할 것.
+둘을 함께 한다. 연장은 `deadline_policy` 의 새 버전이고, 그 버전이 **서명된 불변 기록**이어야
+"누가 언제 왜 연장했는지" 가 남는다. 이 서명은 T-M3-06 에서 남긴 **서명된 Local Policy Snapshot** 과
+같은 일이라 한 번에 끝낸다. (D-34)
 
-Offline Event Spool 은 T-M3-08 에서 일부 풀렸다. 중앙이 죽어 있는 동안 Outbox 가
-DEAD 로 떨어지지 않고 대학 DB 에 그대로 쌓인다 (D-33). 남은 것은 **장기 장애 시
-Outbox 용량**이다 — 파티션·SENT 아카이브·적체 경보 (§B7).
+주의할 것
+- **연장 권한은 입학처 정책담당이다.** 기술팀이 결정하게 만들지 않는다 (§B17). 역할 구분이 아직
+  공유 토큰(`ADMIN_API_TOKEN`)이라 **누가** 했는지 구분이 약하다 — 2인 승인 기록으로 보완하고,
+  역할 분리는 T-M5-10 에서 붙인다는 것을 명시한다
+- 연장은 Freeze(마감 24시간 전 잠금)에 걸리지 않는다. 이미 그렇게 짜여 있다 — 깨지 않는지 시험으로 고정
+- 개발자가 DB 를 직접 고쳐 연장하는 경로를 만들지 않는다 (§B16)
+- 서명 키를 어디에 둘지는 M5 Vault(§06) 와 맞물린다. 지금은 키 ID 를 기록에 남겨 교체 가능하게만
+
+### 🟡 T-M3-06 에 남은 것
+
+| 항목 | 언제 | 이유 |
+|---|---|---|
+| Local JWKS Cache | **T-M5-02 와 함께** | 검증할 토큰 형식·발급자가 아직 없다. 지금 만들면 추측으로 짓는 코드다 |
+| 서명된 Policy Snapshot | 위 1️⃣ 에서 | signed config version 과 같은 일 |
+| Outbox 장기 적체 용량 | M4 (§B7) | 파티션·SENT 아카이브는 DDL 변경. 적체 **경보**는 이번에 붙였다 |
+| 2시간(§E)·24시간(§A1) 단절 시험 | M4 장애 시험 | 기능은 Demo Gate 5 로 확인됐다. 시간을 버티는지는 부하·장애 시험의 일 |
 
 ### 2️⃣ T-M3-11~13 Admin Web (권민준)
 
@@ -94,10 +106,10 @@ Diff 를 읽히게 그리는 것이 핵심이다 — 읽히지 않는 Diff 는 �
 
 ---
 
-## 노션 반영 대기 (28건)
+## 노션 반영 대기 (29건)
 
-불일치 대장 33건 중 **🔴 OPEN 은 0건** — 전부 판정됐다.
-5건 CLOSED, 나머지 28건이 노션 반영 대기다. 전체는
+불일치 대장 34건 중 **🔴 OPEN 은 0건** — 전부 판정됐다.
+5건 CLOSED, 나머지 29건이 노션 반영 대기다. 전체는
 [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md).
 
 ### 먼저 확인받아야 하는 것

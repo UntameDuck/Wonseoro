@@ -15,6 +15,7 @@ import { FinalizationModule } from './modules/finalization/finalization.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { ReconciliationModule } from './modules/reconciliation/reconciliation.module';
 import { MetaModule } from './modules/meta/meta.module';
+import { OperatingModeModule } from './modules/operating-mode/operating-mode.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { MetaModule } from './modules/meta/meta.module';
     FinalizationModule,
     ReconciliationModule,
     MetaModule,
+    OperatingModeModule,
   ],
 })
 export class AppModule {}

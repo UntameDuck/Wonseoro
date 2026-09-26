@@ -151,6 +151,17 @@ export interface SelfCheck {
   timeline: Array<{ at: string; what: string; result: string }>;
 }
 
+/** 이 대학 서버가 중앙 없이 돌고 있는가. 배너의 근거. (v1.1 §A1) */
+export interface OperatingModeView {
+  mode: 'CONNECTED' | 'AUTONOMOUS';
+  reason: 'CENTRAL_NOT_CONFIGURED' | 'CENTRAL_UNREACHABLE' | null;
+  since: string;
+  lastCentralContactAt: string | null;
+  sync: { pendingEvents: number; oldestPendingAgeSeconds: number; lagging: boolean };
+  checkedAt: string;
+  serverTime: string;
+}
+
 export interface Submission {
   applicationId: string;
   submissionId: string;
@@ -225,6 +236,8 @@ export const api = {
     }),
 
   selfCheck: (id: string) => call<SelfCheck>(`/api/v1/applications/${id}/self-check`),
+
+  operatingMode: () => call<OperatingModeView>('/api/v1/meta/operating-mode'),
 
   /**
    * 추가문항 스키마. 화면은 이것을 보고 입력 필드를 그린다.

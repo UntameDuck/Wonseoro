@@ -1,6 +1,7 @@
 import {
   assertNotMockInProduction,
   devOnlyFlag,
+  envBool,
   envChoice,
   envInt,
   envList,
@@ -63,6 +64,19 @@ export const VAULT_TIMEOUT_MS = envInt('VAULT_TIMEOUT_MS', 2000, { min: 100, max
 export const BREAKER = {
   failureThreshold: envInt('BREAKER_FAILURE_THRESHOLD', 5, { min: 1, max: 100 }),
   openMs: envInt('BREAKER_OPEN_MS', 30_000, { min: 1000, max: 600_000 }),
+} as const;
+
+/**
+ * Central Dependency Health Gate. (v1.1 §A1)
+ *
+ * 중앙을 얼마 간격으로 확인할지, 중앙 반영이 얼마나 밀리면 "지연" 으로 볼지.
+ * 확인 결과는 메모리에 두고 화면 조회는 그것만 읽는다. 마감 피크에 지원자
+ * 수천 명이 배너 상태를 물어도 DB 와 중앙에는 이 간격으로만 간다.
+ */
+export const CENTRAL_GATE = {
+  autostart: envBool('CENTRAL_GATE_AUTOSTART', true),
+  intervalMs: envInt('CENTRAL_GATE_INTERVAL_MS', 10_000, { min: 1000, max: 300_000 }),
+  syncLagWarnSeconds: envInt('SYNC_LAG_WARN_SECONDS', 300, { min: 10, max: 86_400 }),
 } as const;
 
 /**

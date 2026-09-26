@@ -1,5 +1,6 @@
 'use client';
 
+import type { OperatingModeView } from '../lib/api';
 import type { SaveState } from '../lib/use-autosave';
 import type { DeadlineView } from '../lib/use-deadline';
 import { formatKstTime, formatRemaining } from '../lib/use-deadline';
@@ -147,6 +148,60 @@ export function DeadlineBanner({ deadline }: { deadline: DeadlineView }) {
         </span>
       )}
     </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────── */
+
+/**
+ * 자율 운영 배너 — 기술설계서 v1.1 §A1 · §07
+ *
+ * 중앙이 끊겨도 **접수는 막히지 않는다.** 막히는 것은 "내 원서" 통합 조회 반영뿐이다.
+ * 그런데 지원자는 통합 조회에 접수가 안 보이면 접수가 안 된 줄 알고
+ * 다시 결제하거나 처음부터 다시 한다. 그걸 막으려고 먼저 말한다.
+ *
+ * 그래서 문구의 순서가 정해져 있다.
+ *   1. 무엇이 정상인지 (작성·저장·결제·최종제출)
+ *   2. 접수 완료를 무엇으로 확인하는지 (접수번호)
+ *   3. 무엇이 늦는지 (통합 조회)
+ * 경고 톤이 아니라 안내 톤이다. 지원자가 잘못한 것도, 할 일이 있는 것도 아니다.
+ */
+export function OperatingModeBanner({ view }: { view: OperatingModeView | null }) {
+  if (!view) return null;
+  const autonomous = view.mode === 'AUTONOMOUS';
+  if (!autonomous && !view.sync.lagging) return null;
+
+  // 연결된 적이 있다가 끊긴 경우에만 시각을 보인다. 한 번도 연결된 적이 없으면
+  // `since` 는 서버가 뜬 시각일 뿐이라, "그때부터 끊겼다" 고 말하면 사실이 아니다.
+  const since =
+    autonomous && view.reason === 'CENTRAL_UNREACHABLE' && view.lastCentralContactAt
+      ? new Date(view.since).toLocaleTimeString('ko-KR', {
+          timeZone: 'Asia/Seoul',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        })
+      : null;
+
+  return (
+    <Alert
+      tone="info"
+      title={
+        autonomous
+          ? '통합 조회 서비스와 연결이 원활하지 않습니다'
+          : '통합 조회 반영이 지연되고 있습니다'
+      }
+    >
+      <p style={{ margin: 0 }}>
+        원서 작성·저장·서류·결제·최종제출은 <strong>이 대학 서버에서 정상 처리</strong>됩니다.
+        최종제출 후 <strong>접수번호가 표시되면 접수가 완료</strong>된 것입니다.
+      </p>
+      <p style={{ margin: 'var(--krds-space-2) 0 0' }}>
+        &lsquo;내 원서&rsquo; 통합 조회에는 늦게 나타날 수 있습니다. 다시 결제하거나 처음부터
+        다시 작성하지 마십시오.
+        {since && <> ({since}부터)</>}
+      </p>
+    </Alert>
   );
 }
 
