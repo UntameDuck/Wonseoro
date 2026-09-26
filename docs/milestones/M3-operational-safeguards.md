@@ -535,13 +535,13 @@ Central ACK         수신
 
 ## 종료 체크리스트 — v1.1 §01 E. 핵심 인수기준
 
-- [ ] 중앙 2시간 단절: 원서손실 0, 핵심 SLO 유지
-- [ ] 동일 Finalize 100회 재시도: Submission 1건
-- [ ] PG Callback 30분 지연: 자동 정합화
+- [ ] 중앙 2시간 단절: 원서손실 0, 핵심 SLO 유지 — 기능 ✅(Demo Gate 5·relay 시험), **시간 시험은 T-M4-35**
+- [x] 동일 Finalize 100회 재시도: Submission 1건 — M2 Demo Gate 4 · DB UNIQUE
+- [ ] PG Callback 30분 지연: 자동 정합화 — ❌ **미구현** (D-40)
 - [x] **단독 운영자 1명으로 마감시간 변경 불가** — API·DB 제약·관리자 콘솔 화면까지 (2026-09-26)
 - [x] 특정 Application의 접수과정을 Evidence Package로 재구성 가능 — 콘솔 증적 조회 (2026-09-26)
-- [ ] 운영계정으로 Audit 삭제 불가
-- [ ] Production interactive write 경로 없음 (§01 B16)
-- [ ] **노션 §01을 다시 읽고** C(필수 신규 기능) 8종이 전부 구현됐는지 대조
-- [ ] 구현하며 바뀐 정책 구조를 노션에 반영
-- [ ] 발견한 불일치를 D-N으로 등록·처리
+- [ ] 운영계정으로 Audit 삭제 불가 — ❌ **미충족** (D-41)
+- [ ] Production interactive write 경로 없음 (§01 B16) — 앱 경로 ✅, DB 슈퍼유저 하나 (D-41)
+- [x] **노션 §01을 다시 읽고** C(필수 신규 기능) 8종이 전부 구현됐는지 대조 — [05 문서](../05-m3-exit-m4-readiness.md). C4 는 T-M4-07
+- [ ] 구현하며 바뀐 정책 구조를 노션에 반영 — 55개 수정 지점 대기 ([05 문서 부록](../05-m3-exit-m4-readiness.md))
+- [x] 발견한 불일치를 D-N으로 등록·처리 — D-1 ~ D-41

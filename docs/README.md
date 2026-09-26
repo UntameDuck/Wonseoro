@@ -11,6 +11,7 @@
 | 4 | [adr/](adr/) | 왜 이렇게 정했는지 |
 | 5 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) | 문서 간 충돌이 의심될 때 |
 | 6 | [04-production-readiness.md](04-production-readiness.md) | 운영에 올리기 전 무엇을 점검했는지 |
+| 7 | [05-m3-exit-m4-readiness.md](05-m3-exit-m4-readiness.md) | M3 종료 체크리스트 실제 상태 · 결정 사항 · M4 준비물 · 노션 반영 목록 |
 | 7 | [spec-assets/README.md](spec-assets/README.md) | 노션 첨부 배치 현황 |
 
 ## 마일스톤 (총 7단계)
