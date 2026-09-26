@@ -190,7 +190,12 @@ export const api = {
       ...(who.subjectToken ? { subjectToken: who.subjectToken } : {}),
     }),
 
-  getApplication: (id: string) => call<Application>(`/api/v1/applications/${id}`),
+  /**
+   * 원서 조회는 **본인 것만** 된다. (D-28) 신원 없이 부르면 403 이다.
+   * 조회 호출이 신원을 안 실어서 원서 생성 직후 화면이 멈춘 적이 있다.
+   */
+  getApplication: (id: string, applicantId: string) =>
+    call<Application>(`/api/v1/applications/${id}`, { applicantId }),
 
   /** 자동저장. If-Match 가 없으면 서버가 거부한다. */
   patchApplication: (
@@ -235,7 +240,8 @@ export const api = {
       applicantId,
     }),
 
-  selfCheck: (id: string) => call<SelfCheck>(`/api/v1/applications/${id}/self-check`),
+  selfCheck: (id: string, applicantId: string) =>
+    call<SelfCheck>(`/api/v1/applications/${id}/self-check`, { applicantId }),
 
   operatingMode: () => call<OperatingModeView>('/api/v1/meta/operating-mode'),
 
@@ -243,7 +249,7 @@ export const api = {
    * 추가문항 스키마. 화면은 이것을 보고 입력 필드를 그린다.
    * 전형이 늘어도 프론트 코드를 고치지 않는 근거다. (v1.1 §A5)
    */
-  formSchema: (id: string) =>
+  formSchema: (id: string, applicantId: string) =>
     call<{
       admissionTypeCode: string;
       schemaVersion: string;
@@ -252,9 +258,10 @@ export const api = {
         properties?: Record<string, Record<string, unknown>>;
         required?: string[];
       };
-    }>(`/api/v1/applications/${id}/form-schema`),
+    }>(`/api/v1/applications/${id}/form-schema`, { applicantId }),
 
-  submission: (id: string) => call<Submission>(`/api/v1/applications/${id}/submission`),
+  submission: (id: string, applicantId: string) =>
+    call<Submission>(`/api/v1/applications/${id}/submission`, { applicantId }),
 
   /* ── 모집 카탈로그. 하드코딩을 걷어내는 근거다 ─────────────────────── */
 

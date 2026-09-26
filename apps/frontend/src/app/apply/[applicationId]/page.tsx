@@ -75,7 +75,7 @@ export default function ApplyPage({
   /** 서버 상태부터 읽는다. 재연결 후에도 항상 서버가 기준이다. (v1.1 §10 §4) */
   const reload = useCallback(async () => {
     try {
-      const res = await api.getApplication(applicationId);
+      const res = await api.getApplication(applicationId, applicantId);
       setApp(res.data);
       setEtag(res.etag);
       setFields(
@@ -85,7 +85,7 @@ export default function ApplyPage({
       );
       setFailure(null);
       if (res.data.status === 'FINALIZED') {
-        const sub = await api.submission(applicationId).catch(() => null);
+        const sub = await api.submission(applicationId, applicantId).catch(() => null);
         if (sub) setSubmission(sub.data);
         setStep(6);
       }
@@ -98,7 +98,7 @@ export default function ApplyPage({
         ...(err instanceof ApiError ? { traceId: err.problem.traceId } : {}),
       });
     }
-  }, [applicationId]);
+  }, [applicationId, applicantId]);
 
   useEffect(() => {
     void reload();
@@ -131,13 +131,13 @@ export default function ApplyPage({
   // 스키마는 원서와 별개로 받는다. Config 가 바뀌면 값도 바뀐다.
   useEffect(() => {
     void api
-      .formSchema(applicationId)
+      .formSchema(applicationId, applicantId)
       .then(({ data }) => {
         setSchema(data.schema as JsonSchema);
         setSchemaVersion(data.schemaVersion);
       })
       .catch(() => setSchema(null));
-  }, [applicationId]);
+  }, [applicationId, applicantId]);
 
   /**
    * 어떤 필드를 어느 단계에 보여줄지.
@@ -154,9 +154,9 @@ export default function ApplyPage({
 
   /** 서류 검사 상태를 다시 읽는다. self-check 가 상태와 안내문구를 함께 준다. */
   const refreshDocuments = useCallback(async () => {
-    const res = await api.selfCheck(applicationId).catch(() => null);
+    const res = await api.selfCheck(applicationId, applicantId).catch(() => null);
     if (res) setSelfCheck(res.data);
-  }, [applicationId]);
+  }, [applicationId, applicantId]);
 
   // 4·5단계에 들어갈 때 서류 검사 상태를 읽는다.
   useEffect(() => {
@@ -164,10 +164,10 @@ export default function ApplyPage({
   }, [step, refreshDocuments]);
 
   const recheck = useCallback(async () => {
-    const res = await api.selfCheck(applicationId).catch(() => null);
+    const res = await api.selfCheck(applicationId, applicantId).catch(() => null);
     if (res) setSelfCheck(res.data);
     await reload();
-  }, [applicationId, reload]);
+  }, [applicationId, applicantId, reload]);
 
   function update(code: string, value: string) {
     const next = { ...fields, [code]: value };
