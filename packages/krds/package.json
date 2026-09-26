@@ -1,0 +1,22 @@
+{
+  "name": "@wonseoro/krds",
+  "version": "0.0.1",
+  "private": true,
+  "description": "KRDS 공통 부품과 디자인 토큰. 지원자 웹과 관리자 콘솔이 같이 쓴다. 앱끼리 서로 import 하지 않기 위해 여기 둔다.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens.css": "./src/tokens.css"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "typescript": "^5.6.0"
+  }
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { Field } from './components';
+import { Field } from '@wonseoro/krds';
 
 /**
  * JSON Schema 기반 동적 폼 — 기술설계서 v1.1 §A5

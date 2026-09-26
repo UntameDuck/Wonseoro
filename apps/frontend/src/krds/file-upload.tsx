@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { ApiError, NetworkError, api, newIdempotencyKey } from '../lib/api';
-import { Alert, Button } from './components';
+import { Alert, Button } from '@wonseoro/krds';
 
 export interface UploadedDocument {
   documentType: string;

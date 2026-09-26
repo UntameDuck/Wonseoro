@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, Field, Select } from '../krds/components';
+import { Alert, Button, Card, Field, Select } from '@wonseoro/krds';
 import { ApiError, NetworkError, api } from '../lib/api';
 import { loadSession, saveSession } from '../lib/session';
 import { useOperatingMode } from '../lib/use-operating-mode';

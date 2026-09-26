@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card } from '../../krds/components';
+import { Alert, Button, Card } from '@wonseoro/krds';
 import { Breadcrumb } from '../../krds/navigation';
 import { NetworkError, api } from '../../lib/api';
 import { loadSession } from '../../lib/session';

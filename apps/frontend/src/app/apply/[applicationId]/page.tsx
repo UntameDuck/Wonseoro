@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, DescriptionList, ErrorSummary } from '../../../krds/components';
+import { Alert, Button, Card, DescriptionList, ErrorSummary } from '@wonseoro/krds';
 import { SchemaForm, type JsonSchema } from '../../../krds/schema-form';
 import { DocumentStatusList, FileUpload } from '../../../krds/file-upload';
 import { Breadcrumb, STEPS, StepIndicator, type StepNo } from '../../../krds/navigation';

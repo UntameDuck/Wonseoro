@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
-import '../krds/tokens.css';
+import '@wonseoro/krds/tokens.css';
 
 export const metadata: Metadata = {
   title: '원서로 — 대학입학 원서접수',

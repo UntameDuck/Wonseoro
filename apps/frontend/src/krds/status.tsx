@@ -4,7 +4,7 @@ import type { OperatingModeView } from '../lib/api';
 import type { SaveState } from '../lib/use-autosave';
 import type { DeadlineView } from '../lib/use-deadline';
 import { formatKstTime, formatRemaining } from '../lib/use-deadline';
-import { Alert, Button } from './components';
+import { Alert, Button } from '@wonseoro/krds';
 
 /**
  * 자동저장 상태 표시 — 기술설계서 v1.1 §07
