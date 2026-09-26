@@ -23,9 +23,9 @@
 
 | 구분 | 태스크 |
 |---|---|
-| ✅ 완료 | T-M3-01 Deadline Policy · T-M3-02 Config Governance · T-M3-04 Reconciliation · T-M3-05 Exception Queue · T-M3-07 Evidence Package · T-M3-08 Circuit Breaker · T-M3-15 서명된 활성화 기록 · T-M3-10 Retention Matrix · **T-M3-09 Purpose-scoped Token** |
-| 🟡 부분 | T-M3-03 hash-chain (물리 분리는 M5) · T-M3-06 Autonomous Mode (JWKS 캐시는 T-M5-02) · **T-M3-14 마감 연장** (화면은 Admin Web) |
-| 🔜 다음 | T-M3-11~13 Admin Web (+ T-M3-14 화면) · M3 종료 게이트 |
+| ✅ 완료 | T-M3-01 Deadline Policy · T-M3-02 Config Governance · T-M3-04 Reconciliation · T-M3-05 Exception Queue · T-M3-07 Evidence Package · T-M3-08 Circuit Breaker · T-M3-15 서명된 활성화 기록 · T-M3-10 Retention Matrix · T-M3-09 Purpose-scoped Token · **T-M3-11~14 관리자 콘솔** |
+| 🟡 부분 | T-M3-03 hash-chain (물리 분리는 M5) · T-M3-06 Autonomous Mode (JWKS 캐시는 T-M5-02) |
+| 🔜 다음 | **M3 종료 게이트** — 아래 체크리스트 |
 
 ### §01 E 핵심 인수기준 "단독 운영자 1명으로 마감시간 변경 불가" 통과
 
@@ -412,6 +412,55 @@ consent_record FK           → ON DELETE CASCADE
 ⚠️ 개발 DB 의 기존 요약은 옛 무키 해시라 "내 원서" 에 더 이상 나오지 않는다. 운영 데이터는 아직
 없으므로 이관 대상은 없다. 남은 것 — 키 보관은 M5 Vault(§06), 대학·중앙 키 배포 절차.
 
+### 관리자 콘솔 — 규칙은 서버가 지키고, 화면은 이유를 먼저 말한다 (T-M3-11~14 ✅)
+
+`apps/admin-web` (Next.js, 포트 4100). KRDS 부품은 지원자 웹과 함께 `packages/krds` 로 옮겨 같이 쓴다.
+
+**운영 토큰은 브라우저에 없다.** `ADMIN_API_TOKEN` 이 브라우저 JS 에 들어가면 화면을 연 누구나
+꺼내 쓸 수 있고, 그 뒤에는 마감 연장과 개인정보가 있다. 화면은 `/api/admin/*` 를 부르고 콘솔 서버가
+토큰을 붙여 넘긴다. 이 중계기가 열린 중계기가 되지 않게 막은 것을 직접 두드려 확인했다.
+
+```
+담당자 없이 POST                  401
+담당자 쿠키만, 콘솔 헤더 없음      403   ← 다른 사이트가 담당자 이름으로 승인을 보내는 경로
+경로 조작 (../)                   400
+조회는 담당자 없이                 200
+응답에 토큰 흔적                   없음
+X-Frame-Options                   DENY
+```
+
+**막는 것은 서버다. 화면은 할 수 없는 행동을 이유와 함께 미리 비활성화한다.** 버튼을 눌러 403 을
+받고 나서야 규칙을 알게 하면 운영자는 규칙을 장애로 받아들인다. 화면을 우회해도 같은 규칙에 걸린다.
+
+§01 E "단독 운영자 1명으로 마감시간 변경 불가" 를 화면으로 돌린 결과 (전용 검증 모집)
+
+```
+설정 v2 (전형료 55,000→60,000 · 문항 1000→500자)
+  admin1 (작성자)   "되돌리기 어려운 변경 2건" 표시 / 체크해도 승인 막힘 — 작성자 본인은 승인할 수 없습니다
+  admin2            체크 전 승인 막힘 → 체크 → 승인 1/2 / 적용 막힘 — 승인이 1명 더 필요합니다
+  admin3            진입 시 체크 해제 상태(앞사람 체크를 물려받지 않음) → 승인 2/2
+  적용              거부 — 마감 24시간 전부터는 설정을 변경할 수 없습니다 (Freeze, 서버 사유 그대로)
+마감 연장 (officer1 작성, 결정번호 입학처-2026-117)
+  officer1          승인 막힘 — 작성자 본인
+  officer2 → officer3 승인 → 적용   현재 마감 +28시간, 적용 이력 EXTEND · ✓ 서명 확인
+설정 v2 다시 적용   성공 — 연장으로 마감이 멀어져 잠금이 풀렸다
+증적 조회           체인 ✓ / "마감 판정에 쓰인 정책을 찾을 수 없습니다" (개발용 환경변수 정책으로 접수된 원서)
+```
+
+**구현하며 고친 것**
+
+- 멱등키를 화면을 열 때 한 번 만들어 두면, 담당자를 바꿔 같은 버전을 두 번째로 승인할 때 **같은 키가
+  재사용되어 첫 승인의 응답이 재생된다** — 두 번째 승인이 기록되지 않는다. 누를 때마다 새로 만든다
+- "변경을 확인했습니다" 체크가 담당자를 바꿔도 남아 있었다. 확인은 사람마다 해야 한다
+- 사유 안내 순서 — "확인 체크 필요" 가 "이미 승인하셨습니다" 보다 먼저 나오면 다시 체크하면 될 것처럼 읽힌다
+- 적용된 정책은 대기 목록에서 빠지면서 성공 알림도 함께 사라졌다. 알림을 화면 상단으로 올렸다
+- 개발용 마감 정책의 `DEADLINE_AT=` (빈 값)이 `??` 를 통과해 Invalid Date 가 되고, 새 모집의 설정 적용이
+  500 으로 죽었다. 빈 값은 미설정으로 본다
+
+⚠️ **담당자 입력은 개발 전용이다.** 신원 증명이 아니라서 운영(`NODE_ENV=production`)에서는 콘솔이
+동작을 거부한다. 관리자 SSO(T-M5-10) 가 이 자리를 대신한다. 콘솔 화면은 자동 테스트가 없다 — 위 흐름은
+브라우저로 돌린 검증이다.
+
 ## 태스크
 
 | ID | 태스크 | 담당 | 근거 노션 | 인수기준 | 상태 |
@@ -426,10 +475,10 @@ consent_record FK           → ON DELETE CASCADE
 | T-M3-08 | **Dependency Circuit Breaker** | 송리안 | §01 C8 | PG/중앙/문자/메일 장애 전파 차단 (문자·메일은 붙일 때) | ✅ |
 | T-M3-09 | Purpose-scoped Token | 송리안 | §01 A12 | 중앙 토큰으로 원본 재식별 불가, key rotation | ✅ |
 | T-M3-10 | Retention Matrix + Policy Validation | 송리안 | §01 A15 | 법정·기관 기준보다 짧게 설정 불가 | ✅ |
-| T-M3-11 | Admin Web — Config 승인 화면 | 권민준 | §01 A14 | 단독 승인 불가가 UI에서 강제됨 |
-| T-M3-12 | Admin Web — Reconciliation 콘솔 | 권민준 | §01 C2 | 불일치 목록·사유 입력·before/after |
-| T-M3-13 | Admin Web — Evidence 조회 | 권민준 | §01 C6 | 특정 원서의 접수과정 재구성 |
-| T-M3-14 | Deadline Extension Workflow | 공동 | §01 B17 | **권한은 입학처 정책담당.** 기술팀이 결정하지 않는다 | 🟡 백엔드 |
+| T-M3-11 | Admin Web — Config 승인 화면 | 권민준 | §01 A14 | 단독 승인 불가가 UI에서 강제됨 | ✅ |
+| T-M3-12 | Admin Web — Reconciliation 콘솔 | 권민준 | §01 C2 | 불일치 목록·사유 입력·before/after | ✅ |
+| T-M3-13 | Admin Web — Evidence 조회 | 권민준 | §01 C6 | 특정 원서의 접수과정 재구성 | ✅ |
+| T-M3-14 | Deadline Extension Workflow | 공동 | §01 B17 | **권한은 입학처 정책담당.** 기술팀이 결정하지 않는다 | ✅ |
 | T-M3-15 | 마감연장 시 signed config version 생성 | 송리안 | §01 B17 | 연장 이력이 불변 기록으로 남음 | ✅ |
 
 ## 태스크 상세
@@ -489,8 +538,8 @@ Central ACK         수신
 - [ ] 중앙 2시간 단절: 원서손실 0, 핵심 SLO 유지
 - [ ] 동일 Finalize 100회 재시도: Submission 1건
 - [ ] PG Callback 30분 지연: 자동 정합화
-- [ ] **단독 운영자 1명으로 마감시간 변경 불가**
-- [ ] 특정 Application의 접수과정을 Evidence Package로 재구성 가능
+- [x] **단독 운영자 1명으로 마감시간 변경 불가** — API·DB 제약·관리자 콘솔 화면까지 (2026-09-26)
+- [x] 특정 Application의 접수과정을 Evidence Package로 재구성 가능 — 콘솔 증적 조회 (2026-09-26)
 - [ ] 운영계정으로 Audit 삭제 불가
 - [ ] Production interactive write 경로 없음 (§01 B16)
 - [ ] **노션 §01을 다시 읽고** C(필수 신규 기능) 8종이 전부 구현됐는지 대조

@@ -388,11 +388,15 @@ export class DeadlinePolicyRepository extends DeadlinePolicyPort {
       approvedBy: string[];
       activatedAt: string | null;
       policyHash: string;
+      /** 작성자. 화면이 "본인은 승인할 수 없음" 을 미리 보여주려고 싣는다. 막는 것은 서버다. */
+      createdBy: string;
+      /** 연장이면 사유·결정번호·기준 정책. */
+      extension: ExtensionFacts | null;
     }>
   > {
     const { rows } = await this.db.query<Record<string, unknown>>(
       `SELECT id, version, mode, deadline_at, approved_by_1, approved_by_2,
-              activated_at, policy_hash
+              activated_at, policy_hash, immutable_snapshot
          FROM deadline_policy
         WHERE cycle_id = $1
         -- ⚠️ deadline_policy 에는 created_at 이 없다. (D-23)
@@ -410,6 +414,8 @@ export class DeadlinePolicyRepository extends DeadlinePolicyPort {
       ),
       activatedAt: r.activated_at ? (r.activated_at as Date).toISOString() : null,
       policyHash: String(r.policy_hash),
+      createdBy: String((r.immutable_snapshot as { createdBy?: string } | null)?.createdBy ?? ''),
+      extension: (r.immutable_snapshot as { extension?: ExtensionFacts } | null)?.extension ?? null,
     }));
   }
 
@@ -448,10 +454,18 @@ export class DeadlinePolicyRepository extends DeadlinePolicyPort {
 
   /** 개발 전용. ALLOW_ENV_DEADLINE_POLICY=true 일 때만. */
   private envPolicy(cycleId: string): DeadlinePolicy {
-    const mode = (process.env.DEADLINE_MODE ??
+    // 빈 값은 설정하지 않은 것으로 본다. `.env.example` 이 `DEADLINE_AT=` 로 비워 두는데,
+    // `??` 는 빈 문자열을 통과시켜 new Date('') — Invalid Date — 가 됐다. 그 값이 마감 임박
+    // 잠금 계산에 들어가 설정 적용이 500 으로 죽었다.
+    const mode = (process.env.DEADLINE_MODE ||
       'FINALIZED_COMMIT_BEFORE_DEADLINE') as DeadlineMode;
-    const deadlineAt =
-      process.env.DEADLINE_AT ?? new Date(Date.now() + 86_400_000).toISOString();
+    const raw = process.env.DEADLINE_AT || new Date(Date.now() + 86_400_000).toISOString();
+    if (Number.isNaN(Date.parse(raw))) {
+      throw ProblemException.retryable(
+        `개발용 마감 정책의 DEADLINE_AT 이 올바른 시각이 아닙니다: ${raw}`,
+      );
+    }
+    const deadlineAt = new Date(raw).toISOString();
     const fingerprint = createHash('sha256')
       .update(`${cycleId}|${mode}|${deadlineAt}`)
       .digest('hex')

@@ -1,0 +1,24 @@
+{
+  "name": "@wonseoro/admin-web",
+  "version": "0.0.1",
+  "private": true,
+  "description": "입학처 관리자 콘솔 — 설정 승인 · 마감 연장 · 대조 · 증적 (T-M3-11~14)",
+  "scripts": {
+    "dev": "next dev -p 4100",
+    "build": "next build",
+    "start": "next start -p 4100",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@wonseoro/contracts": "*",
+    "@wonseoro/krds": "*",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "typescript": "^5.6.0"
+  }
+}

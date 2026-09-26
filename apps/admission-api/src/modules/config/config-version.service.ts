@@ -388,6 +388,23 @@ export class ConfigVersionService {
     return rows[0] ? this.load(String(rows[0].id)) : null;
   }
 
+  /**
+   * 한 모집의 설정 버전 목록. 관리자 콘솔의 승인 대기함이 쓴다.
+   * 본문(config_json)은 싣지 않는다 — 무엇이 바뀌는지는 diff 로 본다.
+   */
+  async list(cycleId: string): Promise<Array<ConfigVersionRow & { createdAt: string }>> {
+    const { rows } = await this.db.query<{ id: string; created_at: Date }>(
+      `SELECT id, created_at FROM config_version WHERE cycle_id = $1
+        ORDER BY created_at DESC LIMIT 50`,
+      [cycleId],
+    );
+    const out: Array<ConfigVersionRow & { createdAt: string }> = [];
+    for (const r of rows) {
+      out.push({ ...(await this.load(r.id)), createdAt: r.created_at.toISOString() });
+    }
+    return out;
+  }
+
   async load(configId: string): Promise<ConfigVersionRow> {
     const { rows } = await this.db.query<Record<string, unknown>>(
       `SELECT id, version, status, config_hash, created_by,

@@ -169,12 +169,14 @@ stateDiagram-v2
 | 서비스 | 경로 | 역할 |
 | --- | --- | --- |
 | Applicant Web | `apps/frontend` | 공통원서, 전형 선택, 자동저장, 서류, 결제, 접수상태 UX (KRDS) |
+| Admin Console | `apps/admin-web` | 설정 승인(Diff·2인), 마감 연장, 대조·예외, 증적 조회. 운영 토큰은 서버에만 (BFF) |
 | Admission API | `apps/admission-api` | 대학 Data Plane 본체. 원서·서류·결제·Finalize·감사·대조·설정 |
 | Document Service | `apps/document-service` | 악성코드 검사 워커. 검사는 오래 걸리므로 접수 트랜잭션과 분리 |
 | Event Relay | `apps/event-relay` | At-least-once 전달, 지수 Backoff, Dead Letter, 중앙 ACK 처리 |
 | Central API | `apps/central-api` | Sync Gateway, Common Profile Vault, 내 원서 Dashboard |
 | Contracts | `packages/contracts` | 상태머신·이벤트·오류 모델의 단일 출처 |
 | Server Kit | `packages/server-kit` | DB Pool 예산, 설정 계약(기동 시 검증) |
+| KRDS | `packages/krds` | 지원자 웹·관리자 콘솔이 같이 쓰는 KRDS 부품과 디자인 토큰 |
 
 Admission API 내부 모듈은 [apps/admission-api/README.md](apps/admission-api/README.md) 참조.
 
@@ -279,13 +281,15 @@ Admission API 내부 모듈은 [apps/admission-api/README.md](apps/admission-api
 dev-folder/
 ├── apps/
 │   ├── frontend/             # 지원자 Web (Next.js · KRDS)
+│   ├── admin-web/            # 입학처 관리자 콘솔 (Next.js · KRDS · BFF)
 │   ├── admission-api/        # 대학 Data Plane 본체
 │   ├── document-service/     # 악성코드 검사 워커
 │   ├── event-relay/          # 중앙 비동기 동기화
 │   └── central-api/          # 중앙 Control + Convenience Plane
 ├── packages/
 │   ├── contracts/            # 상태머신 · CloudEvents · Problem · OpenAPI
-│   └── server-kit/           # DB Pool 예산 · 설정 계약
+│   ├── server-kit/           # DB Pool 예산 · 설정 계약 · Circuit Breaker · 목적별 참조
+│   └── krds/                 # KRDS 공통 부품 · 디자인 토큰
 ├── infra/
 │   ├── db/                   # DDL, 마이그레이션, 정합성 제약 검증
 │   └── compose/              # 로컬 개발 인프라
@@ -296,7 +300,7 @@ dev-folder/
 
 ## Project Status
 
-> 기준일 2026-09-26 · 전체 139개 태스크 중 **54개 완료** · 테스트 **252개 통과**
+> 기준일 2026-09-26 · 전체 139개 태스크 중 **58개 완료** · 테스트 **252개 통과**
 
 지원자가 화면에서 원서를 만들어 서류를 올리고 결제한 뒤 **접수번호를 받는 전 과정이 동작합니다.**
 
@@ -312,7 +316,7 @@ dev-folder/
 | M0 기반 | 7/8 | 모노레포, 계약, ADR, 로컬 인프라 |
 | M1 접수 Core | **14/14** | 원서 생성·자동저장·추가문항·서류·감사 hash-chain |
 | M2 결제·Finalize·화면 | **24/24** | 결제 재검증, Finalize 트랜잭션, KRDS 6단계 화면, Dashboard |
-| M3 운영 안전장치 | **10/15** | 마감 정책 엔진, 설정 거버넌스, 4-way 대조, 증적 재구성, 의존성 차단, 서명된 적용 기록, 보존기간 매트릭스, 목적별 가명 참조 |
+| M3 운영 안전장치 | **14/15** | 마감 정책 엔진, 설정 거버넌스, 4-way 대조, 증적 재구성, 의존성 차단, 서명된 적용 기록, 보존기간 매트릭스, 목적별 가명 참조, 관리자 콘솔 |
 | M4 분산 실증 | 0/28 | K-PaaS 배포, 장애 격리 실증, 부하 시험 |
 | M5 신뢰성·보안·접근성 | 0/35 | OIDC·MFA, 실 PG, 실 AV, WORM 감사 |
 | M6 Pilot 준비 | 0/15 | 대학 1곳 Shadow Test |

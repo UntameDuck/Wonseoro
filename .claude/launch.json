@@ -4,19 +4,41 @@
     {
       "name": "frontend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "-w", "@wonseoro/frontend"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "-w",
+        "@wonseoro/frontend"
+      ],
       "port": 4000
+    },
+    {
+      "name": "admin-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "-w",
+        "@wonseoro/admin-web"
+      ],
+      "port": 4100
     },
     {
       "name": "admission-api",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["--env-file=apps/admission-api/.env.example", "apps/admission-api/dist/main.js"],
+      "runtimeArgs": [
+        "--env-file=apps/admission-api/.env.example",
+        "apps/admission-api/dist/main.js"
+      ],
       "port": 3001
     },
     {
       "name": "central-api",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["--env-file=apps/central-api/.env.example", "apps/central-api/dist/main.js"],
+      "runtimeArgs": [
+        "--env-file=apps/central-api/.env.example",
+        "apps/central-api/dist/main.js"
+      ],
       "port": 3000
     }
   ]

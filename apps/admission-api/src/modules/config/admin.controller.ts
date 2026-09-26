@@ -56,6 +56,14 @@ export class AdminController {
     return active;
   }
 
+  /** 승인 대기함. 본문 없이 상태·승인자만. */
+  @Get('config/versions')
+  @Header('cache-control', 'no-store')
+  async listConfigs(@Query('cycleId') cycleId?: string) {
+    if (!cycleId) throw ProblemException.validationFailed('cycleId 가 필요합니다.');
+    return { versions: await this.configs.list(cycleId) };
+  }
+
   @Post('config/versions')
   @HttpCode(201)
   @Header('cache-control', 'no-store')

@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-26 (T-M3-09 Purpose-scoped Token · T-M3-10 Retention Matrix 완료)
+> 최종 갱신: 2026-09-26 (Admin Web — T-M3-11~14 화면 완료, M3 14/15)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -9,19 +9,19 @@
 
 ## 현재 지점
 
-**M0·M1·M2 완료, M3 10/15.** MVP 가 화면에서 끝까지 동작하고, 운영 안전장치의 핵심이 붙었다.
+**M0·M1·M2 완료, M3 14/15.** MVP 가 화면에서 끝까지 동작하고, 운영 안전장치의 핵심이 붙었다.
 
 | 단계 | 진행 | 비고 |
 |---|---|---|
 | M0 기반 | 7/8 | 제출문서 정정(T-M0-08)만 남음 |
 | M1 접수 Core | **14/14** | ✅ |
 | M2 결제·Finalize·화면 | **24/24** | ✅ Demo Gate 1~5 통과 |
-| **M3 운영 안전장치** | **10/15** | ◀ 진행 중 (🟡 2건 별도) |
+| **M3 운영 안전장치** | **14/15** | ◀ 종료 게이트 대기 (T-M3-06 🟡) |
 | M4 분산 실증 | 0/28 | |
 | M5 신뢰성·보안·접근성 | 0/35 | |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 54/139 태스크** (T-M3-06·14 🟡 부분 완료 별도). 테스트 파일 25개 / **252개 테스트**
+**총 58/139 태스크** (T-M3-06 🟡 부분 완료 별도). 테스트 파일 25개 / **252개 테스트**
 (admission-api 202 · server-kit 27 · central-api 19 · event-relay 4) 전부 통과, DB 정합성 제약 14종 PASS.
 
 ### 동작하는 것 — End-to-End
@@ -52,7 +52,8 @@
 | T-M3-15 서명된 활성화 기록 | ✅ | 마감·설정의 모든 적용을 Ed25519 로 서명, **추가만 가능한 기록** + 운영자 감사 체인. 공개키로 대학 밖에서 검증 |
 | T-M3-09 Purpose-scoped Token | ✅ | 중앙 지원자 참조를 **목적 키 HMAC** 로 — Vault 접근만으로는 조인 불가, 키 교체 지원. 대학 내부 UUID 유출·URL 토큰 제거 |
 | T-M3-10 Retention Matrix | ✅ | 데이터 종류별 하한 — **법정 기간을 지어내지 않는다**. 근거 있는 2년만 박고 나머지는 대학이 명시. 설정 승인 절차를 탄다 |
-| T-M3-14 마감 연장 워크플로 | 🟡 | 백엔드 완료 — **입학처 결정 문서번호 필수** · 기준 정책이 바뀌면 적용 거부. 화면은 Admin Web 과 함께 |
+| T-M3-14 마감 연장 워크플로 | ✅ | **입학처 결정 문서번호 필수** · 기준 정책이 바뀌면 적용 거부 · 관리자 콘솔 화면 |
+| T-M3-11~13 관리자 콘솔 | ✅ | `apps/admin-web` — 설정 승인(Diff 확인)·대조·증적. **운영 토큰은 브라우저에 없다** |
 
 ### 프로덕션 점검 (2026-09-23)
 
@@ -67,13 +68,16 @@
 
 ## 착수 순서
 
-### 1️⃣ 다음 작업 — Admin Web (T-M3-11~13 + T-M3-14 화면) · M3 종료 게이트
+### 1️⃣ 다음 작업 — M3 종료 게이트
 
-**M3 백엔드 태스크는 전부 끝났다.** 남은 것은 화면과 종료 체크리스트다.
+**M3 태스크 15개 중 14개가 끝났다.** 남은 T-M3-06 은 JWKS 캐시 하나이고 T-M5-02 와 함께 한다.
+다음 마일스톤으로 가기 전에 종료 체크리스트(M3 문서 하단)를 채운다.
 
-- Admin Web 은 권민준 담당이다. 필요한 API 는 아래 2️⃣ 표에 전부 있다
-- M3 종료 전 **노션 §01 을 다시 읽고 C 8종을 대조**한다 (M3 문서 하단 체크리스트).
-  C4 Admission Peak Mode 는 M3 태스크에 없다 — 어디서 할지 정해야 한다
+- **노션 §01 을 다시 읽고 C 8종을 대조**한다. C4 **Admission Peak Mode** 는 M3 태스크에 없다 —
+  M4(부하 시험)에서 할지 여기서 할지 정해야 한다
+- §01 E 인수기준 중 M3 몫: "단독 운영자 1명으로 마감시간 변경 불가" ✅(화면까지) ·
+  "Evidence Package 로 재구성" ✅ · "PG Callback 30분 지연 자동 정합화" 는 시험 대기 ·
+  "운영계정으로 Audit 삭제 불가" 는 WORM(M5) 대기
 - 노션 반영 대기가 쌓였다. 특히 **D-27 · D-29 · D-7 · D-38** 은 확인받아야 방향이 확정된다
 
 ### ⚠️ 보존기간 하한값 확인 필요 (D-38)
@@ -94,27 +98,25 @@ T-M3-10 은 **틀을 만들었고 숫자는 비어 있다.** 설계서가 숫자
 서명된 Policy Snapshot 은 T-M3-15 로 끝났다 — 공개키(`GET /api/v1/meta/signing-keys`)와
 활성화 기록만 있으면 중앙 없이도 대학 밖에서 적용 정책을 검증할 수 있다.
 
-### 2️⃣ T-M3-11~13 Admin Web (권민준)
+### 관리자 콘솔 (`apps/admin-web`, 포트 4100)
 
-백엔드 API 는 전부 준비돼 있다.
+```bash
+npm run dev -w @wonseoro/admin-web
+```
 
-| 화면 | 호출 |
+| 화면 | 하는 일 |
 |---|---|
-| Config 승인 (T-M3-11) | `GET /admin/v1/config/versions/{id}/diff` → `POST .../approve` (digest 동봉) |
-| Reconciliation 콘솔 (T-M3-12) | `GET /admin/v1/reconciliation/exceptions` · `POST .../run` · `POST /{id}/resolve` |
-| Evidence 조회 (T-M3-13) | `GET /admin/v1/evidence/applications/{id}?reason=` |
-| **마감 연장 (T-M3-14 화면)** | `POST /admin/v1/deadline-policies/extensions` (사유·결정번호) → `.../{id}/approve` ×2 → `.../{id}/activate` |
-| **적용 이력 (T-M3-15)** | `GET /admin/v1/activations?cycleId=` — 서명 검증 결과·시스템 체인 포함 |
+| 설정 승인 | 버전 목록 → Diff(파괴적 변경을 맨 위에) → "확인했습니다" 체크 → 승인 → 2인 뒤 적용 · 되돌리기(사유) |
+| 마감 · 연장 | 현재 마감 · 연장 초안(**결정번호 먼저**) · 승인 대기 · 서명된 적용 이력 |
+| 대조 · 예외 | 불일치만 심각도순 · 대조 실행 · 처리 코드 + 사유로 해소 (데이터는 고치지 않는다) |
+| 증적 조회 | 원서 ID + 사유 → 체인·정책 서명 검증 결과를 맨 위에, 그다음 접수·Timeline |
 
-**연장 화면에서 보여야 하는 것** — 지금 마감 → 새 마감, 사유, 결정 문서번호, 승인 현황.
-409 는 "승인하는 사이 다른 정책이 적용됨" 이다. 실패가 아니라 **다시 작성하라는 안내**로 그린다.
-적용 이력은 `allSignaturesValid` · `systemChain.valid` 가 false 면 맨 위에 경고를 띄운다.
+**운영 토큰은 브라우저에 없다.** 화면은 같은 오리진의 `/api/admin/*` 를 부르고, 콘솔 서버가
+`ADMIN_API_TOKEN` 을 붙여 admission-api 로 넘긴다(BFF). admission-api 는 관리자 오리진에 CORS 를
+열지 않는다.
 
-**T-M3-11 이 §01 E 의 인수기준을 화면에서 증명한다.**
-"단독 운영자 1명으로 마감시간 변경 불가" 가 UI 에서 강제되는 것을 보여야 한다.
-Diff 를 읽히게 그리는 것이 핵심이다 — 읽히지 않는 Diff 는 없는 Diff 와 같다.
-
-⚠️ 운영 API 는 `Authorization: Bearer <ADMIN_API_TOKEN>` 이 필요하다.
+⚠️ **담당자 입력은 개발 전용이다.** 적은 이름이 그대로 승인 기록에 남는다 — 신원 증명이 아니다.
+그래서 콘솔은 **운영(`NODE_ENV=production`)에서 동작을 거부한다.** 관리자 SSO(T-M5-10)가 붙어야 쓸 수 있다.
 
 ---
 
@@ -142,7 +144,7 @@ Diff 를 읽히게 그리는 것이 핵심이다 — 읽히지 않는 Diff 는 �
 D-16 self-check · D-19 form-schema · D-20 scan-result · D-22 policy activate ·
 D-24 evidence reason · D-26 reconciliation run · **원서 취소(D-7)** ·
 **Config diff/rollback(T-M3-02)** · D-32 dependencies · D-34 operating-mode ·
-**D-35 마감 연장 · 적용 이력 · 서명 공개키** · D-37 본문 인코딩 400 · D-38 retention matrix·plan · D-39 대시보드 토큰 헤더
+**D-35 마감 연장 · 적용 이력 · 서명 공개키 · 설정 버전 목록** · D-37 본문 인코딩 400 · D-38 retention matrix·plan · D-39 대시보드 토큰 헤더
 
 ---
 
