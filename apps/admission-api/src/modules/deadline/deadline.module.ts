@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { Db } from '@wonseoro/server-kit';
+import { ActivationRecorder } from '../activation/activation-recorder';
 import { DeadlinePolicyPort } from './deadline-policy.port';
 import { DeadlinePolicyRepository } from './deadline-policy.repository';
 import { DeadlineService } from './deadline.service';
@@ -17,8 +18,9 @@ import { DeadlineService } from './deadline.service';
     DeadlinePolicyRepository,
     {
       provide: DeadlinePolicyPort,
-      useFactory: (db: Db) => new DeadlinePolicyRepository(db),
-      inject: [Db],
+      useFactory: (db: Db, activations: ActivationRecorder) =>
+        new DeadlinePolicyRepository(db, activations),
+      inject: [Db, ActivationRecorder],
     },
   ],
   exports: [DeadlineService, DeadlinePolicyPort],

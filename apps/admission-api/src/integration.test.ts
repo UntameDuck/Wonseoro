@@ -6,6 +6,8 @@ import { AuditService, GENESIS_HASH } from './modules/audit/audit.service';
 import { PostgresIdempotencyStore } from './common/idempotency/postgres-idempotency.store';
 import { FormSchemaService } from './modules/config/form-schema.service';
 import { DocumentService } from './modules/document/document.service';
+import { ActivationRecorder } from './modules/activation/activation-recorder';
+import { ActivationSigner } from './modules/activation/activation-signer';
 import { EvidenceService } from './modules/evidence/evidence.service';
 import { FileInspector } from './modules/document/file-inspector';
 import { ObjectStorage } from './modules/document/object-storage';
@@ -442,7 +444,12 @@ describe('서류 상태 전이 (v1.0 §5.4 / v1.1 §B5)', () => {
 });
 
 describe('Evidence Package (v1.1 §A11·§C6 / §01 E)', () => {
-  const service = () => new EvidenceService(db, new AuditService());
+  const service = () =>
+    new EvidenceService(
+      db,
+      new AuditService(),
+      new ActivationRecorder(db, new ActivationSigner(), new AuditService()),
+    );
 
   it('조회 사유 없이는 뽑을 수 없다 (v1.0 §8.3)', async (t) => {
     if (!available) return t.skip('DATABASE_URL 없음');

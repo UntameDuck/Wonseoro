@@ -4,6 +4,7 @@ import { IdempotencyModule } from './common/idempotency/idempotency.module';
 import { IdentityModule } from './common/identity/identity.module';
 import { ResilienceModule } from './common/resilience/dependency-breakers';
 import { DbModule } from '@wonseoro/server-kit';
+import { ActivationModule } from './modules/activation/activation.module';
 import { ApplicationModule } from './modules/application/application.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { CancellationModule } from './modules/cancellation/cancellation.module';
@@ -25,6 +26,7 @@ import { OperatingModeModule } from './modules/operating-mode/operating-mode.mod
     IdempotencyModule,
     IdentityModule,
     AuditModule,
+    ActivationModule,
     DeadlineModule,
     ApplicationModule,
     CancellationModule,

@@ -8,6 +8,7 @@ import { ADMIN_API_TOKEN, AUTH_MODE, CORS_ORIGINS, PORT, UNIVERSITY_ID } from '.
 import { IdempotencyInterceptor } from './common/idempotency/idempotency.interceptor';
 import { IdempotencyStore } from './common/idempotency/idempotency.store';
 import { ProblemFilter } from './common/problem/problem.filter';
+import { strictJsonParser } from './common/http/strict-json';
 import { assertConfigured, isProduction } from '@wonseoro/server-kit';
 
 /**
@@ -27,6 +28,9 @@ async function bootstrap(): Promise<void> {
     AppModule,
     // trustProxy: Edge/WAF 뒤에 있으므로 원 IP 판단에 필요하다.
     new FastifyAdapter({ trustProxy: true, bodyLimit: 1_048_576 }),
+    // 본문 파서는 아래에서 직접 등록한다. Nest 가 자기 JSON 파서를 따로 올리면
+    // 깨진 UTF-8 을 받아들이는 기본 동작이 되살아난다. (D-37)
+    { bodyParser: false },
   );
 
   // OpenAPI updateApplication 이 application/merge-patch+json 을 요구한다.
@@ -35,18 +39,10 @@ async function bootstrap(): Promise<void> {
   // parseAs 는 'buffer' 여야 한다. 'string' 을 쓰면 Fastify 가 문자 수와
   // Content-Length(바이트 수)를 비교해 한글 본문에서 전부 실패한다.
   // 원서 본문은 대부분 한글이므로 이 구분이 치명적이다.
-  fastify.addContentTypeParser(
-    MEDIA_MERGE_PATCH,
-    { parseAs: 'buffer' },
-    (_req: unknown, body: Buffer, done: (err: Error | null, value?: unknown) => void) => {
-      try {
-        const text = body.toString('utf8');
-        done(null, text === '' ? {} : JSON.parse(text));
-      } catch (err) {
-        done(err as Error);
-      }
-    },
-  );
+  fastify.addContentTypeParser(MEDIA_MERGE_PATCH, { parseAs: 'buffer' }, strictJsonParser);
+  // 기본 JSON 파서는 깨진 UTF-8 을 U+FFFD 로 바꿔 받아들인다. 거절하도록 바꾼다. (D-37)
+  fastify.removeContentTypeParser('application/json');
+  fastify.addContentTypeParser('application/json', { parseAs: 'buffer' }, strictJsonParser);
 
   // 모든 오류를 problem+json 으로 통일한다.
   app.useGlobalFilters(new ProblemFilter());

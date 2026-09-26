@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-26 (T-M3-08 완료 · T-M3-06 부분 완료)
+> 최종 갱신: 2026-09-26 (T-M3-15 완료 · T-M3-14 백엔드 완료)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -9,20 +9,20 @@
 
 ## 현재 지점
 
-**M0·M1·M2 완료, M3 7/15.** MVP 가 화면에서 끝까지 동작하고, 운영 안전장치의 핵심이 붙었다.
+**M0·M1·M2 완료, M3 8/15.** MVP 가 화면에서 끝까지 동작하고, 운영 안전장치의 핵심이 붙었다.
 
 | 단계 | 진행 | 비고 |
 |---|---|---|
 | M0 기반 | 7/8 | 제출문서 정정(T-M0-08)만 남음 |
 | M1 접수 Core | **14/14** | ✅ |
 | M2 결제·Finalize·화면 | **24/24** | ✅ Demo Gate 1~5 통과 |
-| **M3 운영 안전장치** | **7/15** | ◀ 진행 중 |
+| **M3 운영 안전장치** | **8/15** | ◀ 진행 중 (🟡 2건 별도) |
 | M4 분산 실증 | 0/28 | |
 | M5 신뢰성·보안·접근성 | 0/35 | |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 51/139 태스크** (T-M3-06 🟡 부분 완료 별도). 테스트 파일 19개 / **216개 테스트**
-(admission-api 174 · server-kit 22 · central-api 16 · event-relay 4) 전부 통과, DB 정합성 제약 12종 PASS.
+**총 52/139 태스크** (T-M3-06·14 🟡 부분 완료 별도). 테스트 파일 21개 / **230개 테스트**
+(admission-api 188 · server-kit 22 · central-api 16 · event-relay 4) 전부 통과, DB 정합성 제약 14종 PASS.
 
 ### 동작하는 것 — End-to-End
 
@@ -48,7 +48,9 @@
 | T-M3-05 Exception Queue | ✅ | 불일치만 큐로, 보정은 사유·before/after 와 함께 |
 | T-M3-07 Evidence Package | ✅ | 한 원서의 접수 과정 재구성 + 체인 검증 |
 | T-M3-08 Dependency Circuit Breaker | ✅ | 중앙·PG·AV 보고 경로 차단. **PG 는 끊겨도 UNKNOWN** · 중앙 장애가 이벤트를 DEAD 로 만들지 않음 |
-| T-M3-06 Autonomous Mode | 🟡 | Health Gate · 자율 운영 배너 · Sync Lag 경보. **JWKS 캐시는 T-M5-02 로** (D-34) |
+| T-M3-06 Autonomous Mode | 🟡 | Health Gate · 자율 운영 배너 · Sync Lag 경보 · 서명된 Policy Snapshot. **JWKS 캐시만 T-M5-02 로** (D-34) |
+| T-M3-15 서명된 활성화 기록 | ✅ | 마감·설정의 모든 적용을 Ed25519 로 서명, **추가만 가능한 기록** + 운영자 감사 체인. 공개키로 대학 밖에서 검증 |
+| T-M3-14 마감 연장 워크플로 | 🟡 | 백엔드 완료 — **입학처 결정 문서번호 필수** · 기준 정책이 바뀌면 적용 거부. 화면은 Admin Web 과 함께 |
 
 ### 프로덕션 점검 (2026-09-23)
 
@@ -63,30 +65,29 @@
 
 ## 착수 순서
 
-### 1️⃣ 다음 작업 — T-M3-14·15 마감 연장 워크플로 + signed config version
+### 1️⃣ 다음 작업 — T-M3-09 Purpose-scoped Token · T-M3-10 Retention Matrix
 
-**근거 노션**: §01 B17 · A1 · A14
+**근거 노션**: §01 A12 · A15
 
-둘을 함께 한다. 연장은 `deadline_policy` 의 새 버전이고, 그 버전이 **서명된 불변 기록**이어야
-"누가 언제 왜 연장했는지" 가 남는다. 이 서명은 T-M3-06 에서 남긴 **서명된 Local Policy Snapshot** 과
-같은 일이라 한 번에 끝낸다. (D-34)
+남은 M3 백엔드 태스크 둘이다. 둘 다 **중앙에 무엇이 남는가** 의 문제다.
 
-주의할 것
-- **연장 권한은 입학처 정책담당이다.** 기술팀이 결정하게 만들지 않는다 (§B17). 역할 구분이 아직
-  공유 토큰(`ADMIN_API_TOKEN`)이라 **누가** 했는지 구분이 약하다 — 2인 승인 기록으로 보완하고,
-  역할 분리는 T-M5-10 에서 붙인다는 것을 명시한다
-- 연장은 Freeze(마감 24시간 전 잠금)에 걸리지 않는다. 이미 그렇게 짜여 있다 — 깨지 않는지 시험으로 고정
-- 개발자가 DB 를 직접 고쳐 연장하는 경로를 만들지 않는다 (§B16)
-- 서명 키를 어디에 둘지는 M5 Vault(§06) 와 맞물린다. 지금은 키 ID 를 기록에 남겨 교체 가능하게만
+- **T-M3-09** — 중앙 토큰으로 대학 원본을 재식별할 수 없어야 한다. 지금 중앙 요약의
+  `subjectRef = sha256(subject_token)` (D-27) 은 목적별로 나뉘어 있지 않고 키 교체도 없다.
+  **D-27 확인과 맞물린다** — 먼저 확인받는 것이 순서다
+- **T-M3-10** — 데이터 종류별 보존기간, 법정·기관 기준보다 짧게 설정 불가.
+  **활성화 기록·감사 체인은 지울 수 없게 만들었다** (0003). 보존기간 만료와 충돌하지 않게
+  "지우는 대상" 과 "지울 수 없는 대상" 을 표로 먼저 가른다
 
 ### 🟡 T-M3-06 에 남은 것
 
 | 항목 | 언제 | 이유 |
 |---|---|---|
 | Local JWKS Cache | **T-M5-02 와 함께** | 검증할 토큰 형식·발급자가 아직 없다. 지금 만들면 추측으로 짓는 코드다 |
-| 서명된 Policy Snapshot | 위 1️⃣ 에서 | signed config version 과 같은 일 |
-| Outbox 장기 적체 용량 | M4 (§B7) | 파티션·SENT 아카이브는 DDL 변경. 적체 **경보**는 이번에 붙였다 |
+| Outbox 장기 적체 용량 | M4 (§B7) | 파티션·SENT 아카이브는 DDL 변경. 적체 **경보**는 붙였다 |
 | 2시간(§E)·24시간(§A1) 단절 시험 | M4 장애 시험 | 기능은 Demo Gate 5 로 확인됐다. 시간을 버티는지는 부하·장애 시험의 일 |
+
+서명된 Policy Snapshot 은 T-M3-15 로 끝났다 — 공개키(`GET /api/v1/meta/signing-keys`)와
+활성화 기록만 있으면 중앙 없이도 대학 밖에서 적용 정책을 검증할 수 있다.
 
 ### 2️⃣ T-M3-11~13 Admin Web (권민준)
 
@@ -97,6 +98,12 @@
 | Config 승인 (T-M3-11) | `GET /admin/v1/config/versions/{id}/diff` → `POST .../approve` (digest 동봉) |
 | Reconciliation 콘솔 (T-M3-12) | `GET /admin/v1/reconciliation/exceptions` · `POST .../run` · `POST /{id}/resolve` |
 | Evidence 조회 (T-M3-13) | `GET /admin/v1/evidence/applications/{id}?reason=` |
+| **마감 연장 (T-M3-14 화면)** | `POST /admin/v1/deadline-policies/extensions` (사유·결정번호) → `.../{id}/approve` ×2 → `.../{id}/activate` |
+| **적용 이력 (T-M3-15)** | `GET /admin/v1/activations?cycleId=` — 서명 검증 결과·시스템 체인 포함 |
+
+**연장 화면에서 보여야 하는 것** — 지금 마감 → 새 마감, 사유, 결정 문서번호, 승인 현황.
+409 는 "승인하는 사이 다른 정책이 적용됨" 이다. 실패가 아니라 **다시 작성하라는 안내**로 그린다.
+적용 이력은 `allSignaturesValid` · `systemChain.valid` 가 false 면 맨 위에 경고를 띄운다.
 
 **T-M3-11 이 §01 E 의 인수기준을 화면에서 증명한다.**
 "단독 운영자 1명으로 마감시간 변경 불가" 가 UI 에서 강제되는 것을 보여야 한다.
@@ -106,10 +113,10 @@ Diff 를 읽히게 그리는 것이 핵심이다 — 읽히지 않는 Diff 는 �
 
 ---
 
-## 노션 반영 대기 (29건)
+## 노션 반영 대기 (32건)
 
-불일치 대장 34건 중 **🔴 OPEN 은 0건** — 전부 판정됐다.
-5건 CLOSED, 나머지 29건이 노션 반영 대기다. 전체는
+불일치 대장 37건 중 **🔴 OPEN 은 0건** — 전부 판정됐다.
+5건 CLOSED, 나머지 32건이 노션 반영 대기다. 전체는
 [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md).
 
 ### 먼저 확인받아야 하는 것
@@ -122,14 +129,15 @@ Diff 를 읽히게 그리는 것이 핵심이다 — 읽히지 않는 Diff 는 �
 
 ### DDL 에 접어 넣어야 하는 것
 
-`infra/db/migrations/0002_integrity_constraints.sql` 은 **임시 파일**이다.
-노션 §02 첨부 DDL 에 반영한 뒤 삭제한다. (D-21 · D-25 · D-29)
+`infra/db/migrations/0002_integrity_constraints.sql` · `0003_signed_activation.sql` 은 **임시 파일**이다.
+노션 §02 첨부 DDL 에 반영한 뒤 삭제한다. (D-21 · D-25 · D-29 · D-35)
 
 ### 계약(OpenAPI)에 추가해야 하는 것
 
 D-16 self-check · D-19 form-schema · D-20 scan-result · D-22 policy activate ·
 D-24 evidence reason · D-26 reconciliation run · **원서 취소(D-7)** ·
-**Config diff/rollback(T-M3-02)**
+**Config diff/rollback(T-M3-02)** · D-32 dependencies · D-34 operating-mode ·
+**D-35 마감 연장 · 적용 이력 · 서명 공개키** · D-37 본문 인코딩 400
 
 ---
 

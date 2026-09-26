@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { after, before, describe, it } from 'node:test';
 import { Db } from '@wonseoro/server-kit';
+import { ActivationRecorder } from '../activation/activation-recorder';
+import { ActivationSigner } from '../activation/activation-signer';
+import { AuditService } from '../audit/audit.service';
 import { DeadlinePolicyRepository } from '../deadline/deadline-policy.repository';
 import { DeadlineService } from '../deadline/deadline.service';
 import { ConfigVersionService } from './config-version.service';
@@ -24,15 +27,18 @@ async function makeCycle(name: string): Promise<string> {
   await db.query(
     `INSERT INTO admission_cycle (id, university_id, admission_year, name, opens_at, closes_at, status)
      VALUES ($1, 'UNIV-A', 2099, $2, now(), now() + interval '90 days', 'OPEN')`,
-    [id, name],
+    // 전형은 지우지 않고 닫으므로 이름이 겹치지 않게 한다. (이름이 유니크다)
+    [id, `${name} ${id.slice(0, 8)}`],
   );
   cycles.push(id);
   return id;
 }
 
+const recorder = () => new ActivationRecorder(db, new ActivationSigner(), new AuditService());
+
 function service(): ConfigVersionService {
-  const policies = new DeadlinePolicyRepository(db);
-  return new ConfigVersionService(db, new DeadlineService(policies));
+  const policies = new DeadlinePolicyRepository(db, recorder());
+  return new ConfigVersionService(db, new DeadlineService(policies), recorder());
 }
 
 async function draft(
@@ -49,7 +55,7 @@ async function draft(
 async function seedActive(cycle: string, version: string): Promise<string> {
   const id = await draft(version, BASE, cycle);
   await approveTwice(id);
-  await service().activate(id, null);
+  await service().activate(id, null, 'admin4@univ-a');
   return id;
 }
 
@@ -98,10 +104,10 @@ before(async () => {
 
 after(async () => {
   if (!available) return;
+  // 전형을 지우지 않는다. 활성화 기록은 추가만 가능하고(0003) 전형을 참조한다 —
+  // 적용 이력이 있는 전형은 지울 수 없어야 맞다. 대신 닫아서 화면에 안 보이게 한다.
   for (const id of cycles) {
-    await db.query(`DELETE FROM config_version WHERE cycle_id = $1`, [id]);
-    await db.query(`DELETE FROM deadline_policy WHERE cycle_id = $1`, [id]);
-    await db.query(`DELETE FROM admission_cycle WHERE id = $1`, [id]);
+    await db.query(`UPDATE admission_cycle SET status = 'ARCHIVED' WHERE id = $1`, [id]);
   }
   await db.onApplicationShutdown();
 });
@@ -189,7 +195,7 @@ describe('되돌리기 (Rollback)', () => {
     // 전형료를 올린 새 설정을 정상 절차로 적용한다.
     const next = await draft('rb-v2', { ...BASE, fees: { EARLY: 66000 } }, cyc);
     await approveTwice(next);
-    await svc.activate(next, null);
+    await svc.activate(next, null, 'admin4@univ-a');
     assert.equal((await svc.active(cyc))?.id, next);
 
     // 잘못됐다는 것을 알았다. 되돌린다.
@@ -233,10 +239,10 @@ describe('마감 임박 잠금 (Freeze)', () => {
     // 잠금 전에 두 번째 설정을 정상 적용해 둔다. 되돌릴 대상이 필요하다.
     const secondId = await draft('fz-v2', { ...BASE, fees: { EARLY: 66000 } }, cyc);
     await approveTwice(secondId);
-    await service().activate(secondId, null);
+    await service().activate(secondId, null, 'admin4@univ-a');
 
     // 이제 마감을 1시간 뒤로 둔다. 잠금 구간(기본 24시간)에 들어간다.
-    const policies = new DeadlinePolicyRepository(db);
+    const policies = new DeadlinePolicyRepository(db, recorder());
     const { policyId } = await policies.createDraft({
       cycleId: cyc,
       version: 'fz-pol-1',
@@ -246,12 +252,12 @@ describe('마감 임박 잠금 (Freeze)', () => {
     });
     await policies.approve(policyId, 'admin2@univ-a');
     await policies.approve(policyId, 'admin3@univ-a');
-    await policies.activate(policyId, null);
+    await policies.activate(policyId, null, 'admin4@univ-a');
 
     // 새 변경은 막힌다. 마지막 몇 시간의 설정 변경은 검증할 시간이 없다.
     const thirdId = await draft('fz-v3', { ...BASE, fees: { EARLY: 77000 } }, cyc);
     await approveTwice(thirdId);
-    assert.equal(await problemStatus(service().activate(thirdId, null)), 403);
+    assert.equal(await problemStatus(service().activate(thirdId, null, 'admin4@univ-a')), 403);
 
     // 되돌리기는 막히지 않는다.
     // Freeze 는 새 변경을 멈추는 장치다. 잘못된 설정으로 마감을 맞는 쪽이 더 큰 사고다.

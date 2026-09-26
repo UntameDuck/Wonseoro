@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
+import { ActivationRecorder } from '../activation/activation-recorder';
+import type { SignatureStatus } from '../activation/activation-signer';
 import { AuditService } from '../audit/audit.service';
 
 export interface EvidenceTimelineEntry {
@@ -46,6 +48,22 @@ export interface EvidencePackage {
     approvedBy: string[];
     activatedAt: string | null;
     policyHash: string;
+    /**
+     * 이 정책을 적용한 서명된 기록. (T-M3-15)
+     * null 이면 서명 기록이 도입되기 전에 적용된 정책이다 — 승인자는 있지만
+     * "누가 적용했는가" 와 "그 뒤로 바뀌지 않았는가" 는 증명하지 못한다.
+     */
+    signedActivation: {
+      activationId: string;
+      kind: string;
+      effectiveAt: string;
+      operatorId: string;
+      decisionRef: string | null;
+      keyId: string;
+      signature: SignatureStatus;
+      /** 서명된 마감시각·정책해시가 지금 DB 의 정책과 같은가. 다르면 정책 행이 고쳐졌다. */
+      matchesPolicy: boolean;
+    } | null;
   } | null;
   configVersion: { version: string; configHash: string; activatedAt: string | null } | null;
   payments: Array<{
@@ -99,6 +117,7 @@ export class EvidenceService {
   constructor(
     private readonly db: Db,
     private readonly audit: AuditService,
+    private readonly activations: ActivationRecorder,
   ) {}
 
   /**
@@ -237,15 +256,35 @@ export class EvidenceService {
     );
     const r = rows[0];
     if (!r) return null;
+    const deadlineAt = (r.deadline_at as Date).toISOString();
+    const policyHash = String(r.policy_hash);
+
+    const record = (await this.activations.list(cycleId, { subjectType: 'DEADLINE_POLICY' })).find(
+      (a) => a.subjectVersion === version,
+    );
+
     return {
       version: String(r.version),
       mode: String(r.mode),
-      deadlineAt: (r.deadline_at as Date).toISOString(),
+      deadlineAt,
       approvedBy: [String(r.approved_by_1), String(r.approved_by_2)].filter(
         (a) => !a.startsWith('DRAFT:'),
       ),
       activatedAt: r.activated_at ? (r.activated_at as Date).toISOString() : null,
-      policyHash: String(r.policy_hash),
+      policyHash,
+      signedActivation: record
+        ? {
+            activationId: record.activationId,
+            kind: record.kind,
+            effectiveAt: record.effectiveAt,
+            operatorId: record.operatorId,
+            decisionRef: record.decisionRef,
+            keyId: record.keyId,
+            signature: record.signature,
+            matchesPolicy:
+              record.content.deadlineAt === deadlineAt && record.content.policyHash === policyHash,
+          }
+        : null,
     };
   }
 

@@ -40,10 +40,25 @@ export class AuditService {
   /**
    * 트랜잭션 안에서 감사 이벤트를 기록한다.
    * 체인은 application 단위로 잇는다 — Evidence Package 가 원서 하나를 재구성해야 하므로.
+   *
+   * 원서에 딸리지 않은 이벤트(마감·설정 적용 같은 운영자 행위)는 **시스템 체인** 하나로
+   * 잇는다. 전에는 이것들이 전부 GENESIS 에서 시작해 체인이 아니었다 — 하나를 지워도
+   * 드러나지 않았다. 운영자 행위야말로 지워지면 안 되는 기록이다. (D-36)
    */
   async record(client: PoolClient, input: AuditInput): Promise<string> {
-    const occurredAt = new Date();
-    const prevHash = await this.lastHash(client, input.applicationId);
+    let occurredAt = new Date();
+    let prevHash: string;
+    if (input.applicationId) {
+      prevHash = await this.lastHash(client, input.applicationId);
+    } else {
+      const last = await this.lockSystemChain(client);
+      prevHash = last.hash;
+      // 체인은 시각 순으로 검증한다. 같은 밀리초나 역순 시각이 나오면 순서가 뒤섞여
+      // 멀쩡한 체인이 깨진 것으로 보인다. 직전 이벤트보다 반드시 뒤에 둔다.
+      if (last.at && occurredAt.getTime() <= last.at.getTime()) {
+        occurredAt = new Date(last.at.getTime() + 1);
+      }
+    }
 
     const eventId = randomUUID();
     const sourceIpHash = input.sourceIp ? this.hashIp(input.sourceIp) : null;
@@ -95,19 +110,7 @@ export class AuditService {
     client: PoolClient,
     applicationId: string,
   ): Promise<{ valid: boolean; brokenAt?: string; checked: number }> {
-    const { rows } = await client.query<{
-      id: string;
-      application_id: string | null;
-      actor_type: string;
-      actor_id: string | null;
-      action: string;
-      result: string;
-      config_version: string | null;
-      policy_version: string | null;
-      prev_hash: string;
-      event_hash: string;
-      occurred_at: Date;
-    }>(
+    const { rows } = await client.query<ChainRow>(
       `SELECT id, application_id, actor_type, actor_id, action, result,
               config_version, policy_version, prev_hash, event_hash, occurred_at
          FROM audit_event
@@ -115,7 +118,39 @@ export class AuditService {
         ORDER BY occurred_at ASC, id ASC`,
       [applicationId],
     );
+    return this.walk(rows);
+  }
 
+  /**
+   * 시스템 체인의 끝을 잡는다. 트랜잭션이 끝날 때까지 다른 기록은 기다린다.
+   * 잠그지 않으면 두 활성화가 같은 끝을 보고 각자 이어붙여 체인이 갈라진다.
+   */
+  private async lockSystemChain(client: PoolClient): Promise<{ hash: string; at: Date | null }> {
+    await client.query(`SELECT pg_advisory_xact_lock(hashtext('audit:system-chain'))`);
+    const { rows } = await client.query<{ event_hash: string; occurred_at: Date }>(
+      `SELECT event_hash, occurred_at FROM audit_event
+        WHERE application_id IS NULL
+        ORDER BY occurred_at DESC, id DESC
+        LIMIT 1`,
+    );
+    return { hash: rows[0]?.event_hash ?? GENESIS_HASH, at: rows[0]?.occurred_at ?? null };
+  }
+
+  /** 시스템 체인(운영자 행위) 검증. 끊긴 지점이 있으면 그 이벤트를 돌려준다. */
+  async verifySystemChain(
+    client: PoolClient,
+  ): Promise<{ valid: boolean; brokenAt?: string; checked: number }> {
+    const { rows } = await client.query<ChainRow>(
+      `SELECT id, application_id, actor_type, actor_id, action, result,
+              config_version, policy_version, prev_hash, event_hash, occurred_at
+         FROM audit_event
+        WHERE application_id IS NULL
+        ORDER BY occurred_at ASC, id ASC`,
+    );
+    return this.walk(rows);
+  }
+
+  private walk(rows: ChainRow[]): { valid: boolean; brokenAt?: string; checked: number } {
     let expectedPrev = GENESIS_HASH;
     for (const row of rows) {
       if (row.prev_hash !== expectedPrev) {
@@ -137,7 +172,6 @@ export class AuditService {
       }
       expectedPrev = row.event_hash;
     }
-
     return { valid: true, checked: rows.length };
   }
 
@@ -170,4 +204,18 @@ export class AuditService {
   private hashIp(ip: string): string {
     return createHash('sha256').update(`${AUDIT_IP_SALT}|${ip}`).digest('hex');
   }
+}
+
+interface ChainRow {
+  id: string;
+  application_id: string | null;
+  actor_type: string;
+  actor_id: string | null;
+  action: string;
+  result: string;
+  config_version: string | null;
+  policy_version: string | null;
+  prev_hash: string;
+  event_hash: string;
+  occurred_at: Date;
 }

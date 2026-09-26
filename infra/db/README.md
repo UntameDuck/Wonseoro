@@ -22,6 +22,8 @@
 | 미승인 마감정책 활성화 차단 | `deadline_policy` CHECK — 활성화됐으면 실제 승인자 둘 (D-21) |
 | 불일치 중복 등록 차단 | `reconciliation_exception(application_id, exception_type) WHERE state IN ('OPEN','MANUAL_REVIEW')` (D-25) |
 | 취소 후 재지원 허용 | `application` 자연키에서 `CANCELLED` 제외 (D-29) |
+| 적용 기록은 추가만 | `activation_record` UPDATE·DELETE·TRUNCATE 트리거 차단 (D-35) |
+| 연장은 결정 근거와 함께 | `activation_record` CHECK — `EXTEND` 는 `decision_ref`, 연장·되돌리기는 `reason` 필수 (D-35) |
 
 ## 엔티티 (v1.0 §6 + v1.1 §02 ERD)
 

@@ -15,6 +15,7 @@ import { DeadlineMode } from '@wonseoro/contracts';
 import { AdminGuard } from '../../common/identity/admin.guard';
 import { adminFrom } from '../../common/identity/identity';
 import { ProblemException } from '../../common/problem/problem.exception';
+import { ActivationRecorder } from '../activation/activation-recorder';
 import { DeadlinePolicyRepository } from '../deadline/deadline-policy.repository';
 import { ConfigVersionService } from './config-version.service';
 
@@ -29,6 +30,11 @@ import { ConfigVersionService } from './config-version.service';
  * 공유 비밀은 누가 했는지 구분하지 못한다 — 문과 기록은 다른 문제다.
  *
  * ⚠️ `deadline-policies/{id}/activate` 는 계약에 없는 경로다. (불일치 대장 D-22)
+ * ⚠️ `deadline-policies/extensions` · `activations` 도 계약에 없다. (D-35)
+ *
+ * 활성화·연장·되돌리기는 전부 **서명된 기록**으로 남는다. 누가 했는지는 `x-admin-id`
+ * 에서 온다 — 공유 비밀 뒤라 신원 증명은 아니지만, 두 명의 서로 다른 승인자가
+ * 서명된 기록에 함께 묶이므로 "한 사람이 혼자 바꿨다" 는 구별된다. (역할 분리는 T-M5-10)
  */
 @UseGuards(AdminGuard)
 @Controller('admin/v1')
@@ -36,6 +42,7 @@ export class AdminController {
   constructor(
     private readonly configs: ConfigVersionService,
     private readonly policies: DeadlinePolicyRepository,
+    private readonly activations: ActivationRecorder,
   ) {}
 
   /* ── Config ──────────────────────────────────────────────────────── */
@@ -123,8 +130,13 @@ export class AdminController {
   async activateConfig(
     @Param('configId') configId: string,
     @Body() body: { activateAt?: string },
+    @Req() req: FastifyRequest,
   ) {
-    return this.configs.activate(configId, body.activateAt ? new Date(body.activateAt) : null);
+    return this.configs.activate(
+      configId,
+      body?.activateAt ? new Date(body.activateAt) : null,
+      this.admin(req),
+    );
   }
 
   /* ── Deadline Policy ─────────────────────────────────────────────── */
@@ -147,6 +159,30 @@ export class AdminController {
     });
   }
 
+  /**
+   * 마감 연장 초안. (v1.1 §B17, T-M3-14)
+   *
+   * 지금 적용 중인 정책을 기준으로만 만들고, 사유와 **입학처 결정 문서번호**가 필수다.
+   * 이 시스템은 연장을 결정하지 않는다. 입학처의 결정을 기록하고 집행한다.
+   * 그 뒤는 일반 정책과 같다 — 작성자가 아닌 두 명이 승인해야 적용된다.
+   */
+  @Post('deadline-policies/extensions')
+  @HttpCode(201)
+  @Header('cache-control', 'no-store')
+  async createExtension(
+    @Body()
+    body: { cycleId?: string; deadlineAt?: string; reason?: string; decisionRef?: string },
+    @Req() req: FastifyRequest,
+  ) {
+    return this.policies.createExtension({
+      cycleId: this.required(body?.cycleId, 'cycleId'),
+      deadlineAt: this.required(body?.deadlineAt, 'deadlineAt'),
+      reason: body?.reason ?? '',
+      decisionRef: body?.decisionRef ?? '',
+      createdBy: this.admin(req),
+    });
+  }
+
   @Post('deadline-policies/:policyId/approve')
   @HttpCode(200)
   @Header('cache-control', 'no-store')
@@ -162,10 +198,12 @@ export class AdminController {
   async activatePolicy(
     @Param('policyId') policyId: string,
     @Body() body: { activateAt?: string },
+    @Req() req: FastifyRequest,
   ) {
     return this.policies.activate(
       policyId,
-      body.activateAt ? new Date(body.activateAt) : null,
+      body?.activateAt ? new Date(body.activateAt) : null,
+      this.admin(req),
     );
   }
 
@@ -175,6 +213,27 @@ export class AdminController {
   async policyHistory(@Query('cycleId') cycleId?: string) {
     if (!cycleId) throw ProblemException.validationFailed('cycleId 가 필요합니다.');
     return { policies: await this.policies.history(cycleId) };
+  }
+
+  /**
+   * 서명된 활성화 이력 — 마감 정책·설정 전부. (T-M3-15)
+   * 조회할 때마다 서명을 다시 검증한다. 분쟁 시 "누가 언제 왜 적용했는가" 에 답한다.
+   */
+  @Get('activations')
+  @Header('cache-control', 'no-store')
+  async activationHistory(@Query('cycleId') cycleId?: string) {
+    if (!cycleId) throw ProblemException.validationFailed('cycleId 가 필요합니다.');
+    const [records, systemChain] = await Promise.all([
+      this.activations.list(cycleId),
+      this.activations.verifySystemChain(),
+    ]);
+    return {
+      activations: records,
+      // 하나라도 검증에 실패하면 목록 전체를 믿을 수 없다. 화면이 맨 위에 띄운다.
+      allSignaturesValid: records.every((r) => r.signature === 'VALID'),
+      // 서명은 남은 기록이 진짜인지, 체인은 빠진 기록이 없는지를 말한다.
+      systemChain,
+    };
   }
 
   private required(v: string | undefined, name: string): string {

@@ -135,6 +135,29 @@ export const ALLOW_ENV_DEADLINE_POLICY = devOnlyFlag(
  */
 export const CONFIG_FREEZE_HOURS = envInt('CONFIG_FREEZE_HOURS', 24, { min: 0, max: 720 });
 
+/**
+ * 활성화 기록 서명 키 — Ed25519 개인키(PKCS#8 PEM). (v1.1 §B17 · §A1, T-M3-15)
+ *
+ * 마감·설정을 적용할 때마다 "누가 언제 왜 무엇을" 을 이 키로 서명해 남긴다.
+ * 공개키는 `GET /api/v1/meta/signing-keys` 로 공개한다. 대학 밖에서도 검증할 수 있어야
+ * 서명의 의미가 있다.
+ *
+ * 비우면 개발용 고정 키를 쓴다. **운영에서는 필수다** — 개발 키로 서명한 기록은
+ * 누구나 같은 서명을 만들 수 있으므로 아무것도 증명하지 못한다.
+ * 키 보관은 M5 Vault(§06)로 옮긴다.
+ */
+export const POLICY_SIGNING_KEY = secretOrDev(
+  'POLICY_SIGNING_KEY',
+  '',
+  '마감 연장·설정 활성화 기록 서명 키. 없으면 누가 무엇을 적용했는지 증명할 수 없다',
+);
+/** 키 교체를 대비해 기록마다 어떤 키로 서명했는지 남긴다. */
+export const POLICY_SIGNING_KEY_ID = envOrDev(
+  'POLICY_SIGNING_KEY_ID',
+  'dev-ed25519-1',
+  '서명 키 식별자. 키를 바꾸면 이 값도 바꾼다',
+);
+
 export const S3 = {
   bucket: envOrDev('S3_BUCKET', 'univ-a-documents', '서류를 저장할 버킷'),
   region: envOrDev('S3_REGION', 'us-east-1', 'Object Storage 리전'),

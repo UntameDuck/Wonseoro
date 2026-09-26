@@ -3,6 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { CONFIG_FREEZE_HOURS } from '../../config';
+import { ActivationRecorder, ActivationView } from '../activation/activation-recorder';
 import { DeadlineService } from '../deadline/deadline.service';
 import { ConfigDiff, diffConfig } from './config-diff';
 import { addApproval, assertActivationTime, assertApproved } from './two-person-rule';
@@ -40,6 +41,11 @@ export interface ConfigVersionRow {
  * Freeze
  *   마감이 임박하면 설정을 바꾸지 않는다. 다만 **되돌리기는 막지 않는다** —
  *   Freeze 는 새 변경을 멈추는 장치이지 복구를 멈추는 장치가 아니다.
+ *
+ * 서명된 활성화 기록 (T-M3-15)
+ *   활성화·되돌리기마다 누가·언제·왜 를 서명해 남긴다. 되돌리기는 같은 행의
+ *   activated_at 을 덮어쓰므로, 이 기록이 없으면 두 번째 적용이 첫 번째 적용의
+ *   흔적을 지운다.
  */
 @Injectable()
 export class ConfigVersionService {
@@ -48,6 +54,7 @@ export class ConfigVersionService {
   constructor(
     private readonly db: Db,
     private readonly deadline: DeadlineService,
+    private readonly activations: ActivationRecorder,
   ) {}
 
   async createDraft(input: {
@@ -137,7 +144,11 @@ export class ConfigVersionService {
    * 활성화. 기존 ACTIVE 를 RETIRED 로 내리고 이것을 올린다.
    * **한 트랜잭션에서 한다.** 중간에 끊기면 활성 Config 가 0개이거나 2개가 된다.
    */
-  async activate(configId: string, activateAt: Date | null): Promise<ConfigVersionRow> {
+  async activate(
+    configId: string,
+    activateAt: Date | null,
+    operatorId: string,
+  ): Promise<ConfigVersionRow & { activation: ActivationView }> {
     const row = await this.load(configId);
     assertApproved({
       createdBy: row.createdBy,
@@ -152,7 +163,7 @@ export class ConfigVersionService {
     );
     await this.assertNotFrozen(String(cyc[0]?.cycle_id), activateAt ?? new Date());
 
-    await this.db.tx(async (client) => {
+    const activation = await this.db.tx(async (client) => {
       const { rows } = await client.query<{ cycle_id: string }>(
         `SELECT cycle_id FROM config_version WHERE id = $1 FOR UPDATE`,
         [configId],
@@ -160,6 +171,12 @@ export class ConfigVersionService {
       const cycleId = rows[0]?.cycle_id;
       if (!cycleId) throw ProblemException.validationFailed('존재하지 않는 설정입니다.');
 
+      const { rows: cur } = await client.query<{ version: string }>(
+        `SELECT version FROM config_version
+          WHERE cycle_id = $1 AND status = 'ACTIVE' AND id <> $2
+          FOR UPDATE`,
+        [cycleId, configId],
+      );
       await client.query(
         `UPDATE config_version SET status = 'RETIRED'
           WHERE cycle_id = $1 AND status = 'ACTIVE' AND id <> $2`,
@@ -167,16 +184,33 @@ export class ConfigVersionService {
       );
       // 즉시 활성화면 DB 가 시각을 찍는다. 애플리케이션 시계가 DB 보다 앞서면
       // 방금 활성화한 설정이 잠시 "아직 적용 전" 으로 보인다.
-      await client.query(
+      const { rows: updated } = await client.query<{ activated_at: Date }>(
         `UPDATE config_version
             SET status = 'ACTIVE', activated_at = COALESCE($2::timestamptz, now())
-          WHERE id = $1`,
+          WHERE id = $1
+          RETURNING activated_at`,
         [configId, activateAt],
       );
+
+      return this.activations.record(client, {
+        cycleId,
+        subjectType: 'CONFIG_VERSION',
+        subjectId: configId,
+        subjectVersion: row.version,
+        kind: 'ACTIVATE',
+        effectiveAt: updated[0]!.activated_at,
+        operatorId,
+        supersedesVersion: cur[0]?.version ?? null,
+        content: {
+          configHash: row.configHash,
+          approvedBy: row.approvedBy,
+          createdBy: row.createdBy,
+        },
+      });
     });
 
-    this.logger.log(`config ${row.version} activated`);
-    return this.load(configId);
+    this.logger.log(`config ${row.version} activated by ${operatorId}`);
+    return { ...(await this.load(configId)), activation };
   }
 
   /**
@@ -220,7 +254,7 @@ export class ConfigVersionService {
     targetConfigId: string;
     operator: string;
     reason: string;
-  }): Promise<{ restored: ConfigVersionRow; retired: string | null }> {
+  }): Promise<{ restored: ConfigVersionRow; retired: string | null; activation: ActivationView }> {
     const reason = input.reason?.trim() ?? '';
     if (reason.length < 2) {
       throw ProblemException.validationFailed('되돌리는 사유를 입력해 주십시오.');
@@ -228,7 +262,7 @@ export class ConfigVersionService {
 
     const { rows } = await this.db.query<Record<string, unknown>>(
       `SELECT cycle_id, version, status, activated_at, created_by,
-              approved_by_1, approved_by_2
+              approved_by_1, approved_by_2, config_hash
          FROM config_version WHERE id = $1`,
       [input.targetConfigId],
     );
@@ -251,7 +285,7 @@ export class ConfigVersionService {
       approvedBy2: asApprover(target.approved_by_2),
     });
 
-    const retired = await this.db.tx(async (client) => {
+    const { retired, activation } = await this.db.tx(async (client) => {
       const { rows: cur } = await client.query<{ id: string; version: string }>(
         `SELECT id, version FROM config_version
           WHERE cycle_id = $1 AND status = 'ACTIVE'
@@ -263,18 +297,38 @@ export class ConfigVersionService {
           WHERE cycle_id = $1 AND status = 'ACTIVE'`,
         [String(target.cycle_id)],
       );
-      await client.query(
-        `UPDATE config_version SET status = 'ACTIVE', activated_at = now() WHERE id = $1`,
+      const { rows: updated } = await client.query<{ activated_at: Date }>(
+        `UPDATE config_version SET status = 'ACTIVE', activated_at = now()
+          WHERE id = $1 RETURNING activated_at`,
         [input.targetConfigId],
       );
-      return cur[0]?.version ?? null;
+      const retiredVersion = cur[0]?.version ?? null;
+
+      // 사유가 로그에만 있으면 로그 보존기간이 지나면 사라진다. 서명된 기록으로 남긴다.
+      const recorded = await this.activations.record(client, {
+        cycleId: String(target.cycle_id),
+        subjectType: 'CONFIG_VERSION',
+        subjectId: input.targetConfigId,
+        subjectVersion: String(target.version),
+        kind: 'ROLLBACK',
+        effectiveAt: updated[0]!.activated_at,
+        operatorId: input.operator,
+        reason,
+        supersedesVersion: retiredVersion,
+        content: {
+          configHash: String(target.config_hash),
+          approvedBy: [String(target.approved_by_1), String(target.approved_by_2)],
+          createdBy: String(target.created_by ?? ''),
+        },
+      });
+      return { retired: retiredVersion, activation: recorded };
     });
 
     this.logger.warn(
       `config rolled back to ${String(target.version)} by ${input.operator} ` +
         `(from ${retired ?? 'none'}): ${reason}`,
     );
-    return { restored: await this.load(input.targetConfigId), retired };
+    return { restored: await this.load(input.targetConfigId), retired, activation };
   }
 
   /**

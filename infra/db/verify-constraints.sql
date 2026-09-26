@@ -268,4 +268,41 @@ BEGIN
   ASSERT reopened, '재발한 불일치를 등록할 수 없다';
 END $$;
 
+-- ── 13. 활성화 기록 — 추가만 가능하다 (0003, D-35) ─────────────────────
+-- 연장·되돌리기의 "누가 언제 왜" 가 고쳐지거나 지워지면 불변 기록이 아니다.
+DO $$
+DECLARE rec uuid := gen_random_uuid();
+        upd boolean := false; del boolean := false; nodecision boolean := false;
+BEGIN
+  INSERT INTO activation_record (id, cycle_id, subject_type, subject_id, subject_version, kind,
+                                 effective_at, operator_id, reason, decision_ref,
+                                 payload, payload_hash, signature, key_id)
+  VALUES (rec, '99999999-9999-9999-9999-999999999999', 'DEADLINE_POLICY', gen_random_uuid(),
+          'verify-ext1', 'EXTEND', now(), 'verifier', '검증', '입학처-검증-1',
+          '{}', 'h', 's', 'k');
+  BEGIN
+    UPDATE activation_record SET reason = '조작' WHERE id = rec;
+  EXCEPTION WHEN insufficient_privilege THEN upd := true;
+  END;
+  BEGIN
+    DELETE FROM activation_record WHERE id = rec;
+  EXCEPTION WHEN insufficient_privilege THEN del := true;
+  END;
+  RAISE NOTICE '13. 활성화 기록 수정·삭제 차단: %', CASE WHEN upd AND del THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT upd AND del, '활성화 기록을 고치거나 지울 수 있다';
+
+  -- 연장은 입학처 결정 문서번호 없이 기록될 수 없다. 기술팀이 결정하지 않는다. (§B17)
+  BEGIN
+    INSERT INTO activation_record (id, cycle_id, subject_type, subject_id, subject_version, kind,
+                                   effective_at, operator_id, reason, payload, payload_hash,
+                                   signature, key_id)
+    VALUES (gen_random_uuid(), '99999999-9999-9999-9999-999999999999', 'DEADLINE_POLICY',
+            gen_random_uuid(), 'verify-ext2', 'EXTEND', now(), 'verifier', '검증',
+            '{}', 'h', 's', 'k');
+  EXCEPTION WHEN check_violation THEN nodecision := true;
+  END;
+  RAISE NOTICE '14. 결정번호 없는 연장 기록 차단: %', CASE WHEN nodecision THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT nodecision, '결정 근거 없는 연장이 기록된다';
+END $$;
+
 ROLLBACK;
