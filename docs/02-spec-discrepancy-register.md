@@ -468,8 +468,8 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **왜 중대한가** | v1.1 §A2 는 마감 판정을 **서버 시각**으로 한다고 규정한다. 그런데 "서버" 가 둘(애플리케이션·DB)이고 둘이 어긋날 수 있다는 것을 다루지 않았다. 마감 직전에는 그 밀리초가 사람의 접수다. Pod 가 여럿이면 각자 다른 시계를 갖는다 |
 | **판정** | **시각의 권위는 DB 하나다.** 즉시 활성화는 `COALESCE($1::timestamptz, now())` 로 DB 가 찍는다. 예약 활성화는 지정 시각을 그대로 쓴다 — 미래 시각이라 경합이 없다 |
 | **저장소 반영** | ✅ `deadline-policy.repository.ts` · `config-version.service.ts` |
-| **노션 반영** | ⬜ §A2 에 "시각 권위는 DB" 를 명시. 애플리케이션 시계로 기록·비교하지 않는다 |
-| **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
+| **노션 반영** | ✅ §A2 시각 권위는 DB (2026-09-27) |
+| **상태** | 🟢 CLOSED — 저장소·노션 반영 (2026-09-27) |
 
 ---
 
@@ -489,12 +489,12 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **readiness 와 분리** | Breaker 상태를 `readyz` 에 넣지 않는다. 중앙이 죽었다고 Pod 가 트래픽에서 빠지면 끊는 의미가 없다. 조회는 `GET /healthz/dependencies` |
 | **계약 추가** | `getSyncStatus` 응답에 `circuit` (optional, §A16 상 호환) · `GET /healthz/dependencies` (probe 계열이라 OpenAPI 대상인지 확인 필요) |
 | **저장소 반영** | ✅ `server-kit/circuit-breaker.ts` 외 |
-| **노션 반영** | ⬜ §01 C8 에 의존성별 끊김 규칙 표 추가 · §03 OpenAPI 에 위 두 항목 |
+| **노션 반영** | ⬜ §03 OpenAPI 에 위 두 항목 · ✅ §01 C8 의존성별 끊김 규칙 (2026-09-27) |
 | **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
 
 ---
 
-## D-33. 중앙이 2분 반만 죽어도 Outbox 이벤트가 DEAD 로 떨어졌다 🔴
+## D-33. 중앙이 2분 반만 죽어도 Outbox 이벤트가 DEAD 로 떨어졌다 🟢
 
 | | |
 |---|---|
@@ -506,8 +506,8 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **검증** | `relay.integration.test.ts` — 가짜 중앙을 끄고 탐침 3주기를 돌린 뒤 켰다. DEAD 0, 최대 attempt_count 1, 5건 전부 SENT |
 | **남은 것** | 개발 DB 에 기존 DEAD 6건이 있다. 원인은 DB 에 남지 않아 이 결함 때문인지 단정할 수 없다. DEAD 사유를 컬럼으로 남기는 것은 DDL 변경이라 별도 판단 |
 | **저장소 반영** | ✅ `apps/event-relay/src/relay.service.ts` |
-| **노션 반영** | ⬜ §04 또는 §B7 에 "재시도 한도는 이벤트 단위 실패만 센다" 명시 |
-| **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
+| **노션 반영** | ✅ §B7 재시도 한도는 이벤트 단위 실패만 센다 (2026-09-27) |
+| **상태** | 🟢 CLOSED — 저장소·노션 반영 (2026-09-27) |
 
 ---
 
@@ -525,7 +525,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **시간 기준도 둘이다** | A1 해결은 "최소 **24시간** 단절", §E 인수기준은 "**2시간** 단절" 이다. 기능 자체는 시간과 무관하게 동작하므로(Demo Gate 5), 어느 쪽을 인수기준으로 할지는 M4 장애 시험에서 정한다 |
 | **계약 추가** | `GET /api/v1/meta/operating-mode` — 공개 조회, 개인정보·운영정보 없음. 메모리의 마지막 확인 결과만 돌려준다 |
 | **저장소 반영** | ✅ `modules/operating-mode/` · 프론트 `OperatingModeBanner` |
-| **노션 반영** | ⬜ §01 A1 의 기능 목록에 단계 표기 · §03 OpenAPI 에 operating-mode · A1/§E 의 단절 시간 기준 통일 |
+| **노션 반영** | ⬜ §03 OpenAPI 에 operating-mode · ✅ §01 A1 단계 표기·단절 시간 기준(24시간 설계 목표/2시간 인수시험) (2026-09-27) |
 | **상태** | 🟡 판정완료 — 노션 반영 대기 |
 
 ---
@@ -542,7 +542,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **남은 것** | ① 키 교체 시 옛 기록을 검증할 **검증 키 목록**이 없다 (지금은 `UNKNOWN_KEY` 로 표시) ② 서명 키 보관은 M5 Vault ③ 운영자 신원 증명은 T-M5-10 |
 | **계약 추가** | `POST /admin/v1/deadline-policies/extensions` · `GET /admin/v1/activations` · `GET /api/v1/meta/signing-keys` · activate 응답의 `activation` |
 | **저장소 반영** | ✅ `0003_signed_activation.sql` · `modules/activation/` · 마감·설정 서비스 · Evidence |
-| **노션 반영** | ⬜ §02 DDL 에 `activation_record` · §03 OpenAPI 위 경로 · §B17 에 연장 규칙 |
+| **노션 반영** | ⬜ §02 DDL 에 `activation_record` · §03 OpenAPI 위 경로 · ✅ §B17 연장 규칙 (2026-09-27) |
 | **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
 
 ---
@@ -606,7 +606,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **D-27 과의 관계** | 가명 참조를 둔다는 결정은 유지했다. 참조를 만드는 방법만 바꿨다. D-27 이 "두지 않는다" 로 결론 나도 제거는 똑같이 쉽다 |
 | **남은 것** | 키 보관(M5 Vault) · 대학·중앙 키 배포 절차 · 중복지원 검증(v1.0 §6.2)이 필요해지면 별도 키의 `DEDUP` 목적 |
 | **저장소 반영** | ✅ `server-kit/purpose-ref.ts` · finalization · application.repository · central dashboard · frontend |
-| **노션 반영** | ⬜ §A12 에 참조 형식·키 교체 규칙 · §04 `subjectRef` 형식 · 대시보드 조회 경로(헤더) |
+| **노션 반영** | ⬜ §04 `subjectRef` 형식 · 대시보드 조회 경로(헤더) · ✅ §A12 참조 형식·키 교체 규칙 (2026-09-27) |
 | **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
 
 ---
@@ -621,7 +621,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **왜 놓쳤나** | 대조 기능(T-M3-04)을 "검사할 수 있다" 로 완료 처리했다. "저절로 돈다" 는 별개의 인수기준이었다 |
 | **판정** | 결제 확인 워커(Backoff · PG Breaker) + 서명 검증·멱등 콜백(값은 믿지 않고 재조회) + 대조 스케줄(1시간·D+1, advisory lock). **결제가 확인돼도 자동 Finalize 는 하지 않는다** — 제출은 지원자의 의사 표시다 |
 | **저장소 반영** | ✅ 2026-09-27 — `POST /api/v1/payments/callbacks/:provider`(서명 · 멱등 · PG 재조회 · Idempotency-Key 제외) · `PaymentRecheckWorker`(PENDING·UNKNOWN, Backoff 30초→30분, 48시간) · `ReconciliationScheduler`(1시간·48시간) · 둘 다 세션 advisory lock · 시험 13건. 30분 지연 시간 시험은 T-M4-34 |
-| **노션 반영** | ⬜ §A4 · §B4 에 "자동 Finalize 하지 않음" 명시 · §03 콜백 경로 |
+| **노션 반영** | ⬜ §03 콜백 경로 · ✅ §A4·§B4 "자동 Finalize 하지 않음" (2026-09-27) |
 | **상태** | 🟢 저장소 반영 완료 — 노션 반영 대기 |
 
 ---

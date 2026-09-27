@@ -140,10 +140,10 @@ npm run dev -w @wonseoro/admin-web
 
 ---
 
-## 노션 반영 대기 (36건 · 수정 지점 55)
+## 노션 반영 대기 (34건 · 수정 지점 45)
 
 불일치 대장 41건 중 **🔴 OPEN 은 0건** — 전부 판정됐다.
-5건 CLOSED, 나머지 36건이 노션 반영 대기다. 노션 문서별 목록은 [05 문서 부록](05-m3-exit-m4-readiness.md). 전체는
+7건 CLOSED, 나머지 34건이 노션 반영 대기다. **§01 운영 리스크는 2026-09-27 반영 완료** (9곳). 노션 문서별 목록은 [05 문서 부록](05-m3-exit-m4-readiness.md). 전체는
 [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md).
 
 ### 먼저 확인받아야 하는 것

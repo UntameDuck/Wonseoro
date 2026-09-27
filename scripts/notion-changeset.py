@@ -2,6 +2,7 @@
 
 저장소 루트에서 실행: python scripts/notion-changeset.py
 05-m3-exit-m4-readiness.md 부록이 이 출력이다. 대장이 원본이다.
+--write 를 주면 05 문서 부록을 이 출력으로 바꾼다.
 """
 import re
 import sys
@@ -47,6 +48,9 @@ for did, title, status, todo, pdf in items:
     for t in todo:
         # 한 줄에 여러 문서가 · 로 섞여 있다. 조각마다 문서를 판정한다.
         for part in [p.strip() for p in re.split(r' · ', t) if p.strip()]:
+            # 노션에 반영한 조각은 대장에 "✅ …" 로 남긴다. 목록에서 뺀다.
+            if part.startswith('✅'):
+                continue
             if '결정' in part or '확인' in part:
                 grouped.setdefault('먼저 결정·확인이 필요한 것', []).append(f'- **{did}** {part}  \n  <sub>{title}</sub>')
                 continue
@@ -67,6 +71,19 @@ for pg in order:
         continue
     out.append(f'\n### {pg} — {len(grouped[pg])}건\n')
     out.extend(grouped[pg])
-sys.stdout.reconfigure(encoding='utf-8')
-print('\n'.join(out))
-print(f'\n<!-- items={len(items)} edits={total} -->')
+out.append(f'\n<!-- items={len(items)} edits={total} -->')
+text = '\n'.join(out)
+
+if '--write' in sys.argv:
+    path = r'E:\Competition\govtech\dev-folder\docs\05-m3-exit-m4-readiness.md'
+    doc = open(path, encoding='utf-8', newline='').read()
+    nl = '\r\n' if '\r\n' in doc else '\n'
+    start = doc.index('<!-- 자동 생성:')
+    end = doc.index('-->', doc.index('<!-- items=')) + 3
+    doc = doc[:start] + text.replace('\n', nl) + doc[end:]
+    open(path, 'w', encoding='utf-8', newline='').write(doc)
+    sys.stdout.reconfigure(encoding='utf-8')
+    print(f'05 부록 갱신: {len(items)}건 · {total}개 수정 지점')
+else:
+    sys.stdout.reconfigure(encoding='utf-8')
+    print(text)
