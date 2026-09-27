@@ -1,10 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { PaymentStatus } from '@wonseoro/contracts';
+import { PG_CALLBACK_SECRET } from '../../config';
 
 export interface IntentResult {
   providerTxId: string;
   providerPayload: Record<string, unknown>;
+}
+
+/**
+ * 서명을 통과한 콜백에서 꺼낸 것. **상태는 담지 않는다** — 콜백이 뭐라고 하든
+ * 서버는 PG 에 다시 묻는다. 콜백은 "지금 다시 확인하라" 는 신호일 뿐이다. (§B4)
+ */
+export interface CallbackNotice {
+  providerTxId: string;
+  /** PG 쪽 이벤트 ID. 같은 콜백이 여러 번 와도 한 번만 처리하는 근거다. */
+  eventId: string;
 }
 
 export interface VerifyResult {
@@ -28,6 +39,11 @@ export abstract class PaymentProviderPort {
   abstract verify(providerTxId: string): Promise<VerifyResult>;
   abstract cancel(providerTxId: string): Promise<{ status: PaymentStatus }>;
   abstract reconcile(from: Date, to: Date): Promise<Array<{ providerTxId: string; status: PaymentStatus }>>;
+  /**
+   * 콜백 서명 검증. 맞지 않으면 null. 형식은 PG 마다 다르므로 어댑터가 판단한다.
+   * `rawBody` 는 받은 바이트 그대로다 — 파싱했다 다시 직렬화하면 서명이 맞지 않는다.
+   */
+  abstract verifyCallback(signature: string | undefined, rawBody: Buffer): CallbackNotice | null;
 }
 
 /**
@@ -94,6 +110,26 @@ export class MockPaymentProvider extends PaymentProviderPort {
   async reconcile(): Promise<Array<{ providerTxId: string; status: PaymentStatus }>> {
     // M3 Reconciliation Center 에서 실제 대조에 쓴다. (T-M3-04)
     return [];
+  }
+
+  /**
+   * Mock 콜백 서명: `x-pg-signature: hex(HMAC-SHA256(PG_CALLBACK_SECRET, 원문))`.
+   * 본문: `{ "providerTxId": "...", "eventId": "..." }` — 다른 필드(예: status)는 읽지 않는다.
+   */
+  verifyCallback(signature: string | undefined, rawBody: Buffer): CallbackNotice | null {
+    if (!signature) return null;
+    const expected = createHmac('sha256', PG_CALLBACK_SECRET).update(rawBody).digest('hex');
+    const given = Buffer.from(signature, 'utf8');
+    const want = Buffer.from(expected, 'utf8');
+    if (given.length !== want.length || !timingSafeEqual(given, want)) return null;
+    try {
+      const body = JSON.parse(rawBody.toString('utf8')) as { providerTxId?: unknown; eventId?: unknown };
+      if (typeof body.providerTxId !== 'string' || typeof body.eventId !== 'string') return null;
+      if (!body.providerTxId || !body.eventId || body.eventId.length > 160) return null;
+      return { providerTxId: body.providerTxId, eventId: body.eventId };
+    } catch {
+      return null;
+    }
   }
 
   /**

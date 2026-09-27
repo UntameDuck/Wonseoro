@@ -25,7 +25,7 @@
 |---|---|
 | ✅ 완료 | T-M3-01 Deadline Policy · T-M3-02 Config Governance · T-M3-04 Reconciliation · T-M3-05 Exception Queue · T-M3-07 Evidence Package · T-M3-08 Circuit Breaker · T-M3-15 서명된 활성화 기록 · T-M3-10 Retention Matrix · T-M3-09 Purpose-scoped Token · **T-M3-11~14 관리자 콘솔** |
 | 🟡 부분 | T-M3-03 hash-chain (물리 분리는 M5) · T-M3-06 Autonomous Mode (JWKS 캐시는 T-M5-02) |
-| 🔧 진행 | **G1 결제 자동 정합화 (D-40)** — 콜백 처리까지 완료, 엔드포인트·재확인 워커·대조 스케줄 남음 |
+| ✅ 종료 전 보강 | **G1 결제 자동 정합화 (D-40)** — PG 콜백 · 재확인 워커 · 대조 스케줄 (2026-09-27) |
 | 🔜 다음 | **G2 감사 삭제 불가 (D-41)** → 종료 체크리스트 마감 · 노션 반영 ([05 문서](../05-m3-exit-m4-readiness.md)) |
 
 ### §01 E 핵심 인수기준 "단독 운영자 1명으로 마감시간 변경 불가" 통과
@@ -462,6 +462,23 @@ X-Frame-Options                   DENY
 동작을 거부한다. 관리자 SSO(T-M5-10) 가 이 자리를 대신한다. 콘솔 화면은 자동 테스트가 없다 — 위 흐름은
 브라우저로 돌린 검증이다.
 
+### 결제 자동 정합화 — 확인은 저절로, 제출은 지원자가 (D-40 ✅)
+
+M3 종료 체크리스트를 코드로 확인하다 발견했다. 대조(T-M3-04)는 "검사할 수 있다" 였지 "저절로 돈다" 가
+아니었다. 지원자가 결제 직후 창을 닫으면 그 결제는 누가 다시 물을 때까지 PENDING 이었다.
+
+| 경로 | 무엇을 | 무엇을 믿지 않나 |
+|---|---|---|
+| PG 콜백 `POST /api/v1/payments/callbacks/:provider` | 서명 확인 → 이벤트 ID 로 한 번만 → PG 재조회 | **콜백 본문의 상태.** 위조·재전송·순서 뒤바뀜이 모두 가능하다. 콜백은 "지금 다시 물어라" 는 신호일 뿐 |
+| 결제 재확인 워커 (30초) | PENDING·UNKNOWN 을 결제별 Backoff(30초→30분)로 | CREATED 는 묻지 않는다 — 대부분 결제하지 않은 창이고, 피크에 PG 호출이 결제 시도 수만큼 는다 |
+| 대조 스케줄 (1시간) | 최근 48시간 4-way 대조 | 사람이 누를 것이라는 가정 |
+
+- **CONFIRMED 가 돼도 Finalize 하지 않는다.** 제출은 지원자의 의사 표시다
+- 서명은 **받은 바이트 그대로** 검증한다. 파싱 후 다시 직렬화하면 정상 콜백이 위조로 보인다 — 공백만 바꾼 본문이 403 인 것을 실제 HTTP 로 확인했다
+- 콜백은 Idempotency-Key 를 강제하지 않는다(`@ExternalCallback`). PG 는 우리 헤더를 모른다. 다른 mutation 은 그대로 400
+- 워커·스케줄은 **세션 advisory lock** 으로 Pod 하나만 돈다. 트랜잭션 잠금으로 하면 PG 호출 동안 트랜잭션이 열려 있다 (§B3)
+- 48시간이 지나도 확인이 안 되면 더 묻지 않는다 — 대조가 `PAYMENT_STATE_UNKNOWN_STALE` 로 사람에게 넘긴다
+
 ## 태스크
 
 | ID | 태스크 | 담당 | 근거 노션 | 인수기준 | 상태 |
@@ -469,7 +486,7 @@ X-Frame-Options                   DENY
 | T-M3-01 | **Deadline Policy Engine** | 송리안 | §01 A2·C1 | 3개 룰 프로파일, 2인 승인, 정책버전, 경계값 검증 | ✅ |
 | T-M3-02 | **Configuration Governance** | 송리안 | §01 A14·C5 | 2인 승인·예약 활성화·Diff 확인 승인·Rollback·Freeze | ✅ |
 | T-M3-03 | Audit hash-chain + 분리 저장소 | 송리안 | §01 A11, v1.0 §9 | hash-chain·변조 검출 ✅ / WORM 물리 분리는 M5 | 🟡 |
-| T-M3-04 | **Reconciliation Center (4-way)** | 송리안 | §01 A4·B18·C2 | Application/Payment/Submission/Central 대조 | ✅ |
+| T-M3-04 | **Reconciliation Center (4-way)** | 송리안 | §01 A4·B18·C2 | Application/Payment/Submission/Central 대조 · 1시간 자동 실행(D-40) | ✅ |
 | T-M3-05 | Exception Queue + 수동 승인 복구 | 송리안 | §01 A4·B16 | 불일치만 큐로, 보정은 Admin Action API로만 | ✅ |
 | T-M3-06 | **Autonomous Mode** | 송리안 | §01 A1·C3 | Local Policy Snapshot·JWKS Cache·Offline Spool | 🟡 |
 | T-M3-07 | **Evidence Package 생성** | 송리안 | §01 A11·C6 | 상태 Timeline·정책·결제증적·config·clock·hash 검증 | ✅ |
@@ -538,7 +555,7 @@ Central ACK         수신
 
 - [ ] 중앙 2시간 단절: 원서손실 0, 핵심 SLO 유지 — 기능 ✅(Demo Gate 5·relay 시험), **시간 시험은 T-M4-35**
 - [x] 동일 Finalize 100회 재시도: Submission 1건 — M2 Demo Gate 4 · DB UNIQUE
-- [ ] PG Callback 30분 지연: 자동 정합화 — 🔧 **구현 중** (D-40)
+- [ ] PG Callback 30분 지연: 자동 정합화 — 기능 ✅ (D-40, 2026-09-27), **실제 30분 지연 시험은 T-M4-34**
 - [x] **단독 운영자 1명으로 마감시간 변경 불가** — API·DB 제약·관리자 콘솔 화면까지 (2026-09-26)
 - [x] 특정 Application의 접수과정을 Evidence Package로 재구성 가능 — 콘솔 증적 조회 (2026-09-26)
 - [ ] 운영계정으로 Audit 삭제 불가 — ❌ **미충족** (D-41)

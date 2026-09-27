@@ -160,6 +160,53 @@ export class PaymentService {
     return this.apply(payment, result.status, result.providerApprovedAt, context);
   }
 
+  /**
+   * PG 콜백 — v1.1 §A4 "Callback + Provider Polling 이중 확인" (D-40)
+   *
+   * 1. 서명은 컨트롤러가 어댑터로 확인했다. 여기 오는 것은 서명이 맞는 콜백뿐이다
+   * 2. **같은 콜백은 한 번만 처리한다.** PG 는 응답을 못 받으면 같은 콜백을 다시 보낸다.
+   *    `payment_event(payment_id, provider_event_id)` 유니크가 막는다 (canonical DDL)
+   * 3. **콜백이 말하는 상태를 믿지 않는다.** PG 에 다시 묻고(verify) 그 답으로 정한다.
+   *    콜백 본문은 위조·재전송·순서 뒤바뀜이 모두 가능하다
+   * 4. 결제가 확인돼도 **Finalize 는 하지 않는다.** 제출은 지원자의 의사 표시다.
+   *    지원자는 다음에 화면을 열 때 "결제 확인됨 — 최종제출" 을 본다
+   */
+  async handleCallback(notice: {
+    providerTxId: string;
+    eventId: string;
+    rawHash: string;
+  }): Promise<{ outcome: 'UNKNOWN_TX' | 'DUPLICATE' | 'VERIFIED'; status?: PaymentStatus }> {
+    const { rows } = await this.db.query<{ id: string }>(
+      `SELECT id FROM payment WHERE provider = $1 AND provider_tx_id = $2`,
+      [this.provider.name, notice.providerTxId],
+    );
+    const paymentId = rows[0]?.id;
+    if (!paymentId) {
+      // 우리가 만든 거래가 아니다. PG 가 계속 재전송하지 않게 2xx 로 받되, 흔적은 남긴다.
+      this.logger.warn(`callback for unknown tx ${notice.providerTxId} (event ${notice.eventId})`);
+      return { outcome: 'UNKNOWN_TX' };
+    }
+
+    const inserted = await this.db.query(
+      `INSERT INTO payment_event
+         (id, payment_id, event_type, provider_event_id, payload_hash, payload_redacted, occurred_at)
+       VALUES ($1,$2,'CALLBACK_RECEIVED',$3,$4,$5,now())
+       ON CONFLICT (payment_id, provider_event_id) WHERE provider_event_id IS NOT NULL DO NOTHING`,
+      [
+        randomUUID(),
+        paymentId,
+        notice.eventId,
+        notice.rawHash,
+        // 원문은 남기지 않는다. 무엇을 받았는지는 해시로 증명한다. (v1.1 §04)
+        JSON.stringify({ eventId: notice.eventId }),
+      ],
+    );
+    if (inserted.rowCount === 0) return { outcome: 'DUPLICATE' };
+
+    const verified = await this.verify(paymentId, {});
+    return { outcome: 'VERIFIED', status: verified.status };
+  }
+
   async load(paymentId: string): Promise<PaymentRow> {
     const { rows } = await this.db.query<Record<string, unknown>>(
       `SELECT id, application_id, provider, provider_tx_id, amount, currency,

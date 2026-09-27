@@ -620,9 +620,9 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **영향** | 지원자가 결제 직후 창을 닫으면 그 결제는 누군가 다시 확인할 때까지 PENDING 으로 남는다. 돈은 나갔는데 접수는 멈춘 상태가 저절로 풀리지 않는다 |
 | **왜 놓쳤나** | 대조 기능(T-M3-04)을 "검사할 수 있다" 로 완료 처리했다. "저절로 돈다" 는 별개의 인수기준이었다 |
 | **판정** | 결제 확인 워커(Backoff · PG Breaker) + 서명 검증·멱등 콜백(값은 믿지 않고 재조회) + 대조 스케줄(1시간·D+1, advisory lock). **결제가 확인돼도 자동 Finalize 는 하지 않는다** — 제출은 지원자의 의사 표시다 |
-| **저장소 반영** | 🔧 구현 중 (2026-09-27) — 설정 · 원문 바이트 보존 · `@ExternalCallback` · Mock HMAC 서명 검증 · 멱등 콜백 처리(PG 재조회) 완료. 콜백 엔드포인트 · 재확인 워커 · 대조 스케줄 · 시험 남음 |
+| **저장소 반영** | ✅ 2026-09-27 — `POST /api/v1/payments/callbacks/:provider`(서명 · 멱등 · PG 재조회 · Idempotency-Key 제외) · `PaymentRecheckWorker`(PENDING·UNKNOWN, Backoff 30초→30분, 48시간) · `ReconciliationScheduler`(1시간·48시간) · 둘 다 세션 advisory lock · 시험 13건. 30분 지연 시간 시험은 T-M4-34 |
 | **노션 반영** | ⬜ §A4 · §B4 에 "자동 Finalize 하지 않음" 명시 · §03 콜백 경로 |
-| **상태** | 🟡 판정완료 — 구현 중 |
+| **상태** | 🟢 저장소 반영 완료 — 노션 반영 대기 |
 
 ---
 

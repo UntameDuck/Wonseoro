@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
+import { PaymentCallbackController } from './payment-callback.controller';
 import { PaymentController } from './payment.controller';
 import { MockPaymentProvider, PaymentProviderPort } from './payment.provider';
+import { PaymentRecheckWorker } from './payment-recheck.worker';
 import { PaymentService } from './payment.service';
 
 /**
@@ -10,9 +12,10 @@ import { PaymentService } from './payment.service';
  */
 @Module({
   imports: [AuditModule],
-  controllers: [PaymentController],
+  controllers: [PaymentController, PaymentCallbackController],
   providers: [
     PaymentService,
+    PaymentRecheckWorker,
     { provide: PaymentProviderPort, useClass: MockPaymentProvider },
   ],
   exports: [PaymentService],

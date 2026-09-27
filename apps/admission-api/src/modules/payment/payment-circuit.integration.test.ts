@@ -50,6 +50,10 @@ class UnreachablePg extends PaymentProviderPort {
   async reconcile(): Promise<Array<{ providerTxId: string; status: PaymentStatus }>> {
     return [];
   }
+
+  verifyCallback(): null {
+    return null;
+  }
 }
 
 async function seedApplication(): Promise<string> {

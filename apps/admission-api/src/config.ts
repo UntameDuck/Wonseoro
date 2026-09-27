@@ -137,6 +137,42 @@ export const PAYMENT_PROVIDER = envChoice(
 );
 if (PAYMENT_PROVIDER === 'mock') assertNotMockInProduction('결제', 'mock');
 
+/**
+ * PG 콜백 서명 비밀. (v1.1 §A4·§B4, D-40)
+ * 콜백은 인터넷에서 들어온다. 서명이 맞지 않으면 누구나 "결제 완료" 를 보낼 수 있다 —
+ * 다만 콜백 값으로 상태를 정하지는 않는다(PG 에 다시 묻는다). 서명은 쓸데없는 재조회를 막는다.
+ */
+export const PG_CALLBACK_SECRET = secretOrDev(
+  'PG_CALLBACK_SECRET',
+  'dev-pg-callback-secret',
+  'PG 콜백 서명 검증 비밀. 없으면 아무나 결제 콜백을 보낼 수 있다',
+);
+
+/**
+ * 결제 재확인 워커. (D-40)
+ *
+ * PENDING·UNKNOWN 결제를 PG 에 다시 묻는다. 지원자가 결제 직후 창을 닫아도
+ * 결제 확인이 저절로 끝나야 한다. 간격은 결제마다 Backoff 로 늘어난다(30초 → 30분).
+ * maxAgeHours 가 지나면 더 묻지 않고 대조(PAYMENT_STATE_UNKNOWN_STALE)에 넘긴다.
+ */
+export const PAYMENT_RECHECK = {
+  autostart: envBool('PAYMENT_RECHECK_AUTOSTART', true),
+  intervalMs: envInt('PAYMENT_RECHECK_INTERVAL_MS', 30_000, { min: 1000, max: 3_600_000 }),
+  batchSize: envInt('PAYMENT_RECHECK_BATCH', 50, { min: 1, max: 1000 }),
+  maxAgeHours: envInt('PAYMENT_RECHECK_MAX_AGE_HOURS', 48, { min: 1, max: 720 }),
+} as const;
+
+/**
+ * 대조 자동 실행. (§B18 "D+1 자동 대조", D-40)
+ * 사람이 눌러야만 도는 대조는 사고가 난 뒤에야 돈다. 매시간 최근 sinceHours 를 본다 —
+ * 48시간 창이면 D+1 을 매시간 덮는다.
+ */
+export const RECON_SCHEDULE = {
+  autostart: envBool('RECON_SCHEDULE_AUTOSTART', true),
+  intervalMs: envInt('RECON_SCHEDULE_INTERVAL_MS', 3_600_000, { min: 60_000, max: 86_400_000 }),
+  sinceHours: envInt('RECON_SCHEDULE_SINCE_HOURS', 48, { min: 1, max: 720 }),
+} as const;
+
 /** 활성 마감정책이 없을 때 환경변수로 대신하는 개발용 경로. */
 export const ALLOW_ENV_DEADLINE_POLICY = devOnlyFlag(
   'ALLOW_ENV_DEADLINE_POLICY',

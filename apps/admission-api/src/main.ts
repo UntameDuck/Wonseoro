@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Logger } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { MEDIA_MERGE_PATCH } from '@wonseoro/contracts';
 import { AppModule } from './app.module';
@@ -48,7 +48,7 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(new ProblemFilter());
 
   // 모든 mutation 에 Idempotency-Key 를 강제한다. 예외 없음.
-  app.useGlobalInterceptors(new IdempotencyInterceptor(app.get(IdempotencyStore)));
+  app.useGlobalInterceptors(new IdempotencyInterceptor(app.get(IdempotencyStore), app.get(Reflector)));
 
   // 대학 Data Plane 과 지원자 웹은 서로 다른 도메인에 있다. (v1.1 §10 §11)
   // 운영에서는 Edge 라우팅으로 같은 오리진처럼 묶고 Allowlist 를 좁힌다. (v1.1 §06 CORS Allowlist)

@@ -1,6 +1,6 @@
 # M3 종료 · M4 착수 준비
 
-> 작성: 2026-09-26 · 갱신: 2026-09-27 (G1 구현 착수 · 결정 3건 확정)
+> 작성: 2026-09-26 · 갱신: 2026-09-27 (G1 완료 · 결정 3건 확정)
 > **M4 는 검증 단계지 설계 단계가 아니다.** 여기서 구조 결함이 나오면 M1 까지 되돌아간다.
 > 그래서 M3 를 닫기 전에, 체크리스트를 "문서상 완료" 가 아니라 **코드로 확인한 상태**로 채운다.
 >
@@ -18,7 +18,7 @@
 |---|---|---|
 | 중앙 2시간 단절: 원서손실 0, 핵심 SLO 유지 | 🟡 기능 ✅ · 시간 시험 M4 | Demo Gate 5(중앙 정지 중 생성→제출), relay 통합 테스트(DEAD 0). **2시간을 버티는지는 T-M4-35** |
 | 동일 Finalize 100회 재시도: Submission 1건 | ✅ | M2 Demo Gate 4. DB `submission.application_id` UNIQUE 가 최종 방어 (`db:verify` 1번) |
-| **PG Callback 30분 지연: 자동 정합화** | 🔧 **구현 중** | 아래 ② G1 — 콜백 처리까지 완료, 엔드포인트·워커·스케줄 남음 |
+| **PG Callback 30분 지연: 자동 정합화** | ✅ 기능 · 시간 시험 M4 | 아래 ② G1 — 콜백·재확인 워커·대조 스케줄. **실제 30분 지연은 T-M4-34** |
 | 단독 운영자 1명으로 마감시간 변경 불가 | ✅ | API·DB CHECK·관리자 콘솔 화면 (M3 문서) |
 | Evidence Package 로 재구성 | ✅ | 콘솔 증적 조회 |
 | **운영계정으로 Audit 삭제 불가** | ❌ **미충족** | 아래 ② G2 |
@@ -32,7 +32,7 @@
 | # | 기능 | 상태 |
 |---|---|---|
 | C1 | Deadline Policy Engine | ✅ T-M3-01 · 연장 T-M3-14 |
-| C2 | Reconciliation Center | 🟡 대조·예외 큐 ✅ — **자동 실행(D+1) 없음**, 사람이 눌러야 돈다 (G1) |
+| C2 | Reconciliation Center | ✅ 대조·예외 큐 + **1시간 자동 실행** (G1, 2026-09-27) |
 | C3 | Autonomous Mode | 🟡 T-M3-06 — JWKS 캐시만 T-M5-02 |
 | C4 | Admission Peak Mode | ⏭ **T-M4-07** 로 이미 잡혀 있다 |
 | C5 | Configuration Governance | ✅ T-M3-02 · 서명 T-M3-15 |
@@ -44,7 +44,7 @@
 
 ## ② M3 를 닫기 전에 구현해야 하는 것
 
-### G1. 결제 자동 정합화가 없다 (D-40) — **M3 안에서 처리**
+### G1. 결제 자동 정합화가 없다 (D-40) — ✅ **완료 (2026-09-27)**
 
 코드를 따라가 보니 §A4 "Callback + Provider Polling 이중 확인" 의 두 쪽이 모두 비어 있다.
 
@@ -63,19 +63,20 @@
 3. **대조 스케줄** — 1시간마다 최근 48시간, 매일 새벽 D+1 전체. 여러 Pod 가 동시에 돌지 않게 advisory lock
 4. 시험 — Mock PG `SLOW`·`UNKNOWN`·`DOWN` 에서 콜백 1~30분 지연을 시계로 당겨 재현 (T-M4-34 의 기능 부분)
 
-**G1 진행 상황 (2026-09-27, 작업 중 · 미커밋)**
+**G1 완료 (2026-09-27)**
 
-| 부분 | 상태 | 내용 |
-|---|---|---|
-| 설정 | ✅ | `PG_CALLBACK_SECRET` · `PAYMENT_RECHECK_*`(30초 간격, 50건, 48시간) · `RECON_SCHEDULE_*`(1시간, 최근 48시간) |
-| 원문 바이트 보존 | ✅ | JSON 파서가 `req.rawBody` 를 남긴다 — 서명은 다시 직렬화한 값이 아니라 받은 바이트로 검증 |
-| 외부 콜백 표시 | ✅ | `@ExternalCallback()` — Idempotency-Key 강제에서 제외. 중복은 PG 이벤트 ID 로 막는다 |
-| Mock PG 서명 검증 | ✅ | HMAC-SHA256 · 상수시간 비교 · **콜백 본문의 상태 값은 읽지 않는다** |
-| 콜백 처리 | ✅ | `payment_event(payment_id, provider_event_id)` 유니크로 한 번만 → PG 재조회로 상태 결정 → **자동 Finalize 없음** |
-| 콜백 엔드포인트 | ⬜ | `POST /api/v1/payments/callbacks/:provider` — 서명 불일치 401, 모르는 거래도 2xx |
-| 결제 재확인 워커 | ⬜ | PENDING·UNKNOWN 만, 결제별 Backoff 30초→30분, `pg_try_advisory_xact_lock` |
-| 대조 스케줄 | ⬜ | 1시간마다 `reconcile(48h)`, advisory lock 으로 한 Pod 만 |
-| 시험 · 문서 · 커밋 | ⬜ | 서명·중복·재조회·Backoff·잠금 |
+| 부분 | 내용 |
+|---|---|
+| 설정 | `PG_CALLBACK_SECRET`(운영 필수) · `PAYMENT_RECHECK_*`(30초 간격, 50건, 48시간) · `RECON_SCHEDULE_*`(1시간, 최근 48시간) |
+| 원문 바이트 보존 | JSON 파서가 `req.rawBody` 를 남긴다 — 서명은 받은 바이트 그대로 검증. 공백만 바꾼 본문은 403 (실측) |
+| 콜백 엔드포인트 | `POST /api/v1/payments/callbacks/:provider` · `@ExternalCallback()` 로 Idempotency-Key 강제 제외(다른 경로는 그대로 400) · 서명 불일치 403 · 모르는 거래·중복도 200 |
+| 콜백 처리 | `payment_event(payment_id, provider_event_id)` 유니크로 한 번만 → **PG 재조회로 상태 결정** (본문이 FAILED 라 해도 PG 가 CONFIRMED 면 CONFIRMED, 반대도) → **자동 Finalize 없음** |
+| 결제 재확인 워커 | PENDING·UNKNOWN 만 · 결제별 Backoff 30초×2^(n−1) 최대 30분 · 48시간 지나면 대조로 넘김 · PG 회로가 열리면 주기 건너뜀 |
+| 대조 스케줄 | 1시간마다 `reconcile(48h)` |
+| 한 Pod 만 | 워커·스케줄 모두 **세션 advisory lock** (`withLeaderLock`). 트랜잭션 잠금이 아니다 — PG 호출 중 트랜잭션을 열어 두지 않는다 (§B3) |
+| 시험 | 13건 (`payment-reconcile.integration.test.ts`) — 서명·다른 PG·재조회·중복·미제출·모르는 거래·상태 필터·Backoff·기한·회로·잠금·실제 PG 로 확인 끝·스케줄 잠금 |
+
+남은 것은 **시간 시험**뿐이다 — 콜백 1~30분 지연을 실제 시계로 (T-M4-34).
 
 ### G2. 운영계정으로 감사 기록을 지울 수 있다 (D-41) — **M3 안에서 처리**
 
@@ -172,8 +173,8 @@ winget install -e --id GrafanaLabs.k6
 G1 → G2 순서로 구현한다 (사용자 결정). 현재 위치는 ◀ 표시.
 
 ```
-1. G1 결제 자동 정합화 (D-40)          ◀ 진행 중. 돈과 접수가 걸린 구멍
-2. G2 감사 삭제 불가 · DB 역할 분리 (D-41)
+1. G1 결제 자동 정합화 (D-40)          ✅ 2026-09-27
+2. G2 감사 삭제 불가 · DB 역할 분리 (D-41)   ◀ 다음
 3. M3 종료 체크리스트 마감 · 노션 반영 (결정 불필요 항목 먼저, 페이지별 확인)
 4. 첨부 3종 배치(Chrome 노션 세션) · 도구 설치(kind·helm·k6, 사용자 실행)
 5. M4 — Helm 차트 → kind 2클러스터 → 대학 간 격리 시험(T-M4-42) → 기능 시험 → (K-PaaS) 수치 시험

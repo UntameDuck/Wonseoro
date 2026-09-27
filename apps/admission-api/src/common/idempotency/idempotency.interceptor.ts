@@ -4,6 +4,7 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { createHash } from 'node:crypto';
 import type { FastifyRequest } from 'fastify';
 import { Observable, from, of, switchMap } from 'rxjs';
@@ -14,6 +15,7 @@ import {
   IDEMPOTENCY_KEY_MIN_LENGTH,
 } from '@wonseoro/contracts';
 import { ProblemException } from '../problem/problem.exception';
+import { EXTERNAL_CALLBACK } from './external-callback.decorator';
 import { IdempotencyScope, IdempotencyStore } from './idempotency.store';
 
 const MUTATION_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
@@ -34,12 +36,20 @@ const MUTATION_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
  */
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
-  constructor(private readonly store: IdempotencyStore) {}
+  constructor(
+    private readonly store: IdempotencyStore,
+    private readonly reflector: Reflector = new Reflector(),
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
 
     if (!MUTATION_METHODS.has(request.method)) {
+      return next.handle();
+    }
+
+    // PG 콜백처럼 외부가 부르는 경로. 자기 이벤트 ID 로 중복을 막는다.
+    if (this.reflector.get<boolean>(EXTERNAL_CALLBACK, context.getHandler())) {
       return next.handle();
     }
 

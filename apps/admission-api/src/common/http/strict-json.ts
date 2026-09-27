@@ -18,10 +18,13 @@ const decoder = new TextDecoder('utf-8', { fatal: true });
 
 /** Fastify content-type parser 로 등록한다. parseAs: 'buffer' 여야 한다. */
 export function strictJsonParser(
-  _req: unknown,
+  req: unknown,
   body: Buffer,
   done: (err: Error | null, value?: unknown) => void,
 ): void {
+  // 원문 바이트를 남긴다. PG 콜백 서명은 파싱한 값이 아니라 받은 바이트 그대로에 대해 검증해야 한다.
+  // 다시 직렬화하면 키 순서·공백이 달라져 정상 콜백이 위조로 보인다.
+  if (req && typeof req === 'object') (req as { rawBody?: Buffer }).rawBody = body;
   let text: string;
   try {
     text = decoder.decode(body);
