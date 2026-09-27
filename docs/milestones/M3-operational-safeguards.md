@@ -19,13 +19,14 @@
 | [v1.0 §9 감사로그](https://app.notion.com/p/3de75ab5debe801f99c5fee017130c65) | 감사 이벤트 목록, hash-chain, WORM |
 | [09. STRIDE](https://app.notion.com/p/3df75ab5debe81e4bff5f44e1e3112d4) | Repudiation·Tampering 대응이 이 단계 기능과 직결 |
 
-## 진행 현황 (2026-09-26)
+## 진행 현황 (2026-09-27)
 
 | 구분 | 태스크 |
 |---|---|
 | ✅ 완료 | T-M3-01 Deadline Policy · T-M3-02 Config Governance · T-M3-04 Reconciliation · T-M3-05 Exception Queue · T-M3-07 Evidence Package · T-M3-08 Circuit Breaker · T-M3-15 서명된 활성화 기록 · T-M3-10 Retention Matrix · T-M3-09 Purpose-scoped Token · **T-M3-11~14 관리자 콘솔** |
 | 🟡 부분 | T-M3-03 hash-chain (물리 분리는 M5) · T-M3-06 Autonomous Mode (JWKS 캐시는 T-M5-02) |
-| 🔜 다음 | **M3 종료 게이트** — 아래 체크리스트 |
+| 🔧 진행 | **G1 결제 자동 정합화 (D-40)** — 콜백 처리까지 완료, 엔드포인트·재확인 워커·대조 스케줄 남음 |
+| 🔜 다음 | **G2 감사 삭제 불가 (D-41)** → 종료 체크리스트 마감 · 노션 반영 ([05 문서](../05-m3-exit-m4-readiness.md)) |
 
 ### §01 E 핵심 인수기준 "단독 운영자 1명으로 마감시간 변경 불가" 통과
 
@@ -537,7 +538,7 @@ Central ACK         수신
 
 - [ ] 중앙 2시간 단절: 원서손실 0, 핵심 SLO 유지 — 기능 ✅(Demo Gate 5·relay 시험), **시간 시험은 T-M4-35**
 - [x] 동일 Finalize 100회 재시도: Submission 1건 — M2 Demo Gate 4 · DB UNIQUE
-- [ ] PG Callback 30분 지연: 자동 정합화 — ❌ **미구현** (D-40)
+- [ ] PG Callback 30분 지연: 자동 정합화 — 🔧 **구현 중** (D-40)
 - [x] **단독 운영자 1명으로 마감시간 변경 불가** — API·DB 제약·관리자 콘솔 화면까지 (2026-09-26)
 - [x] 특정 Application의 접수과정을 Evidence Package로 재구성 가능 — 콘솔 증적 조회 (2026-09-26)
 - [ ] 운영계정으로 Audit 삭제 불가 — ❌ **미충족** (D-41)
