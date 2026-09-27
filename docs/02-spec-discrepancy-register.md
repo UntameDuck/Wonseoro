@@ -413,7 +413,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
-## D-28. 지원자 API 에 소유권 검사가 없었다 🔴
+## D-28. 지원자 API 에 소유권 검사가 없었다 🟢
 
 | | |
 |---|---|
@@ -423,8 +423,8 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **왜 계약만 봐서는 안 잡히나** | OpenAPI 는 `security: [{ oidc: [] }]` 로 "인증"을 규정하지만 **인가는 규정하지 않는다.** 인증만 붙이면 로그인한 지원자 전원이 서로의 원서를 볼 수 있다. 계약이 맞아도 제품이 틀릴 수 있는 자리다 |
 | **판정** | 자원마다 소유자를 확인한다. 없는 자원과 남의 자원을 **같은 응답**으로 돌려준다 — 구분해 주면 식별자를 훑어 유효한 원서를 찾아낼 수 있다 |
 | **저장소 반영** | ✅ `common/identity/ownership.service.ts` + 전 경로 적용 · 통합 테스트 6종 |
-| **노션 반영** | ⬜ §09 STRIDE Information Disclosure 에 이 경로 추가 · ✅ §03 소유권 규칙 (2026-09-27) |
-| **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
+| **노션 반영** | ✅ §09 STRIDE Information Disclosure (2026-09-27) · ✅ §03 소유권 규칙 (2026-09-27) |
+| **상태** | 🟢 CLOSED — 저장소·노션 반영 (2026-09-27) |
 
 ---
 
@@ -571,7 +571,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **판정** | UTF-8 이 아니면 **400** 으로 거절한다 (`TextDecoder` fatal). 500 이면 서버 고장으로 알고 같은 것을 또 보낸다. 잘못된 JSON 도 400 `VALIDATION_FAILED` 로 정리했다 (전에는 status 400 에 code `INTERNAL`) |
 | **구현 주의** | Nest 가 기동 시 자기 JSON 파서를 따로 올린다. `bodyParser: false` 로 끄지 않으면 기본 동작이 되살아난다 |
 | **저장소 반영** | ✅ `common/http/strict-json.ts` · `main.ts` |
-| **노션 반영** | ⬜ §03 첨부 yaml 갱신(공통 오류) · ✅ §03 공통 요구 (2026-09-27) · §06 입력 검증 |
+| **노션 반영** | ⬜ §03 첨부 yaml 갱신(공통 오류) · ✅ §03 공통 요구 (2026-09-27) · ✅ §06 입력 검증 (2026-09-27) |
 | **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
 
 ---
@@ -606,7 +606,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **D-27 과의 관계** | 가명 참조를 둔다는 결정은 유지했다. 참조를 만드는 방법만 바꿨다. D-27 이 "두지 않는다" 로 결론 나도 제거는 똑같이 쉽다 |
 | **남은 것** | 키 보관(M5 Vault) · 대학·중앙 키 배포 절차 · 중복지원 검증(v1.0 §6.2)이 필요해지면 별도 키의 `DEDUP` 목적 |
 | **저장소 반영** | ✅ `server-kit/purpose-ref.ts` · finalization · application.repository · central dashboard · frontend |
-| **노션 반영** | ⬜ §04 `subjectRef` 형식 · §03 첨부 yaml 갱신(대시보드 헤더) · ✅ §03 본문 (2026-09-27) · ✅ §A12 참조 형식·키 교체 규칙 (2026-09-27) |
+| **노션 반영** | ⬜ §04 `subjectRef` 형식(D-27 확정 뒤 — 중앙에 가명 참조를 두는지가 먼저다) · §03 첨부 yaml 갱신(대시보드 헤더) · ✅ §03 본문 (2026-09-27) · ✅ §A12 참조 형식·키 교체 규칙 (2026-09-27) |
 | **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
 
 ---
@@ -636,8 +636,8 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **판정** | 역할 분리(`kadmission_app` 은 감사·적용 기록에 INSERT·SELECT 만) + `audit_event` 추가 전용 트리거 + 테스트 정리 방식 변경 + `db:verify` 에 거부 확인. 물리 분리(WORM)는 M5 |
 | **저장소 반영** | ✅ 2026-09-27 — `0004_db_roles_audit_append_only.sql`: `kadmission_app`(업무 테이블 DML · 감사·적용 기록은 **SELECT·INSERT 만** · TRUNCATE·DDL 없음) · `kadmission_migrator`(소유자) · `kadmission_auditor`(읽기). `audit_event` UPDATE·DELETE·TRUNCATE 트리거. admission-api · document-service · event-relay 가 앱 역할로 붙는다. 시험은 앱 역할로 돌고, 감사 기록 정리·변조 재현만 `test-support/break-glass.ts`(슈퍼유저 + `session_replication_role=replica`). `db:verify` 15~18 |
 | **남은 것** | 슈퍼유저가 트리거를 일부러 끄는 것은 DB 안에서 막을 수 없다 → WORM·Object Lock(M5). 중앙 DB(`central`)도 아직 슈퍼유저 하나 — 같은 방식으로 M5 |
-| **노션 반영** | ⬜ §06 DB 역할 표 · ✅ §02 역할·트리거 (2026-09-27) |
-| **상태** | 🟢 저장소 반영 완료 — 노션 반영 대기 |
+| **노션 반영** | ✅ §06 DB 역할 (2026-09-27) · ✅ §02 역할·트리거 (2026-09-27) |
+| **상태** | 🟢 CLOSED — 저장소·노션 반영 (2026-09-27). WORM 물리 분리는 M5 |
 
 ---
 
