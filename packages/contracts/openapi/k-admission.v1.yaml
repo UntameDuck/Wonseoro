@@ -1,10 +1,24 @@
 openapi: 3.1.0
 info:
   title: K-Admission University Data Plane API
-  version: 1.1.0
+  version: 1.2.0
   description: >
     Reference contract for a university-local K-Admission data plane.
     The university DB is the source of truth; central sync is not in the applicant critical path.
+
+
+    1.2.0 aligns the contract with the repository implementation (spec discrepancy register
+    D-7, D-16, D-17, D-19, D-20, D-22, D-24, D-26, D-32, D-34, D-35, D-37, D-38, D-39, D-40).
+    Paths marked with `x-kadmission-register` were added by the implementation first.
+
+
+    Common rules:
+    every mutation (POST/PATCH/PUT/DELETE) requires `Idempotency-Key`, except external callbacks
+    that deduplicate by their own event id (`x-kadmission-external-callback: true`);
+    JSON bodies must be valid UTF-8 — invalid bytes or malformed JSON are rejected with
+    400 `VALIDATION_FAILED` and never stored (D-37);
+    applicant resources owned by someone else answer exactly like missing resources (D-28);
+    responses carrying personal data use `Cache-Control: no-store`.
 servers:
   - url: https://{university}.apply.k-admission.kr
     variables:
@@ -14,11 +28,19 @@ tags:
   - name: Meta
   - name: Catalog
   - name: Applications
+  - name: Support
+    description: Applicant self-service status (§01 C7)
   - name: Documents
   - name: Payments
   - name: Submissions
   - name: Admin
   - name: Internal
+  - name: Ops
+    description: Kubernetes probes and dependency state. Not routed through the public ingress.
+  - name: Central
+    description: >
+      Central Control/Convenience Plane (served by the central host, not the university host).
+      Never on the applicant's submission critical path.
 paths:
   /api/v1/meta/time:
     get:
@@ -32,6 +54,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ServerTime'
+  /api/v1/meta/operating-mode:
+    get:
+      tags: [Meta]
+      operationId: getOperatingMode
+      x-kadmission-register: D-34
+      summary: Autonomous-mode banner source
+      description: >
+        Last in-memory result of the central health gate. Public; carries no personal or
+        internal operational data (failure counts and circuit state live in /healthz/dependencies).
+        AUTONOMOUS changes guidance only — no applicant feature is blocked.
+      security: []
+      responses:
+        '200':
+          description: Operating mode
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OperatingMode' }
+  /api/v1/meta/signing-keys:
+    get:
+      tags: [Meta]
+      operationId: listSigningKeys
+      x-kadmission-register: D-35
+      summary: Public keys that verify signed activation records
+      description: >
+        Anyone can fetch these keys. With them and the activation records, a third party can
+        verify outside the university that the applied deadline policy is exactly the approved one.
+      security: []
+      responses:
+        '200':
+          description: Ed25519 public keys
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [keys]
+                properties:
+                  keys:
+                    type: array
+                    items: { $ref: '#/components/schemas/SigningKey' }
   /api/v1/admission-cycles/current:
     get:
       tags: [Catalog]
@@ -155,6 +219,92 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ValidationResult' }
+  /api/v1/applications/{applicationId}/form-schema:
+    get:
+      tags: [Applications]
+      operationId: getApplicationFormSchema
+      x-kadmission-register: D-19
+      summary: University-specific additional-field JSON Schema for this application
+      description: >
+        Resolved from the application's admission type and the ACTIVE config version, so the
+        client never computes the combination. Owner only (knowing someone else's application id
+        must not reveal which admission type they applied to).
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+      responses:
+        '200':
+          description: Form schema
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FormSchema' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /api/v1/applications/{applicationId}/self-check:
+    get:
+      tags: [Support]
+      operationId: getApplicationSelfCheck
+      x-kadmission-register: D-16
+      summary: What the server knows about this application, in plain words
+      description: >
+        Submission state, payment state (uncertain is reported as uncertain — never prompts a
+        second payment), document scan state, central sync state reported separately from
+        submission, and the attempt timeline. No personal data.
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+      responses:
+        '200':
+          description: Self-check
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SelfCheck' }
+        '400':
+          $ref: '#/components/responses/Problem'
+  /api/v1/applications/{applicationId}/cancel:
+    post:
+      tags: [Applications]
+      operationId: cancelApplication
+      x-kadmission-register: D-7
+      summary: Cancel an application before it is received
+      description: >
+        Allowed from DRAFT, READY, PAYMENT_PENDING and PAID only. An application that has an
+        application number (FINALIZED) is a received application and cannot be cancelled
+        (409 — contact the admissions office). FINALIZING answers 409 with "check again shortly".
+        A confirmed payment is never refunded automatically: it is queued as
+        REFUND_REQUIRED_AFTER_CANCEL for a person to approve, and the payment stays CONFIRMED
+        until the refund actually happens. The reason is audited but not sent to central.
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 2, maxLength: 500 }
+      responses:
+        '200':
+          description: Cancelled
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CancelResult' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
   /api/v1/applications/{applicationId}/documents/upload-intents:
     post:
       tags: [Documents]
@@ -250,6 +400,51 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Payment' }
+  /api/v1/payments/callbacks/{provider}:
+    post:
+      tags: [Payments]
+      operationId: receivePaymentCallback
+      x-kadmission-register: D-40
+      x-kadmission-external-callback: true
+      summary: PG server-to-server callback
+      description: >
+        Called by the payment gateway over the internet. No applicant identity and no
+        Idempotency-Key: the signature header authenticates the sender, and the provider event id
+        deduplicates (payment_event unique). The body's payment status is never trusted — the
+        server re-queries the PG. A confirmed payment does not auto-finalize; submission remains
+        the applicant's act. Any correctly signed callback answers 200 regardless of outcome so
+        the PG stops retrying.
+      security: []
+      parameters:
+        - in: path
+          name: provider
+          required: true
+          description: Must equal the PG this university contracted, otherwise 403.
+          schema: { type: string }
+        - in: header
+          name: X-PG-Signature
+          required: true
+          description: Provider signature over the raw request body.
+          schema: { type: string }
+      requestBody:
+        required: true
+        description: Provider-specific payload. Only its transaction id and event id are used.
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Received
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [received, outcome]
+                properties:
+                  received: { type: boolean, const: true }
+                  outcome: { type: string, enum: [VERIFIED, DUPLICATE, UNKNOWN_TX] }
+        '403':
+          $ref: '#/components/responses/Problem'
   /api/v1/applications/{applicationId}/finalize:
     post:
       tags: [Submissions]
@@ -313,17 +508,49 @@ paths:
       tags: [Admin]
       operationId: getActiveConfig
       security: [{ oidc: [admin] }]
+      parameters:
+        - $ref: '#/components/parameters/CycleIdQuery'
       responses:
         '200':
           description: Active configuration
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ConfigVersion' }
+        '400':
+          $ref: '#/components/responses/Problem'
   /admin/v1/config/versions:
+    get:
+      tags: [Admin]
+      operationId: listConfigVersions
+      x-kadmission-register: D-35
+      summary: Approval inbox — versions without their body (newest first, at most 50)
+      security: [{ oidc: [admin] }]
+      parameters:
+        - $ref: '#/components/parameters/CycleIdQuery'
+      responses:
+        '200':
+          description: Config versions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [versions]
+                properties:
+                  versions:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/ConfigVersion'
+                        - type: object
+                          required: [createdAt]
+                          properties:
+                            createdAt: { type: string, format: date-time }
     post:
       tags: [Admin]
       operationId: createConfigVersion
       security: [{ oidc: [admin] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -335,74 +562,370 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ConfigVersion' }
+        '400':
+          $ref: '#/components/responses/Problem'
+  /admin/v1/config/versions/{configId}/diff:
+    get:
+      tags: [Admin]
+      operationId: getConfigDiff
+      x-kadmission-register: T-M3-02
+      summary: What this version changes against the current ACTIVE one
+      description: >
+        Destructive changes are listed separately. The returned `digest` must be sent back when
+        approving — an approval means "I agree to this change", not "I agree to this id".
+      security: [{ oidc: [admin] }]
+      parameters:
+        - $ref: '#/components/parameters/ConfigId'
+      responses:
+        '200':
+          description: Diff
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConfigDiff' }
   /admin/v1/config/versions/{configId}/approve:
     post:
       tags: [Admin]
       operationId: approveConfigVersion
+      description: >
+        Two distinct approvers, neither of them the author. `acknowledgedDiffDigest` must equal
+        the current diff digest; if the draft or the ACTIVE baseline changed after review, 409.
       security: [{ oidc: [admin] }]
       parameters:
-        - in: path
-          name: configId
-          required: true
-          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/ConfigId'
         - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [acknowledgedDiffDigest]
+              properties:
+                acknowledgedDiffDigest: { type: string }
       responses:
-        '200': { description: Approval recorded }
+        '200':
+          description: Approval recorded
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ConfigVersion'
+                  - type: object
+                    required: [remainingApprovals]
+                    properties:
+                      remainingApprovals: { type: integer, minimum: 0, maximum: 2 }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
   /admin/v1/config/versions/{configId}/activate:
     post:
       tags: [Admin]
       operationId: activateConfigVersion
+      description: >
+        Activates after two-person approval; the previous ACTIVE version is RETIRED in the same
+        transaction. Refused (403) inside the pre-deadline freeze window or without two distinct non-author approvers. Every activation is recorded
+        as a signed, append-only activation record.
       security: [{ oidc: [admin] }]
       parameters:
-        - in: path
-          name: configId
-          required: true
-          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/ConfigId'
         - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ActivateRequest' }
       responses:
-        '200': { description: Activated after two-person approval }
+        '200':
+          description: Activated after two-person approval
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ConfigVersion'
+                  - type: object
+                    required: [activation]
+                    properties:
+                      activation: { $ref: '#/components/schemas/ActivationRecord' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /admin/v1/config/versions/{configId}/rollback:
+    post:
+      tags: [Admin]
+      operationId: rollbackConfigVersion
+      x-kadmission-register: T-M3-02
+      summary: Re-activate a version that was ACTIVE before
+      description: >
+        Does not create a new version: the target row already carries two real approvals.
+        Only versions that were actually activated before can be targets. Not blocked by the
+        freeze window — freezing stops new changes, not recovery.
+      security: [{ oidc: [admin] }]
+      parameters:
+        - $ref: '#/components/parameters/ConfigId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 2 }
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [restored, retired, activation]
+                properties:
+                  restored: { $ref: '#/components/schemas/ConfigVersion' }
+                  retired: { type: [string, 'null'], description: Version that was ACTIVE before the rollback }
+                  activation: { $ref: '#/components/schemas/ActivationRecord' }
+        '400':
+          $ref: '#/components/responses/Problem'
   /admin/v1/deadline-policies:
+    get:
+      tags: [Admin]
+      operationId: listDeadlinePolicies
+      summary: Deadline policy history — who changed the deadline and when
+      security: [{ oidc: [admin] }]
+      parameters:
+        - $ref: '#/components/parameters/CycleIdQuery'
+      responses:
+        '200':
+          description: Policies
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [policies]
+                properties:
+                  policies:
+                    type: array
+                    items: { $ref: '#/components/schemas/DeadlinePolicy' }
     post:
       tags: [Admin]
       operationId: createDeadlinePolicy
       security: [{ oidc: [admin] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/CreateDeadlinePolicyRequest' }
       responses:
-        '201': { description: Deadline policy draft }
+        '201':
+          description: Deadline policy draft
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [policyId, policyHash]
+                properties:
+                  policyId: { type: string, format: uuid }
+                  policyHash: { type: string }
+        '400':
+          $ref: '#/components/responses/Problem'
+  /admin/v1/deadline-policies/extensions:
+    post:
+      tags: [Admin]
+      operationId: createDeadlineExtension
+      x-kadmission-register: D-35
+      summary: Draft a deadline extension from the policy currently in force
+      description: >
+        Requires a reason and the admissions office decision document number — the platform
+        records and executes the office's decision, it does not decide. Then the normal
+        two-person approval applies. Not blocked by the freeze window. If the base policy is no
+        longer in force at activation time, activation is refused (409).
+      security: [{ oidc: [admin] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cycleId, deadlineAt, reason, decisionRef]
+              properties:
+                cycleId: { type: string, format: uuid }
+                deadlineAt: { type: string, format: date-time }
+                reason: { type: string, minLength: 5 }
+                decisionRef: { type: string, minLength: 1 }
+      responses:
+        '201':
+          description: Extension draft
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [policyId, policyHash, version, extendsVersion]
+                properties:
+                  policyId: { type: string, format: uuid }
+                  policyHash: { type: string }
+                  version: { type: string }
+                  extendsVersion: { type: string }
+        '400':
+          $ref: '#/components/responses/Problem'
   /admin/v1/deadline-policies/{policyId}/approve:
     post:
       tags: [Admin]
       operationId: approveDeadlinePolicy
       security: [{ oidc: [admin] }]
       parameters:
-        - in: path
-          name: policyId
-          required: true
-          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/PolicyId'
         - $ref: '#/components/parameters/IdempotencyKey'
       responses:
-        '200': { description: Approval recorded }
+        '200':
+          description: Approval recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [policyId, complete, remainingApprovals]
+                properties:
+                  policyId: { type: string, format: uuid }
+                  complete: { type: boolean }
+                  remainingApprovals: { type: integer, minimum: 0, maximum: 1 }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /admin/v1/deadline-policies/{policyId}/activate:
+    post:
+      tags: [Admin]
+      operationId: activateDeadlinePolicy
+      x-kadmission-register: D-22
+      summary: Activate an approved deadline policy (optionally scheduled)
+      description: >
+        Symmetric with config activation. A policy that was applied once is never re-applied
+        (no back door to an old deadline), and a deadline already in the past at activation time
+        is refused (no retroactive closing). Recorded as a signed activation record.
+      security: [{ oidc: [admin] }]
+      parameters:
+        - $ref: '#/components/parameters/PolicyId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ActivateRequest' }
+      responses:
+        '200':
+          description: Activated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [activatedAt, activation]
+                properties:
+                  activatedAt: { type: string, format: date-time }
+                  activation: { $ref: '#/components/schemas/ActivationRecord' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /admin/v1/activations:
+    get:
+      tags: [Admin]
+      operationId: listActivations
+      x-kadmission-register: D-35
+      summary: Signed activation history for deadline policies and configs
+      description: >
+        Signatures are re-verified on every read. `allSignaturesValid` says the remaining records
+        are genuine; `systemChain` says none are missing.
+      security: [{ oidc: [admin] }]
+      parameters:
+        - $ref: '#/components/parameters/CycleIdQuery'
+      responses:
+        '200':
+          description: Activation history
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [activations, allSignaturesValid, systemChain]
+                properties:
+                  activations:
+                    type: array
+                    items: { $ref: '#/components/schemas/ActivationRecord' }
+                  allSignaturesValid: { type: boolean }
+                  systemChain: { $ref: '#/components/schemas/ChainVerification' }
   /admin/v1/reconciliation/exceptions:
     get:
       tags: [Admin]
       operationId: listReconciliationExceptions
+      description: Mismatches only, ordered by severity then newest (at most 200).
       security: [{ oidc: [operator] }]
+      parameters:
+        - in: query
+          name: state
+          schema:
+            type: string
+            enum: [OPEN, MANUAL_REVIEW, RESOLVED, AUTO_RESOLVED, ALL]
+            default: OPEN
       responses:
         '200':
           description: Exceptions
           content:
             application/json:
               schema:
-                type: array
-                items: { $ref: '#/components/schemas/ReconciliationException' }
+                type: object
+                required: [exceptions]
+                properties:
+                  exceptions:
+                    type: array
+                    items: { $ref: '#/components/schemas/ReconciliationException' }
+        '400':
+          $ref: '#/components/responses/Problem'
+  /admin/v1/reconciliation/run:
+    post:
+      tags: [Admin]
+      operationId: runReconciliation
+      x-kadmission-register: D-26
+      summary: Run the 4-way reconciliation now
+      description: >
+        Same path as the hourly schedule. Needed during incidents (SEV1 runbook) when waiting
+        for the next batch is not an option. The window is bounded so one run cannot scan the
+        whole history.
+      security: [{ oidc: [operator] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sinceHours: { type: integer, minimum: 1, maximum: 720, default: 48 }
+      responses:
+        '200':
+          description: Run result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [checked, opened, autoResolved, stillOpen]
+                properties:
+                  checked: { type: integer, minimum: 0 }
+                  opened: { type: integer, minimum: 0 }
+                  autoResolved: { type: integer, minimum: 0 }
+                  stillOpen: { type: integer, minimum: 0 }
+        '400':
+          $ref: '#/components/responses/Problem'
   /admin/v1/reconciliation/{exceptionId}/resolve:
     post:
       tags: [Admin]
       operationId: resolveReconciliationException
+      description: Records the judgement with before/after in the audit chain. Does not change the data.
       security: [{ oidc: [admin] }]
       parameters:
         - in: path
@@ -418,23 +941,153 @@ paths:
               type: object
               required: [resolutionCode, reason]
               properties:
-                resolutionCode: { type: string }
+                resolutionCode: { type: string, minLength: 1 }
                 reason: { type: string, minLength: 1 }
       responses:
-        '200': { description: Resolved and audited }
+        '200':
+          description: Resolved and audited
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, state]
+                properties:
+                  id: { type: string, format: uuid }
+                  state: { type: string, const: RESOLVED }
+        '400':
+          $ref: '#/components/responses/Problem'
   /admin/v1/evidence/applications/{applicationId}:
     get:
       tags: [Admin]
       operationId: getEvidencePackage
+      description: >
+        Viewing is itself audited (ADMIN_VIEWED_PII) with the viewer and the reason.
+        Contains no name, resident number, contact, address, application body or file originals.
       security: [{ oidc: [auditor] }]
       parameters:
         - $ref: '#/components/parameters/ApplicationId'
+        - in: query
+          name: reason
+          required: true
+          x-kadmission-register: D-24
+          description: Purpose of access. Empty → 400.
+          schema: { type: string, minLength: 1 }
       responses:
         '200':
-          description: Evidence package metadata
+          description: Evidence package
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/EvidencePackage' }
+        '400':
+          $ref: '#/components/responses/Problem'
+  /admin/v1/retention/matrix:
+    get:
+      tags: [Admin]
+      operationId: getRetentionMatrix
+      x-kadmission-register: D-38
+      summary: Retention floor and basis per data category
+      description: >
+        Retention is configured through the config `retention` section (two-person approval,
+        diff, signed activation) — not here. Shortening a period shows as DESTRUCTIVE in the diff.
+      security: [{ oidc: [admin] }]
+      responses:
+        '200':
+          description: Retention categories
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [categories]
+                properties:
+                  categories:
+                    type: object
+                    additionalProperties: { $ref: '#/components/schemas/RetentionCategory' }
+  /admin/v1/retention/plan:
+    get:
+      tags: [Admin]
+      operationId: getRetentionPlan
+      x-kadmission-register: D-38
+      summary: What the active policy would purge and when — never executes
+      security: [{ oidc: [admin] }]
+      parameters:
+        - $ref: '#/components/parameters/CycleIdQuery'
+      responses:
+        '200':
+          description: Purge plan
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RetentionPlan' }
+        '400':
+          $ref: '#/components/responses/Problem'
+  /internal/v1/documents/pending-scan:
+    get:
+      tags: [Internal]
+      operationId: listDocumentsPendingScan
+      x-kadmission-register: D-20
+      summary: QUARANTINED documents waiting for the malware scanner
+      description: Polled by document-service. The worker never writes the DB directly (ADR-0004).
+      security: [{ mutualTLS: [] }]
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        '200':
+          description: Pending documents
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [documents]
+                properties:
+                  documents:
+                    type: array
+                    items:
+                      type: object
+                      required: [documentId, objectKey, mediaType, sizeBytes, sha256]
+                      properties:
+                        documentId: { type: string, format: uuid }
+                        objectKey: { type: string }
+                        mediaType: { type: string }
+                        sizeBytes: { type: integer, minimum: 0 }
+                        sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+  /internal/v1/documents/{documentId}/scan-result:
+    post:
+      tags: [Internal]
+      operationId: reportDocumentScanResult
+      x-kadmission-register: D-20
+      security: [{ mutualTLS: [] }]
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [result]
+              properties:
+                result: { type: string, enum: [CLEAN, MALICIOUS, ERROR] }
+                scanner: { type: string }
+                engineVersion: { type: string }
+      responses:
+        '200':
+          description: Scan result applied
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [documentId, result, status]
+                properties:
+                  documentId: { type: string, format: uuid }
+                  result: { type: string, enum: [CLEAN, MALICIOUS, ERROR] }
+                  status: { type: string, enum: [UPLOADING, QUARANTINED, AVAILABLE, REJECTED, DELETED] }
+        '400':
+          $ref: '#/components/responses/Problem'
   /internal/v1/events:
     post:
       tags: [Internal]
@@ -480,6 +1133,10 @@ paths:
     get:
       tags: [Internal]
       operationId: getSyncStatus
+      description: >
+        University-side outbox backlog, served by event-relay. A growing backlog with an OPEN
+        circuit means central is down; with a CLOSED circuit, the relay itself is stuck.
+        (The central host has its own per-university view on the same path; see Central tag docs.)
       security: [{ mutualTLS: [] }]
       responses:
         '200':
@@ -493,6 +1150,147 @@ paths:
                   universityId: { type: string }
                   oldestPendingAgeSeconds: { type: integer, minimum: 0 }
                   pendingCount: { type: integer, minimum: 0 }
+                  deadCount: { type: integer, minimum: 0 }
+                  circuit:
+                    x-kadmission-register: D-32
+                    description: Optional (compatible addition, §A16)
+                    allOf: [{ $ref: '#/components/schemas/CircuitSnapshot' }]
+  /healthz:
+    get:
+      tags: [Ops]
+      operationId: getLiveness
+      x-kadmission-register: D-32
+      description: Process liveness only. Never checks the DB — restarting every Pod during a DB failover makes it worse.
+      security: []
+      responses:
+        '200':
+          description: Alive
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProbeResult' }
+  /readyz:
+    get:
+      tags: [Ops]
+      operationId: getReadiness
+      x-kadmission-register: D-32
+      description: DB reachability only. External dependencies (central, PG) are deliberately excluded.
+      security: []
+      responses:
+        '200':
+          description: Ready
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProbeResult' }
+        '503':
+          $ref: '#/components/responses/Problem'
+  /healthz/dependencies:
+    get:
+      tags: [Ops]
+      operationId: getDependencyCircuits
+      x-kadmission-register: D-32
+      description: >
+        Circuit breaker state of this Pod's external dependencies. Not part of readiness —
+        if a central or PG outage failed readiness, every Pod would leave traffic and all
+        submissions would stop.
+      security: []
+      responses:
+        '200':
+          description: Dependency circuits
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [service, degraded, circuits, time]
+                properties:
+                  service: { type: string }
+                  degraded: { type: boolean }
+                  circuits:
+                    type: array
+                    items: { $ref: '#/components/schemas/CircuitSnapshot' }
+                  time: { type: string, format: date-time }
+  /api/v1/dashboard/applications:
+    get:
+      tags: [Central]
+      operationId: listMyApplications
+      x-kadmission-register: D-39
+      summary: My applications across universities (central summary, may lag)
+      description: >
+        Reads only the event-fed summary; never calls university DBs. Returns only the caller's
+        rows (purpose-keyed HMAC reference, D-27/D-39). `lastSyncedAt` must be shown — a lagging
+        summary is not a failed submission. The identifier in a query string is rejected (400)
+        because URLs end up in proxy and browser logs.
+      servers:
+        - url: https://central.k-admission.kr
+      parameters:
+        - $ref: '#/components/parameters/SubjectToken'
+      responses:
+        '200':
+          description: Summaries
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [serverTime, applications]
+                properties:
+                  serverTime: { type: string, format: date-time }
+                  applications:
+                    type: array
+                    maxItems: 100
+                    items: { $ref: '#/components/schemas/ApplicationSummary' }
+        '400':
+          $ref: '#/components/responses/Problem'
+  /internal/v1/profile-snapshots:
+    post:
+      tags: [Central]
+      operationId: releaseProfileSnapshot
+      x-kadmission-register: D-17
+      summary: Common Profile Vault — release consented fields to a university
+      description: >
+        Called by a university data plane when creating an application. Only the intersection of
+        requested and consented fields leaves the vault; requested-but-unconsented fields are
+        named in `withheldFields` instead of silently dropped. Best-effort: if central does not
+        answer, the application is created empty (D-18). `applicationRef` is an opaque
+        university-salted value, never the university's internal applicant id (D-39).
+      servers:
+        - url: https://central.k-admission.kr
+      security: [{ mutualTLS: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subjectToken, universityId, requestedFields]
+              properties:
+                subjectToken: { type: string }
+                universityId: { type: string }
+                requestedFields:
+                  type: array
+                  items: { type: string }
+                applicationRef: { type: string }
+      responses:
+        '200':
+          description: Snapshot
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [fields, releasedFields, withheldFields, releasedAt]
+                properties:
+                  fields: { type: object, additionalProperties: true }
+                  releasedFields:
+                    type: array
+                    items: { type: string }
+                  withheldFields:
+                    type: array
+                    items: { type: string }
+                  releasedAt: { type: string, format: date-time }
 components:
   securitySchemes:
     oidc:
@@ -526,6 +1324,27 @@ components:
       name: If-Match
       required: true
       schema: { type: string }
+    CycleIdQuery:
+      in: query
+      name: cycleId
+      required: true
+      schema: { type: string, format: uuid }
+    ConfigId:
+      in: path
+      name: configId
+      required: true
+      schema: { type: string, format: uuid }
+    PolicyId:
+      in: path
+      name: policyId
+      required: true
+      schema: { type: string, format: uuid }
+    SubjectToken:
+      in: header
+      name: x-subject-token
+      required: true
+      description: Applicant subject token. Header only — never in the URL (D-39).
+      schema: { type: string, minLength: 1 }
   responses:
     Problem:
       description: Problem Details
@@ -546,6 +1365,7 @@ components:
       required: [id, admissionYear, name, opensAt, closesAt, status]
       properties:
         id: { type: string, format: uuid }
+        universityId: { type: string }
         admissionYear: { type: integer }
         name: { type: string }
         opensAt: { type: string, format: date-time }
@@ -566,6 +1386,7 @@ components:
         id: { type: string, format: uuid }
         code: { type: string }
         name: { type: string }
+        quota: { type: [integer, 'null'], minimum: 0 }
     CreateApplicationRequest:
       type: object
       additionalProperties: false
@@ -674,20 +1495,30 @@ components:
         serverTime: { type: string, format: date-time }
     ConfigVersion:
       type: object
-      required: [id, version, status, configHash]
+      required: [id, version, status, configHash, createdBy, approvedBy, activatedAt]
       properties:
         id: { type: string, format: uuid }
         version: { type: string }
         status: { type: string, enum: [DRAFT, APPROVED, ACTIVE, RETIRED] }
         configHash: { type: string }
+        createdBy: { type: string }
+        approvedBy:
+          type: array
+          maxItems: 2
+          items: { type: string }
         activatedAt: { type: [string, 'null'], format: date-time }
     CreateConfigVersionRequest:
       type: object
       required: [cycleId, version, config]
       properties:
         cycleId: { type: string, format: uuid }
-        version: { type: string }
-        config: { type: object, additionalProperties: true }
+        version: { type: string, maxLength: 64 }
+        config:
+          type: object
+          additionalProperties: true
+          description: >
+            Includes `forms` (JSON Schema per admission type code) and the optional `retention`
+            section ({ <category>: { days } }), validated against the retention matrix (D-38).
     CreateDeadlinePolicyRequest:
       type: object
       required: [cycleId, version, mode, deadlineAt]
@@ -707,17 +1538,420 @@ components:
         exceptionType: { type: string }
         severity: { type: string, enum: [INFO, WARN, HIGH, CRITICAL] }
         state: { type: string, enum: [OPEN, AUTO_RESOLVED, MANUAL_REVIEW, RESOLVED] }
+        facts: { type: object, additionalProperties: true }
         detectedAt: { type: string, format: date-time }
     EvidencePackage:
       type: object
-      required: [applicationId, generatedAt, evidenceHash, timeline]
+      description: >
+        Reconstruction of one application's submission process. `evidenceHash` excludes
+        `generatedAt`, so two extractions of the same content hash identically.
+      required: [applicationId, generatedAt, evidenceHash, application, submission, deadlinePolicy,
+        configVersion, payments, documents, consents, timeline, chainVerification]
       properties:
         applicationId: { type: string, format: uuid }
         generatedAt: { type: string, format: date-time }
         evidenceHash: { type: string }
+        application:
+          type: object
+          required: [status, version, cycleId, admissionTypeCode, departmentCode]
+          properties:
+            status: { type: string }
+            version: { type: string }
+            cycleId: { type: string, format: uuid }
+            admissionTypeCode: { type: string }
+            departmentCode: { type: string }
+        submission:
+          type: [object, 'null']
+          required: [applicationNumber, requestedAt, paymentVerifiedAt, finalizedAt,
+            deadlinePolicyVersion, configVersion, serverClockOffsetMs, evidenceHash]
+          properties:
+            applicationNumber: { type: string }
+            requestedAt: { type: string, format: date-time }
+            paymentVerifiedAt: { type: string, format: date-time }
+            finalizedAt: { type: string, format: date-time }
+            deadlinePolicyVersion: { type: string }
+            configVersion: { type: string }
+            serverClockOffsetMs: { type: integer }
+            evidenceHash: { type: string }
+        deadlinePolicy:
+          type: [object, 'null']
+          description: The policy actually applied at submission time.
+          required: [version, mode, deadlineAt, approvedBy, activatedAt, policyHash, signedActivation]
+          properties:
+            version: { type: string }
+            mode: { type: string }
+            deadlineAt: { type: string, format: date-time }
+            approvedBy:
+              type: array
+              items: { type: string }
+            activatedAt: { type: [string, 'null'], format: date-time }
+            policyHash: { type: string }
+            signedActivation:
+              type: [object, 'null']
+              description: null when the policy was applied before signed records existed.
+              required: [activationId, kind, effectiveAt, operatorId, decisionRef, keyId, signature, matchesPolicy]
+              properties:
+                activationId: { type: string, format: uuid }
+                kind: { type: string, enum: [ACTIVATE, EXTEND, ROLLBACK] }
+                effectiveAt: { type: string, format: date-time }
+                operatorId: { type: string }
+                decisionRef: { type: [string, 'null'] }
+                keyId: { type: string }
+                signature: { $ref: '#/components/schemas/SignatureStatus' }
+                matchesPolicy: { type: boolean }
+        configVersion:
+          type: [object, 'null']
+          required: [version, configHash, activatedAt]
+          properties:
+            version: { type: string }
+            configHash: { type: string }
+            activatedAt: { type: [string, 'null'], format: date-time }
+        payments:
+          type: array
+          items:
+            type: object
+            required: [provider, status, amount, providerApprovedAt, verifiedAt, events]
+            properties:
+              provider: { type: string }
+              status: { type: string }
+              amount: { type: number }
+              providerApprovedAt: { type: [string, 'null'], format: date-time }
+              verifiedAt: { type: [string, 'null'], format: date-time }
+              events:
+                type: array
+                items:
+                  type: object
+                  required: [eventType, occurredAt, payloadHash]
+                  properties:
+                    eventType: { type: string }
+                    occurredAt: { type: [string, 'null'], format: date-time }
+                    payloadHash: { type: string }
+        documents:
+          type: array
+          items:
+            type: object
+            required: [documentType, status, sha256, scans]
+            properties:
+              documentType: { type: string }
+              status: { type: string }
+              sha256: { type: string }
+              scans:
+                type: array
+                items:
+                  type: object
+                  required: [scanner, result, scannedAt]
+                  properties:
+                    scanner: { type: string }
+                    result: { type: string }
+                    scannedAt: { type: [string, 'null'], format: date-time }
+        consents:
+          type: array
+          items:
+            type: object
+            required: [consentCode, policyVersion, grantedAt]
+            properties:
+              consentCode: { type: string }
+              policyVersion: { type: string }
+              grantedAt: { type: string, format: date-time }
         timeline:
           type: array
-          items: { type: object, additionalProperties: true }
+          items:
+            type: object
+            required: [at, action, result, actorType, actorId, traceId, configVersion]
+            additionalProperties: true
+            properties:
+              at: { type: string, format: date-time }
+              action: { type: string }
+              result: { type: string }
+              actorType: { type: string }
+              actorId: { type: [string, 'null'], description: Pseudonymous; never the original identity }
+              traceId: { type: [string, 'null'] }
+              configVersion: { type: [string, 'null'] }
+        chainVerification: { $ref: '#/components/schemas/ChainVerification' }
+    ChainVerification:
+      type: object
+      required: [valid, checked]
+      properties:
+        valid: { type: boolean }
+        checked: { type: integer, minimum: 0 }
+        brokenAt: { type: string, description: First event id where the hash chain breaks }
+    OperatingMode:
+      type: object
+      required: [mode, reason, since, lastCentralContactAt, sync, checkedAt, serverTime]
+      properties:
+        mode: { type: string, enum: [CONNECTED, AUTONOMOUS] }
+        reason: { type: [string, 'null'], enum: [CENTRAL_NOT_CONFIGURED, CENTRAL_UNREACHABLE, null] }
+        since: { type: string, format: date-time }
+        lastCentralContactAt: { type: [string, 'null'], format: date-time }
+        sync:
+          type: object
+          required: [pendingEvents, oldestPendingAgeSeconds, lagging]
+          properties:
+            pendingEvents: { type: integer, minimum: 0 }
+            oldestPendingAgeSeconds: { type: integer, minimum: 0 }
+            lagging: { type: boolean }
+        checkedAt: { type: string, format: date-time }
+        serverTime: { type: string, format: date-time }
+    SigningKey:
+      type: object
+      required: [keyId, alg, publicKeyPem]
+      properties:
+        keyId: { type: string }
+        alg: { type: string, const: Ed25519 }
+        publicKeyPem: { type: string }
+    SignatureStatus:
+      type: string
+      description: Re-verified on every read; not a stored value.
+      enum: [VALID, INVALID, UNKNOWN_KEY]
+    ActivateRequest:
+      type: object
+      properties:
+        activateAt:
+          type: string
+          format: date-time
+          description: Scheduled activation. Omit to activate now (the DB clock stamps the time, D-31).
+    ActivationRecord:
+      type: object
+      description: Signed, append-only record of one activation event (T-M3-15).
+      required: [activationId, subjectType, subjectId, subjectVersion, kind, effectiveAt, operatorId,
+        reason, decisionRef, supersedesVersion, content, keyId, payloadHash, recordedAt, signature]
+      properties:
+        activationId: { type: string, format: uuid }
+        subjectType: { type: string, enum: [DEADLINE_POLICY, CONFIG_VERSION] }
+        subjectId: { type: string, format: uuid }
+        subjectVersion: { type: string }
+        kind: { type: string, enum: [ACTIVATE, EXTEND, ROLLBACK] }
+        effectiveAt: { type: string, format: date-time }
+        operatorId: { type: string }
+        reason: { type: [string, 'null'] }
+        decisionRef: { type: [string, 'null'], description: Admissions office decision document number (extensions) }
+        supersedesVersion: { type: [string, 'null'] }
+        content: { type: object, additionalProperties: true }
+        keyId: { type: string }
+        payloadHash: { type: string }
+        recordedAt: { type: string, format: date-time }
+        signature: { $ref: '#/components/schemas/SignatureStatus' }
+    ConfigChange:
+      type: object
+      required: [path, kind, risk, summary]
+      properties:
+        path: { type: string }
+        kind: { type: string, enum: [ADDED, REMOVED, CHANGED] }
+        risk: { type: string, enum: [INFO, WARN, DESTRUCTIVE] }
+        summary: { type: string }
+        before: {}
+        after: {}
+    ConfigDiff:
+      type: object
+      required: [changes, destructive, digest, identical]
+      properties:
+        changes:
+          type: array
+          items: { $ref: '#/components/schemas/ConfigChange' }
+        destructive:
+          type: array
+          items: { $ref: '#/components/schemas/ConfigChange' }
+        digest: { type: string, description: Send back as acknowledgedDiffDigest when approving }
+        identical: { type: boolean, description: An identical config is refused on approval }
+    DeadlinePolicy:
+      type: object
+      required: [policyId, version, mode, deadlineAt, approvedBy, activatedAt, policyHash, createdBy, extension]
+      properties:
+        policyId: { type: string, format: uuid }
+        version: { type: string }
+        mode: { type: string }
+        deadlineAt: { type: string, format: date-time }
+        approvedBy:
+          type: array
+          maxItems: 2
+          items: { type: string }
+        activatedAt: { type: [string, 'null'], format: date-time }
+        policyHash: { type: string }
+        createdBy: { type: string }
+        extension:
+          type: [object, 'null']
+          required: [kind, extendsVersion, extendsDeadlineAt, reason, decisionRef]
+          properties:
+            kind: { type: string, const: EXTENSION }
+            extendsVersion: { type: string }
+            extendsDeadlineAt: { type: string, format: date-time }
+            reason: { type: string }
+            decisionRef: { type: string }
+    FormSchema:
+      type: object
+      required: [admissionTypeCode, schemaVersion, schema]
+      properties:
+        admissionTypeCode: { type: string }
+        schemaVersion: { type: string, description: ACTIVE config version; stored with each field value }
+        schema: { type: object, additionalProperties: true, description: JSON Schema of additional fields }
+    SelfCheck:
+      type: object
+      required: [applicationId, serverTime, deadlineAt, deadlinePolicyVersion, application,
+        submission, payment, documents, centralSync, timeline]
+      properties:
+        applicationId: { type: string, format: uuid }
+        serverTime: { type: string, format: date-time }
+        deadlineAt: { type: string, format: date-time }
+        deadlinePolicyVersion: { type: string }
+        application:
+          type: object
+          required: [status, lastSavedAt, summary]
+          properties:
+            status: { type: string }
+            lastSavedAt: { type: [string, 'null'], format: date-time }
+            summary: { type: string, description: One sentence the UI may show verbatim }
+        submission:
+          type: [object, 'null']
+          required: [submissionId, applicationNumber, finalizedAt, deadlinePolicyVersion]
+          properties:
+            submissionId: { type: string, format: uuid }
+            applicationNumber: { type: string }
+            finalizedAt: { type: string, format: date-time }
+            deadlinePolicyVersion: { type: string }
+        payment:
+          type: object
+          required: [exists, guidance]
+          properties:
+            exists: { type: boolean }
+            status: { type: string }
+            amount: { type: number }
+            providerApprovedAt: { type: [string, 'null'], format: date-time }
+            verifiedAt: { type: [string, 'null'], format: date-time }
+            guidance: { type: string, description: Never prompts a second payment while uncertain }
+        documents:
+          type: array
+          items:
+            type: object
+            required: [documentType, status, guidance]
+            properties:
+              documentType: { type: string }
+              status: { type: string }
+              guidance: { type: string }
+        centralSync:
+          type: object
+          description: Reported separately — pending central sync does not mean the submission failed.
+          required: [pending, sent, lastSentAt, guidance]
+          properties:
+            pending: { type: integer, minimum: 0 }
+            sent: { type: integer, minimum: 0 }
+            lastSentAt: { type: [string, 'null'], format: date-time }
+            guidance: { type: string }
+        timeline:
+          type: array
+          maxItems: 200
+          items:
+            type: object
+            required: [at, what, result]
+            properties:
+              at: { type: string, format: date-time }
+              what: { type: string }
+              result: { type: string }
+    CancelResult:
+      type: object
+      required: [applicationId, status, cancelledAt, refundRequired, paymentId]
+      properties:
+        applicationId: { type: string, format: uuid }
+        status: { type: string, const: CANCELLED }
+        cancelledAt: { type: string, format: date-time }
+        refundRequired:
+          type: boolean
+          description: A confirmed payment exists; it is queued for a person to refund (no auto-refund).
+        paymentId: { type: [string, 'null'], format: uuid }
+    RetentionFloor:
+      oneOf:
+        - type: object
+          required: [kind, days, basis]
+          properties:
+            kind: { const: LEGAL }
+            days: { type: integer, minimum: 1 }
+            basis: { type: string }
+        - type: object
+          required: [kind, basis]
+          properties:
+            kind: { const: INSTITUTION }
+            basis: { type: string }
+        - type: object
+          required: [kind, basis]
+          properties:
+            kind: { const: IMMUTABLE }
+            basis: { type: string }
+    RetentionCategory:
+      type: object
+      required: [label, anchor, floor, purge, personal]
+      properties:
+        label: { type: string }
+        anchor: { type: string, enum: [CYCLE_CLOSED, EVENT_TIME] }
+        floor: { $ref: '#/components/schemas/RetentionFloor' }
+        purge:
+          type: string
+          enum: [CONTENT, OBJECT, NONE]
+          description: CONTENT clears content but keeps the row (the audit chain references it); OBJECT deletes the file and keeps its hash.
+        personal: { type: boolean }
+    RetentionPlan:
+      type: object
+      required: [cycleId, cycleClosesAt, configVersion, configured, problems, items, executes, generatedAt]
+      properties:
+        cycleId: { type: string, format: uuid }
+        cycleClosesAt: { type: string, format: date-time }
+        configVersion: { type: [string, 'null'] }
+        configured: { type: boolean }
+        problems:
+          type: array
+          items:
+            type: object
+            required: [category, message]
+            properties:
+              category: { type: string }
+              message: { type: string }
+        items:
+          type: array
+          items:
+            type: object
+            required: [code, label, floor, purge, days, dueAt, status, affected]
+            properties:
+              code: { type: string }
+              label: { type: string }
+              floor: { $ref: '#/components/schemas/RetentionFloor' }
+              purge: { type: string, enum: [CONTENT, OBJECT, NONE] }
+              days: { type: [integer, 'null'] }
+              dueAt: { type: [string, 'null'], format: date-time }
+              status: { type: string, enum: [UNSET, RETAINED, DUE, DUE_BUT_CHAINED, IMMUTABLE] }
+              affected: { type: [integer, 'null'], description: Counted only when DUE }
+        executes: { type: boolean, const: false, description: The plan never deletes anything }
+        generatedAt: { type: string, format: date-time }
+    CircuitSnapshot:
+      type: object
+      required: [name, state, consecutiveFailures, failureThreshold, openedAt, retryAfterMs, lastFailure]
+      properties:
+        name: { type: string }
+        state: { type: string, enum: [CLOSED, OPEN, HALF_OPEN] }
+        consecutiveFailures: { type: integer, minimum: 0 }
+        failureThreshold: { type: integer, minimum: 1 }
+        openedAt: { type: [string, 'null'], format: date-time }
+        retryAfterMs: { type: integer, minimum: 0 }
+        lastFailure: { type: [string, 'null'] }
+    ProbeResult:
+      type: object
+      required: [service, status, time]
+      properties:
+        service: { type: string }
+        status: { type: string, const: ok }
+        time: { type: string, format: date-time }
+    ApplicationSummary:
+      type: object
+      description: Central summary row. No personal data; the submission of record is the university DB.
+      required: [universityId, applicationId, admissionYear, admissionTypeCode, departmentCode,
+        status, applicationNumber, submittedAt, lastSyncedAt]
+      properties:
+        universityId: { type: string }
+        applicationId: { type: string }
+        admissionYear: { type: integer }
+        admissionTypeCode: { type: string }
+        departmentCode: { type: string }
+        status: { type: string }
+        applicationNumber: { type: [string, 'null'] }
+        submittedAt: { type: [string, 'null'], format: date-time }
+        lastSyncedAt: { type: string, format: date-time }
     Problem:
       type: object
       required: [type, title, status, code, traceId]

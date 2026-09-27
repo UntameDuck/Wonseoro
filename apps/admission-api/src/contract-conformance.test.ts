@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it } from 'node:test';
 import {
@@ -53,6 +53,66 @@ function openApiEnum(anchor: string): string[] {
   const m = after.match(/enum: \[([^\]]+)\]/);
   assert.ok(m?.[1], `${anchor} 뒤에 enum 이 없습니다`);
   return m[1].split(',').map((v) => v.trim());
+}
+
+/**
+ * 계약에 두지 않기로 한 경로. 이유 없이 늘리지 않는다.
+ */
+const CONTRACT_EXEMPT = new Map<string, string>([
+  // 공통원서 저장 — M2 개발 편의용 통합 엔드포인트. 지원자용 공통원서 API 는 따로 연다 (D-17)
+  ['POST /internal/v1/profiles', 'dev convenience'],
+  // relay 시험·운영 수동 트리거. 외부 계약이 아니다
+  ['POST /internal/v1/sync/drain', 'ops trigger'],
+]);
+
+/** 컨트롤러 소스를 훑어 구현된 경로를 모은다. 데코레이터 순서 그대로 읽는다. */
+function implementedRoutes(): Array<{ method: string; path: string; file: string }> {
+  const roots = ['apps/admission-api/src', 'apps/central-api/src', 'apps/event-relay/src'];
+  const routes: Array<{ method: string; path: string; file: string }> = [];
+  for (const root of roots) {
+    for (const file of tsFiles(resolve(ROOT, root))) {
+      const src = readFileSync(file, 'utf8');
+      if (!src.includes('@Controller(')) continue;
+      let prefix = '';
+      const re = /@Controller\(\s*(?:'([^']*)')?\s*\)|@(Get|Post|Patch|Put|Delete)\(\s*(?:'([^']*)')?\s*\)/g;
+      for (const m of src.matchAll(re)) {
+        if (m[0].startsWith('@Controller')) {
+          prefix = m[1] ?? '';
+          continue;
+        }
+        const path = '/' + [prefix, m[3] ?? ''].filter(Boolean).join('/').replace(/:(\w+)/g, '{$1}');
+        routes.push({ method: m[2]!.toUpperCase(), path, file: file.slice(ROOT.length + 1) });
+      }
+    }
+  }
+  return routes;
+}
+
+function tsFiles(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = resolve(dir, entry.name);
+    if (entry.isDirectory()) out.push(...tsFiles(full));
+    else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts')) out.push(full);
+  }
+  return out;
+}
+
+/** paths 아래 `  /경로:` 블록들을 [경로, 메서드, 오퍼레이션 본문] 으로 쪼갠다. */
+function openApiOperations(): Array<[string, string, string]> {
+  const paths = OPENAPI.slice(OPENAPI.indexOf('\npaths:\n'), OPENAPI.indexOf('\ncomponents:\n'));
+  const ops: Array<[string, string, string]> = [];
+  for (const block of paths.split(/\n(?=  \/)/).slice(1)) {
+    const path = block.slice(2, block.indexOf(':\n'));
+    for (const op of block.split(/\n(?=    (?:get|post|patch|put|delete):\n)/).slice(1)) {
+      ops.push([path, op.slice(4, op.indexOf(':')), op]);
+    }
+  }
+  return ops;
+}
+
+function openApiHas(method: string, path: string): boolean {
+  return openApiOperations().some(([p, m]) => p === path && m === method.toLowerCase());
 }
 
 describe('계약 적합성 — DDL (k-admission-postgresql-ddl.txt)', () => {
@@ -143,6 +203,28 @@ describe('계약 적합성 — OpenAPI (k-admission-openapi.yaml)', () => {
   it('Draft 수정은 merge-patch 이고 If-Match 를 요구한다', () => {
     assert.match(OPENAPI, /application\/merge-patch\+json/);
     assert.match(OPENAPI, /name: If-Match\s*\n\s*required: true/);
+  });
+
+  it('구현된 모든 경로가 계약에 있다 — 코드가 먼저 앞서가면 여기서 깨진다', () => {
+    const missing = implementedRoutes()
+      .filter((r) => !CONTRACT_EXEMPT.has(`${r.method} ${r.path}`))
+      .filter((r) => !openApiHas(r.method, r.path))
+      .map((r) => `${r.method} ${r.path}  (${r.file})`);
+    assert.deepEqual(missing, [], `계약(OpenAPI)에 없는 경로:\n${missing.join('\n')}`);
+  });
+
+  it('외부 콜백 말고는 모든 mutation 이 Idempotency-Key 를 요구한다 (전역 인터셉터와 같은 규칙)', () => {
+    const lacking: string[] = [];
+    for (const [path, method, op] of openApiOperations()) {
+      if (!['post', 'patch', 'put', 'delete'].includes(method)) continue;
+      if (op.includes('x-kadmission-external-callback: true')) continue;
+      // 중앙 호스트 경로는 admission-api 인터셉터 밖이다.
+      if (op.includes('tags: [Central]')) continue;
+      if (!op.includes("$ref: '#/components/parameters/IdempotencyKey'")) {
+        lacking.push(`${method.toUpperCase()} ${path}`);
+      }
+    }
+    assert.deepEqual(lacking, []);
   });
 
   it('Finalize 는 재시도 시 200, 신규 시 201 을 반환한다', () => {
