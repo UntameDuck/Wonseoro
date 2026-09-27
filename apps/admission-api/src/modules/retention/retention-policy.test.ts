@@ -18,6 +18,21 @@ describe('보존 정책 검증 (v1.1 §A15)', () => {
     assert.match(problems[0]!.message, /730/);
   });
 
+  it('접수 원서는 10년보다 짧게 정할 수 없다 — 입시관리 기록물 (D-38)', () => {
+    const problems = validateRetention({ ...VALID_RETENTION, APPLICATION_SUBMITTED: { days: 1825 } });
+    assert.deepEqual(problems.map((p) => p.category), ['APPLICATION_SUBMITTED']);
+    assert.match(problems[0]!.message, /3650/);
+  });
+
+  it('결제·동의 기록은 정합성 규칙으로 접수 원서의 10년을 따라간다', () => {
+    const problems = validateRetention({
+      ...VALID_RETENTION,
+      PAYMENT_RECORD: { days: 1825 },
+      CONSENT_RECORD: { days: 1825 },
+    });
+    assert.deepEqual(problems.map((p) => p.category).sort(), ['CONSENT_RECORD', 'PAYMENT_RECORD']);
+  });
+
   it('빠진 항목을 기본값으로 채우지 않는다 — 명시해야 한다', () => {
     const { DOCUMENT_FILE: _omit, ...rest } = VALID_RETENTION;
     assert.deepEqual(codes(rest), ['DOCUMENT_FILE']);

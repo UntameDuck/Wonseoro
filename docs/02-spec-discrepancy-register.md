@@ -132,7 +132,8 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **딸려 나온 것** | 감사 액션 `APPLICATION_CANCELLED` 가 §9 목록에 없었다. `audit_event.action` 에 CHECK 가 없어 저장은 되지만 계약에는 추가가 필요하다. 취소 API 경로도 OpenAPI 에 없다 |
 | **저장소 반영** | ✅ `application-state.ts` 전이·헬퍼 · `modules/cancellation/` · 대조 8번 검사 · 통합 테스트 12종 |
 | **노션 반영** | ⬜ §03 첨부 yaml 교체(cancel) — 저장소 yaml v1.2.0 ✅ (2026-09-27) · ✅ §03 본문 cancel (2026-09-27) · ✅ v1.0 §5.6 접수 전 취소 전이 (2026-09-27) · ✅ v1.0 §9 APPLICATION_CANCELLED (2026-09-27) · **접수 후 취소를 별도 레코드로 둘지 결정** |
-| **상태** | 🟡 판정완료 — 노션 반영 대기 (접수 후 취소 설계는 여전히 열려 있다) |
+| **결정 (2026-09-27)** | **접수 후 취소는 별도 레코드로 두지 않는다 — 409 유지.** 대학입학전형기본사항: "접수된 원서의 취소는 원칙적으로 불가", '접수된 원서' = 수험번호가 부여된 원서. 전형료 반환은 「고등교육법 시행령」 제42조의3 사유(과오납·대학 귀책·천재지변·질병/사고 입원·사망)로만 — 접수 원장을 두고 **결제 쪽 반환 기록**으로 다룬다(실 PG, T-M5-06). 접수 전 취소(PAID 포함)는 수험번호가 없으므로 현행 규정과 충돌하지 않는다 |
+| **상태** | 🟡 결정 완료 — 노션 반영 대기 (§03 첨부 yaml 교체) |
 
 ---
 
@@ -264,7 +265,8 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **저장 위치 결정** | v1.0 §5 가 "공통원서는 **Control Plane 과 분리된** Applicant Common Profile Vault 에서 관리한다"고 명시한다. 따라서 Sync Gateway 의 집계 DB(`kadmission_central`)와 **같은 스키마에 두지 않는다.** 별도 스키마 `kadmission_vault` 를 쓴다 |
 | **운영 시** | 별도 DB 인스턴스 + 자체 KMS 로 분리한다. 한 스키마에 두면 §8.3 의 "Vault 가 새로운 개인정보 집중 위험이 되지 않도록 통제"가 깨진다 |
 | **노션 반영** | ⬜ Vault API 계약을 §03 또는 §10 에 추가. 저장소 yaml v1.2.0 에 현재 형태로 적었다 (2026-09-27). 요청/응답 형태와 동의 범위 전달 방식을 정해야 한다 |
-| **상태** | 🟡 판정완료 — 계약 추가 대기 |
+| **결정 (2026-09-27)** | **현재 형식으로 확정** — `requestedFields ∩ 동의` 만 내보내고 나머지는 `withheldFields` 로 명시. 보강 1건: 대학이 제3자 제공 동의(받는 자·목적·항목·보유기간, 개인정보보호법 제17조)를 기록할 수 있게 응답에 동의 버전을 싣는다 — 중앙 Vault 동의 모델 확장이 필요해 M5(Vault 분리)와 함께 |
+| **상태** | 🟡 결정 완료 — 노션 반영 대기 (§10 또는 §03) |
 
 ---
 
@@ -351,7 +353,8 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **추가 결함** | 같은 테이블에 **`created_at` 도 없다.** 다른 모든 테이블에는 있다. 생성 순서를 알 수 없어 이력 조회를 승인 시각으로 정렬해야 한다. 승인 전 초안은 정렬 기준이 아예 없다 |
 | **제안** | `deadline_policy` 에도 `status varchar(24) CHECK (status IN ('DRAFT','APPROVED','ACTIVE','RETIRED'))` 와 `created_at timestamptz NOT NULL DEFAULT now()` 를 두고 승인자 컬럼을 nullable 로 바꾼다. 대신 D-21 처럼 `CHECK (status <> 'ACTIVE' OR (승인자 둘 다 있고 서로 다름))` 로 막는다 |
 | **노션 반영** | ⬜ §02 첨부 DDL 수정 — 스키마 변경(status·created_at 추가, 승인자 nullable) 제안이라 먼저 확인 필요 |
-| **상태** | 🟡 판정완료 — DDL 변경 제안 |
+| **결정 (2026-09-27)** | **채택** — `status`·`created_at` 추가, 승인자 nullable + ACTIVE 는 서로 다른 두 승인자 CHECK. `DRAFT:` 접두사는 DB 가 강제하지 못한다. D-29 와 같은 §02 첨부 DDL 교체 때 함께 반영 |
+| **상태** | 🟡 결정 완료 — 저장소 마이그레이션·노션 반영 대기 |
 
 ---
 
@@ -409,7 +412,8 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **함께 결정** | `applicantToken` 없는 요청은 400 이다. 빈 목록을 주면 "접수된 원서가 없다"로 읽혀 지원자가 재접수를 시도한다 |
 | **저장소 반영** | ✅ `packages/contracts/src/events.ts` (optional `subjectRef`) · `infra/db/central/0001_init.sql` (`subject_ref` + 인덱스) · sync-gateway upsert · dashboard 필터 |
 | **노션 반영** | ⬜ §04 이벤트 스키마와 §10 §9 Dashboard 계약에 반영. **중앙에 가명 식별자를 두는 결정이라 §A3 과 함께 재검토해야 한다** |
-| **상태** | 🟡 저장소 해소 — 노션 확인 필요 (설계 결정이 걸려 있다) |
+| **결정 (2026-09-27)** | **둔다 — 현행 유지.** 통합 조회는 참조 없이 성립하지 않고, 참조는 목적 키 HMAC(D-39)이라 Vault 와 조인되지 않는다. 현행 복수지원 위반 검색은 대교협이 대학 자료를 직접 받아 대조하는 구조라, 중앙에 가명 참조만 두는 쪽이 집중도가 낮다. §01 A12 에 적은 형식 그대로 간다 |
+| **상태** | 🟡 결정 완료 — 노션 반영 대기 (§04 `subjectRef`) |
 
 ---
 
@@ -440,7 +444,9 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **⚠️ 주의** | 이것은 canonical DDL 의 제약을 **약화**하는 변경이다. 다른 항목(D-21·D-25)처럼 덧붙이는 것이 아니다. 노션 확인이 특히 필요하다 |
 | **저장소 반영** | ✅ `0002_integrity_constraints.sql` · `application.repository.ts` 의 `ON CONFLICT` 와 조회 조건 |
 | **노션 반영** | ⬜ §02 첨부 DDL 의 `application` 자연키를 부분 유니크로 변경 |
-| **상태** | 🟡 저장소 해소 — 노션 확인 필요 (제약 약화 변경) |
+| **결정 (2026-09-27)** | **채택하되 키를 고친다.** 취소 원서 제외는 맞다(결제 전 삭제·재작성은 현행 관행). 그러나 키에 `department_id` 가 있어 **같은 전형에 모집단위만 다른 유효 원서를 둘 가질 수 있었다** — 대학입학전형기본사항 "하나의 전형에서는 하나의 모집단위에만 지원할 수 있음" 위반. 키를 `(cycle_id, applicant_id, admission_type_id) WHERE status <> 'CANCELLED'` 로 바꾼다. 다른 모집단위로 생성·전형 변경 시 409 `ONE_DEPARTMENT_PER_ADMISSION_TYPE` |
+| **저장소 반영 (2026-09-27)** | ✅ `0005_one_department_per_admission_type.sql` · `application.repository.ts` · `db:verify` 19 · `natural-key.integration.test.ts` 4종 |
+| **상태** | 🟡 결정·저장소 반영 완료 — 노션 반영 대기 (§02 첨부 DDL) |
 
 ---
 
@@ -454,7 +460,8 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **이번에 한 선택** | Freeze 를 **저장소 없이** 만들었다. 마감 정책의 마감시각에서 구간을 계산하고, 해제 경로를 두지 않는다. 필요해 보이는 해제 상황(마감 연장)은 `deadline_policy` 의 일이라 이 잠금에 걸리지 않는다 |
 | **판정** | 지금은 필요 없다. 다만 **문서와 DDL 이 어긋나 있는 것은 사실**이므로 둘 중 하나를 맞춰야 한다 — 테이블을 추가하거나, 엔티티 목록에서 빼거나 |
 | **노션 반영** | ⬜ §02 ERD 와 첨부 DDL 중 어느 쪽이 맞는지 확인 |
-| **상태** | 🟡 판정완료 — 확인 대기 |
+| **결정 (2026-09-27)** | **DDL 이 맞다 — ERD·엔티티 목록에서 `SystemConfig` 를 뺀다.** Freeze 는 저장소 없이 계산되고 운영 스위치를 쓰는 곳이 없다. 필요해지면 그때 테이블과 승인 절차를 함께 설계한다 |
+| **상태** | 🟡 결정 완료 — 노션 반영 대기 (§02 ERD) |
 
 ---
 
@@ -490,7 +497,8 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **계약 추가** | `getSyncStatus` 응답에 `circuit` (optional, §A16 상 호환) · `GET /healthz/dependencies` (probe 계열이라 OpenAPI 대상인지 확인 필요) |
 | **저장소 반영** | ✅ `server-kit/circuit-breaker.ts` 외 |
 | **노션 반영** | ⬜ §03 첨부 yaml 교체 — 저장소 yaml v1.2.0 에 두 항목 ✅ (2026-09-27) · ✅ §01 C8 의존성별 끊김 규칙 (2026-09-27) |
-| **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
+| **결정 (2026-09-27)** | **계약에 넣는다** — `Ops` 태그, 외부 Ingress 비노출. M4 Helm probe 가 이 경로에 기대므로 계약이 있어야 한다. 저장소 yaml v1.2.0 반영 |
+| **상태** | 🟡 결정·저장소 반영 완료 — 노션 반영 대기 (§03 첨부 yaml 교체) |
 
 ---
 
@@ -590,7 +598,10 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **계약 추가** | `GET /admin/v1/retention/matrix` · `GET /admin/v1/retention/plan` · Config `retention` 섹션 |
 | **저장소 반영** | ✅ `contracts/retention.ts` · `modules/retention/` · Config 검증·Diff |
 | **노션 반영** | ⬜ v1.0 §9 에 Retention Matrix 표 · ✅ §02 파기 = 내용 제거 (2026-09-27) |
-| **상태** | 🟡 판정완료 — 하한값 확인 대기 |
+| **결정 (2026-09-27)** | **접수 원서 10년 하한(LEGAL 3650).** 대학입학전형기본사항이 입시 기록물을 「공공기록물 관리에 관한 법률」·국가기록원 「대학 기록물 보존기간 책정기준 가이드」(2021)에 따라 보존하라고 하고, 가이드의 '입시관리업무' 단위과제가 **10년**이다. 결제·동의 기록은 기존 정합성 규칙으로 10년을 따라간다. 관리자 접속기록 2년 확인 — 「개인정보의 안전성 확보조치 기준」 제8조: 1년 이상, 고유식별정보·민감정보를 처리하거나 5만 명 이상이면 2년 이상 |
+| **남긴 것** | 서류·신원은 접수·미접수가 한 항목이다. 여기에 10년을 걸면 미접수자 정보까지 10년 붙잡힌다(개인정보보호법 제21조 — 목적 달성 시 지체 없이 파기). **항목을 접수·미접수로 나눈 뒤** 접수분에 10년을 건다 |
+| **저장소 반영 (2026-09-27)** | ✅ `contracts/retention.ts` · 시험 2종 |
+| **상태** | 🟡 결정·저장소 반영 완료 — 서류·신원 항목 분리 대기, 노션 반영 대기 (v1.0 §9 표) |
 
 ---
 
@@ -638,6 +649,19 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **남은 것** | 슈퍼유저가 트리거를 일부러 끄는 것은 DB 안에서 막을 수 없다 → WORM·Object Lock(M5). 중앙 DB(`central`)도 아직 슈퍼유저 하나 — 같은 방식으로 M5 |
 | **노션 반영** | ✅ §06 DB 역할 (2026-09-27) · ✅ §02 역할·트리거 (2026-09-27) |
 | **상태** | 🟢 CLOSED — 저장소·노션 반영 (2026-09-27). WORM 물리 분리는 M5 |
+
+---
+
+## D-42. 현행 원서접수는 "결제 = 접수" 인데 우리는 결제 뒤 제출을 따로 누른다 🔴
+
+| | |
+|---|---|
+| **발견** | 2026-09-27 (결정 8건 근거 조사 — 현행 원서접수 관행 확인) |
+| **충돌** | 현행 대입 원서접수는 **전형료 결제를 마치면 곧 접수 완료**다 — 결제 후 수정·취소 불가, 수험번호 부여. D-40 은 "결제가 확인돼도 자동 Finalize 하지 않는다 — 제출은 지원자의 의사 표시다" 로 정했다. README 의 지원자 여정은 "전형료 결제 및 **자동 접수 완료**" 라고 적혀 있어 D-40 과도 어긋난다 |
+| **위험** | 현행에 익숙한 지원자는 결제 후 창을 닫는다. 그러면 원서는 **PAID 로 마감을 넘긴다** — 돈은 냈는데 접수는 안 된, 2026년 장애 구제 신청과 같은 종류의 분쟁이다. Self-check 가 "최종제출이 남았습니다" 를 보여줘도 지원자가 다시 열지 않으면 소용없다 |
+| **제안** | "결제하기" 버튼을 **제출 의사 표시**로 정의하고(버튼 옆에 "결제가 확인되면 접수가 완료되며 이후 취소할 수 없습니다" 고지 — 현행 원서접수 안내와 같은 취지), 결제 확인(콜백·재확인 워커) 시 서버가 Finalize 한다. Finalize 검증(마감·필수 서류)에서 떨어지면 PAID 로 남기고 Self-check·대조가 드러낸다. 마감 판정 모드(`deadline_policy.mode` 의 `PAYMENT_APPROVED_BEFORE_DEADLINE`)와 함께 정해야 한다 |
+| **필요한 결정** | ① 자동 Finalize 를 할지 ② 한다면 결제 전 동의 문구와 마감 모드 |
+| **상태** | 🔴 OPEN — 결정 대기 (D-40 판정을 뒤집는 제안) |
 
 ---
 

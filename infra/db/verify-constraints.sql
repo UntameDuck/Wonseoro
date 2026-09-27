@@ -377,4 +377,37 @@ BEGIN
   ASSERT blocked AND aud, '감사 기록 트리거 또는 감사 역할 권한이 없다';
 END $$;
 
+-- ── 19. 한 전형에는 모집단위 하나 · 취소 뒤 재지원 허용 (D-29, 0005) ─────
+-- 대학입학전형기본사항 — "하나의 전형에서는 하나의 모집단위에만 지원할 수 있음"
+DO $$
+DECLARE other_dept boolean := false; reapplied boolean := false;
+        dept2 uuid := gen_random_uuid(); app2 uuid := gen_random_uuid();
+BEGIN
+  INSERT INTO department (id, cycle_id, code, name, quota)
+  VALUES (dept2, '11111111-1111-1111-1111-111111111111', 'VERIFY-EE', '검증용 전자공학과', 10);
+
+  -- 55555555 (EARLY · CSE) 가 유효한 채로 같은 전형 다른 모집단위
+  BEGIN
+    INSERT INTO application (id, cycle_id, applicant_id, admission_type_id, department_id, status)
+    VALUES (app2, '11111111-1111-1111-1111-111111111111', '4a4a4a4a-4444-4444-4444-444444444444',
+            '22222222-2222-2222-2222-222222222222', dept2, 'DRAFT');
+  EXCEPTION WHEN unique_violation THEN other_dept := true;
+  END;
+
+  -- 기존 원서를 취소하면 같은 전형에 다시 지원할 수 있다
+  UPDATE application SET status = 'CANCELLED' WHERE id = '55555555-5555-5555-5555-555555555555';
+  BEGIN
+    INSERT INTO application (id, cycle_id, applicant_id, admission_type_id, department_id, status)
+    VALUES (app2, '11111111-1111-1111-1111-111111111111', '4a4a4a4a-4444-4444-4444-444444444444',
+            '22222222-2222-2222-2222-222222222222', dept2, 'DRAFT');
+    reapplied := true;
+  EXCEPTION WHEN unique_violation THEN reapplied := false;
+  END;
+
+  RAISE NOTICE '19. 한 전형 한 모집단위 · 취소 뒤 재지원 허용: %',
+    CASE WHEN other_dept AND reapplied THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT other_dept, '같은 전형에 다른 모집단위로 유효한 원서가 둘 생겼다';
+  ASSERT reapplied, '취소한 뒤 같은 전형에 다시 지원할 수 없다';
+END $$;
+
 ROLLBACK;

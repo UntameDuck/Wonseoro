@@ -66,10 +66,12 @@ export class ApplicationRepository {
    * 원서 생성.
    *
    * 생성의 멱등성은 idempotency_record 가 아니라 **자연키**가 보장한다.
-   * UNIQUE (cycle_id, applicant_id, admission_type_id, department_id) WHERE status <> 'CANCELLED'
-   * 같은 지원자가 같은 전형·모집단위에 **유효한** 원서를 둘 가질 수 없다. (D-12, D-29)
+   * UNIQUE (cycle_id, applicant_id, admission_type_id) WHERE status <> 'CANCELLED'
+   * 같은 지원자가 한 전형에 **유효한** 원서를 둘 가질 수 없다 — 모집단위가 달라도.
+   * "하나의 전형에서는 하나의 모집단위에만 지원" (대학입학전형기본사항, D-12, D-29)
    *
-   * 따라서 재시도는 기존 원서를 그대로 돌려준다. 오류가 아니다.
+   * 따라서 같은 모집단위로의 재시도는 기존 원서를 그대로 돌려준다. 오류가 아니다.
+   * 다른 모집단위면 409 다 — 기존 원서를 돌려주면 고른 모집단위로 만들어진 줄 안다.
    */
   async create(input: CreateApplicationInput): Promise<{ row: ApplicationRow; created: boolean }> {
     // ⚠️ 중앙 호출은 트랜잭션 **밖**에서 한다. 락 유지 시간이 중앙 지연에 묶이면 안 된다.
@@ -93,8 +95,8 @@ export class ApplicationRepository {
            (id, cycle_id, applicant_id, admission_type_id, department_id, status)
          VALUES ($1,$2,$3,$4,$5,'DRAFT')
          -- 취소된 원서는 자연키에서 빠진다. 착오로 취소한 지원자가 마감 전에
-         -- 다시 지원할 수 있어야 한다. (D-29 / 0002 마이그레이션)
-         ON CONFLICT (cycle_id, applicant_id, admission_type_id, department_id)
+         -- 다시 지원할 수 있어야 한다. (D-29 / 0002 · 0005 마이그레이션)
+         ON CONFLICT (cycle_id, applicant_id, admission_type_id)
            WHERE status <> 'CANCELLED'
          DO NOTHING`,
         [id, input.cycleId, input.applicantId, input.admissionTypeId, input.departmentId],
@@ -104,10 +106,12 @@ export class ApplicationRepository {
         cycleId: input.cycleId,
         applicantId: input.applicantId,
         admissionTypeId: input.admissionTypeId,
-        departmentId: input.departmentId,
       });
 
       const created = inserted.rowCount === 1;
+      if (!created && row.departmentId !== input.departmentId) {
+        throw ProblemException.oneDepartmentPerAdmissionType();
+      }
       if (created) {
         // 동의된 공통원서 필드를 시점 Snapshot 으로 복사한다.
         // 이후 중앙 Profile 이 바뀌어도 이 원서는 바뀌지 않는다. (v1.1 §10 §3)
@@ -197,7 +201,8 @@ export class ApplicationRepository {
         );
       }
 
-      const updated = await client.query(
+      const updated = await client
+        .query(
         `UPDATE application
             SET admission_type_id = COALESCE($3, admission_type_id),
                 department_id     = COALESCE($4, department_id),
@@ -211,7 +216,14 @@ export class ApplicationRepository {
           input.admissionTypeId ?? null,
           input.departmentId ?? null,
         ],
-      );
+      )
+        .catch((err: unknown) => {
+          // 전형을 바꿨는데 그 전형에 유효한 원서가 이미 있다. 500 이 아니라 규칙 위반이다. (D-29)
+          if (isUniqueViolation(err, 'uq_application_active_natural_key')) {
+            throw ProblemException.oneDepartmentPerAdmissionType();
+          }
+          throw err;
+        });
 
       if (updated.rowCount === 0) {
         // If-Match 로 받은 버전이 최신이 아니다. 사용자의 입력을 덮어쓰지 않는다.
@@ -265,16 +277,15 @@ export class ApplicationRepository {
       cycleId: string;
       applicantId: string;
       admissionTypeId: string;
-      departmentId: string;
     },
   ): Promise<ApplicationRow> {
     const { rows } = await client.query<Record<string, unknown>>(
       // 취소된 원서는 제외한다. 포함하면 재지원 직후 옛 취소 건이 돌아올 수 있다.
       `SELECT ${SELECT_COLS} ${FROM_APPLICATION}
         WHERE a.cycle_id = $1 AND a.applicant_id = $2
-          AND a.admission_type_id = $3 AND a.department_id = $4
+          AND a.admission_type_id = $3
           AND a.status <> 'CANCELLED'`,
-      [key.cycleId, key.applicantId, key.admissionTypeId, key.departmentId],
+      [key.cycleId, key.applicantId, key.admissionTypeId],
     );
     const row = rows[0];
     if (!row) throw ProblemException.retryable('원서를 생성하지 못했습니다.');
@@ -305,4 +316,9 @@ function vaultApplicationRef(cycleId: string, applicantId: string): string {
   return createHash('sha256')
     .update(`${CENTRAL_ID_SALT}|vault-snapshot|${cycleId}|${applicantId}`)
     .digest('hex');
+}
+
+function isUniqueViolation(err: unknown, constraint: string): boolean {
+  const e = err as { code?: string; constraint?: string } | null;
+  return e?.code === '23505' && e.constraint === constraint;
 }

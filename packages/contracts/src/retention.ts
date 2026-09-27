@@ -61,7 +61,16 @@ export const RETENTION_CATEGORIES = {
   APPLICATION_SUBMITTED: {
     label: '접수된 원서 본문과 접수 원장',
     anchor: 'CYCLE_CLOSED',
-    floor: INSTITUTION,
+    // 대학입학전형기본사항이 입시 기록물을 공공기록물법·국가기록원 가이드에 따라 보존하라고 하고,
+    // 가이드의 "입시관리업무" 단위과제가 10년이다. 결제·동의 기록은 아래 정합성 규칙으로 따라온다.
+    // 서류·신원은 접수·미접수가 한 항목이라 여기 하한을 걸면 미접수자 정보까지 10년 붙잡힌다
+    // (개인정보보호법 제21조 — 목적 달성 시 파기). 항목을 나눈 뒤에 건다. (D-38)
+    floor: {
+      kind: 'LEGAL',
+      days: 3650,
+      basis:
+        '공공기록물 관리에 관한 법률 · 대학 기록물 보존기간 책정기준 가이드(국가기록원, 2021) 입시관리업무 10년 · 대학입학전형기본사항',
+    },
     purge: 'CONTENT',
     personal: true,
   },

@@ -108,6 +108,22 @@ export class ProblemException extends HttpException {
     });
   }
 
+  /**
+   * 같은 전형에 다른 모집단위로 유효한 원서가 이미 있다. (D-29)
+   * 대학입학전형기본사항 — "하나의 전형에서는 하나의 모집단위에만 지원할 수 있음".
+   * 기존 원서를 조용히 돌려주면 지원자는 고른 모집단위로 만들어진 줄 안다.
+   */
+  static oneDepartmentPerAdmissionType(): ProblemException {
+    return new ProblemException({
+      code: ProblemCode.ONE_DEPARTMENT_PER_ADMISSION_TYPE,
+      title: '이 전형에는 이미 작성 중인 원서가 있습니다',
+      status: 409,
+      detail:
+        '하나의 전형에는 한 모집단위에만 지원할 수 있습니다. ' +
+        '모집단위를 바꾸려면 작성 중인 원서에서 변경하거나, 그 원서를 취소한 뒤 다시 만들어 주십시오.',
+    });
+  }
+
   static alreadyFinalized(): ProblemException {
     return new ProblemException({
       code: ProblemCode.ALREADY_FINALIZED,
