@@ -89,7 +89,8 @@ T-M4-05 GitOps Pull(Argo CD/Flux) · T-M4-20~24 관측성 순서다. 각 인수�
 
 현재 PC의 Docker Desktop 4.62.0은 재기동 때
 `%LOCALAPPDATA%\Docker\run\dockerInference` 재분석 지점을 제거하지 못해 백엔드가 종료된다.
-WSL 종료·CLI 재시작으로는 복구되지 않았다. Windows 재부팅 후 Docker가 정상 기동하면 시험을 재개한다.
+WSL 종료·CLI 재시작으로는 복구되지 않았다. C: 여유 공간도 약 40MB뿐이다(실패한 kind 임시 tar는 남아 있지 않음).
+먼저 C: 공간을 확보하고 Windows 재부팅 후 Docker가 정상 기동하면 시험을 재개한다.
 중단 직전 namespace를 빠뜨린 첫 Helm 명령이 `default/univ-a` 실패 릴리스를 만들었고 제거 도중 Docker가
 멈췄다. 재부팅 뒤 `helm list -A --kube-context kind-univ-a`로 남았는지 확인해, 있으면
 `helm uninstall univ-a -n default --kube-context kind-univ-a`로 그 실패 릴리스만 제거한다. 이후 README의
