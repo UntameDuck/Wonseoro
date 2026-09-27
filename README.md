@@ -342,7 +342,7 @@ dev-folder/
 
 인증(`AUTH_MODE=dev-headers`), 실 PG 연동, 실 안티바이러스, WORM 감사 저장소 물리 분리, K-PaaS 실배포·GitOps, 대학 간 격리 시험 결과, 부하·장애 시험 실측치. **흉내 구현은 운영 모드에서 선택되면 프로세스가 기동하지 않습니다.**
 
-자세한 현황과 다음 착수 순서는 [docs/03-next-steps.md](docs/03-next-steps.md), 운영 준비 점검 내역은 [docs/04-production-readiness.md](docs/04-production-readiness.md)를 참조하십시오.
+이어받는 사람·AI는 [docs/HANDOFF.md](docs/HANDOFF.md)부터 읽습니다. 자세한 현황과 다음 착수 순서는 [docs/03-next-steps.md](docs/03-next-steps.md), 운영 준비 점검 내역은 [docs/04-production-readiness.md](docs/04-production-readiness.md)를 참조하십시오.
 
 이 문서의 성능·가용성 수치는 목표값이며 검증 결과가 아닙니다. 법률·보안·공공 클라우드 기준은 2026-09-17 설계 기준선을 바탕으로 정리했으며, 실제 도입 전 각 대학의 법적 지위와 시스템 등급에 따른 보안성 검토, 개인정보 영향평가, 법무 검토가 필요합니다.
 

@@ -4,7 +4,8 @@
 
 | 순서 | 문서 | 언제 읽나 |
 |---|---|---|
-| 0 | **[03-next-steps.md](03-next-steps.md)** | **지금 무엇을 할 차례인가.** 이어받을 때 여기부터 |
+| 0 | **[HANDOFF.md](HANDOFF.md)** | **다른 사람·AI 가 이어받을 때 가장 먼저.** 규칙·환경 함정·다음 작업 실행 방법 |
+| 0 | **[03-next-steps.md](03-next-steps.md)** | **지금 무엇을 할 차례인가.** |
 | 1 | **[01-notion-sync-protocol.md](01-notion-sync-protocol.md)** | **작업 시작 전 무조건.** 노션을 언제·어떻게 확인하고 고치는지 |
 | 2 | [00-development-plan.md](00-development-plan.md) | 전체 그림 — 7단계 구성, 역할 분담, MVP 범위, DoD |
 | 3 | [milestones/](milestones/) | 지금 하는 단계의 세부 태스크 |

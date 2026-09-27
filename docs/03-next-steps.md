@@ -4,6 +4,7 @@
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
+> **이어받는 사람·AI 는 [HANDOFF.md](HANDOFF.md) 부터** — 규칙·환경 함정·다음 작업의 실행 방법을 한 장에 모았다.
 
 ---
 
