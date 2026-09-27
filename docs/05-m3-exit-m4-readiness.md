@@ -24,7 +24,7 @@
 | **운영계정으로 Audit 삭제 불가** | ✅ DB 안 · WORM M5 | 아래 ② G2 — 앱 역할은 권한 없음, 소유자·슈퍼유저 평소 경로는 트리거가 막음 (`db:verify` 15~18) |
 | Production interactive write 경로 없음 (§B16) | 🟡 | 앱 쓰기 경로는 승인된 Admin API 뿐, 앱은 최소권한 역할로 붙는다 (G2). **슈퍼유저 break-glass 는 남는다** — 접근 통제·기록은 M5 (Vault 동적 자격증명) |
 | 노션 §01 C 8종 대조 | ✅ 대조 완료 | 아래 표 |
-| 바뀐 정책 구조를 노션에 반영 | 🔧 **§01 ✅ · §02 본문 ✅**, 43개 수정 지점 남음 | ③ · 부록 |
+| 바뀐 정책 구조를 노션에 반영 | 🔧 **§01 ✅ · §02·§03 본문 ✅**, 43개 수정 지점 남음 (대부분 첨부 교체) | ③ · 부록 |
 | 발견한 불일치를 D-N 으로 등록 | ✅ | D-1 ~ D-41 |
 
 ### §01 C 필수 신규 기능 8종 대조
@@ -204,6 +204,7 @@ G1 → G2 순서로 구현한다 (사용자 결정). 현재 위치는 ◀ 표시
 |---|---|
 | §01 운영 리스크 | ✅ 2026-09-27 — D-31·32·33·34·35·39·40 9곳 |
 | §02 ERD·DDL | 🟡 2026-09-27 — 본문 "v1.1 구현 반영" 절 + ERD 2줄 (D-21·25·35·38·41). **첨부 DDL 교체는 D-29 확정 뒤 한 번에** |
+| §03 OpenAPI | 🟡 2026-09-27 — 본문 경로 목록 17개 추가 · 공통 요구 3줄 (D-7·16·19·20·22·24·26·28·34·35·37·39·40, T-M3-02). **첨부 yaml 은 아직** — 저장소 `packages/contracts/openapi/k-admission.v1.yaml` 을 먼저 맞추고 올린다 |
 
 <!-- 자동 생성: 불일치 대장의 "노션 반영 ⬜" 항목 34건에서 43개 수정 지점 -->
 
@@ -235,37 +236,35 @@ G1 → G2 순서로 구현한다 (사용자 결정). 현재 위치는 ◀ 표시
 - **D-35** §02 첨부 DDL 에 `activation_record`(D-29 확정 뒤 첨부 교체 때 함께)  
   <sub>마감·설정을 "누가 언제 왜 적용했는지" 담을 자리가 DDL 에 없다</sub>
 
-### §03 OpenAPI — 15건
+### §03 OpenAPI — 14건
 
-- **D-7** §03 OpenAPI 에 `POST /applications/{id}/cancel`  
+- **D-7** §03 첨부 yaml 갱신(cancel)  
   <sub>Application 상태에 CANCELLED 가 있으나 상태머신에 정의가 없다</sub>
-- **D-16** §03 Applicant API 목록과 첨부 `k-admission-openapi.yaml` 에 추가해야 한다  
+- **D-16** §03 첨부 yaml 갱신  
   <sub>Support Self-check 가 필수 기능인데 OpenAPI 에 없다</sub>
 - **D-17** Vault API 계약을 §03 또는 §10 에 추가. 요청/응답 형태와 동의 범위 전달 방식을 정해야 한다  
   <sub>Common Profile Vault 의 API 가 어디에도 정의되어 있지 않다</sub>
-- **D-19** §03 Applicant API 에 추가하고 첨부 yaml 갱신. 또는 `AdmissionType` 에 `formSchema` 를 싣는 방식 중 택일  
+- **D-19** §03 첨부 yaml 갱신(form-schema 조회 API 방식)  
   <sub>동적 폼 렌더링에 필요한 Schema 조회 API 가 없다</sub>
-- **D-20** §03 Internal API 에 추가하고 첨부 yaml 갱신  
+- **D-20** §03 첨부 yaml 갱신  
   <sub>AV 검사 워커용 내부 API 가 계약에 없다</sub>
-- **D-22** §03 과 첨부 yaml 에 추가  
+- **D-22** §03 첨부 yaml 갱신  
   <sub>Deadline Policy 에 활성화 API 가 없다</sub>
-- **D-24** §03 과 첨부 yaml 에 reason 파라미터 추가  
+- **D-24** §03 첨부 yaml 갱신(reason)  
   <sub>Evidence Package 조회에 사유 파라미터가 없다</sub>
-- **D-26** §03 과 첨부 yaml 에 추가  
+- **D-26** §03 첨부 yaml 갱신  
   <sub>Reconciliation 수동 실행 경로가 계약에 없다</sub>
-- **D-28** §03 에 소유권 규칙을 명시하고, §09 STRIDE 의 Information Disclosure 항목에 이 경로를 추가  
-  <sub>지원자 API 에 소유권 검사가 없었다 🔴</sub>
 - **D-32** §03 OpenAPI 에 위 두 항목  
   <sub>Circuit Breaker 가 열렸을 때의 규칙이 의존성마다 정해져 있지 않다</sub>
-- **D-34** §03 OpenAPI 에 operating-mode  
+- **D-34** §03 첨부 yaml 갱신(operating-mode)  
   <sub>Autonomous Mode 의 구성요소가 서로 다른 단계에 걸쳐 있다</sub>
-- **D-35** §03 OpenAPI 위 경로  
+- **D-35** §03 첨부 yaml 갱신(연장·적용 이력·공개키)  
   <sub>마감·설정을 "누가 언제 왜 적용했는지" 담을 자리가 DDL 에 없다</sub>
-- **D-37** §03 OpenAPI 공통 오류에 "본문 인코딩" 명시  
+- **D-37** §03 첨부 yaml 갱신(공통 오류)  
   <sub>깨진 UTF-8 본문이 성공 응답과 함께 저장됐다 🔴</sub>
-- **D-39** 대시보드 조회 경로(헤더)  
+- **D-39** §03 첨부 yaml 갱신(대시보드 헤더)  
   <sub>중앙의 지원자 참조가 Vault 와 조인됐고, 대학 내부 UUID 가 중앙에 갔다 🔴</sub>
-- **D-40** §03 콜백 경로  
+- **D-40** §03 첨부 yaml 갱신(콜백)  
   <sub>결제 자동 정합화가 없다 — 콜백도, 재확인도, 대조 스케줄도 🔴</sub>
 
 ### §06 보안정책 — 2건
@@ -281,6 +280,11 @@ G1 → G2 순서로 구현한다 (사용자 결정). 현재 위치는 ◀ 표시
   <sub>중앙 DB 스키마에 canonical DDL 이 없다</sub>
 - **D-39** §04 `subjectRef` 형식  
   <sub>중앙의 지원자 참조가 Vault 와 조인됐고, 대학 내부 UUID 가 중앙에 갔다 🔴</sub>
+
+### §09 STRIDE — 1건
+
+- **D-28** §09 STRIDE Information Disclosure 에 이 경로 추가  
+  <sub>지원자 API 에 소유권 검사가 없었다 🔴</sub>
 
 ### v1.0 본문 — 11건
 

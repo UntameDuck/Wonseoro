@@ -131,7 +131,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **⑤ 사유 필수** | 사유 없는 취소는 나중에 분쟁이 됐을 때 아무것도 설명하지 못한다. 다만 **중앙으로 나가는 이벤트에는 사유를 넣지 않는다** — 개인 사정이고 중앙이 알아야 할 이유가 없다 (§A3) |
 | **딸려 나온 것** | 감사 액션 `APPLICATION_CANCELLED` 가 §9 목록에 없었다. `audit_event.action` 에 CHECK 가 없어 저장은 되지만 계약에는 추가가 필요하다. 취소 API 경로도 OpenAPI 에 없다 |
 | **저장소 반영** | ✅ `application-state.ts` 전이·헬퍼 · `modules/cancellation/` · 대조 8번 검사 · 통합 테스트 12종 |
-| **노션 반영** | ⬜ v1.0 §5.6 상태 다이어그램에 취소 전이 추가 · §9 감사 액션 목록 · §03 OpenAPI 에 `POST /applications/{id}/cancel` · **접수 후 취소를 별도 레코드로 둘지 결정** |
+| **노션 반영** | ⬜ v1.0 §5.6 상태 다이어그램에 취소 전이 추가 · §9 감사 액션 목록 · §03 첨부 yaml 갱신(cancel) · ✅ §03 본문 cancel (2026-09-27) · **접수 후 취소를 별도 레코드로 둘지 결정** |
 | **상태** | 🟡 판정완료 — 노션 반영 대기 (접수 후 취소 설계는 여전히 열려 있다) |
 
 ---
@@ -249,7 +249,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **왜 중요한가** | 2026년 장애 때 지원자가 자기 상태를 확인할 길이 고객센터뿐이었다. "서버가 아는 상태"를 사용자가 직접 보는 것이 이 제품이 고치려는 지점이다 |
 | **판정** | **구현한다.** 기능 요구(§01 C7)가 계약 누락보다 우선한다 |
 | **구현 경로** | `GET /api/v1/applications/{applicationId}/self-check` |
-| **노션 반영** | ⬜ §03 Applicant API 목록과 첨부 `k-admission-openapi.yaml` 에 추가해야 한다 |
+| **노션 반영** | ⬜ §03 첨부 yaml 갱신 · ✅ §03 본문 (2026-09-27) |
 | **상태** | 🟡 판정완료 — 계약 추가 대기 |
 
 ---
@@ -292,7 +292,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **근거** | canonical OpenAPI 의 `AdmissionType` 스키마는 `id/code/name/feeAmount` 만 담는다. 추가문항 정의를 실어 보내지 않는다 |
 | **판정** | **조회 API 를 추가한다.** `GET /api/v1/applications/{applicationId}/form-schema` |
 | **왜 application 단위인가** | 스키마는 전형 × 활성 Config 버전의 조합으로 정해진다. 원서는 이미 둘 다 알고 있으므로 클라이언트가 조합을 계산할 필요가 없다 |
-| **노션 반영** | ⬜ §03 Applicant API 에 추가하고 첨부 yaml 갱신. 또는 `AdmissionType` 에 `formSchema` 를 싣는 방식 중 택일 |
+| **노션 반영** | ⬜ §03 첨부 yaml 갱신(form-schema 조회 API 방식) · ✅ §03 본문 (2026-09-27) |
 | **상태** | 🟡 판정완료 — 계약 추가 대기 |
 
 ---
@@ -305,7 +305,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **문제** | v1.0 §5.4 는 "악성코드 검사 완료 전 QUARANTINED, 통과 후 AVAILABLE" 을 규정한다. 그런데 **검사 워커가 결과를 보고할 경로가 계약에 없다.** 그러면 서류는 영원히 QUARANTINED 에 머물고, 접수 확정이 AVAILABLE 기준이므로 필수서류가 있는 전형은 접수가 끝나지 않는다 |
 | **판정** | 내부 API 를 추가한다 — `GET /internal/v1/documents/pending-scan`, `POST /internal/v1/documents/{id}/scan-result` |
 | **왜 워커가 DB 를 직접 고치지 않는가** | 서류 상태의 원장은 대학 DB 이고 상태 전이 규칙은 `admission-api` 한 곳에만 있어야 한다. 워커가 DB 를 직접 쓰면 규칙이 두 곳에 생긴다 (ADR-0004) |
-| **노션 반영** | ⬜ §03 Internal API 에 추가하고 첨부 yaml 갱신 |
+| **노션 반영** | ⬜ §03 첨부 yaml 갱신 · ✅ §03 본문 (2026-09-27) |
 | **상태** | 🟡 판정완료 — 계약 추가 대기 |
 
 ---
@@ -335,7 +335,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **충돌** | DDL `deadline_policy.activated_at` 이 존재하고 v1.1 §A2 는 "정책은 입학처 **2인 승인 후 활성화**한다"고 규정한다. 그런데 OpenAPI 에는 `POST /admin/v1/deadline-policies` 와 `.../approve` 만 있고 **activate 가 없다.** Config 쪽에는 activate 가 있다 |
 | **문제** | 승인과 활성화를 분리한 이유는 §A14 의 "활성화 예약시간" 때문이다. 승인 즉시 적용되면 마감정책이 의도치 않은 시점에 바뀐다 |
 | **판정** | `POST /admin/v1/deadline-policies/{policyId}/activate` 를 추가한다. Config 와 대칭을 맞춘다 |
-| **노션 반영** | ⬜ §03 과 첨부 yaml 에 추가 |
+| **노션 반영** | ⬜ §03 첨부 yaml 갱신 · ✅ §03 본문 (2026-09-27) |
 | **상태** | 🟡 판정완료 — 계약 추가 대기 |
 
 ---
@@ -363,7 +363,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **문제** | v1.0 §8.3 은 "민감정보 조회는 **목적·사유 입력 및 별도 Audit**" 를 요구한다. §B16 도 운영자 보정에 reason/ticket 을 요구한다. 그런데 canonical OpenAPI 의 `getEvidencePackage` 는 `applicationId` 만 받는다. **사유 없이 열람할 수 있다** |
 | **왜 중요한가** | Evidence Package 는 한 지원자의 접수 과정 전체를 담는다. 사유 없이 누구나 열어볼 수 있으면 §09 Information Disclosure 의 "운영자 과권한" 이 그대로 열린다 |
 | **판정** | `?reason=` 을 필수로 받는다. 비어 있으면 400. 열람 사실을 `ADMIN_VIEWED_PII` 감사 이벤트로 남긴다 |
-| **노션 반영** | ⬜ §03 과 첨부 yaml 에 reason 파라미터 추가 |
+| **노션 반영** | ⬜ §03 첨부 yaml 갱신(reason) · ✅ §03 본문 (2026-09-27) |
 | **상태** | 🟡 판정완료 — 계약 추가 대기 |
 
 ---
@@ -392,7 +392,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **문제** | §B18 은 "D+1 에 자동 대조" 를 규정하고 OpenAPI 는 목록 조회와 해소만 제공한다. **대조를 지금 돌리는 경로가 없다** |
 | **왜 필요한가** | 장애 대응 중에는 다음 배치를 기다릴 수 없다. SEV1 런북의 `Reconciliation` 단계(§14.3)는 즉시 실행을 전제로 한다. 배치 주기가 하루면 그 사이 운영자는 상태를 확인할 방법이 없다 |
 | **판정** | `POST /admin/v1/reconciliation/run` 추가 |
-| **노션 반영** | ⬜ §03 과 첨부 yaml 에 추가 |
+| **노션 반영** | ⬜ §03 첨부 yaml 갱신 · ✅ §03 본문 (2026-09-27) |
 | **상태** | 🟡 판정완료 — 계약 추가 대기 |
 
 ---
@@ -423,7 +423,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **왜 계약만 봐서는 안 잡히나** | OpenAPI 는 `security: [{ oidc: [] }]` 로 "인증"을 규정하지만 **인가는 규정하지 않는다.** 인증만 붙이면 로그인한 지원자 전원이 서로의 원서를 볼 수 있다. 계약이 맞아도 제품이 틀릴 수 있는 자리다 |
 | **판정** | 자원마다 소유자를 확인한다. 없는 자원과 남의 자원을 **같은 응답**으로 돌려준다 — 구분해 주면 식별자를 훑어 유효한 원서를 찾아낼 수 있다 |
 | **저장소 반영** | ✅ `common/identity/ownership.service.ts` + 전 경로 적용 · 통합 테스트 6종 |
-| **노션 반영** | ⬜ §03 에 소유권 규칙을 명시하고, §09 STRIDE 의 Information Disclosure 항목에 이 경로를 추가 |
+| **노션 반영** | ⬜ §09 STRIDE Information Disclosure 에 이 경로 추가 · ✅ §03 소유권 규칙 (2026-09-27) |
 | **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
 
 ---
@@ -525,7 +525,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **시간 기준도 둘이다** | A1 해결은 "최소 **24시간** 단절", §E 인수기준은 "**2시간** 단절" 이다. 기능 자체는 시간과 무관하게 동작하므로(Demo Gate 5), 어느 쪽을 인수기준으로 할지는 M4 장애 시험에서 정한다 |
 | **계약 추가** | `GET /api/v1/meta/operating-mode` — 공개 조회, 개인정보·운영정보 없음. 메모리의 마지막 확인 결과만 돌려준다 |
 | **저장소 반영** | ✅ `modules/operating-mode/` · 프론트 `OperatingModeBanner` |
-| **노션 반영** | ⬜ §03 OpenAPI 에 operating-mode · ✅ §01 A1 단계 표기·단절 시간 기준(24시간 설계 목표/2시간 인수시험) (2026-09-27) |
+| **노션 반영** | ⬜ §03 첨부 yaml 갱신(operating-mode) · ✅ §03 본문 (2026-09-27) · ✅ §01 A1 단계 표기·단절 시간 기준(24시간 설계 목표/2시간 인수시험) (2026-09-27) |
 | **상태** | 🟡 판정완료 — 노션 반영 대기 |
 
 ---
@@ -542,7 +542,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **남은 것** | ① 키 교체 시 옛 기록을 검증할 **검증 키 목록**이 없다 (지금은 `UNKNOWN_KEY` 로 표시) ② 서명 키 보관은 M5 Vault ③ 운영자 신원 증명은 T-M5-10 |
 | **계약 추가** | `POST /admin/v1/deadline-policies/extensions` · `GET /admin/v1/activations` · `GET /api/v1/meta/signing-keys` · activate 응답의 `activation` |
 | **저장소 반영** | ✅ `0003_signed_activation.sql` · `modules/activation/` · 마감·설정 서비스 · Evidence |
-| **노션 반영** | ⬜ §02 첨부 DDL 에 `activation_record`(D-29 확정 뒤 첨부 교체 때 함께) · §03 OpenAPI 위 경로 · ✅ §B17 연장 규칙 (2026-09-27) · ✅ §02 본문·ERD (2026-09-27) |
+| **노션 반영** | ⬜ §02 첨부 DDL 에 `activation_record`(D-29 확정 뒤 첨부 교체 때 함께) · §03 첨부 yaml 갱신(연장·적용 이력·공개키) · ✅ §03 본문 (2026-09-27) · ✅ §B17 연장 규칙 (2026-09-27) · ✅ §02 본문·ERD (2026-09-27) |
 | **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
 
 ---
@@ -571,7 +571,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **판정** | UTF-8 이 아니면 **400** 으로 거절한다 (`TextDecoder` fatal). 500 이면 서버 고장으로 알고 같은 것을 또 보낸다. 잘못된 JSON 도 400 `VALIDATION_FAILED` 로 정리했다 (전에는 status 400 에 code `INTERNAL`) |
 | **구현 주의** | Nest 가 기동 시 자기 JSON 파서를 따로 올린다. `bodyParser: false` 로 끄지 않으면 기본 동작이 되살아난다 |
 | **저장소 반영** | ✅ `common/http/strict-json.ts` · `main.ts` |
-| **노션 반영** | ⬜ §03 OpenAPI 공통 오류에 "본문 인코딩" 명시 · §06 입력 검증 |
+| **노션 반영** | ⬜ §03 첨부 yaml 갱신(공통 오류) · ✅ §03 공통 요구 (2026-09-27) · §06 입력 검증 |
 | **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
 
 ---
@@ -606,7 +606,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **D-27 과의 관계** | 가명 참조를 둔다는 결정은 유지했다. 참조를 만드는 방법만 바꿨다. D-27 이 "두지 않는다" 로 결론 나도 제거는 똑같이 쉽다 |
 | **남은 것** | 키 보관(M5 Vault) · 대학·중앙 키 배포 절차 · 중복지원 검증(v1.0 §6.2)이 필요해지면 별도 키의 `DEDUP` 목적 |
 | **저장소 반영** | ✅ `server-kit/purpose-ref.ts` · finalization · application.repository · central dashboard · frontend |
-| **노션 반영** | ⬜ §04 `subjectRef` 형식 · 대시보드 조회 경로(헤더) · ✅ §A12 참조 형식·키 교체 규칙 (2026-09-27) |
+| **노션 반영** | ⬜ §04 `subjectRef` 형식 · §03 첨부 yaml 갱신(대시보드 헤더) · ✅ §03 본문 (2026-09-27) · ✅ §A12 참조 형식·키 교체 규칙 (2026-09-27) |
 | **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
 
 ---
@@ -621,7 +621,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **왜 놓쳤나** | 대조 기능(T-M3-04)을 "검사할 수 있다" 로 완료 처리했다. "저절로 돈다" 는 별개의 인수기준이었다 |
 | **판정** | 결제 확인 워커(Backoff · PG Breaker) + 서명 검증·멱등 콜백(값은 믿지 않고 재조회) + 대조 스케줄(1시간·D+1, advisory lock). **결제가 확인돼도 자동 Finalize 는 하지 않는다** — 제출은 지원자의 의사 표시다 |
 | **저장소 반영** | ✅ 2026-09-27 — `POST /api/v1/payments/callbacks/:provider`(서명 · 멱등 · PG 재조회 · Idempotency-Key 제외) · `PaymentRecheckWorker`(PENDING·UNKNOWN, Backoff 30초→30분, 48시간) · `ReconciliationScheduler`(1시간·48시간) · 둘 다 세션 advisory lock · 시험 13건. 30분 지연 시간 시험은 T-M4-34 |
-| **노션 반영** | ⬜ §03 콜백 경로 · ✅ §A4·§B4 "자동 Finalize 하지 않음" (2026-09-27) |
+| **노션 반영** | ⬜ §03 첨부 yaml 갱신(콜백) · ✅ §03 본문 (2026-09-27) · ✅ §A4·§B4 "자동 Finalize 하지 않음" (2026-09-27) |
 | **상태** | 🟢 저장소 반영 완료 — 노션 반영 대기 |
 
 ---
