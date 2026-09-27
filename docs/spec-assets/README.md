@@ -7,7 +7,7 @@
 | 노션 문서 | 첨부파일 | 저장소 배치 경로 | 상태 |
 |---|---|---|---|
 | 02. PostgreSQL ERD | `k-admission-postgresql-ddl.txt` | `infra/db/migrations/0001_init.sql` | ✅ **v1.2 교체 (2026-09-27)** — 저장소 → 노션 업로드 (15,880바이트/397줄) |
-| 03. OpenAPI 계약 | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` | ✅ **v1.2.0 교체 (2026-09-27)** — 저장소 → 노션 업로드 (76,303바이트) |
+| 03. OpenAPI 계약 | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` | ✅ **v1.2.0 교체 (2026-09-27)** — 저장소 → 노션 업로드 (2026-09-27 재교체 — self-check 404, 76,494바이트) |
 | 04. CloudEvents | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | ✅ 배치 (5,504자/126줄) |
 | 05. Helm 배포 | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` | ⬜ 미배치 |
 | 05. Helm 배포 | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` | ⬜ 미배치 |

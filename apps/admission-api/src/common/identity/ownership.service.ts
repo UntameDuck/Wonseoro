@@ -56,7 +56,10 @@ export class Ownership {
   }
 }
 
-/** 없는 것과 남의 것을 구분해서 알려주지 않는다. */
+/**
+ * 없는 것과 남의 것을 구분해서 알려주지 않는다 — 둘 다 같은 404. (D-28, OpenAPI)
+ * 전에는 400 VALIDATION_FAILED 였다. 구분은 막았지만 계약(404)과 달랐다.
+ */
 function notFound(what: string): ProblemException {
-  return ProblemException.validationFailed(`존재하지 않는 ${what}입니다.`);
+  return ProblemException.notFound(`존재하지 않는 ${what}입니다.`);
 }

@@ -431,6 +431,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **판정** | 자원마다 소유자를 확인한다. 없는 자원과 남의 자원을 **같은 응답**으로 돌려준다 — 구분해 주면 식별자를 훑어 유효한 원서를 찾아낼 수 있다 |
 | **저장소 반영** | ✅ `common/identity/ownership.service.ts` + 전 경로 적용 · 통합 테스트 6종 |
 | **노션 반영** | ✅ §09 STRIDE Information Disclosure (2026-09-27) · ✅ §03 소유권 규칙 (2026-09-27) |
+| **재발견 (2026-09-27)** | `GET /applications/{id}/self-check` 가 **빠져 있었다.** 원서 ID 만 알면 남의 접수번호·결제 상태·시도 이력이 보였다. 소유권 검사를 붙였고, 같은 누락이 다시 생기지 않게 `ownership-coverage.test.ts` 가 컨트롤러를 훑어 `/api/v1` 아래 지원자 자원 식별자를 받는 핸들러가 `this.ownership.assert…` 를 부르지 않으면 실패한다(검사를 빼면 이 경로를 정확히 잡는 것까지 확인). 함께 고친 것: 없는·남의 자원 응답이 계약(404)과 달리 **400 VALIDATION_FAILED** 였다 — 구분은 막았지만 계약 위반이라 404 NOT_FOUND 로 맞췄다 |
 | **상태** | 🟢 CLOSED — 저장소·노션 반영 (2026-09-27) |
 
 ---

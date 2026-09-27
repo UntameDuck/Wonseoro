@@ -3,6 +3,12 @@ import { randomUUID } from 'node:crypto';
 import { after, before, describe, it } from 'node:test';
 import { Db } from '@wonseoro/server-kit';
 import { Ownership } from './ownership.service';
+import { ActivationRecorder } from '../../modules/activation/activation-recorder';
+import { ActivationSigner } from '../../modules/activation/activation-signer';
+import { AuditService } from '../../modules/audit/audit.service';
+import { DeadlinePolicyRepository } from '../../modules/deadline/deadline-policy.repository';
+import { DeadlineService } from '../../modules/deadline/deadline.service';
+import { SelfCheckController } from '../../modules/meta/self-check.controller';
 
 /**
  * 소유권 확인 통합 테스트 — 실제 PostgreSQL 이 필요하다.
@@ -127,6 +133,33 @@ describe('딸린 자원의 소유권', () => {
     if (!available) return t.skip('DATABASE_URL 없음');
     await assert.doesNotReject(ownership().assertSubmission(submissionId, owner));
     await assert.rejects(ownership().assertSubmission(submissionId, stranger));
+  });
+});
+
+describe('Self-check 도 본인 원서만 (D-28 에서 빠졌던 경로)', () => {
+  const controller = () =>
+    new SelfCheckController(
+      db,
+      new DeadlineService(
+        new DeadlinePolicyRepository(db, new ActivationRecorder(db, new ActivationSigner(), new AuditService())),
+      ),
+      ownership(),
+    );
+  const as = (applicantId: string) => ({ headers: { 'x-applicant-id': applicantId } }) as never;
+
+  it('본인은 접수번호와 상태를 본다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const res = await controller().selfCheck(applicationId, as(owner));
+    assert.equal(res.submission?.submissionId, submissionId);
+  });
+
+  it('남은 볼 수 없다 — 없는 원서와 같은 404 로', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const notMine = await problemOf(controller().selfCheck(applicationId, as(stranger)));
+    const notThere = await problemOf(controller().selfCheck(randomUUID(), as(stranger)));
+    assert.equal(notMine.status, 404);
+    assert.equal(notMine.status, notThere.status);
+    assert.equal(notMine.detail, notThere.detail);
   });
 });
 

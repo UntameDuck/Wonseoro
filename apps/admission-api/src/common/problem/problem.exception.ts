@@ -193,6 +193,16 @@ export class ProblemException extends HttpException {
   }
 
   /** 권한·절차 위반. 2인 승인 규칙 위반이 여기로 온다. */
+  /** 없는 자원. 남의 자원도 같은 응답이다 — 존재 여부를 알려주지 않는다. (D-28) */
+  static notFound(detail: string): ProblemException {
+    return new ProblemException({
+      code: ProblemCode.NOT_FOUND,
+      title: '찾을 수 없습니다',
+      status: 404,
+      detail,
+    });
+  }
+
   static forbidden(detail: string): ProblemException {
     return new ProblemException({
       code: ProblemCode.FORBIDDEN,

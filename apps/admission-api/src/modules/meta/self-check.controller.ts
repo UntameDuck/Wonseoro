@@ -1,6 +1,9 @@
-import { Controller, Get, Header, Param } from '@nestjs/common';
+import { Controller, Get, Header, Param, Req } from '@nestjs/common';
+import type { FastifyRequest } from 'fastify';
 import { CACHE_CONTROL_PII } from '@wonseoro/contracts';
 import { Db } from '@wonseoro/server-kit';
+import { applicantFrom } from '../../common/identity/identity';
+import { Ownership } from '../../common/identity/ownership.service';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { DeadlineService } from '../deadline/deadline.service';
 
@@ -27,17 +30,21 @@ interface TimelineEntry {
  *   3. 중앙 동기화 상태와 접수 상태를 **분리해서** 보여준다 (v1.1 §07)
  *      중앙에 안 갔다고 접수가 안 된 것이 아니다
  *   4. 개인정보를 싣지 않는다. 상태와 시각만 준다
+ *   5. **본인 원서만 보여준다.** 접수번호·결제 상태·시도 이력이 담긴다. 남의 원서와 없는 원서는
+ *      같은 404 다 — 구분해 주면 식별자를 훑어 유효한 원서를 찾을 수 있다. (D-28 에서 빠졌던 경로)
  */
 @Controller('api/v1/applications')
 export class SelfCheckController {
   constructor(
     private readonly db: Db,
     private readonly deadline: DeadlineService,
+    private readonly ownership: Ownership,
   ) {}
 
   @Get(':applicationId/self-check')
   @Header('cache-control', CACHE_CONTROL_PII)
-  async selfCheck(@Param('applicationId') applicationId: string) {
+  async selfCheck(@Param('applicationId') applicationId: string, @Req() req: FastifyRequest) {
+    await this.ownership.assertApplication(applicationId, applicantFrom(req).applicantId);
     const app = await this.loadApplication(applicationId);
     const snapshot = await this.deadline.snapshot(app.cycleId);
 
