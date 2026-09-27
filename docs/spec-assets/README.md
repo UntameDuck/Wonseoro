@@ -6,8 +6,8 @@
 
 | 노션 문서 | 첨부파일 | 저장소 배치 경로 | 상태 |
 |---|---|---|---|
-| 02. PostgreSQL ERD | `k-admission-postgresql-ddl.txt` | `infra/db/migrations/0001_init.sql` | ✅ 배치 (10,641자/288줄) |
-| 03. OpenAPI 계약 | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` | ✅ 배치 (24,427자/734줄) |
+| 02. PostgreSQL ERD | `k-admission-postgresql-ddl.txt` | `infra/db/migrations/0001_init.sql` | ✅ 배치 (10,641자/288줄) · **교체 후보 v1.2** `infra/db/k-admission-postgresql-ddl.v1.2.sql` (0002·0003·0005·0006 + 감사 트리거, `scripts/check-merged-ddl.sh` 로 체인과 스키마 동일 확인) |
+| 03. OpenAPI 계약 | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` | ✅ 배치 (24,427자/734줄) · **저장소 v1.2.0 이 교체 후보** (구현 정합, 계약 적합성 시험) |
 | 04. CloudEvents | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | ✅ 배치 (5,504자/126줄) |
 | 05. Helm 배포 | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` | ⬜ 미배치 |
 | 05. Helm 배포 | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` | ⬜ 미배치 |
