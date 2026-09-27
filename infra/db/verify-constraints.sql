@@ -128,11 +128,11 @@ DO $$
 DECLARE blocked boolean := false;
 BEGIN
   BEGIN
-    INSERT INTO deadline_policy (id, cycle_id, version, mode, deadline_at,
+    INSERT INTO deadline_policy (id, cycle_id, version, mode, deadline_at, created_by,
                                  approved_by_1, approved_by_2, approved_at,
                                  policy_hash, immutable_snapshot)
     VALUES (gen_random_uuid(), '11111111-1111-1111-1111-111111111111', 'v1',
-            'FINALIZED_COMMIT_BEFORE_DEADLINE', '2026-09-11T09:00:00Z',
+            'FINALIZED_COMMIT_BEFORE_DEADLINE', '2026-09-11T09:00:00Z', 'author@univ-a',
             'admin@univ-a', 'admin@univ-a', now(), 'h', '{}'::jsonb);
   EXCEPTION WHEN check_violation THEN blocked := true;
   END;
@@ -408,6 +408,55 @@ BEGIN
     CASE WHEN other_dept AND reapplied THEN 'PASS' ELSE 'FAIL' END;
   ASSERT other_dept, '같은 전형에 다른 모집단위로 유효한 원서가 둘 생겼다';
   ASSERT reapplied, '취소한 뒤 같은 전형에 다시 지원할 수 없다';
+END $$;
+
+-- ── 20. 마감 정책 수명주기 — 상태 컬럼이 규칙을 진다 (D-23, 0006) ────────
+-- 전에는 'DRAFT:' 접두사 문자열이 초안을 나타냈다. DB 가 강제하지 못했다.
+DO $$
+DECLARE no_approval boolean := false; draft_active boolean := false; self_ok boolean := false;
+        ok_draft boolean := false;
+BEGIN
+  -- 초안은 승인자 없이 만들 수 있다
+  INSERT INTO deadline_policy (id, cycle_id, version, mode, deadline_at, created_by, policy_hash, immutable_snapshot)
+  VALUES (gen_random_uuid(), '99999999-9999-9999-9999-999999999999', 'v-d23-draft',
+          'FINALIZED_COMMIT_BEFORE_DEADLINE', '2027-09-11T09:00:00Z', 'author@univ-a', 'h', '{}'::jsonb);
+  ok_draft := true;
+
+  -- 승인 한 명으로 APPROVED 가 될 수 없다
+  BEGIN
+    INSERT INTO deadline_policy (id, cycle_id, version, mode, deadline_at, created_by, status,
+                                 approved_by_1, approved_at, policy_hash, immutable_snapshot)
+    VALUES (gen_random_uuid(), '99999999-9999-9999-9999-999999999999', 'v-d23-one',
+            'FINALIZED_COMMIT_BEFORE_DEADLINE', '2027-09-11T09:00:00Z', 'author@univ-a', 'APPROVED',
+            'admin1@univ-a', now(), 'h', '{}'::jsonb);
+  EXCEPTION WHEN check_violation THEN no_approval := true;
+  END;
+
+  -- 초안이 적용 시각을 가질 수 없다
+  BEGIN
+    INSERT INTO deadline_policy (id, cycle_id, version, mode, deadline_at, created_by, activated_at,
+                                 policy_hash, immutable_snapshot)
+    VALUES (gen_random_uuid(), '99999999-9999-9999-9999-999999999999', 'v-d23-act',
+            'FINALIZED_COMMIT_BEFORE_DEADLINE', '2027-09-11T09:00:00Z', 'author@univ-a', now(),
+            'h', '{}'::jsonb);
+  EXCEPTION WHEN check_violation THEN draft_active := true;
+  END;
+
+  -- 작성자는 자기 정책을 승인할 수 없다
+  BEGIN
+    INSERT INTO deadline_policy (id, cycle_id, version, mode, deadline_at, created_by, status,
+                                 approved_by_1, approved_by_2, approved_at, policy_hash, immutable_snapshot)
+    VALUES (gen_random_uuid(), '99999999-9999-9999-9999-999999999999', 'v-d23-self',
+            'FINALIZED_COMMIT_BEFORE_DEADLINE', '2027-09-11T09:00:00Z', 'author@univ-a', 'APPROVED',
+            'author@univ-a', 'admin2@univ-a', now(), 'h', '{}'::jsonb);
+  EXCEPTION WHEN check_violation THEN self_ok := true;
+  END;
+
+  RAISE NOTICE '20. 마감 정책 수명주기 (초안·승인 1명·초안 적용·자기승인): %',
+    CASE WHEN ok_draft AND no_approval AND draft_active AND self_ok THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT no_approval, '승인 한 명으로 마감 정책이 APPROVED 가 됐다';
+  ASSERT draft_active, '초안 마감 정책이 적용 시각을 가졌다';
+  ASSERT self_ok, '작성자가 자기 마감 정책을 승인했다';
 END $$;
 
 ROLLBACK;

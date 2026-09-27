@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
-import { DeadlineMode, DeadlinePolicy } from '@wonseoro/contracts';
+import { DeadlineMode, DeadlinePolicy, DeadlinePolicyStatus } from '@wonseoro/contracts';
 import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
 import {
@@ -113,28 +113,19 @@ export class DeadlinePolicyRepository extends DeadlinePolicyPort {
       .update(JSON.stringify(snapshot))
       .digest('hex');
 
-    /**
-     * ⚠️ DDL 이 approved_by_1/2 와 approved_at 을 NOT NULL 로 잡고 있어
-     * 초안 상태를 표현할 수 없다. 작성자 표식을 넣어 "미승인"을 나타낸다.
-     * 승인이 들어오면 실제 승인자로 덮어쓴다.
-     *
-     * 더 깔끔한 방법은 status 컬럼을 두는 것이다 — config_version 처럼.
-     * 노션 §02 에 제안해야 한다.
-     */
+    // 초안은 status 로 표현한다. 승인자·승인 시각은 비워 둔다. (D-23, 0006)
     await this.db.query(
       `INSERT INTO deadline_policy
-         (id, cycle_id, version, mode, deadline_at,
-          approved_by_1, approved_by_2, approved_at, activated_at,
+         (id, cycle_id, version, mode, deadline_at, status, created_by,
           policy_hash, immutable_snapshot)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,now(),NULL,$8,$9)`,
+       VALUES ($1,$2,$3,$4,$5,'DRAFT',$6,$7,$8)`,
       [
         policyId,
         input.cycleId,
         input.version,
         input.mode,
         input.deadlineAt,
-        `DRAFT:${input.createdBy}`,
-        `DRAFT:pending`,
+        input.createdBy,
         policyHash,
         JSON.stringify(snapshot),
       ],
@@ -225,16 +216,28 @@ export class DeadlinePolicyRepository extends DeadlinePolicyPort {
 
   async approve(policyId: string, approver: string): Promise<{ complete: boolean }> {
     const state = await this.loadApprovalState(policyId);
+    if (state.status !== 'DRAFT') {
+      throw ProblemException.validationFailed(`승인할 수 없는 상태입니다. (현재: ${state.status})`);
+    }
     const result = addApproval(state, approver);
 
-    await this.db.query(
+    // 읽은 그대로일 때만 쓴다. 두 사람이 동시에 첫 승인을 넣으면 한쪽이 다른 쪽을 덮어
+    // 승인 하나가 사라진다 — 조건부 UPDATE 로 늦은 쪽을 돌려보낸다.
+    const updated = await this.db.query(
       `UPDATE deadline_policy
           SET approved_by_1 = $2,
-              approved_by_2 = COALESCE($3, 'DRAFT:pending'),
-              approved_at = now()
-        WHERE id = $1`,
-      [policyId, result.approvedBy1, result.approvedBy2],
+              approved_by_2 = $3::text,
+              status = CASE WHEN $3::text IS NULL THEN 'DRAFT' ELSE 'APPROVED' END,
+              approved_at = CASE WHEN $3::text IS NULL THEN NULL ELSE now() END
+        WHERE id = $1 AND status = 'DRAFT'
+          AND approved_by_1 IS NOT DISTINCT FROM $4::text`,
+      [policyId, result.approvedBy1, result.approvedBy2, state.approvedBy1],
     );
+    if (updated.rowCount === 0) {
+      throw ProblemException.versionConflict(
+        '다른 승인이 먼저 들어왔습니다. 목록을 새로 고친 뒤 다시 승인해 주십시오.',
+      );
+    }
 
     this.logger.log(
       `deadline policy ${policyId} approved by ${approver} (complete=${result.complete})`,
@@ -303,12 +306,16 @@ export class DeadlinePolicyRepository extends DeadlinePolicyPort {
          * 으로 보여 마감 판정이 거부된다. 예약 활성화는 지정 시각을 그대로 쓴다.
          */
         `UPDATE deadline_policy
-            SET activated_at = COALESCE($2::timestamptz, now())
-          WHERE id = $1
+            SET activated_at = COALESCE($2::timestamptz, now()),
+                status = 'ACTIVATED'
+          WHERE id = $1 AND status = 'APPROVED'
           RETURNING activated_at`,
         [policyId, activateAt],
       );
-      const activatedAt = updated[0]!.activated_at;
+      if (!updated[0]) {
+        throw ProblemException.validationFailed('승인이 끝나지 않은 정책은 적용할 수 없습니다.');
+      }
+      const activatedAt = updated[0].activated_at;
 
       // 적용하는 순간 이미 지난 마감은 적용 즉시 접수를 닫는다. 소급 마감이다.
       if (deadlineAt.getTime() <= activatedAt.getTime()) {
@@ -385,23 +392,23 @@ export class DeadlinePolicyRepository extends DeadlinePolicyPort {
       version: string;
       mode: string;
       deadlineAt: string;
+      status: DeadlinePolicyStatus;
       approvedBy: string[];
       activatedAt: string | null;
       policyHash: string;
-      /** 작성자. 화면이 "본인은 승인할 수 없음" 을 미리 보여주려고 싣는다. 막는 것은 서버다. */
+      /** 작성자. 화면이 "본인은 승인할 수 없음" 을 미리 보여주려고 싣는다. 막는 것은 서버·DB 다. */
       createdBy: string;
+      createdAt: string;
       /** 연장이면 사유·결정번호·기준 정책. */
       extension: ExtensionFacts | null;
     }>
   > {
     const { rows } = await this.db.query<Record<string, unknown>>(
-      `SELECT id, version, mode, deadline_at, approved_by_1, approved_by_2,
-              activated_at, policy_hash, immutable_snapshot
+      `SELECT id, version, mode, deadline_at, status, created_by, created_at,
+              approved_by_1, approved_by_2, activated_at, policy_hash, immutable_snapshot
          FROM deadline_policy
         WHERE cycle_id = $1
-        -- ⚠️ deadline_policy 에는 created_at 이 없다. (D-23)
-        -- 생성 순서를 알 수 없어 승인 시각으로 정렬한다.
-        ORDER BY approved_at DESC NULLS LAST, version DESC`,
+        ORDER BY created_at DESC, version DESC`,
       [cycleId],
     );
     return rows.map((r) => ({
@@ -409,33 +416,30 @@ export class DeadlinePolicyRepository extends DeadlinePolicyPort {
       version: String(r.version),
       mode: String(r.mode),
       deadlineAt: (r.deadline_at as Date).toISOString(),
-      approvedBy: [String(r.approved_by_1), String(r.approved_by_2)].filter(
-        (a) => !a.startsWith('DRAFT:'),
-      ),
+      status: r.status as DeadlinePolicyStatus,
+      approvedBy: approvers(r),
       activatedAt: r.activated_at ? (r.activated_at as Date).toISOString() : null,
       policyHash: String(r.policy_hash),
-      createdBy: String((r.immutable_snapshot as { createdBy?: string } | null)?.createdBy ?? ''),
+      createdBy: String(r.created_by),
+      createdAt: (r.created_at as Date).toISOString(),
       extension: (r.immutable_snapshot as { extension?: ExtensionFacts } | null)?.extension ?? null,
     }));
   }
 
   private async loadApprovalState(policyId: string) {
     const { rows } = await this.db.query<Record<string, unknown>>(
-      `SELECT approved_by_1, approved_by_2, immutable_snapshot
+      `SELECT status, created_by, approved_by_1, approved_by_2
          FROM deadline_policy WHERE id = $1`,
       [policyId],
     );
     const r = rows[0];
     if (!r) throw ProblemException.validationFailed('존재하지 않는 마감 정책입니다.');
 
-    const a1 = String(r.approved_by_1);
-    const a2 = String(r.approved_by_2);
-    const snapshot = r.immutable_snapshot as { createdBy?: string };
-
     return {
-      createdBy: snapshot?.createdBy ?? '',
-      approvedBy1: a1.startsWith('DRAFT:') ? null : a1,
-      approvedBy2: a2.startsWith('DRAFT:') ? null : a2,
+      status: r.status as DeadlinePolicyStatus,
+      createdBy: String(r.created_by),
+      approvedBy1: r.approved_by_1 === null ? null : String(r.approved_by_1),
+      approvedBy2: r.approved_by_2 === null ? null : String(r.approved_by_2),
     };
   }
 
@@ -482,4 +486,11 @@ export class DeadlinePolicyRepository extends DeadlinePolicyPort {
       policyHash: 'dev-only',
     };
   }
+}
+
+/** 승인한 사람만. 초안이면 빈 배열, 첫 승인만 있으면 한 명. */
+function approvers(r: Record<string, unknown>): string[] {
+  return [r.approved_by_1, r.approved_by_2].filter(
+    (a): a is string => typeof a === 'string' && a.length > 0,
+  );
 }

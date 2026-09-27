@@ -14,12 +14,21 @@ export const DEADLINE_MODE = [
 
 export type DeadlineMode = (typeof DEADLINE_MODE)[number];
 
+/**
+ * 정책 수명주기. (D-23, 0006)
+ * 효력은 상태가 아니라 activated_at 순서로 정한다 — 예약 활성화가 있어서
+ * "지금 적용 중" 을 행에 적어 두면 시각이 올 때마다 누군가 고쳐야 한다.
+ */
+export const DEADLINE_POLICY_STATUS = ['DRAFT', 'APPROVED', 'ACTIVATED'] as const;
+
+export type DeadlinePolicyStatus = (typeof DEADLINE_POLICY_STATUS)[number];
+
 export interface DeadlinePolicy {
   /** DDL: deadline_policy.version */
   version: string;
   mode: DeadlineMode;
   deadlineAt: string;
-  /** DDL: approved_by_1 / approved_by_2. CHECK (approved_by_1 <> approved_by_2) */
+  /** DDL: approved_by_1 / approved_by_2. 적용된 정책이면 서로 다른 두 사람 (CHECK) */
   approvedBy1: string;
   approvedBy2: string;
   approvedAt: string;

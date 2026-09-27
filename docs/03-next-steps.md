@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-27 (결정 8건 확정 · 저장소 OpenAPI v1.2.0 — 다음은 D-23 마이그레이션과 병합 DDL)
+> 최종 갱신: 2026-09-27 (결정 8건 확정 · 저장소 OpenAPI v1.2.0 · D-23 0006 — 다음은 병합 DDL)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -88,7 +88,7 @@
 | 3 | 노션 반영 — 결정 불필요 항목, 페이지마다 확인 | ✅ **본문 1차 완료** — §01·§06·§09·v1.0 반영, §02·§03 본문 보강. 대장 13건 종결 |
 | 4 | 결정 8건 (아래 표) | ✅ **2026-09-27** — 현행 법령·대입전형기본사항 근거로 확정. D-29 키 수정·D-38 10년 하한은 코드 반영 |
 | 5 | 저장소 OpenAPI yaml 을 구현에 맞추기 → 노션 §03 첨부 교체 | ✅ **저장소 v1.2.0** (오퍼레이션 29→52, 계약 적합성 시험이 누락 경로를 잡는다) · ⬜ 노션 첨부 교체 |
-| 6 | D-23 마이그레이션 → 병합 DDL → 노션 §02 첨부 교체 · 0002~0005 정리 | ◀ **다음** |
+| 6 | D-23 마이그레이션 → 병합 DDL → 노션 §02 첨부 교체 · 0002~0006 정리 | ✅ 0006 · ◀ **다음 — 병합 DDL** |
 | 7 | 노션 v1.1 §10 (D-18) · 중앙 DDL 첨부 (D-14) | ⬜ |
 | 8 | M4 준비 — 첨부 3종(Chrome 노션 세션) · kind·helm·k6 설치(사용자) | ⬜ M4 착수 시 |
 
@@ -108,7 +108,7 @@
 | **D-38** | 접수 원서 **10년** 하한, 접속기록 2년 확인 | 입시관리업무 10년(국가기록원 가이드) · 고유식별정보 처리 시 2년 | ✅ `retention.ts` · 서류·신원 항목 분리는 후속 |
 | **D-27** | 가명 참조 **둔다** | 통합 조회의 전제, HMAC 이라 Vault 와 조인 불가 | 노션 §04 |
 | **D-30** | `system_config` 는 **ERD 에서 뺀다** | 쓰는 곳이 없다 | 노션 §02 |
-| **D-23** | status·created_at **채택** | `DRAFT:` 접두사는 DB 가 강제 못 한다 | ◀ 마이그레이션 다음 |
+| **D-23** | status·created_at **채택** | `DRAFT:` 접두사는 DB 가 강제 못 한다 | ✅ 0006 (DRAFT→APPROVED→ACTIVATED · 자기승인 DB 차단) · 노션 |
 | **D-17** | 현재 형식 **확정** + 동의 버전 싣기(M5) | 제3자 제공 동의 기록 요건 | 노션 |
 | **D-32** | 계약에 **넣는다** (Ops) | Helm probe 가 기댄다 | ✅ yaml v1.2.0 |
 
@@ -177,7 +177,7 @@ npm run dev -w @wonseoro/admin-web
 
 ### DDL 에 접어 넣어야 하는 것
 
-`infra/db/migrations/0002` ~ `0005` 는 **임시 파일**이다(0004 역할 분리는 운영 절차라 남길 수 있다).
+`infra/db/migrations/0002` ~ `0006` 은 **임시 파일**이다(0004 역할 분리는 운영 절차라 남길 수 있다).
 노션 §02 첨부 DDL 에 반영한 뒤 삭제한다. (D-21 · D-23 · D-25 · D-29 · D-35 · D-41)
 
 ### 계약(OpenAPI)
@@ -207,7 +207,7 @@ npm run dev -w @wonseoro/admin-web
 ```bash
 npm install
 npm run dev:infra            # postgres(univ_a 5432 / central 5434), MinIO
-npm run db:migrate           # 0001~0004 + 개발용 앱 역할 로그인
+npm run db:migrate           # 0001~0006 + 개발용 앱 역할 로그인
 npm run db:migrate:central
 npm run db:seed
 npm run db:verify            # 정합성 제약·권한 18종이 실제로 막는지 확인

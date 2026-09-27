@@ -276,3 +276,58 @@ describe('서명된 활성화 기록 (T-M3-15)', () => {
     assert.ok(chain.checked >= 1);
   });
 });
+
+describe('마감 정책 수명주기 (D-23, 0006)', () => {
+  it('초안은 승인자 없이 DRAFT, 두 명이면 APPROVED, 적용하면 ACTIVATED', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const cycleId = await makeCycle();
+    const r = repo();
+    const { policyId } = await r.createDraft({
+      cycleId,
+      version: 'life-v1',
+      mode: 'FINALIZED_COMMIT_BEFORE_DEADLINE',
+      deadlineAt: new Date(Date.now() + 48 * HOUR).toISOString(),
+      createdBy: 'officer1@univ-a',
+    });
+    const statusOf = async () => (await r.history(cycleId)).find((p) => p.policyId === policyId)!;
+
+    assert.equal((await statusOf()).status, 'DRAFT');
+    assert.deepEqual((await statusOf()).approvedBy, []);
+    await r.approve(policyId, 'officer2@univ-a');
+    assert.equal((await statusOf()).status, 'DRAFT');
+    await r.approve(policyId, 'officer3@univ-a');
+    assert.equal((await statusOf()).status, 'APPROVED');
+    await r.activate(policyId, null, 'officer2@univ-a');
+    const done = await statusOf();
+    assert.equal(done.status, 'ACTIVATED');
+    assert.deepEqual(done.approvedBy, ['officer2@univ-a', 'officer3@univ-a']);
+    assert.equal(done.createdBy, 'officer1@univ-a');
+  });
+
+  // 이 시험은 경합을 **매번 재현하지는 못한다** — 커넥션 풀 순서에 따라 승인이 줄을 서 버리기도 한다.
+  // 막는 것은 approve 의 조건부 UPDATE(`approved_by_1 IS NOT DISTINCT FROM 읽은 값`)다.
+  // 여기서는 어떤 순서로 끝나든 "성공이라고 답한 승인은 전부 남는다" 는 불변식만 확인한다.
+  it('동시에 승인해도 성공이라고 답한 승인은 전부 남는다 — 늦은 쪽은 409', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const cycleId = await makeCycle();
+    const { policyId } = await repo().createDraft({
+      cycleId,
+      version: 'race-v1',
+      mode: 'FINALIZED_COMMIT_BEFORE_DEADLINE',
+      deadlineAt: new Date(Date.now() + 48 * HOUR).toISOString(),
+      createdBy: 'officer1@univ-a',
+    });
+
+    const results = await Promise.all(
+      ['officer2@univ-a', 'officer3@univ-a', 'officer4@univ-a'].map((who) =>
+        status(repo().approve(policyId, who)),
+      ),
+    );
+    const ok = results.filter((s) => s === 'ok').length;
+    assert.ok(results.every((s) => s === 'ok' || s === 409), `예상 밖 결과: ${results}`);
+
+    // 성공이라고 답한 승인은 전부 행에 남아 있어야 한다.
+    const policy = (await repo().history(cycleId)).find((p) => p.policyId === policyId)!;
+    assert.equal(policy.approvedBy.length, Math.min(ok, 2));
+  });
+});

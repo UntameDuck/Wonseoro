@@ -267,8 +267,8 @@ export class EvidenceService {
       version: String(r.version),
       mode: String(r.mode),
       deadlineAt,
-      approvedBy: [String(r.approved_by_1), String(r.approved_by_2)].filter(
-        (a) => !a.startsWith('DRAFT:'),
+      approvedBy: [r.approved_by_1, r.approved_by_2].filter(
+        (a): a is string => typeof a === 'string' && a.length > 0,
       ),
       activatedAt: r.activated_at ? (r.activated_at as Date).toISOString() : null,
       policyHash,

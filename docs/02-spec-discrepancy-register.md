@@ -354,7 +354,8 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **제안** | `deadline_policy` 에도 `status varchar(24) CHECK (status IN ('DRAFT','APPROVED','ACTIVE','RETIRED'))` 와 `created_at timestamptz NOT NULL DEFAULT now()` 를 두고 승인자 컬럼을 nullable 로 바꾼다. 대신 D-21 처럼 `CHECK (status <> 'ACTIVE' OR (승인자 둘 다 있고 서로 다름))` 로 막는다 |
 | **노션 반영** | ⬜ §02 첨부 DDL 수정 — 스키마 변경(status·created_at 추가, 승인자 nullable) 제안이라 먼저 확인 필요 |
 | **결정 (2026-09-27)** | **채택** — `status`·`created_at` 추가, 승인자 nullable + ACTIVE 는 서로 다른 두 승인자 CHECK. `DRAFT:` 접두사는 DB 가 강제하지 못한다. D-29 와 같은 §02 첨부 DDL 교체 때 함께 반영 |
-| **상태** | 🟡 결정 완료 — 저장소 마이그레이션·노션 반영 대기 |
+| **저장소 반영 (2026-09-27)** | ✅ `0006_deadline_policy_status.sql` — 상태는 **DRAFT → APPROVED → ACTIVATED** 셋이다. 제안의 ACTIVE/RETIRED 대신 이렇게 둔 이유: 마감 정책의 효력은 `activated_at` 순서로 정해지고(예약 활성화), "지금 적용 중" 을 행에 적으면 예약 시각마다 누군가 고쳐야 한다. `created_by` 도 컬럼으로 올려 **작성자 자기승인을 DB 가 막는다**(D-21 과 같은 수준). 승인은 조건부 UPDATE 로 바꿔 동시 승인에서 한쪽이 사라지지 않게 했다(늦은 쪽 409). `DRAFT:` 접두사 제거 · `db:verify` 20 · 시험 2종 |
+| **상태** | 🟡 결정·저장소 반영 완료 — 노션 반영 대기 (§02 첨부 DDL) |
 
 ---
 

@@ -798,6 +798,11 @@ paths:
           $ref: '#/components/responses/Problem'
         '403':
           $ref: '#/components/responses/Problem'
+        '409':
+          description: Another approval landed first (conditional update); reload and retry
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /admin/v1/deadline-policies/{policyId}/activate:
     post:
       tags: [Admin]
@@ -1755,12 +1760,20 @@ components:
         identical: { type: boolean, description: An identical config is refused on approval }
     DeadlinePolicy:
       type: object
-      required: [policyId, version, mode, deadlineAt, approvedBy, activatedAt, policyHash, createdBy, extension]
+      required: [policyId, version, mode, deadlineAt, status, approvedBy, activatedAt, policyHash,
+        createdBy, createdAt, extension]
       properties:
         policyId: { type: string, format: uuid }
         version: { type: string }
         mode: { type: string }
         deadlineAt: { type: string, format: date-time }
+        status:
+          type: string
+          enum: [DRAFT, APPROVED, ACTIVATED]
+          x-kadmission-register: D-23
+          description: >
+            Lifecycle only. Which policy is in force is decided by activated_at order
+            (scheduled activation), not by this field.
         approvedBy:
           type: array
           maxItems: 2
@@ -1768,6 +1781,7 @@ components:
         activatedAt: { type: [string, 'null'], format: date-time }
         policyHash: { type: string }
         createdBy: { type: string }
+        createdAt: { type: string, format: date-time }
         extension:
           type: [object, 'null']
           required: [kind, extendsVersion, extendsDeadlineAt, reason, decisionRef]

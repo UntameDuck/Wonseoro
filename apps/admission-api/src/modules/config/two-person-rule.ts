@@ -9,9 +9,9 @@ import { ProblemException } from '../../common/problem/problem.exception';
  * 그래서 중대 설정은 사람 두 명이 승인해야 하고, 그중 누구도
  * 자기가 만든 것을 혼자 통과시킬 수 없다.
  *
- * ⚠️ `deadline_policy` 는 DB 가 `CHECK (approved_by_1 <> approved_by_2)` 로 막는다.
- * `config_version` 은 **DB 제약이 없어** 여기서만 막힌다. (불일치 대장 D-21)
- * 코드는 우회 가능하고 DB 는 아니다. DDL 에 제약을 넣어야 같은 수준이 된다.
+ * 코드는 우회 가능하고 DB 는 아니다. 그래서 같은 규칙을 DB 제약으로도 건다 —
+ * `config_version` 은 0002 (D-21), `deadline_policy` 는 0006 (D-23):
+ * 서로 다른 두 승인자 · 작성자 자기승인 금지 · 승인 없이 활성화 금지.
  *
  * 적용 대상 (§A14)
  *   마감시각 · 전형료 · 모집단위 · 지원자격 · PG 설정
