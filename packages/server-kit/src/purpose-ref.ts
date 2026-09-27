@@ -30,9 +30,16 @@ export interface RefKey {
   secret: string;
 }
 
+const PURPOSE_REF_PATTERN = /^[A-Za-z0-9_-]{1,16}\.[A-Za-z0-9_-]{43}$/;
+
 export function purposeRef(purpose: RefPurpose, key: RefKey, subjectToken: string): string {
   const mac = createHmac('sha256', key.secret).update(`${purpose}|${subjectToken}`).digest('base64url');
   return `${key.id}.${mac}`;
+}
+
+/** 외부에서 받은 목적별 참조가 현재 저장 가능한 키버전 HMAC 형식인지 확인한다. */
+export function isPurposeRef(value: unknown): value is string {
+  return typeof value === 'string' && PURPOSE_REF_PATTERN.test(value);
 }
 
 /**

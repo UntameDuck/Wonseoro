@@ -207,8 +207,7 @@ export class PaymentService {
    *    `payment_event(payment_id, provider_event_id)` 유니크가 막는다 (canonical DDL)
    * 3. **콜백이 말하는 상태를 믿지 않는다.** PG 에 다시 묻고(verify) 그 답으로 정한다.
    *    콜백 본문은 위조·재전송·순서 뒤바뀜이 모두 가능하다
-   * 4. 결제가 확인돼도 **Finalize 는 하지 않는다.** 제출은 지원자의 의사 표시다.
-   *    지원자는 다음에 화면을 열 때 "결제 확인됨 — 최종제출" 을 본다
+   * 4. 결제가 처음 확인되면 자동 Finalize listener를 부른다. 결제 의도 생성이 제출 의사 표시다. (D-42)
    */
   async handleCallback(notice: {
     providerTxId: string;

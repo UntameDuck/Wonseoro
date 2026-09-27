@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { describe, it } from 'node:test';
-import { parseKeyRing, purposeRef } from './purpose-ref';
+import { isPurposeRef, parseKeyRing, purposeRef } from './purpose-ref';
 
 const k1 = { id: 'k1', secret: 'dashboard-secret-1' };
 const token = 'subj-9f2c1a7e4b';
@@ -22,8 +22,16 @@ describe('목적별 가명 참조 (v1.1 §A12)', () => {
   it('어느 키로 만들었는지 참조에 드러나고, 기존 컬럼(64자)에 들어간다', () => {
     const ref = purposeRef('DASHBOARD', k1, token);
     assert.match(ref, /^k1\.[A-Za-z0-9_-]{43}$/);
+    assert.equal(isPurposeRef(ref), true);
     assert.ok(ref.length <= 64);
     assert.notEqual(ref, purposeRef('DASHBOARD', { id: 'k2', secret: 'dashboard-secret-2' }, token));
+  });
+
+  it('과거 키 없는 해시와 저장 한도를 넘는 키 ID는 참조로 받지 않는다', () => {
+    assert.equal(isPurposeRef(createHash('sha256').update(token).digest('hex')), false);
+    assert.equal(isPurposeRef(`key-id-that-is-too-long.${'a'.repeat(43)}`), false);
+    assert.equal(isPurposeRef('k1.not-base64url!'), false);
+    assert.equal(isPurposeRef(null), false);
   });
 
   it('키 목록은 첫 번째가 현재 키다', () => {

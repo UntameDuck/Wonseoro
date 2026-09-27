@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { after, before, describe, it } from 'node:test';
-import { Db } from '@wonseoro/server-kit';
+import { Db, purposeRef } from '@wonseoro/server-kit';
 import {
   IncomingEvent,
   SyncGatewayService,
@@ -213,6 +213,26 @@ describe('Sync Gateway — 위장 발신 차단', () => {
 });
 
 describe('중앙 저장 범위 (v1.0 §17.1)', () => {
+  it('키버전 HMAC subjectRef를 요약에 보존한다 (D-39·D-46)', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const gateway = new SyncGatewayService(db);
+    const appId = randomUUID().replace(/-/g, '');
+    const ref = purposeRef(
+      'DASHBOARD',
+      { id: 'k1', secret: 'dashboard-secret-for-sync-test' },
+      `subj-test-${randomUUID()}`,
+    );
+
+    await gateway.ingest(event({ data: { applicationId: appId, subjectRef: ref } }));
+
+    const { rows } = await db.query<{ subject_ref: string | null }>(
+      `SELECT subject_ref FROM application_summary
+        WHERE university_id = $1 AND application_id = $2`,
+      [UNIV, appId],
+    );
+    assert.equal(rows[0]?.subject_ref, ref);
+  });
+
   it('요약 테이블에 개인정보 컬럼이 없다', async (t) => {
     if (!available) return t.skip('DATABASE_URL 없음');
     const { rows } = await db.query<{ column_name: string }>(

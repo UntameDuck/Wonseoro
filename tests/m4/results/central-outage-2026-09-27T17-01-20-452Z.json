@@ -1,0 +1,62 @@
+{
+  "test": "T-M4-35",
+  "environment": "local-kind-univ-a + central-container (축소·시간 압축 환경)",
+  "productionScenario": "중앙 2시간 단절",
+  "startedAt": "2026-09-27T17:01:20.452Z",
+  "checks": {
+    "central-is-down": {
+      "pass": true,
+      "detectedMs": 40
+    },
+    "university-submits-during-central-outage": {
+      "pass": true,
+      "applications": [
+        {
+          "applicationId": "2706d30e-c0f0-4b7c-a3cd-739b52e02487",
+          "applicationNumber": "2027-UNIV-A-5M7K5K6JQP"
+        },
+        {
+          "applicationId": "e9337f03-06a1-4f35-b180-009432c76764",
+          "applicationNumber": "2027-UNIV-A-PTKGUDERBW"
+        }
+      ]
+    },
+    "outbox-holds-events-during-outage": {
+      "pass": true,
+      "events": [
+        {
+          "eventId": "2e7fdfe3-f73f-47ac-860f-f18c81d725c4",
+          "status": "PENDING"
+        },
+        {
+          "eventId": "904221ac-5532-4fb1-b1ad-2a67bfb1484d",
+          "status": "PENDING"
+        }
+      ],
+      "compressedOutageMs": 8806
+    },
+    "dashboard-recovers-all-applications": {
+      "pass": true,
+      "seenAfterMs": [
+        28435,
+        2026
+      ]
+    },
+    "event-loss-is-zero": {
+      "pass": true,
+      "expected": 2,
+      "sentCount": 2,
+      "receivedCount": 2
+    },
+    "central-restored": {
+      "pass": true,
+      "restored": true
+    }
+  },
+  "eventIds": [
+    "2e7fdfe3-f73f-47ac-860f-f18c81d725c4",
+    "904221ac-5532-4fb1-b1ad-2a67bfb1484d"
+  ],
+  "finishedAt": "2026-09-27T17:02:04.208Z",
+  "passed": true
+}

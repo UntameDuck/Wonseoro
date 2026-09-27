@@ -46,6 +46,19 @@ database:
   host: host.docker.internal
   sslMode: disable
   pool: { maxPerPod: 5, minPerPod: 1, connectionBudget: 30 }
+  pooler:
+    enabled: true
+    replicas: 1
+    defaultPoolSize: 8
+    reservePoolSize: 2
+    maxClientConnections: 50
+    clientTlsSslMode: disable
+    serverTlsSslMode: disable
+    serverTlsCaFile: ""
+    resources:
+      requests: { cpu: "25m", memory: "32Mi" }
+      limits: { cpu: "250m", memory: "128Mi" }
+    podDisruptionBudget: { minAvailable: 0 }
 
 objectStorage:
   endpoint: http://host.docker.internal:9000
@@ -64,10 +77,15 @@ networkPolicy:
   defaultDeny: true
   ingressFrom:
     - ipBlock: { cidr: 172.20.0.0/16 }   # NodePort 로 들어온 요청 (kind 노드 SNAT)
-  dataEgress:
+  databaseEgress:
     to:
       - ipBlock: { cidr: 192.168.65.254/32 }
-    ports: [5432, 5442, 6379]
+    # 대학별 DB 포트는 values-univ-*.yaml 이 자기 포트만 연다.
+    ports: []
+  cacheEgress:
+    to:
+      - ipBlock: { cidr: 192.168.65.254/32 }
+    ports: [6379]
   controlledEgress:
     to:
       - ipBlock: { cidr: 192.168.65.254/32 }

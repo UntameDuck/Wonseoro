@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-28 (**M4 착수** — Helm 차트·이미지·kind 2 클러스터. 다음은 격리 시험 T-M4-42)
+> 최종 갱신: 2026-09-28 (**M4 진행** — PgBouncer 코드·차트 구현 완료, Docker Desktop 복구 뒤 kind 런타임 검증 대기)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -10,7 +10,7 @@
 
 ## 현재 지점
 
-**M0·M1·M2·M3 완료, M4 착수** (3/28). MVP 가 화면에서 끝까지 동작하고, 운영 안전장치가 붙었고, 대학별 클러스터에 올릴 차트가 생겼다.
+**M0·M1·M2·M3 완료, M4 진행 중** (6/28). MVP가 화면에서 끝까지 동작하고, 로컬 축소 환경에서 대학 간 장애 격리·동시 Finalize를 증명했다.
 
 | 단계 | 진행 | 비고 |
 |---|---|---|
@@ -18,12 +18,12 @@
 | M1 접수 Core | **14/14** | ✅ |
 | M2 결제·Finalize·화면 | **24/24** | ✅ Demo Gate 1~5 통과 |
 | M3 운영 안전장치 | **14/15** | ✅ **종료 2026-09-27** — T-M3-03 WORM·T-M3-06 JWKS 는 M5 |
-| **M4 분산 실증** | **3/28** | ◀ 진행 중 — 차트·보안 기준·대학별 values ✅, kind 2 클러스터·Peak Mode·커넥션 예산·격리 시험 🟡 |
+| **M4 분산 실증** | **6/28** | ◀ 진행 중 — 차트·kind·대학 간 격리·동시 Finalize ✅, PG·중앙·Pod 장애 축소 시험·Peak Mode·커넥션 예산 🟡 |
 | M5 신뢰성·보안·접근성 | 0/35 | |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 61/139 태스크** (🟡 부분 완료 별도). **287개 테스트**
-(admission-api 234 · server-kit 30 · central-api 19 · event-relay 4) — 실패 0, 환경 조건으로 건너뛰는 3개(관리자 토큰 설정 여부).
+**총 64/139 태스크** (🟡 부분 완료 별도). **293개 테스트**
+(admission-api 234 · server-kit 35 · central-api 20 · event-relay 4) — 실패 0, 환경 조건으로 건너뛰는 3개(관리자 토큰 설정 여부).
 DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`) CI 포함.
 
 ### 동작하는 것 — End-to-End
@@ -73,29 +73,29 @@ DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-d
 M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 를 **숫자로** 증명하는 것이다.
 로컬(kind)로 증명할 수 있는 것을 먼저 끝내 구조 결함을 잡고, 수치는 K-PaaS 에서 낸다.
 
-### 🎯 목표 1 — 대학 간 장애 격리 증명 (T-M4-42) · **최우선**
+### ✅ 목표 1 — 대학 간 장애 격리 증명 (T-M4-42) · **완료**
 
 | 순서 | 할 일 | 완료 기준 |
 |---|---|---|
-| 1-1 | Docker Desktop 재시작 → kind 2 클러스터에 수정 이미지 재배포 | 세 워크로드(API·Relay·서류 워커) 모두 Ready. 빌드와 클러스터를 **동시에 돌리지 않는다** |
-| 1-2 | NetworkPolicy 가 실제로 막는지 확인 | 허용 안 된 출구(다른 대학 DB 포트·임의 외부)가 막히고, 허용한 길(자기 DB·중앙·MinIO)은 된다 |
-| 1-3 | `node tests/m4/isolation.mjs` | A 클러스터 전면 정지 중 B 가 생성→저장→결제→자동 접수, 중앙 "내 원서" 반영, A 복구 후 A 도 접수 |
+| 1-1 | kind 2 클러스터에 수정 이미지 재배포 | ✅ 세 워크로드(API·Relay·서류 워커) 모두 Ready |
+| 1-2 | NetworkPolicy 실효성 확인 | ✅ 자기 DB·Redis·중앙·MinIO만 허용, 다른 대학 DB·임의 외부 차단 (D-45) |
+| 1-3 | `node tests/m4/isolation.mjs` | ✅ A 정지 중 B 접수 2건·중앙 반영(2.068초), A 복구 후 접수. **로컬 축소 환경** |
 | 1-4 | 결과를 노션 §08 **시나리오 13** 으로 추가 | 결과 파일(`tests/m4/results/`)과 "축소 환경" 명시 |
 
 ### 🎯 목표 2 — 로컬에서 할 수 있는 기능 시험
 
 | ID | 시험 | 로컬 방식 |
 |---|---|---|
-| T-M4-33 | 같은 원서 Finalize 100회 동시 | kind 위 API 로 동시 요청 → Submission 1건 |
-| T-M4-34 | PG 지연·timeout·콜백 1~30분 지연 | Mock PG `SLOW`·`UNKNOWN`, 재확인 워커 주기를 당겨 시간 압축 |
-| T-M4-35 | 중앙 Sync 차단 | 중앙 컨테이너를 멈추고(2시간 → 축소) 접수 지속·복구 후 event loss 0 |
-| T-M4-39 | API Pod·노드 강제 종료 | PDB·maxUnavailable 0 으로 무중단인지 |
+| T-M4-33 | 같은 원서 Finalize 100회 동시 | ✅ 100건 성공 → Submission·Outbox·감사 각 1건 |
+| T-M4-34 | PG 지연·timeout·콜백 1~30분 지연 | 🟡 SLOW·UNKNOWN 자동 복구는 시간 압축 통과. 실제 시간 시험 남음 |
+| T-M4-35 | 중앙 Sync 차단 | 🟡 8.8초 축소 단절·event loss 0. 2시간 시험 남음 |
+| T-M4-39 | API Pod·노드 강제 종료 | 🟡 Pod 삭제·RollingUpdate 오류 0. 다중 노드 시험 남음 |
 
-### 🎯 목표 3 — 차트에 남은 운영 기능
+### 🎯 목표 3 — 차트에 남은 운영 기능 · **현재 목표**
 
 | ID | 할 일 |
 |---|---|
-| T-M4-09 | PgBouncer 계열 Pooler — 지금은 Pod 당 상한과 예산 검사까지 |
+| T-M4-09 | PgBouncer 1.26.0 이미지·차트·TLS 경계·DB/Redis NetworkPolicy 분리·예산 검사 구현. `tests/m4/pgbouncer.mjs` kind 실행 대기 |
 | T-M4-07 | Peak Mode 예약 전환(scheduledActivation)·비핵심 Job 억제 |
 | T-M4-08 | HPA 커스텀 지표 — metrics adapter 설치 후 |
 | T-M4-05 | GitOps Pull 배포(Argo CD 또는 Flux) — 서명된 이미지만 |
@@ -110,7 +110,6 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 
 | 항목 | 왜 |
 |---|---|
-| **Docker Desktop 재시작** | 엔진이 500 을 돌려준다 — 목표 1 의 시작 조건 |
 | **K-PaaS(또는 클라우드) 시험 환경** | 3,000 CCU·1,000 RPS·6시간 Soak·DB Failover 실측은 이 PC 로 불가 (T-M4-30~32·36·41) |
 | 제출 PDF 정정 (D-2·D-3) | 개발보고서의 "Java/Spring" 표기 |
 | 첨부 values-m 커넥션 수치 (D-44 ⑦) | Pod 당 38 로 줄일지, 예산을 411 이상으로 올릴지 — DB 쪽 사실이라 대학·운영이 정한다 |

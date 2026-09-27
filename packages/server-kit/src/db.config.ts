@@ -20,6 +20,42 @@ export interface DbPoolBudget {
 }
 
 /**
+ * Vault가 넣은 DATABASE_URL의 자격증명·DB명은 유지하고 접속 목적지만 Pooler로 바꾼다.
+ * URL을 Helm에서 분해해 Secret 값을 ConfigMap에 흘리지 않기 위해 런타임에서 처리한다.
+ */
+export function databaseConnectionString(env: NodeJS.ProcessEnv = process.env): string | undefined {
+  const raw = env.DATABASE_URL;
+  const host = env.DB_PROXY_HOST;
+  const port = env.DB_PROXY_PORT;
+  const sslMode = env.DB_PROXY_SSLMODE;
+  if (!host && !port) return raw;
+  if (!raw) throw new Error('DB Proxy를 쓰려면 DATABASE_URL이 필요합니다');
+  if (!host || !port) throw new Error('DB_PROXY_HOST와 DB_PROXY_PORT는 함께 설정해야 합니다');
+  const n = Number(port);
+  if (!Number.isInteger(n) || n < 1 || n > 65_535) {
+    throw new Error(`DB_PROXY_PORT는 1~65535의 정수여야 합니다: ${port}`);
+  }
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error('DATABASE_URL 형식이 올바르지 않습니다');
+  }
+  if (url.protocol !== 'postgres:' && url.protocol !== 'postgresql:') {
+    throw new Error(`DATABASE_URL은 PostgreSQL URL이어야 합니다: ${url.protocol}`);
+  }
+  url.hostname = host;
+  url.port = String(n);
+  if (sslMode) {
+    if (!['disable', 'allow', 'prefer', 'require', 'verify-ca', 'verify-full'].includes(sslMode)) {
+      throw new Error(`DB_PROXY_SSLMODE가 올바르지 않습니다: ${sslMode}`);
+    }
+    url.searchParams.set('sslmode', sslMode);
+  }
+  return url.toString();
+}
+
+/**
  * 서비스별 예산.
  * 합계가 DB max_connections 를 넘지 않도록 Pod replica 수와 함께 계산한다.
  *   총 커넥션 = Σ (서비스 replica × 해당 서비스 max)

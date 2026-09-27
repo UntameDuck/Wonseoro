@@ -29,7 +29,7 @@ export interface RecheckResult {
  * 기한 — maxAgeHours 가 지난 결제는 더 묻지 않는다. 대조(PAYMENT_STATE_UNKNOWN_STALE)가
  *   사람에게 넘긴다. 끝없이 묻는 것은 해결이 아니다.
  *
- * **CONFIRMED 가 돼도 Finalize 하지 않는다.** 제출은 지원자의 의사 표시다.
+ * **CONFIRMED가 되면 자동 Finalize listener가 접수한다.** 결제 의도 생성이 제출 의사 표시다. (D-42)
  */
 @Injectable()
 export class PaymentRecheckWorker implements OnModuleInit, OnApplicationShutdown {

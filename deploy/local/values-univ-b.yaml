@@ -17,3 +17,7 @@ runtimeSecret:
     CENTRAL_SUBJECT_KEY: dev-dashboard-subject-key
     S3_ACCESS_KEY: wonseoro
     S3_SECRET_KEY: wonseoro123
+
+networkPolicy:
+  databaseEgress:
+    ports: [5442]

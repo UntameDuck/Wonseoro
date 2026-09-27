@@ -698,6 +698,47 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-45. 로컬 NetworkPolicy가 다른 대학 DB 포트까지 허용한다 🔴
+
+| | |
+|---|---|
+| **발견** | 2026-09-28 (T-M4-42 NetworkPolicy 실효성 시험) |
+| **충돌** | `deploy/local/values-local.yaml`은 대학 간 경로를 열지 않는다고 설명하지만, 공통 `dataEgress.ports`가 UNIV-A DB `5432`와 UNIV-B DB `5442`를 함께 허용한다. 실제 UNIV-A API Pod에서 두 포트 모두 TCP 연결에 성공했다. |
+| **영향** | 두 대학 DB가 같은 Docker Desktop 호스트 IP를 쓰는 로컬 축소 환경에서, 한 대학 Pod가 다른 대학 DB의 네트워크 경계까지 도달한다. DB 인증은 별도 방어선이지만 T-M4-42의 대학별 네트워크 격리 주장을 만족하지 못한다. |
+| **판정** | 공통 values에는 공유 Redis 포트만 두고, 각 대학 overlay가 자기 DB 포트만 추가한다. NetworkPolicy 실측으로 자기 DB 성공·다른 대학 DB timeout을 다시 확인한다. |
+| **저장소 반영** | ✅ `deploy/local/values-local.yaml` · `values-univ-a.yaml` · `values-univ-b.yaml` — 공통은 Redis만, 대학별 overlay는 자기 DB 포트만 허용 |
+| **노션 반영** | 해당 없음 — 노션 첨부가 아닌 로컬 축소 환경의 배포값 오류 |
+| **검증** | 양 대학 모두 자기 DB·Redis·중앙·MinIO 연결 성공, 다른 대학 DB·임의 외부·Worker→중앙 timeout, Worker→자기 API 성공 |
+| **상태** | 🟢 CLOSED — 저장소 반영·kind 실측 (2026-09-28) |
+
+---
+
+## D-46. 중앙 Sync Gateway가 현재 subjectRef 형식을 버린다 🔴
+
+| | |
+|---|---|
+| **발견** | 2026-09-28 (T-M4-42 첫 실행) |
+| **충돌** | D-39에서 `subjectRef`를 키 없는 64자리 SHA-256에서 `<keyId>.<base64url(HMAC-SHA256)>`로 바꿨지만, `SyncGatewayService`의 수신 검증은 여전히 `/^[0-9a-f]{64}$/`만 허용한다. 이벤트는 수신됐으나 `application_summary.subject_ref`가 모두 `null`이 되어 중앙 "내 원서"에서 찾을 수 없었다. |
+| **판정** | `server-kit`에 현재 목적별 참조 형식 검증 함수를 단일 출처로 두고, Sync Gateway가 이를 사용한다. 실제 이벤트 수신→요약 저장→대시보드 조회 회귀 시험을 추가한다. |
+| **저장소 반영** | ✅ `server-kit/isPurposeRef` · 중앙 Sync Gateway · 단위·통합 회귀 시험. 첫 격리 시험 실패 결과와 수정 후 통과 결과를 함께 보존 |
+| **노션 반영** | 해당 없음 — D-39의 확정 형식을 구현 일부가 따라가지 못한 회귀 |
+| **상태** | 🟢 CLOSED — 저장소 반영·T-M4-42 재통과 (2026-09-28) |
+
+---
+
+## D-47. CloudEvents subjectRef 계약이 DB 길이보다 긴 키 ID를 허용한다
+
+| | |
+|---|---|
+| **발견** | 2026-09-28 (D-46 수정 전 계약 대조) |
+| **충돌** | CloudEvents JSON Schema는 `subjectRef`의 `keyId`를 최대 64자로 허용해 전체 값이 최대 108자가 될 수 있다. 구현의 키 목록은 최대 16자이고 중앙 `application_summary.subject_ref`는 `varchar(64)`라 그런 이벤트를 저장할 수 없다. |
+| **판정 방향** | 실제 생성기·DB에 맞춰 계약의 키 ID 상한을 16자로 좁힌다. 계약 첨부 변경이므로 저장소 JSON Schema와 노션 §04 첨부를 같은 작업에서 교체해야 한다. |
+| **저장소 반영** | ⬜ — 노션 페이지 수정 승인 필요 |
+| **노션 반영** | ⬜ §04 CloudEvents 첨부 교체 필요 |
+| **상태** | 🟡 판정 방향 — 사용자 승인 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 

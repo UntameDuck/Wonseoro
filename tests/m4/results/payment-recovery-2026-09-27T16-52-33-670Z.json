@@ -1,0 +1,65 @@
+{
+  "test": "T-M4-34",
+  "environment": "local-kind-univ-a (축소·시간 압축 환경)",
+  "timeCompression": "worker 1초, 결제별 30초 Backoff는 verified_at을 35초 과거로 이동",
+  "startedAt": "2026-09-27T16:52:33.670Z",
+  "checks": {
+    "SLOW-first-check-is-pending": {
+      "pass": true,
+      "httpStatus": 202,
+      "paymentStatus": "PENDING"
+    },
+    "SLOW-worker-auto-confirms-and-finalizes": {
+      "pass": true,
+      "elapsedMs": 1101
+    },
+    "SLOW-double-confirm-is-zero": {
+      "pass": true,
+      "confirmedEvents": 1,
+      "submissions": 1,
+      "finalizedAudits": 1
+    },
+    "deployment-restored": {
+      "pass": true,
+      "restored": true
+    }
+  },
+  "scenarios": {
+    "SLOW": {
+      "applicationId": "eda03509-cb5e-4b02-ac6c-e803f356f29f",
+      "paymentId": "d310fe1d-4879-4d2b-aa38-533524509d2c",
+      "recovered": {
+        "elapsedMs": 1101,
+        "payment": {
+          "id": "d310fe1d-4879-4d2b-aa38-533524509d2c",
+          "status": "CONFIRMED",
+          "amount": 55000,
+          "currency": "KRW",
+          "provider": "mock-pg",
+          "providerApprovedAt": "2026-09-27T16:53:33.885Z",
+          "verifiedAt": "2026-09-27T16:53:33.886Z"
+        },
+        "submission": {
+          "applicationId": "eda03509-cb5e-4b02-ac6c-e803f356f29f",
+          "submissionId": "b1c64b0c-31c5-4faf-b557-5e6d787c236b",
+          "applicationNumber": "2027-UNIV-A-7AXUY2F7X4",
+          "status": "FINALIZED",
+          "requestedAt": "2026-09-27T16:53:32.601Z",
+          "paymentVerifiedAt": "2026-09-27T16:53:33.886Z",
+          "finalizedAt": "2026-09-27T16:53:33.931Z",
+          "deadlinePolicyVersion": "pol-2027-v1",
+          "configVersion": "cfg-2027-v2",
+          "serverTime": "2026-09-27T16:53:34.136Z"
+        }
+      },
+      "counts": {
+        "confirmedEvents": 1,
+        "submissions": 1,
+        "finalizedAudits": 1
+      }
+    }
+  },
+  "error": "unknown: create failed 0",
+  "finishedAt": "2026-09-27T16:55:36.958Z",
+  "passed": false
+}

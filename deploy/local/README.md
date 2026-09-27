@@ -29,6 +29,7 @@ docker exec wonseoro-dev-postgres-central-1 psql -U wonseoro -d central -c "SET 
 
 # 이미지 (같은 이미지를 두 대학이 쓴다)
 for a in admission-api event-relay document-service central-api; do docker build -f deploy/docker/Dockerfile --build-arg APP=$a -t k-admission/$a:dev .; done
+docker build -f deploy/docker/pgbouncer/Dockerfile -t k-admission/pgbouncer:dev .
 
 # 중앙 API — 클러스터 밖
 docker run -d --name ka-central --read-only --tmpfs /tmp --cap-drop ALL -p 3000:3000 \
@@ -38,7 +39,7 @@ docker run -d --name ka-central --read-only --tmpfs /tmp --cap-drop ALL -p 3000:
 # 대학 클러스터
 for u in a b; do
   kind create cluster --config deploy/local/kind-univ-$u.yaml
-  kind load docker-image k-admission/admission-api:dev k-admission/event-relay:dev k-admission/document-service:dev --name univ-$u
+  kind load docker-image k-admission/admission-api:dev k-admission/event-relay:dev k-admission/document-service:dev k-admission/pgbouncer:dev --name univ-$u
   helm upgrade --install univ-$u deploy/charts/k-admission --kube-context kind-univ-$u -n kadmission-app --create-namespace \
     -f deploy/charts/k-admission/values-s.yaml -f deploy/local/values-local.yaml -f deploy/local/values-univ-$u.yaml
 done
@@ -48,6 +49,7 @@ done
 
 ```bash
 node tests/m4/isolation.mjs
+node tests/m4/pgbouncer.mjs
 ```
 
 A 클러스터 노드를 멈춘 동안 B 의 생성→저장→결제→자동 접수와 중앙 "내 원서" 반영을 확인하고, A 를 되살린다.

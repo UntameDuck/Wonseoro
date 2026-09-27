@@ -10,9 +10,9 @@
 ## 1. 30초 요약
 
 - **제품**: 원서로(K-Admission) — 대학 입학 원서접수를 대학별 Data Plane 으로 분산하는 플랫폼. 2026 GovTech 공모전 출품작
-- **현재**: M0~M3 끝(MVP 가 화면에서 접수번호까지 동작), **M4(분산 실증) 3/28 진행 중**. 전체 61/139 태스크
-- **바로 다음 할 일**: kind 2 클러스터를 다시 띄우고 **대학 간 장애 격리 시험 T-M4-42** 를 돌려 결과를 남긴다 → [§4](#4-다음-작업--순서와-방법)
-- **막혀 있던 것**: Docker Desktop 이 메모리 부족으로 멈췄다(2026-09-28). 사용자가 재시작했다. 클러스터 상태는 **확인되지 않았다**
+- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 6/28 진행 중**. 전체 64/139 태스크
+- **완료한 핵심 증명**: 로컬 kind 2클러스터 축소 환경에서 **대학 간 장애 격리 T-M4-42 통과**. A대 전면 정지 중 B대 접수·중앙 반영, A대 복구 후 접수까지 확인
+- **바로 다음 할 일**: Docker Desktop 복구 후 **T-M4-09 PgBouncer kind 통합 시험** → [§4](#4-다음-작업--순서와-방법)
 
 ## 2. 반드시 지킬 규칙
 
@@ -37,16 +37,16 @@
 | 도구 | kind 0.33 · Helm **4.3** · k6 2.2 · kubectl 1.34 (winget 설치). 새 터미널부터 PATH 에 잡힌다. 안 잡히면 `%LOCALAPPDATA%\Microsoft\WinGet\Packages\` 아래 `Helm.Helm_*\windows-amd64`, `Kubernetes.kind_*` 를 PATH 에 더한다. k6 는 `C:\Program Files\k6` |
 | Docker | Desktop, VM 메모리 **약 7.5GB.** 이미지 빌드와 kind 클러스터 2개를 **동시에 돌리면 엔진이 멈춘다**(실제로 멈췄다). 빌드 → 클러스터 순서로, 하나씩 |
 | 로컬 DB | compose: `postgres-univ-a` :5432 · `postgres-univ-b` :5442(`--profile multi`) · `postgres-central` :5434 · redis :6379 · minio :9000 |
-| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 234 · server-kit 30 · central-api 19 · event-relay 4 (실패 0, 3개는 관리자 토큰 설정 여부로 건너뜀) |
+| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 234 · server-kit 35 · central-api 20 · event-relay 4 (실패 0, 3개는 관리자 토큰 설정 여부로 건너뜀) |
 | 검사 | `npm run db:verify`(DB 제약 20종) · `node scripts/check-deps.mjs`(의존성 선언) · `helm lint deploy/charts/k-admission` |
 
 ## 4. 다음 작업 — 순서와 방법
 
 원본은 [03-next-steps.md「다음 개발 목표」](03-next-steps.md#다음-개발-목표-2026-09-28-설정)와 [M4 마일스톤](milestones/M4-federated-proof.md). 아래는 **실행 방법**까지 붙인 요약이다.
 
-### 목표 1 — 대학 간 장애 격리 증명 (T-M4-42) ⭐ 최우선
+### 목표 1 — 대학 간 장애 격리 증명 (T-M4-42) ✅ 완료
 
-**1-1. 로컬 축소 환경 되살리기** — 절차 전체: [deploy/local/README.md](../deploy/local/README.md)
+**결과** — `tests/m4/results/isolation-2026-09-27T16-42-39-057Z.json` (로컬 축소 환경)
 
 ```bash
 docker ps -a                                  # 무엇이 살아 있는지부터
@@ -55,25 +55,21 @@ kind get clusters                             # univ-a, univ-b 가 남아 있는
 
 - 클러스터가 없거나 이상하면 `kind delete cluster --name univ-a` 후 README 절차로 다시 만든다
 - 이미지 4종(`k-admission/{admission-api,event-relay,document-service,central-api}:dev`)은 **클러스터를 띄우기 전에** 빌드한다.
-  document-service 는 의존성 선언을 고친 뒤 **다시 빌드해야 한다**(e0d65f9 이후 이미지가 올라갔는지 확인되지 않았다)
 - `kind load docker-image … --name univ-a` → `helm upgrade --install`(README 명령) → 세 Deployment 가 Ready 인지 확인
 - 중앙 API 는 클러스터 밖 컨테이너 `ka-central`(:3000). 없으면 README 명령으로 띄운다
 - `univ_b` DB 와 중앙 `university_registry` 의 `UNIV-B` 는 이미 만들어 두었다(볼륨이 남아 있으면 그대로)
 
-**1-2. NetworkPolicy 가 실제로 막는지** — kind 0.33 기본 CNI(kindnet)는 NetworkPolicy 를 집행한다고 보고 있으나 **확인하지 않았다.**
-API Pod 에서 허용한 곳(호스트 192.168.65.254 의 5432/5442/6379/3000/9000)은 되고, 그 밖(예: 인터넷, 다른 포트)은 막히는지 `kubectl exec` 로 확인한다.
-집행되지 않으면 Calico 설치를 검토하고 대장에 기록한다.
+**NetworkPolicy 결과** — kindnet이 정책을 실제 집행한다. 양 대학 모두 자기 DB·Redis·중앙·MinIO는 연결되고, 다른 대학 DB·임의 외부·Worker→중앙은 timeout, Worker→자기 API는 연결된다. 공통 values가 양쪽 DB 포트를 열던 문제는 D-45로 수정했다.
 
-**1-3. 격리 시험 실행**
+**재실행**
 
 ```bash
 node tests/m4/isolation.mjs
 ```
 
-A 클러스터 노드 컨테이너를 멈춘 동안 B 대학의 원서 생성→저장→결제→자동 접수, 중앙 "내 원서" 반영, A 복구 후 A 접수까지 확인한다.
-결과 JSON 이 `tests/m4/results/` 에 남는다 — **커밋한다.** 실패하면 원인을 고치고 대장에 올린다.
+A 클러스터 노드 컨테이너를 멈춘 동안 B 대학의 원서 생성→저장→결제→자동 접수, 중앙 "내 원서" 반영, A 복구 후 A 접수까지 확인한다. 첫 실행은 중앙이 현재 `subjectRef` 형식을 버리는 D-46을 발견했고, 수정 후 재실행해 통과했다.
 
-**1-4. 기록** — M4 마일스톤 진행표·03-next-steps 갱신, 노션 §08 에 **시나리오 13(대학 간 격리)** 추가(R6: 사용자 확인 후)
+**남은 기록** — 노션 §08에 **시나리오 13(대학 간 격리)** 추가(R6: 사용자 확인 후)
 
 ### 목표 2 — 로컬 기능 시험 (kind 위에서, 축소 환경)
 
@@ -86,7 +82,14 @@ A 클러스터 노드 컨테이너를 멈춘 동안 B 대학의 원서 생성→
 
 ### 목표 3 — 차트에 남은 운영 기능
 
-T-M4-09 PgBouncer · T-M4-07 Peak Mode 예약 전환 · T-M4-08 HPA 커스텀 지표(metrics adapter) · T-M4-05 GitOps Pull(Argo CD/Flux) · T-M4-20~24 관측성. 각 인수기준은 [M4 마일스톤](milestones/M4-federated-proof.md).
+T-M4-09 PgBouncer는 이미지·차트·앱 연결 override·NetworkPolicy·TLS 경계·예산 검사까지 구현했다.
+Docker Desktop 복구 후 두 클러스터에 배포하고 `node tests/m4/pgbouncer.mjs`로 직접 DB 우회 차단과
+upstream 10개 상한을 확인한다. 그다음 T-M4-07 Peak Mode 예약 전환 · T-M4-08 HPA 커스텀 지표(metrics adapter) ·
+T-M4-05 GitOps Pull(Argo CD/Flux) · T-M4-20~24 관측성 순서다. 각 인수기준은 [M4 마일스톤](milestones/M4-federated-proof.md).
+
+현재 PC의 Docker Desktop 4.62.0은 재기동 때
+`%LOCALAPPDATA%\Docker\run\dockerInference` 재분석 지점을 제거하지 못해 백엔드가 종료된다.
+WSL 종료·CLI 재시작으로는 복구되지 않았다. Windows 재부팅 후 Docker가 정상 기동하면 시험을 재개한다.
 
 ### 목표 4 — 노션 반영 (R6)
 
@@ -107,7 +110,7 @@ T-M4-09 PgBouncer · T-M4-07 Peak Mode 예약 전환 · T-M4-08 HPA 커스텀 �
 
 ## 6. 전체 남은 규모
 
-139개 중 61개 완료, **약 78개 남음** (M0 1 · M3 1 · M4 25 · M5 35 · M6 15).
+139개 중 64개 완료, **75개 남음**.
 AI 가 이 PC 에서 할 수 있는 것 약 45개, 외부 환경 필요 약 15개, 사람·기관 필요 약 15개.
 
 ## 7. 어디에 무엇이 있나
@@ -116,7 +119,7 @@ AI 가 이 PC 에서 할 수 있는 것 약 45개, 외부 환경 필요 약 15�
 |---|---|
 | 지금 할 일 | [03-next-steps.md](03-next-steps.md) |
 | 단계별 태스크·인수기준 | [milestones/](milestones/) |
-| 설계와 구현이 다른 곳 44건 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) |
+| 설계와 구현이 다른 곳 47건 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) |
 | 노션 문서 지도·동기화 규칙 | [01-notion-sync-protocol.md](01-notion-sync-protocol.md) |
 | 왜 이렇게 정했나 | [adr/](adr/) |
 | 배포 | `deploy/` — 차트 `charts/k-admission`, 대학별 `universities/`, 로컬 `local/` |

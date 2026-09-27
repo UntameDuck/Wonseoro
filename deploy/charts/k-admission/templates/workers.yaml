@@ -53,6 +53,14 @@ spec:
               value: {{ $v.eventRelay.batchSize | quote }}
             - name: RELAY_INTERVAL_MS
               value: {{ $v.eventRelay.intervalMs | quote }}
+            {{- if $v.database.pooler.enabled }}
+            - name: DB_PROXY_HOST
+              value: {{ printf "%s-pgbouncer" (include "ka.fullname" .) | quote }}
+            - name: DB_PROXY_PORT
+              value: {{ $v.database.pooler.port | quote }}
+            - name: DB_PROXY_SSLMODE
+              value: {{ $v.database.pooler.clientTlsSslMode | quote }}
+            {{- end }}
             {{- include "ka.extraEnv" $v.eventRelay.env | nindent 12 }}
           envFrom:
             - secretRef:

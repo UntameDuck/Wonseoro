@@ -67,11 +67,11 @@ spec:
         - { protocol: UDP, port: 53 }
         - { protocol: TCP, port: 53 }
 ---
-# 접수 API · Relay → DB·Redis (클러스터 밖 HA 계층)
+# 접수 API · Relay → Redis (클러스터 밖 HA 계층)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "ka.fullname" . }}-allow-data-services
+  name: {{ include "ka.fullname" . }}-allow-cache
   labels: {{- include "ka.labels" . | nindent 4 }}
 spec:
   podSelector:
@@ -80,12 +80,94 @@ spec:
       - { key: network-role, operator: In, values: [api, relay] }
   policyTypes: [Egress]
   egress:
-    - to: {{- toYaml $v.networkPolicy.dataEgress.to | nindent 8 }}
+    - to: {{- toYaml $v.networkPolicy.cacheEgress.to | nindent 8 }}
       ports:
-        {{- range $v.networkPolicy.dataEgress.ports }}
+        {{- range $v.networkPolicy.cacheEgress.ports }}
         - { protocol: TCP, port: {{ . }} }
         {{- end }}
 ---
+{{- if $v.database.pooler.enabled }}
+# 접수 API · Relay → PgBouncer. DB 직접 경로는 열지 않는다.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ka.fullname" . }}-allow-app-to-pgbouncer
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $inst }}
+      app: pgbouncer
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - { key: app.kubernetes.io/instance, operator: In, values: [{{ $inst }}] }
+              - { key: network-role, operator: In, values: [api, relay] }
+      ports:
+        - { protocol: TCP, port: {{ $v.database.pooler.port }} }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ka.fullname" . }}-allow-app-to-pgbouncer-egress
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app.kubernetes.io/instance, operator: In, values: [{{ $inst }}] }
+      - { key: network-role, operator: In, values: [api, relay] }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ $inst }}
+              app: pgbouncer
+      ports:
+        - { protocol: TCP, port: {{ $v.database.pooler.port }} }
+---
+# PgBouncer만 외부 DB에 연결한다.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ka.fullname" . }}-allow-pgbouncer-to-database
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $inst }}
+      app: pgbouncer
+  policyTypes: [Egress]
+  egress:
+    - to: {{- toYaml $v.networkPolicy.databaseEgress.to | nindent 8 }}
+      ports:
+        {{- range $v.networkPolicy.databaseEgress.ports }}
+        - { protocol: TCP, port: {{ . }} }
+        {{- end }}
+---
+{{- else }}
+# Pooler를 끈 설치만 API · Relay의 DB 직접 연결을 허용한다.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ka.fullname" . }}-allow-database-direct
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app.kubernetes.io/instance, operator: In, values: [{{ $inst }}] }
+      - { key: network-role, operator: In, values: [api, relay] }
+  policyTypes: [Egress]
+  egress:
+    - to: {{- toYaml $v.networkPolicy.databaseEgress.to | nindent 8 }}
+      ports:
+        {{- range $v.networkPolicy.databaseEgress.ports }}
+        - { protocol: TCP, port: {{ . }} }
+        {{- end }}
+---
+{{- end }}
 # 접수 API · Relay → 외부(중앙 Sync·PG·Object Storage)는 통제된 출구로만
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

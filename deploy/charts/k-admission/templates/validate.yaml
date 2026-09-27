@@ -18,6 +18,26 @@
 {{- if gt (int $total) (int $v.database.pool.connectionBudget) -}}
 {{- fail (printf "DB 커넥션 예산 초과: 접수 API %d Pod × %d + Relay %d + 서류 워커 %d = %d > connectionBudget %d" (int $apiMax) (int $v.database.pool.maxPerPod) (int $relay) (int $docs) (int $total) (int $v.database.pool.connectionBudget)) -}}
 {{- end -}}
+{{- if $v.database.pooler.enabled -}}
+  {{- if not (has $v.database.pooler.poolMode (list "session" "transaction")) -}}
+  {{- fail (printf "database.pooler.poolMode 는 session | transaction 이어야 한다: %s" $v.database.pooler.poolMode) -}}
+  {{- end -}}
+  {{- if and (has $v.database.pooler.serverTlsSslMode (list "verify-ca" "verify-full")) (not $v.database.pooler.serverTlsCaFile) -}}
+  {{- fail "DB TLS verify-ca/verify-full 은 database.pooler.serverTlsCaFile 이 필요하다" -}}
+  {{- end -}}
+  {{- if not (has $v.database.pooler.clientTlsSslMode (list "disable" "allow" "prefer" "require" "verify-ca" "verify-full")) -}}
+  {{- fail (printf "database.pooler.clientTlsSslMode가 올바르지 않다: %s" $v.database.pooler.clientTlsSslMode) -}}
+  {{- end -}}
+  {{- $serverPerPod := add (int $v.database.pooler.defaultPoolSize) (int $v.database.pooler.reservePoolSize) -}}
+  {{- $serverTotal := mul (int $v.database.pooler.replicas) $serverPerPod -}}
+  {{- if gt $serverTotal (int $v.database.pool.connectionBudget) -}}
+  {{- fail (printf "PgBouncer 서버 커넥션 예산 초과: %d Pod × (%d + reserve %d) = %d > connectionBudget %d" (int $v.database.pooler.replicas) (int $v.database.pooler.defaultPoolSize) (int $v.database.pooler.reservePoolSize) $serverTotal (int $v.database.pool.connectionBudget)) -}}
+  {{- end -}}
+  {{- $clientCapacity := mul (int $v.database.pooler.replicas) (int $v.database.pooler.maxClientConnections) -}}
+  {{- if lt $clientCapacity (int $total) -}}
+  {{- fail (printf "PgBouncer 클라이언트 수용량 부족: %d < 애플리케이션 최대 커넥션 %d" $clientCapacity (int $total)) -}}
+  {{- end -}}
+{{- end -}}
 
 {{- if eq $v.global.environment "production" -}}
   {{- if $v.runtimeSecret.create -}}
@@ -27,6 +47,9 @@
     {{- if or (not $img.digest) (hasPrefix "sha256:REPLACE" $img.digest) -}}
     {{- fail (printf "production 은 서명된 이미지 digest 가 필요하다 (%s.image.digest) — 태그로 배포하지 않는다 (§A6)" $name) -}}
     {{- end -}}
+  {{- end -}}
+  {{- if and $v.database.pooler.enabled (or (not $v.database.pooler.image.digest) (hasPrefix "sha256:REPLACE" $v.database.pooler.image.digest)) -}}
+  {{- fail "production 은 서명된 이미지 digest 가 필요하다 (database.pooler.image.digest) — 태그로 배포하지 않는다 (§A6)" -}}
   {{- end -}}
   {{- if not $v.securityContext.readOnlyRootFilesystem -}}
   {{- fail "production 은 readOnlyRootFilesystem 이 true 여야 한다 (§05 Runtime 기준)" -}}

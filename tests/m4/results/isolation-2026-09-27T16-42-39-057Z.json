@@ -1,0 +1,189 @@
+{
+  "test": "T-M4-42",
+  "environment": "local-kind-2-clusters (축소 환경)",
+  "startedAt": "2026-09-27T16:42:39.057Z",
+  "checks": {
+    "baseline-A": {
+      "pass": true,
+      "ok": true,
+      "steps": {
+        "create": 201,
+        "save": 200,
+        "paymentIntent": 201,
+        "verify": 200,
+        "submission": 200
+      },
+      "applicationNumber": "2027-UNIV-A-BKRXKZGYK7",
+      "token": "subj-iso-5ed7cd1b"
+    },
+    "baseline-B": {
+      "pass": true,
+      "ok": true,
+      "steps": {
+        "create": 201,
+        "save": 200,
+        "paymentIntent": 201,
+        "verify": 200,
+        "submission": 200
+      },
+      "applicationNumber": "2027-UNIV-B-DSEUQEEM2P",
+      "token": "subj-iso-83f298cb"
+    },
+    "A-is-down": {
+      "pass": true,
+      "observed": "UND_ERR_SOCKET",
+      "detectedMs": 14
+    },
+    "B-submits-while-A-down": {
+      "pass": true,
+      "ok": true,
+      "steps": {
+        "create": 201,
+        "save": 200,
+        "paymentIntent": 201,
+        "verify": 200,
+        "submission": 200
+      },
+      "applicationNumber": "2027-UNIV-B-QDNNUCYAXR",
+      "token": "subj-iso-532e2d7c"
+    },
+    "B-submits-again-while-A-down": {
+      "pass": true,
+      "ok": true,
+      "steps": {
+        "create": 201,
+        "save": 200,
+        "paymentIntent": 201,
+        "verify": 200,
+        "submission": 200
+      },
+      "applicationNumber": "2027-UNIV-B-3NWV75LT3T",
+      "token": "subj-iso-3e9ca451"
+    },
+    "central-dashboard-shows-B-while-A-down": {
+      "pass": true,
+      "seenAfterMs": 2068
+    },
+    "A-recovers-and-submits": {
+      "pass": true,
+      "ok": true,
+      "steps": {
+        "create": 201,
+        "save": 200,
+        "paymentIntent": 201,
+        "verify": 200,
+        "submission": 200
+      },
+      "applicationNumber": "2027-UNIV-A-NRW439ASEF",
+      "token": "subj-iso-89ef00e5",
+      "recoveredAfterMs": 54581
+    }
+  },
+  "finishedAt": "2026-09-27T16:43:54.139Z",
+  "passed": true,
+  "log": [
+    {
+      "at": "2026-09-27T16:42:39.067Z",
+      "msg": "사전 확인"
+    },
+    {
+      "at": "2026-09-27T16:42:39.669Z",
+      "msg": "1. 기준선 — 두 대학 모두 접수"
+    },
+    {
+      "at": "2026-09-27T16:42:47.936Z",
+      "msg": "✔ baseline-A",
+      "ok": true,
+      "steps": {
+        "create": 201,
+        "save": 200,
+        "paymentIntent": 201,
+        "verify": 200,
+        "submission": 200
+      },
+      "applicationNumber": "2027-UNIV-A-BKRXKZGYK7",
+      "token": "subj-iso-5ed7cd1b"
+    },
+    {
+      "at": "2026-09-27T16:42:47.937Z",
+      "msg": "✔ baseline-B",
+      "ok": true,
+      "steps": {
+        "create": 201,
+        "save": 200,
+        "paymentIntent": 201,
+        "verify": 200,
+        "submission": 200
+      },
+      "applicationNumber": "2027-UNIV-B-DSEUQEEM2P",
+      "token": "subj-iso-83f298cb"
+    },
+    {
+      "at": "2026-09-27T16:42:47.938Z",
+      "msg": "2. A대 Data Plane 전면 정지",
+      "node": "univ-a-control-plane"
+    },
+    {
+      "at": "2026-09-27T16:42:51.616Z",
+      "msg": "✔ A-is-down",
+      "observed": "UND_ERR_SOCKET",
+      "detectedMs": 14
+    },
+    {
+      "at": "2026-09-27T16:42:51.617Z",
+      "msg": "3. A 정지 중 B대 접수 전 구간"
+    },
+    {
+      "at": "2026-09-27T16:42:53.138Z",
+      "msg": "✔ B-submits-while-A-down",
+      "ok": true,
+      "steps": {
+        "create": 201,
+        "save": 200,
+        "paymentIntent": 201,
+        "verify": 200,
+        "submission": 200
+      },
+      "applicationNumber": "2027-UNIV-B-QDNNUCYAXR",
+      "token": "subj-iso-532e2d7c"
+    },
+    {
+      "at": "2026-09-27T16:42:54.734Z",
+      "msg": "✔ B-submits-again-while-A-down",
+      "ok": true,
+      "steps": {
+        "create": 201,
+        "save": 200,
+        "paymentIntent": 201,
+        "verify": 200,
+        "submission": 200
+      },
+      "applicationNumber": "2027-UNIV-B-3NWV75LT3T",
+      "token": "subj-iso-3e9ca451"
+    },
+    {
+      "at": "2026-09-27T16:42:56.802Z",
+      "msg": "✔ central-dashboard-shows-B-while-A-down",
+      "seenAfterMs": 2068
+    },
+    {
+      "at": "2026-09-27T16:42:56.803Z",
+      "msg": "4. A 복구"
+    },
+    {
+      "at": "2026-09-27T16:43:54.139Z",
+      "msg": "✔ A-recovers-and-submits",
+      "ok": true,
+      "steps": {
+        "create": 201,
+        "save": 200,
+        "paymentIntent": 201,
+        "verify": 200,
+        "submission": 200
+      },
+      "applicationNumber": "2027-UNIV-A-NRW439ASEF",
+      "token": "subj-iso-89ef00e5",
+      "recoveredAfterMs": 54581
+    }
+  ]
+}

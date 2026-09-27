@@ -1,0 +1,61 @@
+{
+  "test": "T-M4-39-partial",
+  "environment": "local-kind-univ-a (축소·단일 노드 환경)",
+  "limitation": "단일 kind 노드이므로 노드 전체 장애 무중단은 미검증. Pod 강제 종료·RollingUpdate만 검증.",
+  "startedAt": "2026-09-27T17:03:27.208Z",
+  "checks": {
+    "deployment-has-two-replicas": {
+      "pass": true,
+      "desired": 2,
+      "ready": 2
+    },
+    "rolling-strategy-is-zero-unavailable": {
+      "pass": true,
+      "maxUnavailable": 0,
+      "maxSurge": 1
+    },
+    "forced-pod-delete-has-zero-request-errors": {
+      "pass": true,
+      "disruptedAt": "2026-09-27T17:03:28.854Z",
+      "requests": 283,
+      "failures": 0,
+      "failureStatuses": {},
+      "p95Ms": 19.4,
+      "maxMs": 73.1
+    },
+    "rolling-restart-has-zero-request-errors": {
+      "pass": true,
+      "disruptedAt": "2026-09-27T17:03:38.538Z",
+      "requests": 504,
+      "failures": 0,
+      "failureStatuses": {},
+      "p95Ms": 16.9,
+      "maxMs": 72
+    },
+    "deployment-returns-to-two-ready-replicas": {
+      "pass": true,
+      "desired": 2,
+      "ready": 2
+    }
+  },
+  "phases": {
+    "forced-pod-delete": {
+      "disruptedAt": "2026-09-27T17:03:28.854Z",
+      "requests": 283,
+      "failures": 0,
+      "failureStatuses": {},
+      "p95Ms": 19.4,
+      "maxMs": 73.1
+    },
+    "rolling-restart": {
+      "disruptedAt": "2026-09-27T17:03:38.538Z",
+      "requests": 504,
+      "failures": 0,
+      "failureStatuses": {},
+      "p95Ms": 16.9,
+      "maxMs": 72
+    }
+  },
+  "finishedAt": "2026-09-27T17:03:54.869Z",
+  "passed": true
+}

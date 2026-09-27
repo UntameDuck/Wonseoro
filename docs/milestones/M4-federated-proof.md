@@ -17,10 +17,14 @@
 | T-M4-01 Helm 차트 | ✅ | `deploy/charts/k-admission` — values-s/m/l (m 은 §05 첨부 그대로, s·l 은 파생값). `helm lint` 통과 |
 | T-M4-02 Runtime 보안 기준 | ✅ | runAsNonRoot(UID 10001)·readOnlyRootFS·seccomp·drop ALL·PDB·startup/readiness/liveness. 이미지를 같은 조건으로 띄워 확인 |
 | T-M4-03 대학별 values | ✅ | `deploy/universities/UNIV-A·B·C` — 같은 차트·같은 이미지, **마감·설정 버전은 values 에 없다**(D-44 ⑥) |
-| T-M4-04 kind 2 클러스터 | 🟡 | univ-a·univ-b 기동, 접수 API·Relay Running. 서류 워커는 의존성 누락 수정 후 재배포 중 Docker Desktop 정지 — **재확인 필요** |
+| T-M4-04 kind 2 클러스터 | ✅ | univ-a·univ-b의 API 2개·Relay·서류 워커 모두 Ready. 서류 워커 수정 이미지 재배포·NetworkPolicy 실효성 확인 |
 | T-M4-07 Peak Mode | 🟡 | `peakMode.enabled` 가 API 최소 replica 를 올린다. 예약 시각 자동 전환·비핵심 Job 억제는 남음 |
-| T-M4-09 커넥션 예산 | 🟡 | `DB_POOL_MAX` + 렌더링 때 Σ(replica × Pod 당 상한) ≤ 예산 검사. **PgBouncer 는 남음**. 첨부 values-m 이 예산을 넘는 것을 찾음(D-44 ⑦) |
-| T-M4-42 대학 간 격리 | 🟡 | 시험 스크립트 `tests/m4/isolation.mjs` 준비. **실행 전** |
+| T-M4-09 커넥션 예산 | 🟡 | PgBouncer 1.26.0 비루트 이미지·Helm Deployment/PDB·앱/DB TLS 경계·서버/클라이언트 예산·직접 DB 우회 차단 구현. 단독 연결 성공, kind 통합 시험은 Docker Desktop 런타임 오류로 대기. 첨부 values-m 예산 결정도 남음(D-44 ⑦) |
+| T-M4-42 대학 간 격리 | ✅ | 로컬 kind 2클러스터 축소 환경 통과. A 전면 정지 중 B 접수 2건·중앙 반영, A 복구 후 접수. `tests/m4/results/isolation-2026-09-27T16-42-39-057Z.json` |
+| T-M4-33 동시 Finalize | ✅ | 100회 동시 요청 전부 성공(201×1, 200×99), Submission·Outbox·감사 각 1건. 로컬 축소 환경 |
+| T-M4-34 PG 지연·UNKNOWN | 🟡 | SLOW·UNKNOWN→복구 시 자동 확정·접수, double-confirm 0. 워커 1초·Backoff 시간 압축 — 실제 10초·1~30분 시간 시험 남음 |
+| T-M4-35 중앙 단절 | 🟡 | 8.8초 단절 중 접수 2건·Outbox 보존·복구 후 event loss 0. 운영 인수기준 2시간 시험 남음 |
+| T-M4-39 API 종료 | 🟡 | Pod 강제 삭제 283건·RollingUpdate 504건 연속 요청 오류 0. 단일 kind 노드라 노드 전체 장애는 미검증 |
 | 나머지 | ⬜ | |
 
 **로컬 축소 환경의 한계** — Docker Desktop 8GB 에서 이미지 빌드와 kind 클러스터 2개를 함께 돌리자 엔진이 멈췄다.
@@ -127,7 +131,7 @@ D-1      : API/DB/Redis 사전 Scale-out
 - [ ] Central event loss 0 / Sequence gap 미복구 0
 - [ ] Central outage 중 핵심접수 지속
 - [ ] DB failover 후 자동 복구
-- [ ] **대학 간 장애 격리 증명** (T-M4-42)
+- [x] **대학 간 장애 격리 증명** (T-M4-42, 로컬 kind 2클러스터 축소 환경)
 - [ ] **실측값으로 노션 v1.0 §10.1 Size Profile 보정** — 추정치를 실측으로 교체
 - [ ] **노션 §08에 시나리오 13(대학 간 격리) 추가**
 - [ ] Helm values 기본값을 실측 기준으로 조정하고 §05 첨부 갱신

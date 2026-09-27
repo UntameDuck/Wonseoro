@@ -1,6 +1,6 @@
 import { DynamicModule, Global, Logger, Module, OnApplicationShutdown } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
-import { poolBudgetFor, startupJitter } from './db.config';
+import { databaseConnectionString, poolBudgetFor, startupJitter } from './db.config';
 
 /**
  * PostgreSQL 접근 계층.
@@ -22,7 +22,7 @@ export class Db implements OnApplicationShutdown {
   ) {
     const budget = poolBudgetFor(service);
     this.pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: databaseConnectionString(),
       // v1.1 §B2 Connection Storm 차단 — Pod 당 상한을 고정한다.
       max: budget.max,
       idleTimeoutMillis: budget.idleTimeoutMs,

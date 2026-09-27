@@ -1,0 +1,128 @@
+{{- $v := .Values -}}
+{{- if $v.database.pooler.enabled }}
+{{- $name := printf "%s-pgbouncer" (include "ka.fullname" .) -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  labels: {{- include "ka.labels" . | nindent 4 }}
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: pgbouncer
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: postgres
+      port: {{ $v.database.pooler.port }}
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "ka.labels" . | nindent 4 }}
+    app: pgbouncer
+spec:
+  replicas: {{ $v.database.pooler.replicas }}
+  selector:
+    matchLabels:
+      app: pgbouncer
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  template:
+    metadata:
+      labels:
+        {{- include "ka.labels" . | nindent 8 }}
+        app: pgbouncer
+        network-role: database-pooler
+    spec:
+      serviceAccountName: {{ $name }}
+      terminationGracePeriodSeconds: 30
+      {{- include "ka.spread" (list . "pgbouncer") | nindent 6 }}
+      {{- include "ka.podSecurity" . | nindent 6 }}
+      containers:
+        - name: pgbouncer
+          image: {{ include "ka.image" (list . $v.database.pooler.image) }}
+          imagePullPolicy: {{ $v.global.imagePullPolicy }}
+          ports:
+            - name: postgres
+              containerPort: {{ $v.database.pooler.port }}
+          env:
+            - { name: PGBOUNCER_PORT, value: {{ $v.database.pooler.port | quote }} }
+            - { name: PGBOUNCER_POOL_MODE, value: {{ $v.database.pooler.poolMode | quote }} }
+            - { name: PGBOUNCER_DEFAULT_POOL_SIZE, value: {{ $v.database.pooler.defaultPoolSize | quote }} }
+            - { name: PGBOUNCER_RESERVE_POOL_SIZE, value: {{ $v.database.pooler.reservePoolSize | quote }} }
+            - { name: PGBOUNCER_MAX_CLIENT_CONNECTIONS, value: {{ $v.database.pooler.maxClientConnections | quote }} }
+            - { name: PGBOUNCER_QUERY_WAIT_TIMEOUT_SECONDS, value: {{ $v.database.pooler.queryWaitTimeoutSeconds | quote }} }
+            - { name: PGBOUNCER_CLIENT_TLS_SSLMODE, value: {{ $v.database.pooler.clientTlsSslMode | quote }} }
+            {{- if ne $v.database.pooler.clientTlsSslMode "disable" }}
+            - { name: PGBOUNCER_CLIENT_TLS_CERT_FILE, value: /etc/pgbouncer-tls/tls.crt }
+            - { name: PGBOUNCER_CLIENT_TLS_KEY_FILE, value: /etc/pgbouncer-tls/tls.key }
+            {{- end }}
+            - { name: PGBOUNCER_SERVER_TLS_SSLMODE, value: {{ $v.database.pooler.serverTlsSslMode | quote }} }
+            {{- if $v.database.pooler.serverTlsCaFile }}
+            - { name: PGBOUNCER_SERVER_TLS_CA_FILE, value: {{ $v.database.pooler.serverTlsCaFile | quote }} }
+            {{- end }}
+          envFrom:
+            - secretRef:
+                name: {{ include "ka.runtimeSecret" . }}
+          resources: {{- toYaml $v.database.pooler.resources | nindent 12 }}
+          {{- include "ka.containerSecurity" . | nindent 10 }}
+          startupProbe:
+            tcpSocket: { port: postgres }
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            tcpSocket: { port: postgres }
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket: { port: postgres }
+            periodSeconds: 10
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            {{- if ne $v.database.pooler.clientTlsSslMode "disable" }}
+            - { name: client-tls, mountPath: /etc/pgbouncer-tls, readOnly: true }
+            {{- end }}
+            {{- if $v.database.pooler.serverTlsCaFile }}
+            - { name: database-ca, mountPath: /etc/pgbouncer-ca, readOnly: true }
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+        {{- if ne $v.database.pooler.clientTlsSslMode "disable" }}
+        - name: client-tls
+          secret:
+            secretName: {{ default (printf "%s-pgbouncer-tls" (include "ka.fullname" .)) $v.database.pooler.clientTlsSecretName }}
+            defaultMode: 0440
+            items:
+              - { key: tls.crt, path: tls.crt }
+              - { key: tls.key, path: tls.key }
+        {{- end }}
+        {{- if $v.database.pooler.serverTlsCaFile }}
+        - name: database-ca
+          secret:
+            secretName: {{ default (printf "%s-database-ca" (include "ka.fullname" .)) $v.database.pooler.caSecretName }}
+            items: [{ key: ca.crt, path: ca.crt }]
+        {{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $name }}
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ $v.database.pooler.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app: pgbouncer
+      app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

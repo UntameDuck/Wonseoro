@@ -8,7 +8,6 @@ infra/compose/.data
 .claude
 docs
 tests
-deploy
 **/.env
 **/.env.*
 !**/.env.example

@@ -102,6 +102,25 @@ database:
     minPerPod: 2
     # 이 대학 DB 에 허용하는 전체 커넥션. 렌더링 때 Σ(replica 상한 × Pod 당 상한) 을 검사한다
     connectionBudget: 200
+  pooler:
+    enabled: false
+    image: { repository: pgbouncer, digest: "" }
+    replicas: 2
+    port: 6432
+    poolMode: transaction
+    defaultPoolSize: 10
+    reservePoolSize: 2
+    maxClientConnections: 500
+    queryWaitTimeoutSeconds: 15
+    clientTlsSslMode: require
+    clientTlsSecretName: ""            # 기본: <release>-pgbouncer-tls, 키 tls.crt·tls.key
+    serverTlsSslMode: verify-full
+    serverTlsCaFile: /etc/pgbouncer-ca/ca.crt
+    caSecretName: ""                 # 기본: <release>-database-ca, 키 ca.crt
+    resources:
+      requests: { cpu: "100m", memory: "128Mi" }
+      limits: { cpu: "1", memory: "256Mi" }
+    podDisruptionBudget: { minAvailable: 1 }
 
 redis:
   host: ""
@@ -153,11 +172,15 @@ networkPolicy:
   ingressFrom:
     - namespaceSelector: { matchLabels: { kadmission-zone: edge } }
       podSelector: { matchLabels: { app.kubernetes.io/name: ingress-nginx } }
-  # DB·Redis 로 나가는 경로. 첨부처럼 data 존 네임스페이스이거나, 클러스터 밖이면 CIDR
-  dataEgress:
+  # DB와 Redis 경로를 분리한다. Pooler 사용 시 API·Relay가 DB로 직접 우회하지 못해야 한다.
+  databaseEgress:
     to:
       - namespaceSelector: { matchLabels: { kadmission-zone: data } }
-    ports: [5432, 6379]
+    ports: [5432]
+  cacheEgress:
+    to:
+      - namespaceSelector: { matchLabels: { kadmission-zone: data } }
+    ports: [6379]
   # 외부(중앙·PG·Object Storage)로 나가는 경로. 첨부는 egress-gateway 하나로 모은다
   controlledEgress:
     to:

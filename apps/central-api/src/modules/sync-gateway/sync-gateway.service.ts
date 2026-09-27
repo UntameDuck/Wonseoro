@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { Db } from '@wonseoro/server-kit';
+import { Db, isPurposeRef } from '@wonseoro/server-kit';
 
 /** 대학이 보내는 CloudEvent. 확장 속성은 envelope 최상위에 붙는다. (v1.1 §04) */
 export interface IncomingEvent {
@@ -289,9 +289,7 @@ export class SyncGatewayService {
         sequence,
         // 대학이 보내주지 않으면 null 이다. 그 원서는 Dashboard 에 뜨지 않는다 —
         // 잘못된 사람에게 보여주는 것보다 안 보여주는 쪽이 낫다. (D-27)
-        typeof data.subjectRef === 'string' && /^[0-9a-f]{64}$/.test(data.subjectRef)
-          ? data.subjectRef
-          : null,
+        isPurposeRef(data.subjectRef) ? data.subjectRef : null,
       ],
     );
   }

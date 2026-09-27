@@ -1,0 +1,45 @@
+{
+  "test": "T-M4-33",
+  "environment": "local-kind-univ-a (축소 환경)",
+  "startedAt": "2026-09-27T16:48:26.726Z",
+  "checks": {
+    "all-100-requests-succeeded": {
+      "pass": true,
+      "statuses": {
+        "200": 99,
+        "201": 1
+      },
+      "elapsedMs": 1320
+    },
+    "all-responses-return-same-submission": {
+      "pass": true,
+      "submissionIds": [
+        "d6d3ca57-63ef-42ae-a246-7ec96b05a698"
+      ],
+      "applicationNumbers": [
+        "2027-UNIV-A-KY3C9VX7XP"
+      ]
+    },
+    "single-submission-row": {
+      "pass": true,
+      "count": 1
+    },
+    "single-finalized-outbox-event": {
+      "pass": true,
+      "count": 1
+    },
+    "single-finalized-audit-event": {
+      "pass": true,
+      "count": 1
+    },
+    "application-is-finalized": {
+      "pass": true,
+      "state": "FINALIZED"
+    }
+  },
+  "applicationId": "bc0fa334-0d47-4412-ae84-1c73a5d08bd5",
+  "requestCount": 100,
+  "elapsedMs": 1320,
+  "finishedAt": "2026-09-27T16:48:29.887Z",
+  "passed": true
+}

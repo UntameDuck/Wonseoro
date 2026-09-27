@@ -1,0 +1,116 @@
+{
+  "test": "T-M4-34",
+  "environment": "local-kind-univ-a (축소·시간 압축 환경)",
+  "timeCompression": "worker 1초, 결제별 30초 Backoff는 verified_at을 35초 과거로 이동",
+  "startedAt": "2026-09-27T16:51:04.735Z",
+  "checks": {
+    "SLOW-first-check-is-pending": {
+      "pass": false,
+      "httpStatus": 200,
+      "paymentStatus": "CONFIRMED"
+    },
+    "SLOW-worker-auto-confirms-and-finalizes": {
+      "pass": true,
+      "elapsedMs": 19
+    },
+    "SLOW-double-confirm-is-zero": {
+      "pass": true,
+      "confirmedEvents": 1,
+      "submissions": 1,
+      "finalizedAudits": 1
+    },
+    "UNKNOWN-is-not-treated-as-failure-or-success": {
+      "pass": false,
+      "httpStatus": 200,
+      "paymentStatus": "CONFIRMED"
+    },
+    "UNKNOWN-does-not-finalize": {
+      "pass": false,
+      "submissionStatus": 200
+    },
+    "UNKNOWN-worker-recovers-after-PG-restores": {
+      "pass": true,
+      "elapsedMs": 12
+    },
+    "UNKNOWN-double-confirm-is-zero": {
+      "pass": true,
+      "confirmedEvents": 1,
+      "submissions": 1,
+      "finalizedAudits": 1
+    },
+    "deployment-restored": {
+      "pass": true,
+      "restored": true
+    }
+  },
+  "scenarios": {
+    "SLOW": {
+      "applicationId": "8d844a34-d605-436f-866a-8e60572e8e86",
+      "paymentId": "2358255e-8680-4c40-8cfe-bfeb891c4397",
+      "recovered": {
+        "elapsedMs": 19,
+        "payment": {
+          "id": "2358255e-8680-4c40-8cfe-bfeb891c4397",
+          "status": "CONFIRMED",
+          "amount": 55000,
+          "currency": "KRW",
+          "provider": "mock-pg",
+          "providerApprovedAt": "2026-09-27T16:51:13.782Z",
+          "verifiedAt": "2026-09-27T16:50:39.098Z"
+        },
+        "submission": {
+          "applicationId": "8d844a34-d605-436f-866a-8e60572e8e86",
+          "submissionId": "fc486925-ad83-430a-a608-0329ff955b11",
+          "applicationNumber": "2027-UNIV-A-6H6UXZ4V88",
+          "status": "FINALIZED",
+          "requestedAt": "2026-09-27T16:51:13.757Z",
+          "paymentVerifiedAt": "2026-09-27T16:51:13.783Z",
+          "finalizedAt": "2026-09-27T16:51:13.812Z",
+          "deadlinePolicyVersion": "pol-2027-v1",
+          "configVersion": "cfg-2027-v2",
+          "serverTime": "2026-09-27T16:51:14.269Z"
+        }
+      },
+      "counts": {
+        "confirmedEvents": 1,
+        "submissions": 1,
+        "finalizedAudits": 1
+      }
+    },
+    "UNKNOWN_RECOVERY": {
+      "applicationId": "bc071938-6a83-4141-aa33-8f29c2eedafc",
+      "paymentId": "4fade2fa-bfb3-401a-965d-8be324f52b91",
+      "recovered": {
+        "elapsedMs": 12,
+        "payment": {
+          "id": "4fade2fa-bfb3-401a-965d-8be324f52b91",
+          "status": "CONFIRMED",
+          "amount": 55000,
+          "currency": "KRW",
+          "provider": "mock-pg",
+          "providerApprovedAt": "2026-09-27T16:51:22.873Z",
+          "verifiedAt": "2026-09-27T16:51:00.447Z"
+        },
+        "submission": {
+          "applicationId": "bc071938-6a83-4141-aa33-8f29c2eedafc",
+          "submissionId": "9952da6f-80d6-457f-afd9-465d649725b2",
+          "applicationNumber": "2027-UNIV-A-VK3CR2GULH",
+          "status": "FINALIZED",
+          "requestedAt": "2026-09-27T16:51:22.855Z",
+          "paymentVerifiedAt": "2026-09-27T16:51:22.875Z",
+          "finalizedAt": "2026-09-27T16:51:22.937Z",
+          "deadlinePolicyVersion": "pol-2027-v1",
+          "configVersion": "cfg-2027-v2",
+          "serverTime": "2026-09-27T16:51:35.599Z"
+        }
+      },
+      "counts": {
+        "confirmedEvents": 1,
+        "submissions": 1,
+        "finalizedAudits": 1
+      }
+    }
+  },
+  "finishedAt": "2026-09-27T16:51:49.198Z",
+  "passed": false
+}
