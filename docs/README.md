@@ -23,8 +23,8 @@
 | M1 | [접수 Core](milestones/M1-admission-core.md) | 14 | 원서를 만들고 저장하고 검증 |
 | M2 | [결제·Finalize·화면](milestones/M2-payment-finalize-mvp.md) | 24 | **화면에서 접수번호를 받는다 (MVP)** |
 | M3 | [운영 안전장치](milestones/M3-operational-safeguards.md) | 15 | 장애가 나도 판정 가능하게 |
-| M4 | [분산 실증](milestones/M4-federated-proof.md) | 25 | 장애 격리를 숫자로 증명 |
-| M5 | [신뢰성·보안·접근성](milestones/M5-reliability-security.md) | 33 | 대학에 넣을 수 있는 수준 |
+| M4 | [분산 실증](milestones/M4-federated-proof.md) | 28 | 장애 격리를 숫자로 증명 |
+| M5 | [신뢰성·보안·접근성](milestones/M5-reliability-security.md) | 35 | 대학에 넣을 수 있는 수준 |
 | M6 | [Pilot 준비](milestones/M6-pilot-readiness.md) | 15 | 대학 1곳 Shadow Test |
 
 총 **139개 태스크, 61개 완료 (2026-09-28)**. 각 태스크에 담당·근거 노션 절·인수기준이 붙어 있다.
