@@ -9,13 +9,13 @@
 | 02. PostgreSQL ERD | `k-admission-postgresql-ddl.txt` | `infra/db/migrations/0001_init.sql` | ✅ **v1.2 교체 (2026-09-27)** — 저장소 → 노션 업로드 (15,880바이트/397줄) |
 | 03. OpenAPI 계약 | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` | ✅ **v1.2.0 교체 (2026-09-27)** — 저장소 → 노션 업로드 (2026-09-27 재교체 — self-check 404, 76,494바이트) |
 | 04. CloudEvents | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | ✅ 배치 (5,504자/126줄) |
-| 05. Helm 배포 | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` | ⬜ 미배치 |
-| 05. Helm 배포 | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` | ⬜ 미배치 |
-| 06. 보안정책 | `k-admission-network-rbac.yaml` | `deploy/platform/policies/network-rbac.yaml` | ⬜ 미배치 |
-| 06. 보안정책 | `k-admission-vault-policy.hcl.txt` | `deploy/platform/policies/vault-policy.hcl` | ⬜ 미배치 |
-| 07. KRDS 와이어프레임 | `k-admission-krds-wireframe.html` | `docs/spec-assets/krds-wireframe.html` | ⬜ 미배치 |
-| 08. 부하테스트 | `k-admission-k6.js.txt` | `tests/load/k6-admission.js` | ⬜ 미배치 |
-| 09. STRIDE | `k-admission-stride-register.csv` | `docs/spec-assets/stride-register.csv` | ⬜ 미배치 |
+| 05. Helm 배포 | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` | ✅ 배치 (2026-09-27, SHA-256 원본 일치) 2,383B · 구현과 차이 D-44 |
+| 05. Helm 배포 | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` | ✅ 배치 (2026-09-27, SHA-256 원본 일치) 5,410B · 구현과 차이 D-44 |
+| 06. 보안정책 | `k-admission-network-rbac.yaml` | `deploy/platform/policies/network-rbac.yaml` | ✅ 배치 (2026-09-27, SHA-256 원본 일치) 4,099B |
+| 06. 보안정책 | `k-admission-vault-policy.hcl.txt` | `deploy/platform/policies/vault-policy.hcl` | ✅ 배치 (2026-09-27, SHA-256 원본 일치) 1,177B |
+| 07. KRDS 와이어프레임 | `k-admission-krds-wireframe.html` | `docs/spec-assets/krds-wireframe.html` | ✅ 배치 (2026-09-27, SHA-256 원본 일치) 7,938B · 결제 화면 문구가 D-42 와 다름 D-43 |
+| 08. 부하테스트 | `k-admission-k6.js.txt` | `tests/load/k6-admission.js` | ✅ 배치 (2026-09-27, SHA-256 원본 일치) 4,358B |
+| 09. STRIDE | `k-admission-stride-register.csv` | `docs/spec-assets/stride-register.csv` | ✅ 배치 (2026-09-27, SHA-256 원본 일치) 3,715B |
 
 > Notion MCP `download-attachment` 로는 받을 수 없다 (`object_not_found` — 이 연동이 만든
 > 업로드가 아니기 때문). 로그인된 브라우저에서 내부 API로 서명 URL을 받아 배치한다.

@@ -1,0 +1,110 @@
+# K-Admission Helm values - M profile reference
+global:
+  universityId: UNIV-A
+  environment: production
+  imageRegistry: registry.example.kr/k-admission
+  imagePullPolicy: IfNotPresent
+  configVersion: cfg-2027-early-22
+  deadlinePolicyVersion: dp-2027-early-v4
+
+frontend:
+  image:
+    repository: frontend
+    digest: sha256:REPLACE_WITH_SIGNED_DIGEST
+  replicas: 3
+  resources:
+    requests: { cpu: "500m", memory: "512Mi" }
+    limits: { cpu: "2", memory: "1Gi" }
+  podDisruptionBudget: { minAvailable: 2 }
+
+api:
+  image:
+    repository: admission-api
+    digest: sha256:REPLACE_WITH_SIGNED_DIGEST
+  replicas: 3
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    cpuUtilization: 60
+    customMetrics:
+      requestRatePerPod: 120
+      p95LatencyMs: 500
+      activeRequestsPerPod: 150
+  resources:
+    requests: { cpu: "2", memory: "4Gi" }
+    limits: { cpu: "8", memory: "16Gi" }
+  podDisruptionBudget: { minAvailable: 2 }
+
+eventRelay:
+  image:
+    repository: event-relay
+    digest: sha256:REPLACE_WITH_SIGNED_DIGEST
+  replicas: 2
+  batchSize: 100
+  maxInFlight: 500
+  backoff:
+    initialMs: 500
+    maxMs: 30000
+    jitter: true
+
+reconciliation:
+  schedule: "*/5 * * * *"
+  maxBatch: 500
+
+peakMode:
+  enabled: false
+  scheduledActivation: "2026-09-11T03:00:00Z"
+  apiMinReplicas: 8
+  frontendMinReplicas: 4
+  suspendNonCriticalJobs: true
+
+database:
+  mode: external-ha
+  host: postgres-primary.database.svc
+  port: 5432
+  sslMode: verify-full
+  pool:
+    maxPerPod: 40
+    minPerPod: 5
+    connectionBudget: 400
+
+redis:
+  host: redis-ha.cache.svc
+  port: 6379
+  tls: true
+
+objectStorage:
+  endpoint: https://object.example.kr
+  bucket: kadmission-univ-a-prod
+  directUpload: true
+  presignTtlSeconds: 600
+  publicAccess: false
+
+centralSync:
+  endpoint: https://sync.k-admission.kr/internal/v1/events
+  mtls: true
+  offlineSpool:
+    enabled: true
+    maxAgeHours: 72
+    highWatermarkEvents: 100000
+
+securityContext:
+  runAsNonRoot: true
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  seccompProfile: RuntimeDefault
+  dropAllCapabilities: true
+  automountServiceAccountToken: false
+
+observability:
+  otelEndpoint: http://otel-collector.kadmission-ops.svc:4317
+  includeRequestBody: false
+  piiLabelsAllowed: false
+
+networkPolicy:
+  defaultDeny: true
+
+nodePlacement:
+  topologyKey: topology.kubernetes.io/zone
+  spreadMaxSkew: 1

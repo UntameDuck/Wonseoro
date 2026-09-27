@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>K-Admission KRDS 기반 저충실도 와이어프레임</title>
+<style>
+:root{
+  --surface:#fff;--surface-alt:#f5f5f5;--text:#111;--muted:#555;--line:#bbb;
+  --focus:#111;--space:16px;--radius:6px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text);background:var(--surface-alt);line-height:1.55}
+a{color:inherit}
+.skip{position:absolute;left:-9999px}.skip:focus{left:12px;top:12px;background:#fff;padding:12px;border:2px solid #111;z-index:999}
+header{background:#fff;border-bottom:1px solid var(--line);padding:14px 20px;position:sticky;top:0;z-index:5}
+header strong{font-size:1.1rem}
+nav{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
+nav a{padding:6px 10px;border:1px solid var(--line);border-radius:999px;text-decoration:none}
+main{max-width:1040px;margin:24px auto;padding:0 16px}
+.screen{background:#fff;border:1px solid var(--line);border-radius:12px;margin:0 0 28px;padding:24px;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+.breadcrumb{color:var(--muted);font-size:.9rem}
+.steps{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:18px 0}
+.step{border-top:4px solid #ccc;padding-top:6px;font-size:.85rem}.step.current{border-color:#111;font-weight:700}.step.done{border-color:#666}
+.status{display:flex;gap:12px;flex-wrap:wrap;padding:12px;background:#f7f7f7;border:1px solid #ddd;border-radius:8px;margin:16px 0}
+.field{margin:18px 0}.field label,.legend{font-weight:700;display:block;margin-bottom:6px}
+input,select,textarea{width:100%;padding:12px;border:1px solid #777;border-radius:4px;font:inherit}
+textarea{min-height:110px}
+button{font:inherit;padding:11px 16px;border:1px solid #111;border-radius:4px;background:#fff}.primary{background:#111;color:#fff}
+.actions{display:flex;justify-content:space-between;gap:12px;margin-top:24px}
+.alert{padding:14px;border:2px solid #555;background:#fafafa;border-radius:6px;margin:16px 0}
+.error{border-left:5px solid #111;padding:12px;background:#f3f3f3}
+.file{border:2px dashed #888;padding:20px;border-radius:8px}
+.summary{display:grid;grid-template-columns:1fr auto;gap:8px;border-top:1px solid #ddd;padding:10px 0}
+.complete{border:3px solid #222}
+small{color:var(--muted)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+@media(max-width:700px){.steps{grid-template-columns:1fr}.step:not(.current){display:none}.actions{position:sticky;bottom:0;background:#fff;padding:10px 0}.screen{padding:16px}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">본문 바로가기</a>
+<header>
+  <strong>K-Admission · A대학교 2027 수시</strong>
+  <nav aria-label="와이어프레임 화면 목록">
+    <a href="#s1">1 대학·전형</a><a href="#s2">2 추가정보</a><a href="#s3">3 서류</a>
+    <a href="#s4">4 검토·결제</a><a href="#s5">5 최종제출</a><a href="#s6">6 완료</a><a href="#err">장애</a>
+  </nav>
+</header>
+<main id="main">
+<section class="screen" id="s1">
+  <p class="breadcrumb">홈 › 2027 수시 › A대학교</p>
+  <h1>대학·전형 선택</h1>
+  <div class="steps" aria-label="6단계 중 2단계">
+    <div class="step done">1 공통정보</div><div class="step current" aria-current="step">2 대학·전형</div>
+    <div class="step">3 추가정보</div><div class="step">4 서류</div><div class="step">5 검토·결제</div><div class="step">6 최종제출</div>
+  </div>
+  <div class="status"><span>마감 2026.09.11 18:00</span><span>서버 기준 남은시간 00:42:18</span><span>저장 완료 17:17:42</span></div>
+  <fieldset class="field"><legend class="legend">지원 전형 *</legend><label><input type="radio" name="type" checked> 학생부종합</label><br><label><input type="radio" name="type"> 논술</label></fieldset>
+  <div class="field"><label for="dept">모집단위 *</label><select id="dept"><option>컴퓨터공학과</option></select></div>
+  <div class="alert">전형 선택에 따라 제출서류와 전형료가 달라집니다.</div>
+  <div class="actions"><button>이전</button><button class="primary">저장 후 다음</button></div>
+</section>
+
+<section class="screen" id="s2">
+  <h1>대학 추가정보</h1>
+  <div class="field"><label for="essay">지원 동기 *</label><textarea id="essay" aria-describedby="count"></textarea><small id="count">0 / 1,000자</small></div>
+  <div class="error" role="alert"><strong>확인이 필요한 항목이 2개 있습니다.</strong><ul><li>지원 동기를 입력해 주세요.</li><li>추가 수집 동의를 확인해 주세요.</li></ul></div>
+  <div class="field"><label><input type="checkbox"> 개인정보 추가 수집에 동의합니다.</label><br><small>수집 목적·항목·보유기간을 별도 상세에서 확인할 수 있습니다.</small></div>
+  <div class="actions"><button>이전</button><button class="primary">저장 후 다음</button></div>
+</section>
+
+<section class="screen" id="s3">
+  <h1>제출서류</h1>
+  <div class="file">
+    <strong>학교생활기록부 대체서류</strong><p>PDF, 최대 10MB, 1개</p>
+    <button>파일 선택</button><p>또는 파일을 이 영역에 끌어놓을 수 있습니다.</p>
+  </div>
+  <div class="summary"><span>sample.pdf · 2.1MB</span><strong>✓ 업로드·검사 완료</strong></div>
+  <div class="alert">악성코드 검사가 완료되지 않은 필수서류가 있으면 최종제출할 수 없습니다.</div>
+  <div class="actions"><button>이전</button><button class="primary">저장 후 다음</button></div>
+</section>
+
+<section class="screen" id="s4">
+  <h1>검토·결제</h1>
+  <div class="summary"><span>공통정보</span><strong>완료</strong></div>
+  <div class="summary"><span>대학 추가정보</span><strong>완료</strong></div>
+  <div class="summary"><span>제출서류</span><strong>완료</strong></div>
+  <div class="summary"><span>전형료</span><strong>55,000원</strong></div>
+  <div class="alert">결제 완료만으로는 접수가 끝나지 않습니다. 결제 후 최종제출을 완료해야 합니다.</div>
+  <div class="actions"><button>이전</button><button class="primary">결제하기</button></div>
+</section>
+
+<section class="screen" id="s5">
+  <h1>최종제출</h1>
+  <div class="alert"><strong>중요</strong><br>최종제출 이후에는 대학 정책에 따라 수정이 제한됩니다.</div>
+  <div class="summary"><span>마감</span><strong>18:00:00</strong></div>
+  <div class="summary"><span>현재 서버시각</span><strong>17:59:21</strong></div>
+  <div class="summary"><span>결제상태</span><strong>확인 완료</strong></div>
+  <p><label><input type="checkbox"> 최종제출 이후의 수정 제한을 확인했습니다.</label></p>
+  <div class="actions"><button>취소</button><button class="primary">최종제출</button></div>
+</section>
+
+<section class="screen complete" id="s6">
+  <h1>원서접수가 완료되었습니다.</h1>
+  <div class="summary"><span>접수번호</span><strong>2027-A-001923</strong></div>
+  <div class="summary"><span>제출시각</span><strong>2026.09.11 17:59:42</strong></div>
+  <div class="summary"><span>전형</span><strong>학생부종합</strong></div>
+  <div class="summary"><span>모집단위</span><strong>컴퓨터공학과</strong></div>
+  <p>중앙 집계 지연은 이 대학의 접수완료 여부와 무관합니다.</p>
+  <button>접수증 보기</button> <button>접수상태 확인</button>
+</section>
+
+<section class="screen" id="err">
+  <h1>요청 처리 시간이 길어지고 있습니다.</h1>
+  <div class="alert" role="status">현재 서버가 확인한 마지막 저장은 17:57:18입니다. 같은 제출 버튼을 반복해서 누르지 않아도 됩니다.</div>
+  <p>요청번호: 01J-EXAMPLE-TRACE</p>
+  <button class="primary">현재 접수상태 다시 확인</button>
+</section>
+</main>
+</body>
+</html>

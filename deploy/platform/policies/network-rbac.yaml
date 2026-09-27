@@ -1,0 +1,170 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: kadmission-app
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-api
+  namespace: kadmission-app
+spec:
+  podSelector:
+    matchLabels:
+      network-role: api
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kadmission-zone: edge
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-dns
+  namespace: kadmission-app
+spec:
+  podSelector:
+    matchLabels:
+      network-role: api
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-data-services
+  namespace: kadmission-app
+spec:
+  podSelector:
+    matchLabels:
+      network-role: api
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kadmission-zone: data
+      ports:
+        - { protocol: TCP, port: 5432 }
+        - { protocol: TCP, port: 6379 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-controlled-egress
+  namespace: kadmission-app
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [admission-api, event-relay]
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kadmission-zone: egress
+          podSelector:
+            matchLabels:
+              app: egress-gateway
+      ports:
+        - protocol: TCP
+          port: 8443
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: platform-viewer
+  namespace: kadmission-app
+rules:
+  - apiGroups: ["", "apps", "batch", "autoscaling"]
+    resources: ["pods","pods/log","services","deployments","replicasets","jobs","cronjobs","horizontalpodautoscalers"]
+    verbs: ["get","list","watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sre-operator
+  namespace: kadmission-app
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments","deployments/scale"]
+    verbs: ["get","list","watch","patch","update"]
+  - apiGroups: [""]
+    resources: ["pods","pods/log","events"]
+    verbs: ["get","list","watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs","cronjobs"]
+    verbs: ["get","list","watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: release-controller
+  namespace: kadmission-app
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get","list","watch","patch","update"]
+  - apiGroups: [""]
+    resources: ["configmaps","services"]
+    verbs: ["get","list","watch","create","patch","update"]
+  - apiGroups: ["policy"]
+    resources: ["poddisruptionbudgets"]
+    verbs: ["get","list","watch","create","patch","update"]
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get","list","watch","create","patch","update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sre-operator-binding
+  namespace: kadmission-app
+subjects:
+  - kind: Group
+    name: kadmission-sre
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: sre-operator
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: viewer-binding
+  namespace: kadmission-app
+subjects:
+  - kind: Group
+    name: kadmission-auditors
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: platform-viewer
+  apiGroup: rbac.authorization.k8s.io

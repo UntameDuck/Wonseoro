@@ -1,0 +1,24 @@
+id,boundary,stride,threat,impact,primary_controls,verification,priority
+S-01,Browser-Identity,S,Applicant account takeover,Unauthorized application access,"OIDC; session rotation; adaptive throttling","credential stuffing simulation; token revocation",P0
+S-02,University-Central,S,Fake university event sender,False centralized state,"mTLS workload identity; source-certificate binding; dedup","wrong-university certificate test",P0
+T-01,Application-DB,T,Application field tampering,Admission integrity loss,"server authorization; optimistic lock; finalized immutability","BOLA/BFLA and concurrency tests",P0
+T-02,Admin-Config,T,Deadline or fee config tampering,Unfair or invalid admissions,"signed config; two-person approval; freeze","single-admin change attempt must fail",P0
+T-03,GitOps-Cluster,T,Release artifact tampering,Multi-university compromise,"SBOM; image signature; digest pinning; admission controller","unsigned image deployment must fail",P0
+T-04,App-Audit,T,Audit log modification,Evidence loss,"append-only/WORM; hash chain; separate role","operator deletion attempt must fail",P0
+R-01,Applicant-Submission,R,Submission repudiation,Dispute over deadline,"finalize-requested; PG verification; commit time; policy version; evidence package","reconstruct timeline from evidence package",P0
+R-02,Admin-Operations,R,Manual correction repudiation,Unaccountable state changes,"individual account; MFA; ticket; reason; two-person approval","audit review",P0
+I-01,App-Observability,I,PII leakage in logs,Privacy breach,"body logging off; telemetry allowlist; masking SDK","PII canary scan in logs",P0
+I-02,Object-Storage,I,Public document exposure,Document leak,"public access block; short-lived URL; object authorization","anonymous object fetch must fail",P0
+I-03,University-Central,I,Over-collection at central,National-scale privacy concentration,"minimal event; opaque ID; purpose token","schema privacy lint",P0
+I-04,Admin-PII,I,Overprivileged operator,Insider data exposure,"JIT access; least privilege; export approval; watermark","role access tests",P1
+D-01,Internet-Edge,D,Deadline flash crowd,Service outage,"pre-scale peak mode; CDN/cache; DB budget","3000 CCU + 1000 RPS test",P0
+D-02,Internet-API,D,Bot/API abuse,Resource exhaustion,"risk throttling; WAF; per-session/application limits","bot plus NAT coexistence test",P1
+D-03,App-PG-Central,D,Dependency outage propagation,Applicant outage,"circuit breaker; timeout; autonomous mode","central 2h disconnect; PG timeout",P0
+D-04,App-Storage,D,Outbox/log disk exhaustion,Write failure,"partition; archive; quotas; backlog alarms","long-disconnect soak",P0
+E-01,Kubernetes,E,Overprivileged service account,Cluster compromise,"namespace RBAC; token automount off; no cluster-admin","RBAC can-i matrix",P0
+E-02,App-Egress,E,SSRF to metadata/KMS,Credential theft,"default-deny egress; metadata block; workload identity","SSRF security test",P0
+E-03,Admin-API,E,Privilege escalation in admin API,Critical config takeover,"server-side RBAC/ABAC; step-up; two-person approval","vertical authorization tests",P0
+A-01,Payment,A,Re-use of same PG transaction,Payment fraud,"provider_tx unique; amount/application binding; reconciliation","duplicate provider transaction test",P0
+A-02,Upload,A,Malicious or zip-bomb document,Service/security compromise,"size limit; magic byte; AV; archive limits","malware and decompression bomb tests",P1
+A-03,Finalize,A,Race condition finalization,Duplicate submissions,"idempotency; unique submission; conditional transition","100 concurrent finalize requests",P0
+A-04,Config,A,Configuration poisoning,Invalid admission behavior,"schema validation; signed snapshot; approval workflow","invalid config rejection",P0

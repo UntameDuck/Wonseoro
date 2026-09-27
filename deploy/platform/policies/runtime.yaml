@@ -1,0 +1,218 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admission-api
+  namespace: kadmission-app
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admission-api
+  namespace: kadmission-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: admission-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: admission-api
+        network-role: api
+    spec:
+      serviceAccountName: admission-api
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 45
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: admission-api
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          image: registry.example.kr/k-admission/admission-api@sha256:REPLACE_WITH_SIGNED_DIGEST
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: production
+            - name: CONFIG_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: admission-runtime
+                  key: configVersion
+            - name: DEADLINE_POLICY_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: admission-runtime
+                  key: deadlinePolicyVersion
+          envFrom:
+            - secretRef:
+                name: admission-runtime-ref
+          resources:
+            requests:
+              cpu: "2"
+              memory: 4Gi
+            limits:
+              cpu: "8"
+              memory: 16Gi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          startupProbe:
+            httpGet:
+              path: /internal/health/startup
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /internal/health/ready
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /internal/health/live
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh","-c","sleep 10"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admission-api
+  namespace: kadmission-app
+spec:
+  selector:
+    app: admission-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: admission-api
+  namespace: kadmission-app
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: admission-api
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: admission-api
+  namespace: kadmission-app
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: admission-api
+  minReplicas: 3
+  maxReplicas: 10
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 600
+      policies:
+        - type: Percent
+          value: 25
+          periodSeconds: 60
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+    - type: Pods
+      pods:
+        metric:
+          name: http_requests_per_second
+        target:
+          type: AverageValue
+          averageValue: "120"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: admission-runtime
+  namespace: kadmission-app
+data:
+  configVersion: cfg-2027-early-22
+  deadlinePolicyVersion: dp-2027-early-v4
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: reconciliation
+  namespace: kadmission-app
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: reconciliation
+        spec:
+          restartPolicy: Never
+          serviceAccountName: admission-api
+          automountServiceAccountToken: false
+          containers:
+            - name: reconciliation
+              image: registry.example.kr/k-admission/admission-api@sha256:REPLACE_WITH_SIGNED_DIGEST
+              args: ["reconcile","--max-batch=500"]
+              resources:
+                requests:
+                  cpu: "250m"
+                  memory: 512Mi
+                limits:
+                  cpu: "1"
+                  memory: 1Gi
+              securityContext:
+                runAsNonRoot: true
+                readOnlyRootFilesystem: true
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]

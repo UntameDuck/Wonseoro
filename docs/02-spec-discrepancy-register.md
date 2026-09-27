@@ -83,7 +83,8 @@
 | **진행** | 2026-09-22: **DDL · OpenAPI · CloudEvents 3종 배치 완료.** 원본과 바이트 단위 일치 검증 (문자수·줄수·체크섬) |
 | **잔여** | Helm values-m · runtime · network-rbac · vault policy · KRDS 와이어프레임 · k6 · STRIDE register (7종) — M4/M5 착수 전까지 |
 | **M4 에 필요한 3종 (2026-09-26 확인)** | `k-admission-k6.js.txt` (§08, att `846bc806-699f-4852-b6c0-fcaeb7dee39f`, block `4df25cda-c2c6-4593-8657-13ba7bb4adb6`) · `k-admission-values-m.yaml` (§05, att `96ef60d0-5d8a-4a09-8ded-5ab794a3da73`, block `a4fa4603-b518-4b73-b8c7-577f4668c4dd`) · `k-admission-runtime.yaml` (§05, att `4cd23155-7587-47f4-80b3-fc2568d8fd7c`, block `1d2ae3da-8232-4800-a382-58c820d26be3`). §05·§08 본문에는 레플리카·리소스·HPA 숫자가 없다 — 전부 첨부 안에 있다 |
-| **상태** | 🟡 부분 완료 |
+| **완료 (2026-09-27)** | 남은 7종 배치 — values-m · runtime · network-rbac · vault policy · KRDS 와이어프레임 · k6 · STRIDE. 로그인된 브라우저 세션에서 서명 URL 로 받아 **브라우저에서 계산한 SHA-256 과 저장소 파일의 SHA-256 이 모두 같다.** 첨부 10종 전부 배치 |
+| **상태** | 🟢 CLOSED — 첨부 10종 배치 (2026-09-27) |
 
 ### 배치 절차 (재현용)
 
@@ -669,6 +670,30 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **D-40 과의 관계** | D-40 의 "자동 Finalize 하지 않음" 을 이 결정이 대체한다. 콜백·재확인 워커·대조 스케줄은 그대로다 |
 | **노션 반영** | ✅ §01 §A4·§B4 "자동 Finalize 하지 않음" 을 "결제 확정 시 자동 접수, 결제 전 접수 가능 점검" 으로 (2026-09-27) · ✅ §03 첨부 yaml v1.2.0 교체 (2026-09-27) · ✅ §07 5단계 고지 문구 (2026-09-27) |
 | **상태** | 🟢 CLOSED — 저장소·노션 반영 (2026-09-27) |
+
+---
+
+## D-43. KRDS 와이어프레임 결제 화면이 "결제 = 접수"(D-42) 와 반대로 안내한다
+
+| | |
+|---|---|
+| **발견** | 2026-09-27 (첨부 배치 중) |
+| **충돌** | §07 첨부 `k-admission-krds-wireframe.html` 의 검토·결제 화면(#s4)이 "결제 완료만으로는 접수가 끝나지 않습니다. 결제 후 최종제출을 완료해야 합니다" 라고 안내하고, 별도 최종제출 화면(#s5)에 제출 버튼이 있다. D-42 는 결제 확인 시 서버가 접수한다 |
+| **판정** | **D-42 를 따른다.** §07 본문과 실제 화면은 이미 "결제가 확인되면 바로 접수가 완료됩니다" 로 고쳤다. 와이어프레임은 저충실도 참고물이라 코드에 영향은 없다 |
+| **노션 반영** | ⬜ §07 첨부 와이어프레임의 #s4 문구·#s5 흐름을 D-42 에 맞춰 교체 (저장소 사본을 고쳐 올리면 된다) |
+| **상태** | 🟡 판정완료 — 첨부 교체 대기 |
+
+---
+
+## D-44. §05 Helm 첨부(runtime·values-m)가 현재 구현과 다르다
+
+| | |
+|---|---|
+| **발견** | 2026-09-27 (첨부 배치 중 대조) |
+| **차이** | ① `SPRING_PROFILES_ACTIVE` — 구현은 NestJS 다(D-3). 운영 모드는 `NODE_ENV=production` ② 컨테이너 포트 8080 — 구현은 `PORT`(기본 3001) ③ 프로브 `/internal/health/startup·ready·live` — 구현은 `/healthz`·`/readyz`(+ `/healthz/dependencies`, D-32). 계약 v1.2.0 이 기준 ④ 대조 CronJob `*/5` · `reconcile --max-batch` — 구현은 앱 안 스케줄러(1시간·advisory lock, D-40). 별도 이미지 명령이 없다 ⑤ 첨부에 event-relay·document-service·frontend Deployment 가 없다(values 에만 있다) ⑥ values 의 `configVersion`·`deadlinePolicyVersion` 을 배포값으로 박는다 — 구현은 DB 의 서명된 활성화 기록이 기준이다(T-M3-15). 배포로 바꾸면 2인 승인을 우회한다 |
+| **판정 방향** | M4 Helm 차트는 **첨부의 구조·보안 설정(securityContext·PDB·HPA·topologySpread·NetworkPolicy)은 그대로** 따르고, 위 6가지는 구현을 따른다. ⑥ 은 차트에서 뺀다 — 마감·설정을 배포 값으로 주입하면 D-21·D-35 가 막은 단독 변경 경로가 된다 |
+| **노션 반영** | ⬜ §05 첨부 runtime·values-m 을 M4 차트 확정 뒤 교체 |
+| **상태** | 🟡 판정 방향 — M4 차트에서 확정 |
 
 ---
 
