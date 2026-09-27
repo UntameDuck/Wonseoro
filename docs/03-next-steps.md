@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-27 (G1 결제 자동 정합화 완료 · 다음은 G2)
+> 최종 갱신: 2026-09-27 (G1 · G2 완료 — M3 코드 구멍 닫음 · 다음은 노션 반영)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -16,13 +16,13 @@
 | M0 기반 | 7/8 | 제출문서 정정(T-M0-08)만 남음 |
 | M1 접수 Core | **14/14** | ✅ |
 | M2 결제·Finalize·화면 | **24/24** | ✅ Demo Gate 1~5 통과 |
-| **M3 운영 안전장치** | **14/15** | ◀ 종료 전 구멍 G1 ✅ · G2 남음 (T-M3-06 🟡) |
+| **M3 운영 안전장치** | **14/15** | ◀ 종료 전 구멍 G1 ✅ · G2 ✅ — 노션 반영 · 결정 대기 (T-M3-06 🟡) |
 | M4 분산 실증 | 0/28 | |
 | M5 신뢰성·보안·접근성 | 0/35 | |
 | M6 Pilot 준비 | 0/15 | |
 
 **총 58/139 태스크** (T-M3-06 🟡 부분 완료 별도). 테스트 파일 26개 / **265개 테스트**
-(admission-api 215 · server-kit 27 · central-api 19 · event-relay 4) 전부 통과, DB 정합성 제약 14종 PASS.
+(admission-api 215 · server-kit 27 · central-api 19 · event-relay 4) 전부 통과, DB 정합성·권한 검증 18종 PASS.
 
 ### 동작하는 것 — End-to-End
 
@@ -75,7 +75,7 @@
 | # | 구멍 | 왜 급한가 |
 |---|---|---|
 | G1 | ~~결제 자동 정합화가 없다~~ (D-40) — ✅ **2026-09-27** 콜백·재확인 워커·대조 스케줄 | 결제 직후 창을 닫아도 결제 확인이 저절로 끝난다. 제출은 여전히 지원자가 한다 |
-| G2 | **운영계정으로 감사 기록을 지울 수 있다** (D-41) — 추가 전용 보호 없음, 앱이 슈퍼유저로 붙음 | §01 E 인수기준 그대로 |
+| G2 | ~~운영계정으로 감사 기록을 지울 수 있다~~ (D-41) — ✅ **2026-09-27** 앱 최소권한 역할 · 추가 전용 트리거 | 앱 계정으로는 감사 기록을 고치거나 지울 수 없다. 슈퍼유저 우회는 WORM(M5) |
 
 그 뒤 결정 7건(05 문서 ③)과 M4 준비물(첨부 3종·kind·helm·k6·실행 환경)이 이어진다.
 
@@ -84,8 +84,8 @@
 | 순서 | 할 일 | 상태 |
 |---|---|---|
 | 1 | G1 결제 자동 정합화 | ✅ 2026-09-27 — 시간 시험(30분 지연)만 T-M4-34 |
-| 2 | **G2 감사 삭제 불가 · DB 역할 분리** | ◀ **다음** |
-| 3 | 노션 반영 — **결정 불필요 항목만, 페이지마다 확인** | ⬜ (사용자 결정) |
+| 2 | G2 감사 삭제 불가 · DB 역할 분리 | ✅ 2026-09-27 |
+| 3 | **노션 반영 — 결정 불필요 항목만, 페이지마다 확인** | ◀ **다음** (사용자 확인 필요) |
 | 4 | 결정 5건(D-7·D-27·D-29·D-30·D-38) | ⬜ 사람이 정한다 |
 | 5 | 첨부 3종 — **Chrome 노션 로그인 세션**으로 · kind·helm·k6 설치(사용자) | ⬜ M4 착수 시 |
 
@@ -97,7 +97,7 @@ G1 에서 한 것은 [05 문서 ② G1](05-m3-exit-m4-readiness.md).
   M4(부하 시험)에서 할지 여기서 할지 정해야 한다
 - §01 E 인수기준 중 M3 몫: "단독 운영자 1명으로 마감시간 변경 불가" ✅(화면까지) ·
   "Evidence Package 로 재구성" ✅ · "PG Callback 30분 지연 자동 정합화" 는 시험 대기 ·
-  "운영계정으로 Audit 삭제 불가" 는 WORM(M5) 대기
+  "운영계정으로 Audit 삭제 불가" 는 DB 안에서 ✅(G2), 물리 분리는 WORM(M5)
 - 노션 반영 대기가 쌓였다. 특히 **D-27 · D-29 · D-7 · D-38** 은 확인받아야 방향이 확정된다
 
 ### ⚠️ 보존기간 하한값 확인 필요 (D-38)
@@ -189,10 +189,10 @@ D-24 evidence reason · D-26 reconciliation run · **원서 취소(D-7)** ·
 ```bash
 npm install
 npm run dev:infra            # postgres(univ_a 5432 / central 5434), MinIO
-npm run db:migrate           # 0001 + 0002
+npm run db:migrate           # 0001~0004 + 개발용 앱 역할 로그인
 npm run db:migrate:central
 npm run db:seed
-npm run db:verify            # 정합성 제약 12종이 실제로 막는지 확인
+npm run db:verify            # 정합성 제약·권한 18종이 실제로 막는지 확인
 npm run build
 ```
 
@@ -200,9 +200,12 @@ npm run build
 **운영 모드(`NODE_ENV=production`)에서는 설정이 빠지면 기동하지 않는다.**
 무엇이 빠졌는지 한 번에 알려준다.
 
-테스트는 DB 가 있어야 통합 테스트까지 돈다.
+테스트는 DB 가 있어야 통합 테스트까지 돈다. **앱은 앱 역할(`kadmission_app`)로 돈다** — 운영과 같은 권한이라
+권한을 빠뜨린 테이블이 있으면 시험이 깨진다. `DATABASE_ADMIN_URL` 은 시험이 끝나고 감사 기록을 정리하는 데만 쓴다
+(앱 역할로는 지울 수 없다, D-41).
 
 ```bash
-DATABASE_URL=postgresql://wonseoro:wonseoro@localhost:5432/univ_a \
+DATABASE_URL=postgresql://kadmission_app:kadmission_app_dev@localhost:5432/univ_a \
+DATABASE_ADMIN_URL=postgresql://wonseoro:wonseoro@localhost:5432/univ_a \
 UNIVERSITY_ID=UNIV-A npm test --workspace @wonseoro/admission-api
 ```

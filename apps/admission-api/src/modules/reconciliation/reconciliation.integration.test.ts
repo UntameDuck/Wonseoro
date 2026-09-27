@@ -4,6 +4,7 @@ import { after, before, describe, it } from 'node:test';
 import { Db } from '@wonseoro/server-kit';
 import { AuditService } from '../audit/audit.service';
 import { ReconciliationService } from './reconciliation.service';
+import { breakGlass } from '../../test-support/break-glass';
 
 /**
  * Reconciliation Center 통합 테스트 — 실제 PostgreSQL 이 필요하다.
@@ -56,7 +57,8 @@ async function seedSubmission(appId: string): Promise<void> {
  * 외래키 위반이 난다. 부모 행을 FOR UPDATE 로 잡으면 그 틈이 닫힌다.
  */
 async function cleanup(appId: string): Promise<void> {
-  await db.tx(async (client) => {
+  // 감사 기록은 앱 역할로 지울 수 없다 (D-41). 시험 정리만 이 경로를 쓴다.
+  await breakGlass(async (client) => {
     await client.query(`SELECT id FROM application WHERE id = $1 FOR UPDATE`, [appId]);
     await client.query(`DELETE FROM reconciliation_exception WHERE application_id = $1`, [appId]);
     await client.query(`DELETE FROM audit_event WHERE application_id = $1`, [appId]);

@@ -12,6 +12,7 @@ import { EvidenceService } from './modules/evidence/evidence.service';
 import { FileInspector } from './modules/document/file-inspector';
 import { ObjectStorage } from './modules/document/object-storage';
 import { IdempotencyScope } from './common/idempotency/idempotency.store';
+import { breakGlass } from './test-support/break-glass';
 
 /**
  * 통합 테스트 — 실제 PostgreSQL 이 필요하다.
@@ -66,7 +67,7 @@ after(async () => {
     [applicationId],
   );
   await db.query(`DELETE FROM document WHERE application_id = $1`, [applicationId]);
-  await db.query(`DELETE FROM audit_event WHERE application_id = $1`, [applicationId]);
+  await breakGlass((c) => c.query(`DELETE FROM audit_event WHERE application_id = $1`, [applicationId]));
   await db.query(`DELETE FROM application WHERE id = $1`, [applicationId]);
   await db.query(`DELETE FROM applicant WHERE id = $1`, [applicantId]);
   await db.onApplicationShutdown();
@@ -118,14 +119,15 @@ describe('감사 hash-chain (v1.0 §9 / v1.1 §A11)', () => {
     const audit = new AuditService();
 
     // 감사 레코드를 몰래 고치는 상황을 재현한다.
-    // 운영에서는 이 UPDATE 권한 자체를 주지 않는다. (M5 WORM 저장소)
-    await db.query(
+    // 앱 역할에는 이 권한이 없고 트리거도 막는다 (D-41). 슈퍼유저가 트리거를 끄고 고친 상황이다 —
+    // DB 안에서 막을 수 없는 마지막 경로이고, hash-chain 이 그걸 찾아낸다. (WORM 은 M5)
+    await breakGlass((c) => c.query(
       `UPDATE audit_event SET result = 'REJECTED'
         WHERE application_id = $1
           AND id = (SELECT id FROM audit_event WHERE application_id = $1
                      ORDER BY occurred_at ASC, id ASC LIMIT 1)`,
       [applicationId],
-    );
+    ));
 
     const result = await db.tx((client) => audit.verifyChain(client, applicationId));
     assert.equal(result.valid, false, '변조된 체인이 valid 로 나오면 증적으로 쓸 수 없다');
@@ -520,14 +522,14 @@ describe('Evidence Package (v1.1 §A11·§C6 / §01 E)', () => {
 
   it('감사 체인이 깨져 있으면 그 사실을 함께 보고한다', async (t) => {
     if (!available) return t.skip('DATABASE_URL 없음');
-    // 누군가 감사 레코드를 고친 상황.
-    await db.query(
+    // 누군가 감사 레코드를 고친 상황 (슈퍼유저가 트리거를 끄고).
+    await breakGlass((c) => c.query(
       `UPDATE audit_event SET result = 'FAILED'
         WHERE application_id = $1
           AND id = (SELECT id FROM audit_event WHERE application_id = $1
                      ORDER BY occurred_at ASC LIMIT 1)`,
       [applicationId],
-    );
+    ));
 
     const pkg = await service().generate(applicationId, 'auditor@univ-a', '변조 확인');
     assert.equal(

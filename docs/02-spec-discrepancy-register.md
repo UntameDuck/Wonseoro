@@ -626,7 +626,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
-## D-41. 운영계정으로 감사 기록을 지울 수 있다 🔴
+## D-41. 운영계정으로 감사 기록을 지울 수 있다 🟢
 
 | | |
 |---|---|
@@ -634,9 +634,10 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **문제** | `audit_event` 에 추가 전용 보호가 없고(활성화 기록에는 있다), 애플리케이션이 **슈퍼유저 역할 하나**로 DB 에 붙는다. 앱이든 운영자든 같은 권한으로 감사 기록을 지울 수 있다. 통합 테스트 4개 파일이 실제로 `DELETE FROM audit_event` 로 정리하고 있다 — 그게 된다는 것 자체가 증거다 |
 | **요구** | v1.0 §9 "감사로그 삭제·수정 권한을 운영자에게 부여하지 않음" · §01 E "운영계정으로 Audit 삭제 불가" · §B16 |
 | **판정** | 역할 분리(`kadmission_app` 은 감사·적용 기록에 INSERT·SELECT 만) + `audit_event` 추가 전용 트리거 + 테스트 정리 방식 변경 + `db:verify` 에 거부 확인. 물리 분리(WORM)는 M5 |
-| **저장소 반영** | ⬜ M3 종료 전 |
+| **저장소 반영** | ✅ 2026-09-27 — `0004_db_roles_audit_append_only.sql`: `kadmission_app`(업무 테이블 DML · 감사·적용 기록은 **SELECT·INSERT 만** · TRUNCATE·DDL 없음) · `kadmission_migrator`(소유자) · `kadmission_auditor`(읽기). `audit_event` UPDATE·DELETE·TRUNCATE 트리거. admission-api · document-service · event-relay 가 앱 역할로 붙는다. 시험은 앱 역할로 돌고, 감사 기록 정리·변조 재현만 `test-support/break-glass.ts`(슈퍼유저 + `session_replication_role=replica`). `db:verify` 15~18 |
+| **남은 것** | 슈퍼유저가 트리거를 일부러 끄는 것은 DB 안에서 막을 수 없다 → WORM·Object Lock(M5). 중앙 DB(`central`)도 아직 슈퍼유저 하나 — 같은 방식으로 M5 |
 | **노션 반영** | ⬜ §06 DB 역할 표 · §02 |
-| **상태** | 🟡 판정완료 — 구현 대기 |
+| **상태** | 🟢 저장소 반영 완료 — 노션 반영 대기 |
 
 ---
 

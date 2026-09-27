@@ -26,7 +26,8 @@
 | ✅ 완료 | T-M3-01 Deadline Policy · T-M3-02 Config Governance · T-M3-04 Reconciliation · T-M3-05 Exception Queue · T-M3-07 Evidence Package · T-M3-08 Circuit Breaker · T-M3-15 서명된 활성화 기록 · T-M3-10 Retention Matrix · T-M3-09 Purpose-scoped Token · **T-M3-11~14 관리자 콘솔** |
 | 🟡 부분 | T-M3-03 hash-chain (물리 분리는 M5) · T-M3-06 Autonomous Mode (JWKS 캐시는 T-M5-02) |
 | ✅ 종료 전 보강 | **G1 결제 자동 정합화 (D-40)** — PG 콜백 · 재확인 워커 · 대조 스케줄 (2026-09-27) |
-| 🔜 다음 | **G2 감사 삭제 불가 (D-41)** → 종료 체크리스트 마감 · 노션 반영 ([05 문서](../05-m3-exit-m4-readiness.md)) |
+| ✅ 종료 전 보강 | **G2 감사 삭제 불가 (D-41)** — 앱 최소권한 역할 · 추가 전용 트리거 · `db:verify` 15~18 (2026-09-27) |
+| 🔜 다음 | 종료 체크리스트 마감 · 노션 반영(페이지별 확인) · 결정 5건 ([05 문서](../05-m3-exit-m4-readiness.md)) |
 
 ### §01 E 핵심 인수기준 "단독 운영자 1명으로 마감시간 변경 불가" 통과
 
@@ -479,6 +480,23 @@ M3 종료 체크리스트를 코드로 확인하다 발견했다. 대조(T-M3-04
 - 워커·스케줄은 **세션 advisory lock** 으로 Pod 하나만 돈다. 트랜잭션 잠금으로 하면 PG 호출 동안 트랜잭션이 열려 있다 (§B3)
 - 48시간이 지나도 확인이 안 되면 더 묻지 않는다 — 대조가 `PAYMENT_STATE_UNKNOWN_STALE` 로 사람에게 넘긴다
 
+### 감사 기록은 평소 쓰는 계정으로 지울 수 없다 (D-41 ✅)
+
+역시 종료 체크리스트를 코드로 확인하다 발견했다. 앱이 **슈퍼유저 하나**로 DB 에 붙었고, `audit_event` 에는 추가 전용
+보호가 없었다. 통합 시험 5개 파일이 `DELETE FROM audit_event` 로 정리하고 있었다 — 그게 된다는 것 자체가 증거였다.
+
+| 겹 | 누구를 막나 | 어떻게 |
+|---|---|---|
+| 권한 | 앱 · 앱 계정을 얻은 사람 | `kadmission_app` 에는 감사·적용 기록의 UPDATE·DELETE·TRUNCATE 권한이 **없다**. DDL 도 없다 |
+| 트리거 | 소유자 · 슈퍼유저의 평소 경로 | `audit_event` · `activation_record` UPDATE·DELETE·TRUNCATE 거부 |
+| hash-chain | 슈퍼유저가 트리거를 끄고 고친 경우 | 막지는 못하고 **찾아낸다.** 막는 것은 WORM(M5) |
+
+- 테이블 소유자를 `kadmission_migrator` 로 옮겼다. 소유자는 GRANT 와 무관하게 뭐든 할 수 있다
+- **시험도 앱 역할로 돈다.** 권한을 빠뜨린 테이블이 있으면 시험이 먼저 깨진다. 감사 기록 정리와 변조 재현만
+  `test-support/break-glass.ts` 로 — 슈퍼유저 연결에서 트리거를 일부러 끈다. 그 경로가 존재한다는 것이 M5 WORM 의 이유다
+- `db:verify` 17번은 테이블마다 권한이 규칙대로인지 본다. 새 테이블에 앱 권한을 잊거나, 추가 전용 테이블에 UPDATE 가
+  붙으면 잡는다. (`has_table_privilege` 에 여러 권한을 한 번에 넘기면 "하나라도 있으면 참" 이라 하나씩 묻는다)
+
 ## 태스크
 
 | ID | 태스크 | 담당 | 근거 노션 | 인수기준 | 상태 |
@@ -558,8 +576,8 @@ Central ACK         수신
 - [ ] PG Callback 30분 지연: 자동 정합화 — 기능 ✅ (D-40, 2026-09-27), **실제 30분 지연 시험은 T-M4-34**
 - [x] **단독 운영자 1명으로 마감시간 변경 불가** — API·DB 제약·관리자 콘솔 화면까지 (2026-09-26)
 - [x] 특정 Application의 접수과정을 Evidence Package로 재구성 가능 — 콘솔 증적 조회 (2026-09-26)
-- [ ] 운영계정으로 Audit 삭제 불가 — ❌ **미충족** (D-41)
-- [ ] Production interactive write 경로 없음 (§01 B16) — 앱 경로 ✅, DB 슈퍼유저 하나 (D-41)
+- [x] 운영계정으로 Audit 삭제 불가 — 앱 역할 권한 없음 · 트리거 (D-41, 2026-09-27). 슈퍼유저 우회 차단은 WORM(M5)
+- [ ] Production interactive write 경로 없음 (§01 B16) — 앱 경로 ✅ · 앱 최소권한 ✅ (D-41). 슈퍼유저 break-glass 통제는 M5
 - [x] **노션 §01을 다시 읽고** C(필수 신규 기능) 8종이 전부 구현됐는지 대조 — [05 문서](../05-m3-exit-m4-readiness.md). C4 는 T-M4-07
 - [ ] 구현하며 바뀐 정책 구조를 노션에 반영 — 55개 수정 지점 대기 ([05 문서 부록](../05-m3-exit-m4-readiness.md))
 - [x] 발견한 불일치를 D-N으로 등록·처리 — D-1 ~ D-41

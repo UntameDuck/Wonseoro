@@ -305,4 +305,76 @@ BEGIN
   ASSERT nodecision, '결정 근거 없는 연장이 기록된다';
 END $$;
 
+-- ── 15~18. 감사 기록은 평소 쓰는 계정으로 지울 수 없다 (D-41) ─────────────
+-- v1.1 §01 E "운영계정으로 Audit 삭제 불가". 앱 역할로 직접 시도해 본다.
+DO $$
+DECLARE
+  aid uuid := gen_random_uuid();
+  upd boolean := false; del boolean := false; trunc boolean := false;
+  act_del boolean := false; ddl boolean := false;
+  missing text;
+BEGIN
+  SET LOCAL ROLE kadmission_app;
+  -- 추가는 된다. 안 되면 접수 자체가 멈춘다
+  INSERT INTO audit_event (id, application_id, actor_type, action, result, event_hash, occurred_at)
+  VALUES (aid, '55555555-5555-5555-5555-555555555555', 'SYSTEM', 'VERIFY_ROLE', 'ACCEPTED', 'h', now());
+  BEGIN UPDATE audit_event SET result = 'REJECTED' WHERE id = aid;
+  EXCEPTION WHEN insufficient_privilege THEN upd := true; END;
+  BEGIN DELETE FROM audit_event WHERE id = aid;
+  EXCEPTION WHEN insufficient_privilege THEN del := true; END;
+  BEGIN TRUNCATE audit_event;
+  EXCEPTION WHEN insufficient_privilege THEN trunc := true; END;
+  BEGIN DELETE FROM activation_record WHERE false;
+  EXCEPTION WHEN insufficient_privilege THEN act_del := true; END;
+  BEGIN CREATE TABLE kadmission.verify_ddl_probe (id int);
+  EXCEPTION WHEN insufficient_privilege THEN ddl := true; END;
+  RESET ROLE;
+
+  RAISE NOTICE '15. 앱 역할로 감사 기록 수정·삭제·비우기 차단: %',
+    CASE WHEN upd AND del AND trunc AND act_del THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT upd AND del AND trunc AND act_del, '앱 역할로 감사·적용 기록을 고치거나 지울 수 있다';
+  RAISE NOTICE '16. 앱 역할로 DDL 차단: %', CASE WHEN ddl THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT ddl, '앱 역할이 테이블을 만들 수 있다';
+
+  -- 새 테이블을 만들고 앱 권한을 잊으면 배포 뒤 첫 요청에서야 드러난다. 여기서 잡는다.
+  -- 반대로 추가 전용 테이블에 UPDATE·DELETE 가 새로 붙어도 잡는다.
+  SELECT string_agg(t.tablename, ', ') INTO missing
+    FROM pg_tables t
+   WHERE t.schemaname = 'kadmission'
+     AND CASE WHEN t.tablename IN ('audit_event', 'activation_record')
+              THEN NOT has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'INSERT')
+                   OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'UPDATE')
+                   OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'DELETE')
+              -- 여러 권한을 한 번에 물으면 "하나라도 있으면 참" 이다. 하나씩 묻는다.
+              ELSE NOT (has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'SELECT')
+                    AND has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'INSERT')
+                    AND has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'UPDATE')
+                    AND has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'DELETE'))
+                   OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'TRUNCATE')
+         END;
+  RAISE NOTICE '17. 앱 역할 권한이 테이블마다 규칙대로: %', COALESCE('FAIL (' || missing || ')', 'PASS');
+  ASSERT missing IS NULL, '앱 역할 권한이 규칙과 다른 테이블: ' || missing;
+END $$;
+
+-- 소유자·슈퍼유저라도 평소 경로로는 지울 수 없다 — 트리거가 계정과 관계없이 선다
+DO $$
+DECLARE aid uuid := gen_random_uuid(); blocked boolean := false; aud boolean := false;
+BEGIN
+  INSERT INTO audit_event (id, application_id, actor_type, action, result, event_hash, occurred_at)
+  VALUES (aid, '55555555-5555-5555-5555-555555555555', 'SYSTEM', 'VERIFY_TRIGGER', 'ACCEPTED', 'h', now());
+  BEGIN DELETE FROM audit_event WHERE id = aid;
+  EXCEPTION WHEN insufficient_privilege THEN blocked := true; END;
+
+  SET LOCAL ROLE kadmission_auditor;
+  PERFORM 1 FROM audit_event LIMIT 1;
+  BEGIN INSERT INTO audit_event (id, actor_type, action, result, event_hash, occurred_at)
+        VALUES (gen_random_uuid(), 'SYSTEM', 'X', 'X', 'h', now());
+  EXCEPTION WHEN insufficient_privilege THEN aud := true; END;
+  RESET ROLE;
+
+  RAISE NOTICE '18. 소유자 권한으로도 감사 삭제 차단 · 감사 역할은 읽기만: %',
+    CASE WHEN blocked AND aud THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT blocked AND aud, '감사 기록 트리거 또는 감사 역할 권한이 없다';
+END $$;
+
 ROLLBACK;

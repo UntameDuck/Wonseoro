@@ -17,6 +17,7 @@ import { PaymentCallbackController } from './payment-callback.controller';
 import { PaymentRecheckWorker } from './payment-recheck.worker';
 import { MockPaymentProvider } from './payment.provider';
 import { PaymentRow, PaymentService } from './payment.service';
+import { breakGlass } from '../../test-support/break-glass';
 
 /**
  * 결제 자동 정합화 (D-40) — 실제 PostgreSQL 이 필요하다.
@@ -142,7 +143,8 @@ before(async () => {
 
 after(async () => {
   if (!available) return;
-  await db.tx(async (client) => {
+  // 감사 기록은 앱 역할로 지울 수 없다 (D-41). 시험 정리만 이 경로를 쓴다.
+  await breakGlass(async (client) => {
     // 동시에 도는 대조 시험이 이 원서들에 예외를 달 수 있다(확인된 결제 · 접수 없음).
     // 원서 행을 먼저 잠가, 예외를 지운 뒤 원서를 지우는 사이에 새 예외가 끼지 못하게 한다.
     await client.query(`SELECT id FROM application WHERE id = ANY($1) FOR UPDATE`, [apps]);

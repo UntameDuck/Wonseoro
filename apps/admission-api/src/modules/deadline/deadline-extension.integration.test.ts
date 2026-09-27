@@ -8,6 +8,7 @@ import { ActivationRecorder } from '../activation/activation-recorder';
 import { ActivationSigner, canonicalJson } from '../activation/activation-signer';
 import { AuditService } from '../audit/audit.service';
 import { DeadlinePolicyRepository } from './deadline-policy.repository';
+import { asAdmin } from '../../test-support/break-glass';
 
 /**
  * 마감 연장 + 서명된 활성화 기록 통합 테스트 — 실제 PostgreSQL 이 필요하다. (T-M3-14·15, §B17)
@@ -207,12 +208,22 @@ describe('서명된 활성화 기록 (T-M3-15)', () => {
     if (!available) return t.skip('DATABASE_URL 없음');
     const cycleId = await makeCycle();
     await seedBase(cycleId);
+    // 앱 역할에는 권한 자체가 없다 (D-41)
     await assert.rejects(
       db.query(`UPDATE activation_record SET reason = '조작' WHERE cycle_id = $1`, [cycleId]),
-      /추가만 가능하다/,
+      /permission denied|추가만 가능하다/,
     );
     await assert.rejects(
       db.query(`DELETE FROM activation_record WHERE cycle_id = $1`, [cycleId]),
+      /permission denied|추가만 가능하다/,
+    );
+    // 소유자·슈퍼유저라도 평소 경로로는 트리거가 막는다
+    await assert.rejects(
+      asAdmin(`UPDATE activation_record SET reason = '조작' WHERE cycle_id = $1`, [cycleId]),
+      /추가만 가능하다/,
+    );
+    await assert.rejects(
+      asAdmin(`DELETE FROM activation_record WHERE cycle_id = $1`, [cycleId]),
       /추가만 가능하다/,
     );
   });

@@ -9,6 +9,7 @@ import { BREAKER } from '../../config';
 import { AuditService } from '../audit/audit.service';
 import { IntentResult, PaymentProviderPort, VerifyResult } from './payment.provider';
 import { PaymentService } from './payment.service';
+import { breakGlass } from '../../test-support/break-glass';
 
 /**
  * PG Circuit Breaker 통합 테스트 — 실제 PostgreSQL 이 필요하다. (v1.1 §01 C8·§B4)
@@ -84,7 +85,8 @@ async function statusOf(paymentId: string): Promise<string> {
 }
 
 async function cleanup(appId: string): Promise<void> {
-  await db.tx(async (client) => {
+  // 감사 기록은 앱 역할로 지울 수 없다 (D-41). 시험 정리만 이 경로를 쓴다.
+  await breakGlass(async (client) => {
     await client.query(`DELETE FROM audit_event WHERE application_id = $1`, [appId]);
     await client.query(
       `DELETE FROM payment_event WHERE payment_id IN
