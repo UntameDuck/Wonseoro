@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { EVENT_TYPE, ApplicationFinalizedData } from '@wonseoro/contracts';
@@ -9,7 +9,7 @@ import { ProblemException } from '../../common/problem/problem.exception';
 import { AuditService } from '../audit/audit.service';
 import { DeadlineService } from '../deadline/deadline.service';
 import { FormSchemaService } from '../config/form-schema.service';
-import { PaymentService } from '../payment/payment.service';
+import { PaymentRow, PaymentService } from '../payment/payment.service';
 
 export interface SubmissionRow {
   submissionId: string;
@@ -27,9 +27,20 @@ export interface FinalizeInput {
   applicantId: string;
   /** 제출 요청이 서버에 도달한 시각. 마감 정책이 이 값을 쓸 수 있다. */
   requestedAt: Date;
+  /**
+   * 누가 접수를 일으켰는가. 결제 확인이 곧 제출이면(D-42) 서버가 부른다 —
+   * 감사에는 SYSTEM 으로 남기고, 제출 의사는 결제 의도를 만든 지원자의 것임을 함께 적는다.
+   */
+  trigger?: 'APPLICANT' | 'PAYMENT_CONFIRMED';
   traceId?: string;
   sourceIp?: string;
 }
+
+/**
+ * 접수로 갈 수 있는 원서 상태. CANCELLED·EXPIRED 는 안 된다 —
+ * 결제가 늦게 확인되는 동안 지원자가 취소했을 수 있다. 그 결제는 환불 대상이지 접수가 아니다.
+ */
+const FINALIZABLE_FROM = new Set(['DRAFT', 'READY', 'PAYMENT_PENDING', 'PAID', 'FINALIZING']);
 
 /**
  * 최종 접수 — 기술설계서 v1.0 §5.6, v1.1 §02
@@ -56,7 +67,7 @@ export interface FinalizeInput {
  * event-relay 가 나중에 보낸다. (v1.1 §10 §12)
  */
 @Injectable()
-export class FinalizationService {
+export class FinalizationService implements OnModuleInit {
   private readonly logger = new Logger(FinalizationService.name);
 
   constructor(
@@ -67,23 +78,78 @@ export class FinalizationService {
     private readonly audit: AuditService,
   ) {}
 
-  async finalize(input: FinalizeInput): Promise<{ submission: SubmissionRow; created: boolean }> {
-    // ── 트랜잭션 이전: 외부 호출과 무거운 검증을 모두 끝낸다 ──────────────
+  /**
+   * 결제가 곧 제출이다 (D-42). 현행 원서접수와 같다 — 전형료 결제를 마치면 접수가 끝난다.
+   *   - 결제창을 열기 전에 접수할 수 있는 원서인지 본다 (상태·입력·서류·마감)
+   *   - 결제가 처음 확인되면(화면 확인·PG 콜백·재확인 워커 어느 쪽이든) 서버가 접수한다
+   */
+  onModuleInit(): void {
+    this.payments.guardIntent(async (applicationId) => {
+      await this.assertReady(applicationId, new Date());
+    });
+    this.payments.onConfirmed((payment) => this.autoFinalize(payment));
+  }
 
-    const existing = await this.findSubmission(input.applicationId);
-    if (existing) {
-      // 이미 접수되었다. 재시도는 오류가 아니다. 같은 결과를 돌려준다.
-      return { submission: existing, created: false };
+  /**
+   * 결제 확인 직후의 자동 접수. 실패해도 결제 확인은 되돌리지 않는다 —
+   * 사유를 감사에 남기고, 대조(PAYMENT_CONFIRMED_WITHOUT_SUBMISSION)와 Self-check 가 드러낸다.
+   * 지원자는 화면에서 다시 제출할 수 있다(같은 finalize 경로).
+   */
+  async autoFinalize(payment: PaymentRow): Promise<void> {
+    const { rows } = await this.db.query<{ applicant_id: string; created_at: Date }>(
+      `SELECT a.applicant_id, p.created_at
+         FROM payment p JOIN application a ON a.id = p.application_id
+        WHERE p.id = $1`,
+      [payment.id],
+    );
+    const found = rows[0];
+    if (!found) return;
+    try {
+      const { submission, created } = await this.finalize({
+        applicationId: payment.applicationId,
+        applicantId: found.applicant_id,
+        // 제출 의사를 밝힌 시각 = "결제하기" 로 결제 의도를 만든 시각.
+        requestedAt: found.created_at,
+        trigger: 'PAYMENT_CONFIRMED',
+      });
+      if (created) {
+        this.logger.log(`auto-finalized ${submission.applicationNumber} on payment ${payment.id}`);
+      }
+    } catch (err) {
+      const problem = err instanceof ProblemException ? err.problem : null;
+      this.logger.warn(
+        `auto-finalize failed for application ${payment.applicationId}: ${problem?.code ?? String(err)}`,
+      );
+      await this.db.tx((client) =>
+        this.audit.record(client, {
+          applicationId: payment.applicationId,
+          actorType: 'SYSTEM',
+          actorId: 'auto-finalize',
+          action: 'FINALIZE_REQUESTED',
+          result: 'REJECTED',
+          details: {
+            trigger: 'PAYMENT_CONFIRMED',
+            paymentId: payment.id,
+            code: problem?.code ?? 'INTERNAL',
+          },
+        }),
+      );
+    }
+  }
+
+  /**
+   * 접수할 수 있는 원서인가 — 결제 전 확인과 접수 직전 확인이 같은 규칙을 쓴다.
+   * 결제 여부와 마감은 보지 않는다. 결제는 finalize 가, 마감은 부르는 쪽이 제 시각으로 본다.
+   */
+  private async assertReady(applicationId: string, deadlineCheckAt: Date | null) {
+    const app = await this.loadApplication(applicationId);
+    if (app.status === 'FINALIZED') throw ProblemException.alreadyFinalized();
+    if (!FINALIZABLE_FROM.has(app.status)) {
+      throw ProblemException.illegalTransition(app.status, 'FINALIZED');
     }
 
-    const app = await this.loadApplication(input.applicationId);
-    if (app.status === 'FINALIZED') throw ProblemException.alreadyFinalized();
-
-    // 결제 확인. CONFIRMED 가 아니면 여기서 멈춘다.
-    const payment = await this.payments.confirmedFor(input.applicationId);
-
     // 필수 입력 검증. 접수 직전에 다시 본다 — 저장 이후 Config 가 바뀌었을 수 있다.
-    const fields = await this.loadFields(input.applicationId);
+    const fields = await this.loadFields(applicationId);
     const validation = await this.forms.validate(app.cycleId, app.admissionTypeCode, fields);
     if (!validation.valid) {
       throw ProblemException.unprocessable(
@@ -94,7 +160,32 @@ export class FinalizationService {
     }
 
     // 필수 서류는 AVAILABLE 상태만 인정한다. (v1.1 §10 §6)
-    await this.assertRequiredDocuments(input.applicationId, app.cycleId, app.admissionTypeCode);
+    await this.assertRequiredDocuments(applicationId, app.cycleId, app.admissionTypeCode);
+
+    // 결제 전: 이미 마감이 지났으면 결제창도 열지 않는다. 어느 판정 방식이든 "지금" 은 이후 시각이다.
+    if (deadlineCheckAt) {
+      await this.deadline.assertWithinDeadline(app.cycleId, {
+        requestReceivedAt: deadlineCheckAt,
+        paymentApprovedAt: deadlineCheckAt,
+        commitAt: deadlineCheckAt,
+      });
+    }
+    return app;
+  }
+
+  async finalize(input: FinalizeInput): Promise<{ submission: SubmissionRow; created: boolean }> {
+    // ── 트랜잭션 이전: 외부 호출과 무거운 검증을 모두 끝낸다 ──────────────
+
+    const existing = await this.findSubmission(input.applicationId);
+    if (existing) {
+      // 이미 접수되었다. 재시도는 오류가 아니다. 같은 결과를 돌려준다.
+      return { submission: existing, created: false };
+    }
+
+    // 결제 확인. CONFIRMED 가 아니면 여기서 멈춘다.
+    const payment = await this.payments.confirmedFor(input.applicationId);
+
+    const app = await this.assertReady(input.applicationId, null);
 
     const commitAt = new Date();
     const policy = await this.deadline.assertWithinDeadline(app.cycleId, {
@@ -115,7 +206,11 @@ export class FinalizationService {
       );
       const current = locked.rows[0];
       if (!current) throw ProblemException.validationFailed('존재하지 않는 원서입니다.');
-      if (current.status === 'FINALIZED') throw ProblemException.alreadyFinalized();
+      // 잠금을 기다리는 사이 다른 경로(자동 접수·화면 제출)가 먼저 접수했다. 재시도와 같다.
+      if (current.status === 'FINALIZED') return null;
+      if (!FINALIZABLE_FROM.has(current.status)) {
+        throw ProblemException.illegalTransition(current.status, 'FINALIZED');
+      }
 
       const applicationNumber = this.issueApplicationNumber(app.admissionYear, app.universityId);
       const submissionId = randomUUID();
@@ -179,17 +274,22 @@ export class FinalizationService {
       });
 
       // 7. Audit INSERT
+      const auto = input.trigger === 'PAYMENT_CONFIRMED';
       await this.audit.record(client, {
         applicationId: input.applicationId,
-        actorType: 'APPLICANT',
-        actorId: input.applicantId,
+        actorType: auto ? 'SYSTEM' : 'APPLICANT',
+        actorId: auto ? 'auto-finalize' : input.applicantId,
         action: 'APPLICATION_FINALIZED',
         result: 'ACCEPTED',
         ...(input.traceId ? { traceId: input.traceId } : {}),
         ...(input.sourceIp ? { sourceIp: input.sourceIp } : {}),
         configVersion,
         policyVersion: policy.version,
-        details: { submissionId, paymentId: payment.id },
+        details: {
+          submissionId,
+          paymentId: payment.id,
+          trigger: input.trigger ?? 'APPLICANT',
+        },
       });
 
       return {
@@ -204,6 +304,11 @@ export class FinalizationService {
       };
     });
     // 8. Commit 완료. 이 시점부터 사용자에게 접수완료다.
+    if (!submission) {
+      const raced = await this.findSubmission(input.applicationId);
+      if (!raced) throw ProblemException.alreadyFinalized();
+      return { submission: raced, created: false };
+    }
 
     this.logger.log(
       `finalized ${submission.applicationNumber} (application=${input.applicationId})`,

@@ -49,6 +49,25 @@ export class PaymentService {
   private static readonly UNVERIFIED_TO_UNKNOWN: readonly PaymentStatus[] = ['CREATED', 'PENDING'];
 
   /**
+   * 결제 전 확인 · 결제 확정 뒤 처리 — 접수(finalization) 모듈이 등록한다. (D-42)
+   *
+   * 결제 모듈이 접수 모듈을 직접 부르면 서로를 import 하게 된다(접수는 결제 스냅샷을 쓴다).
+   * 그래서 접수 쪽이 기동할 때 여기에 걸어 둔다.
+   */
+  private readonly intentGuards: Array<(applicationId: string) => Promise<void>> = [];
+  private readonly confirmedListeners: Array<(payment: PaymentRow) => Promise<void>> = [];
+
+  /** 결제 의도를 만들기 전에 부른다. 던지면 결제창을 열지 않는다. */
+  guardIntent(guard: (applicationId: string) => Promise<void>): void {
+    this.intentGuards.push(guard);
+  }
+
+  /** 결제가 처음 CONFIRMED 가 된 뒤(커밋 후) 부른다. 어느 경로로 확인됐든 같다. */
+  onConfirmed(listener: (payment: PaymentRow) => Promise<void>): void {
+    this.confirmedListeners.push(listener);
+  }
+
+  /**
    * 전형료 결제 의도 생성.
    * 금액은 클라이언트가 보내지 않는다. 대학 설정(admission_type.fee_amount)이 최종 기준이다. (v1.1 §10 §1)
    */
@@ -67,6 +86,10 @@ export class PaymentService {
     const found = rows[0];
     if (!found) throw ProblemException.validationFailed('존재하지 않는 원서입니다.');
     if (found.status === 'FINALIZED') throw ProblemException.alreadyFinalized();
+
+    // 결제가 곧 제출이다 (D-42). 확인되는 순간 접수하므로, 접수할 수 없는 원서면 결제창을 열지 않는다.
+    // 돈을 받은 뒤에 "서류가 빠졌습니다" 를 알리면 환불 사건이 된다.
+    for (const guard of this.intentGuards) await guard(applicationId);
 
     const amount = Number(found.fee_amount);
     // 결제창을 열기 전 단계라 아직 돈이 움직이지 않았다. 끊겼으면 503 으로
@@ -157,7 +180,23 @@ export class PaymentService {
       return this.apply(payment, 'FAILED', result.providerApprovedAt, context);
     }
 
-    return this.apply(payment, result.status, result.providerApprovedAt, context);
+    const applied = await this.apply(payment, result.status, result.providerApprovedAt, context);
+    if (applied.status === 'CONFIRMED') await this.notifyConfirmed(applied);
+    return applied;
+  }
+
+  /**
+   * 확정 알림. 트랜잭션이 커밋된 뒤다. 듣는 쪽의 실패가 결제 확인을 되돌리지 않는다 —
+   * 결제는 확인됐고, 그 뒤의 일이 실패하면 대조(PAYMENT_CONFIRMED_WITHOUT_SUBMISSION)가 찾는다.
+   */
+  private async notifyConfirmed(payment: PaymentRow): Promise<void> {
+    for (const listener of this.confirmedListeners) {
+      try {
+        await listener(payment);
+      } catch (err) {
+        this.logger.error(`payment ${payment.id} confirmed listener failed: ${describeFailure(err)}`);
+      }
+    }
   }
 
   /**

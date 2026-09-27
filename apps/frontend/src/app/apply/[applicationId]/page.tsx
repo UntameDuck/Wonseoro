@@ -202,7 +202,14 @@ export default function ApplyPage({
         amount: intent.data.amount,
         status: verified.data.status,
       });
-      if (verified.data.status === 'CONFIRMED') setStep(6);
+      if (verified.data.status === 'CONFIRMED') {
+        // 결제가 확인되면 서버가 이미 접수했다 (D-42). 같은 제출 경로로 결과만 받는다 —
+        // 이미 접수된 원서면 그 접수를 그대로 돌려준다. 서버 쪽 자동 접수가 실패했으면 여기서 다시 시도된다.
+        const { data } = await api.finalize(applicationId, applicantId, newIdempotencyKey('finalize'));
+        setSubmission(data);
+        await reload();
+        setStep(6);
+      }
     } catch (err) {
       handle(err);
     } finally {
@@ -391,11 +398,22 @@ export default function ApplyPage({
                 catalog ? `${catalog.feeAmount.toLocaleString('ko-KR')}원` : '-',
               ],
               ['결제 상태', payment?.status ?? '결제 전'],
+              ['현재 서버 시각', formatKst(app?.serverTime ?? null)],
+              ['마감 시각', formatKst(app?.deadlineAt ?? null)],
+              ['결제 후 수정·취소', '불가능합니다'],
             ]}
           />
+          {/* 결제가 곧 제출이다 (D-42). 복구 불가능한 동작 직전에 알린다. (§07) */}
+          {!payment && (
+            <Alert tone="warning" title="결제가 확인되면 바로 접수가 완료됩니다">
+              전형료 결제가 확인되는 즉시 원서가 접수되며, 이후에는 원서를 수정하거나 취소할 수
+              없습니다. 위 내용을 확인한 뒤 결제해 주십시오.
+            </Alert>
+          )}
           {payment && payment.status !== 'CONFIRMED' && (
             <Alert tone="warning" title="결제 확인 중입니다">
-              다시 결제하지 마시고 잠시 후 상태를 확인해 주십시오.
+              다시 결제하지 마십시오. 결제가 확인되면 원서는 자동으로 접수됩니다. 이 화면을 닫아도
+              됩니다 — 잠시 후 상태를 확인해 주십시오.
             </Alert>
           )}
           <div
@@ -404,8 +422,8 @@ export default function ApplyPage({
             <Button variant="secondary" onClick={() => setStep(4)}>
               이전
             </Button>
-            <Button onClick={() => void pay()} disabled={busy}>
-              {busy ? '결제 처리 중…' : '전형료 결제'}
+            <Button onClick={() => void pay()} disabled={busy || deadline.passed}>
+              {busy ? '결제·접수 처리 중…' : '전형료 결제하고 접수'}
             </Button>
           </div>
         </Card>

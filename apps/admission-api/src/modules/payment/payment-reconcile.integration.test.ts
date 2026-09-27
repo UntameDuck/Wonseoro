@@ -25,7 +25,7 @@ import { breakGlass } from '../../test-support/break-glass';
  * 확인할 것
  *   - 서명이 맞지 않는 콜백은 아무것도 바꾸지 않는다
  *   - 같은 콜백은 한 번만 처리되고, 상태는 콜백이 아니라 PG 재조회로 정해진다
- *   - 결제가 확인돼도 원서를 제출하지 않는다
+ *   - 결제 확인 뒤의 접수는 결제 모듈이 아니라 접수 모듈의 일이다 (D-42, auto-finalize 시험)
  *   - 재확인 워커는 PENDING·UNKNOWN 만, Backoff 간격이 지난 것만 묻는다
  *   - 여러 Pod 중 하나만 돈다
  */
@@ -220,7 +220,7 @@ describe('PG 콜백 (D-40)', () => {
     assert.equal(await statusOf(id), 'FAILED', '콜백이 CONFIRMED 라고 해도 PG 답이 FAILED 면 FAILED');
   });
 
-  it('같은 콜백은 한 번만 처리하고, 결제가 확인돼도 원서를 제출하지 않는다', async (t) => {
+  it('같은 콜백은 한 번만 처리한다 — PG 재조회도 한 번', async (t) => {
     if (!available) return t.skip('DATABASE_URL 없음');
     const appId = await seedApplication();
     const { id, txId } = await seedPayment(appId, { status: 'PENDING' });
@@ -233,11 +233,6 @@ describe('PG 콜백 (D-40)', () => {
     assert.equal(again.outcome, 'DUPLICATE');
     assert.equal(await statusOf(id), 'CONFIRMED');
     assert.deepEqual(await events(id), ['CALLBACK_RECEIVED', 'VERIFY_CONFIRMED'], 'PG 재조회는 한 번');
-
-    const { rows } = await db.query<{ status: string }>(`SELECT status FROM application WHERE id = $1`, [appId]);
-    assert.equal(rows[0]!.status, 'PAYMENT_PENDING', '제출은 지원자의 의사 표시다');
-    const sub = await db.query(`SELECT 1 FROM submission WHERE application_id = $1`, [appId]);
-    assert.equal(sub.rows.length, 0);
   });
 
   it('우리가 모르는 거래도 200 으로 받는다 — 오류를 주면 PG 가 계속 다시 보낸다', async (t) => {

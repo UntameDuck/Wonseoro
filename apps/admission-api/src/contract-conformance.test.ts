@@ -228,8 +228,9 @@ describe('계약 적합성 — OpenAPI (k-admission-openapi.yaml)', () => {
   });
 
   it('Finalize 는 재시도 시 200, 신규 시 201 을 반환한다', () => {
-    const idx = OPENAPI.indexOf('operationId: finalizeApplication');
-    const section = OPENAPI.slice(idx, idx + 800);
+    const op = openApiOperations().find(([, , body]) => body.includes('operationId: finalizeApplication'));
+    assert.ok(op, 'finalizeApplication 이 없습니다');
+    const section = op[2];
     assert.match(section, /'200':\s*\n\s*description: Existing finalized result for idempotent retry/);
     assert.match(section, /'201':\s*\n\s*description: Application finalized/);
   });
