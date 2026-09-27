@@ -10,6 +10,22 @@
 > M4는 **검증 단계지 설계 단계가 아니다.** 여기서 구조 결함이 나오면 M1까지 되돌아간다.
 > 그래서 Idempotency·Outbox·단일 Writer·서버시간 마감판정을 M1부터 코드에 박아둔 것이다.
 
+## 진행 현황 (2026-09-28)
+
+| ID | 상태 | 근거 |
+|---|---|---|
+| T-M4-01 Helm 차트 | ✅ | `deploy/charts/k-admission` — values-s/m/l (m 은 §05 첨부 그대로, s·l 은 파생값). `helm lint` 통과 |
+| T-M4-02 Runtime 보안 기준 | ✅ | runAsNonRoot(UID 10001)·readOnlyRootFS·seccomp·drop ALL·PDB·startup/readiness/liveness. 이미지를 같은 조건으로 띄워 확인 |
+| T-M4-03 대학별 values | ✅ | `deploy/universities/UNIV-A·B·C` — 같은 차트·같은 이미지, **마감·설정 버전은 values 에 없다**(D-44 ⑥) |
+| T-M4-04 kind 2 클러스터 | 🟡 | univ-a·univ-b 기동, 접수 API·Relay Running. 서류 워커는 의존성 누락 수정 후 재배포 중 Docker Desktop 정지 — **재확인 필요** |
+| T-M4-07 Peak Mode | 🟡 | `peakMode.enabled` 가 API 최소 replica 를 올린다. 예약 시각 자동 전환·비핵심 Job 억제는 남음 |
+| T-M4-09 커넥션 예산 | 🟡 | `DB_POOL_MAX` + 렌더링 때 Σ(replica × Pod 당 상한) ≤ 예산 검사. **PgBouncer 는 남음**. 첨부 values-m 이 예산을 넘는 것을 찾음(D-44 ⑦) |
+| T-M4-42 대학 간 격리 | 🟡 | 시험 스크립트 `tests/m4/isolation.mjs` 준비. **실행 전** |
+| 나머지 | ⬜ | |
+
+**로컬 축소 환경의 한계** — Docker Desktop 8GB 에서 이미지 빌드와 kind 클러스터 2개를 함께 돌리자 엔진이 멈췄다.
+빌드와 클러스터는 따로 돌린다. 수치 시험(T-M4-30~32·36·41)은 K-PaaS 환경이 필요하다.
+
 ## 노션 확인 대상
 
 | 문서 | 이 단계에서 보는 이유 |

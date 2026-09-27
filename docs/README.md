@@ -12,7 +12,8 @@
 | 5 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) | 문서 간 충돌이 의심될 때 |
 | 6 | [04-production-readiness.md](04-production-readiness.md) | 운영에 올리기 전 무엇을 점검했는지 |
 | 7 | [05-m3-exit-m4-readiness.md](05-m3-exit-m4-readiness.md) | M3 종료 체크리스트 실제 상태 · 결정 사항 · M4 준비물 · 노션 반영 목록 |
-| 7 | [spec-assets/README.md](spec-assets/README.md) | 노션 첨부 배치 현황 |
+| 8 | [spec-assets/README.md](spec-assets/README.md) | 노션 첨부 배치 현황 (10종 전부) |
+| 9 | [../deploy/local/README.md](../deploy/local/README.md) | kind 2 클러스터로 대학 Data Plane 띄우기 |
 
 ## 마일스톤 (총 7단계)
 
@@ -26,15 +27,16 @@
 | M5 | [신뢰성·보안·접근성](milestones/M5-reliability-security.md) | 33 | 대학에 넣을 수 있는 수준 |
 | M6 | [Pilot 준비](milestones/M6-pilot-readiness.md) | 15 | 대학 1곳 Shadow Test |
 
-총 **139개 태스크, 58개 완료 (2026-09-27)**. 각 태스크에 담당·근거 노션 절·인수기준이 붙어 있다.
+총 **139개 태스크, 61개 완료 (2026-09-28)**. 각 태스크에 담당·근거 노션 절·인수기준이 붙어 있다.
 
 | 단계 | 진행 |
 |---|---|
 | M0 기반 | 7/8 |
 | M1 접수 Core | 14/14 ✅ |
 | M2 결제·Finalize·화면 | 24/24 ✅ |
-| M3 운영 안전장치 | 14/15 ◀ 코드 구멍 G1·G2 ✅ · 노션 본문 반영 ✅ — 결정 8건 대기 |
-| M4~M6 | 0/78 |
+| M3 운영 안전장치 | 14/15 ✅ 종료 (2026-09-27) |
+| M4 분산 실증 | 3/28 ◀ 차트·이미지 ✅ — 다음: 대학 간 격리 시험 |
+| M5~M6 | 0/50 |
 
 진행 현황과 다음 착수 순서는 **[03-next-steps.md](03-next-steps.md)** 를 본다.
 

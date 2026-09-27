@@ -18,7 +18,7 @@
 
 <p align="center">
   <img alt="Status" src="https://img.shields.io/badge/Status-Working_MVP-2563EB?style=flat-square" />
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-277_passing-16A34A?style=flat-square" />
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-287_passing-16A34A?style=flat-square" />
   <img alt="K-PaaS" src="https://img.shields.io/badge/Platform-K--PaaS-0F766E?style=flat-square" />
   <img alt="Kubernetes" src="https://img.shields.io/badge/Runtime-Kubernetes-326CE5?style=flat-square&amp;logo=kubernetes&amp;logoColor=white" />
   <img alt="KRDS" src="https://img.shields.io/badge/UI-KRDS-4F46E5?style=flat-square" />
@@ -295,14 +295,21 @@ dev-folder/
 ├── infra/
 │   ├── db/                   # DDL, 마이그레이션, 정합성 제약 검증
 │   └── compose/              # 로컬 개발 인프라
-├── deploy/                   # K-PaaS 배포 (M4에서 채운다)
-├── tests/load/               # 부하 시험 (M4)
+├── deploy/
+│   ├── docker/               # 서비스 공통 이미지 (비루트 · 읽기 전용 FS)
+│   ├── charts/k-admission/   # 대학 Data Plane Helm 차트 · values-s/m/l
+│   ├── universities/         # 대학별 values (UNIV-A/B/C) — 코드 fork 0
+│   ├── platform/policies/    # 노션 §05·§06 첨부 (runtime · NetworkPolicy/RBAC · Vault)
+│   └── local/                # kind 2 클러스터 축소 환경
+├── tests/
+│   ├── load/                 # k6 부하 시나리오 (노션 §08 첨부)
+│   └── m4/                   # 대학 간 장애 격리 시험 (T-M4-42)
 └── docs/                     # 계획 · 마일스톤 · ADR · 불일치 대장 · 런북
 ```
 
 ## Project Status
 
-> 기준일 2026-09-27 · 전체 139개 태스크 중 **58개 완료** · **M3 종료** · 테스트 **277개 통과**
+> 기준일 2026-09-28 · 전체 139개 태스크 중 **61개 완료** · **M3 종료 · M4 착수** · 테스트 **287개** (실패 0)
 
 지원자가 화면에서 원서를 만들어 서류를 올리고 결제한 뒤 **접수번호를 받는 전 과정이 동작합니다.**
 
@@ -319,7 +326,7 @@ dev-folder/
 | M1 접수 Core | **14/14** | 원서 생성·자동저장·추가문항·서류·감사 hash-chain |
 | M2 결제·Finalize·화면 | **24/24** | 결제 재검증, Finalize 트랜잭션, KRDS 6단계 화면, Dashboard |
 | M3 운영 안전장치 | **14/15 · 종료** | 마감 정책 엔진, 설정 거버넌스, 4-way 대조, 증적 재구성, 의존성 차단, 서명된 적용 기록, 보존기간 매트릭스, 목적별 가명 참조, 관리자 콘솔. 결제 자동 정합화(PG 콜백·재확인·대조 스케줄), 감사 기록 삭제 차단(앱 최소권한 DB 역할), **결제 = 접수**(결제 확인 시 자동 접수), 한 전형 한 모집단위 |
-| M4 분산 실증 | 0/28 | K-PaaS 배포, 장애 격리 실증, 부하 시험 |
+| M4 분산 실증 | 3/28 · 진행 중 | Helm 차트(대학별 values · 운영 보안 기준 · 배포 전 검사), 서비스 이미지, kind 2 클러스터. 다음: 대학 간 장애 격리 시험 |
 | M5 신뢰성·보안·접근성 | 0/35 | OIDC·MFA, 실 PG, 실 AV, WORM 감사 |
 | M6 Pilot 준비 | 0/15 | 대학 1곳 Shadow Test |
 
@@ -329,10 +336,11 @@ dev-folder/
 - **설정만 바꿔 새 전형을 받는다.** 프론트엔드 코드 변경 없이 새 전형의 추가문항과 전형료가 화면에 반영됩니다.
 - **단독 운영자 1명으로 마감시간을 바꿀 수 없다.** 작성자 자기승인 차단, 2인 승인, 과거 시각 예약 차단이 코드와 DB 제약 양쪽에서 막힙니다.
 - **재시도해도 접수는 한 건이다.** DB 제약 12종이 실제로 막는 것을 행동으로 검증합니다.
+- **배포 설정이 규칙을 우회하지 못한다.** Helm 차트는 운영 배포에서 서명된 이미지 digest가 없거나, 비밀을 차트가 만들거나, 서류 검사 엔진이 흉내이거나, DB 커넥션 예산을 넘으면 렌더링 단계에서 거절합니다. 마감·설정 버전은 배포 값이 아니라 2인 승인 기록으로만 바뀝니다.
 
 ### 아직 없는 것
 
-인증(`AUTH_MODE=dev-headers`), 실 PG 연동, 실 안티바이러스, WORM 감사 저장소 물리 분리, K-PaaS 배포 구성, 부하·장애 시험 실측치. **흉내 구현은 운영 모드에서 선택되면 프로세스가 기동하지 않습니다.**
+인증(`AUTH_MODE=dev-headers`), 실 PG 연동, 실 안티바이러스, WORM 감사 저장소 물리 분리, K-PaaS 실배포·GitOps, 대학 간 격리 시험 결과, 부하·장애 시험 실측치. **흉내 구현은 운영 모드에서 선택되면 프로세스가 기동하지 않습니다.**
 
 자세한 현황과 다음 착수 순서는 [docs/03-next-steps.md](docs/03-next-steps.md), 운영 준비 점검 내역은 [docs/04-production-readiness.md](docs/04-production-readiness.md)를 참조하십시오.
 
