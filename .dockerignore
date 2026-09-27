@@ -1,0 +1,14 @@
+**/node_modules
+**/dist
+**/.next
+**/coverage
+**/*.tsbuildinfo
+infra/compose/.data
+.git
+.claude
+docs
+tests
+deploy
+**/.env
+**/.env.*
+!**/.env.example

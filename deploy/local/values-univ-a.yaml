@@ -1,0 +1,19 @@
+# 로컬 축소 환경 — UNIV-A (values-local.yaml 위에 얹는다)
+global:
+  universityId: UNIV-A
+
+api:
+  service: { type: NodePort, nodePort: 30081 }
+
+objectStorage:
+  bucket: univ-a-documents
+
+# 개발용 값 — 운영은 Vault 가 넣는다 (차트는 production 에서 이 방식을 거부한다)
+runtimeSecret:
+  data:
+    DATABASE_URL: postgresql://kadmission_app:kadmission_app_dev@host.docker.internal:5432/univ_a
+    AUDIT_IP_SALT: dev-salt-a
+    CENTRAL_ID_SALT: dev-salt-a
+    CENTRAL_SUBJECT_KEY: dev-dashboard-subject-key
+    S3_ACCESS_KEY: wonseoro
+    S3_SECRET_KEY: wonseoro123

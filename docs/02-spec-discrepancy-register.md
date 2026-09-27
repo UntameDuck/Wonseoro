@@ -691,6 +691,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 |---|---|
 | **발견** | 2026-09-27 (첨부 배치 중 대조) |
 | **차이** | ① `SPRING_PROFILES_ACTIVE` — 구현은 NestJS 다(D-3). 운영 모드는 `NODE_ENV=production` ② 컨테이너 포트 8080 — 구현은 `PORT`(기본 3001) ③ 프로브 `/internal/health/startup·ready·live` — 구현은 `/healthz`·`/readyz`(+ `/healthz/dependencies`, D-32). 계약 v1.2.0 이 기준 ④ 대조 CronJob `*/5` · `reconcile --max-batch` — 구현은 앱 안 스케줄러(1시간·advisory lock, D-40). 별도 이미지 명령이 없다 ⑤ 첨부에 event-relay·document-service·frontend Deployment 가 없다(values 에만 있다) ⑥ values 의 `configVersion`·`deadlinePolicyVersion` 을 배포값으로 박는다 — 구현은 DB 의 서명된 활성화 기록이 기준이다(T-M3-15). 배포로 바꾸면 2인 승인을 우회한다 |
+| **⑦ 커넥션 예산 초과 (2026-09-28, 차트 렌더링에서 발견)** | 첨부 values-m 은 접수 API 최대 10 Pod × Pod 당 40 = **400 = 예산 400** 이다. 여기에 Relay(2 × 3)·서류 워커(5)를 더하면 **411 > 400.** 차트가 렌더링에서 막는다 — 마감 피크에 최대로 늘면 DB 가 커넥션을 거절한다. Pod 당 38 또는 예산 411 이상으로 첨부를 고쳐야 한다 |
 | **판정 방향** | M4 Helm 차트는 **첨부의 구조·보안 설정(securityContext·PDB·HPA·topologySpread·NetworkPolicy)은 그대로** 따르고, 위 6가지는 구현을 따른다. ⑥ 은 차트에서 뺀다 — 마감·설정을 배포 값으로 주입하면 D-21·D-35 가 막은 단독 변경 경로가 된다 |
 | **노션 반영** | ⬜ §05 첨부 runtime·values-m 을 M4 차트 확정 뒤 교체 |
 | **상태** | 🟡 판정 방향 — M4 차트에서 확정 |

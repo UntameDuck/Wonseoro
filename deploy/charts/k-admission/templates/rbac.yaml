@@ -1,0 +1,75 @@
+{{- /* §06 첨부 network-rbac.yaml 의 역할 — 네임스페이스 범위, cluster-admin 없음, Secret 조회 없음 */ -}}
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "ka.fullname" . }}-platform-viewer
+  labels: {{- include "ka.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["", "apps", "batch", "autoscaling"]
+    resources: ["pods","pods/log","services","deployments","replicasets","jobs","cronjobs","horizontalpodautoscalers"]
+    verbs: ["get","list","watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "ka.fullname" . }}-sre-operator
+  labels: {{- include "ka.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments","deployments/scale"]
+    verbs: ["get","list","watch","patch","update"]
+  - apiGroups: [""]
+    resources: ["pods","pods/log","events"]
+    verbs: ["get","list","watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs","cronjobs"]
+    verbs: ["get","list","watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "ka.fullname" . }}-release-controller
+  labels: {{- include "ka.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get","list","watch","patch","update"]
+  - apiGroups: [""]
+    resources: ["configmaps","services"]
+    verbs: ["get","list","watch","create","patch","update"]
+  - apiGroups: ["policy"]
+    resources: ["poddisruptionbudgets"]
+    verbs: ["get","list","watch","create","patch","update"]
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get","list","watch","create","patch","update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "ka.fullname" . }}-sre-operator
+  labels: {{- include "ka.labels" . | nindent 4 }}
+subjects:
+  - kind: Group
+    name: {{ .Values.rbac.sreGroup }}
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: {{ include "ka.fullname" . }}-sre-operator
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "ka.fullname" . }}-viewer
+  labels: {{- include "ka.labels" . | nindent 4 }}
+subjects:
+  - kind: Group
+    name: {{ .Values.rbac.auditorGroup }}
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: {{ include "ka.fullname" . }}-platform-viewer
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

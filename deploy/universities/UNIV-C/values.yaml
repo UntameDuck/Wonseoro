@@ -1,0 +1,29 @@
+# UNIV-C — C대학교
+# Size Profile: L (deploy/charts/k-admission/values-l.yaml 위에 얹는다)
+global:
+  universityId: UNIV-C
+  environment: production
+  imageRegistry: registry.example.kr/k-admission
+
+# 서명된 이미지 digest — 릴리스 파이프라인이 채운다 (§A6). 비어 있으면 production 렌더링이 실패한다.
+api:
+  image: { repository: admission-api, digest: "" }
+eventRelay:
+  image: { repository: event-relay, digest: "" }
+documentService:
+  image: { repository: document-service, digest: "" }
+  scannerEngine: ""               # 실 검사 엔진은 T-M5-08. 그 전에는 production 렌더링이 실패한다
+
+database:
+  host: postgres-primary.univ-c.internal
+redis:
+  host: redis-ha.univ-c.internal
+objectStorage:
+  endpoint: https://object.univ-c.internal
+  bucket: kadmission-univ-c-prod
+centralSync:
+  endpoint: https://sync.k-admission.kr/internal/v1/events
+
+# Vault 가 넣는 Secret. 이름만 참조한다.
+runtimeSecret:
+  name: kadmission-univ-c-runtime

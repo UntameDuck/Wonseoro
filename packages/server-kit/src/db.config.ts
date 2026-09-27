@@ -58,6 +58,16 @@ export function poolBudgetFor(service: string): DbPoolBudget {
   if (!budget) {
     throw new Error(`DB pool budget 이 정의되지 않은 서비스입니다: ${service}`);
   }
+  // 배포가 Pod 당 상한을 정한다 (Helm `database.pool.maxPerPod`). 차트가 replica × 상한이
+  // 전체 예산(connectionBudget)을 넘지 않는지 렌더링 때 막는다. (T-M4-09, §B2)
+  const override = process.env.DB_POOL_MAX;
+  if (override !== undefined && override !== '') {
+    const max = Number(override);
+    if (!Number.isInteger(max) || max < 1 || max > 500) {
+      throw new Error(`DB_POOL_MAX 는 1~500 의 정수여야 합니다: ${override}`);
+    }
+    return { ...budget, max };
+  }
   return budget;
 }
 

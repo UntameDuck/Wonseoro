@@ -1,0 +1,174 @@
+{{- /*
+  접수 API — §05 첨부 runtime.yaml 의 구조를 따른다.
+  바뀐 것(D-44): 포트 3001 · 프로브 /healthz·/readyz · NODE_ENV · 마감/설정 버전 주입 없음
+*/ -}}
+{{- $v := .Values -}}
+{{- $name := printf "%s-api" (include "ka.fullname" .) -}}
+{{- $min := $v.api.autoscaling.minReplicas -}}
+{{- $replicas := $v.api.replicas -}}
+{{- if $v.peakMode.enabled -}}
+{{- /* Peak Mode: 마감 전 사전 확장 — 최소 replica 를 올린다 (§B1, T-M4-07) */ -}}
+{{- $min = max $min $v.peakMode.apiMinReplicas -}}
+{{- $replicas = max $replicas $v.peakMode.apiMinReplicas -}}
+{{- end }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  labels: {{- include "ka.labels" . | nindent 4 }}
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "ka.labels" . | nindent 4 }}
+    app: admission-api
+spec:
+  {{- if not $v.api.autoscaling.enabled }}
+  replicas: {{ $replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: admission-api
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        {{- include "ka.labels" . | nindent 8 }}
+        app: admission-api
+        network-role: api
+    spec:
+      serviceAccountName: {{ $name }}
+      terminationGracePeriodSeconds: {{ $v.api.terminationGracePeriodSeconds }}
+      {{- include "ka.spread" (list . "admission-api") | nindent 6 }}
+      {{- include "ka.podSecurity" . | nindent 6 }}
+      containers:
+        - name: api
+          image: {{ include "ka.image" (list . $v.api.image) }}
+          imagePullPolicy: {{ $v.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ $v.api.port }}
+          env:
+            {{- include "ka.commonEnv" . | nindent 12 }}
+            - name: PORT
+              value: {{ $v.api.port | quote }}
+            - name: DB_POOL_MAX
+              value: {{ $v.database.pool.maxPerPod | quote }}
+            - name: RECON_SCHEDULE_INTERVAL_MS
+              value: {{ $v.reconciliation.intervalMs | quote }}
+            - name: RECON_SCHEDULE_SINCE_HOURS
+              value: {{ $v.reconciliation.sinceHours | quote }}
+            - name: S3_ENDPOINT
+              value: {{ $v.objectStorage.endpoint | quote }}
+            - name: S3_BUCKET
+              value: {{ $v.objectStorage.bucket | quote }}
+            {{- include "ka.extraEnv" $v.api.env | nindent 12 }}
+          envFrom:
+            - secretRef:
+                name: {{ include "ka.runtimeSecret" . }}
+          resources: {{- toYaml $v.api.resources | nindent 12 }}
+          {{- include "ka.containerSecurity" . | nindent 10 }}
+          # liveness 는 프로세스만 본다 — DB 장애에 Pod 를 죽이면 Failover 중 전부 재시작한다.
+          # readiness 만 DB 를 본다. 중앙·PG 는 넣지 않는다 (D-32).
+          startupProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            periodSeconds: 5
+            timeoutSeconds: 2
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 2
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 10"]
+          {{- include "ka.tmpMount" . | nindent 10 }}
+      {{- include "ka.tmpVolume" . | nindent 6 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  type: {{ $v.api.service.type }}
+  selector:
+    app: admission-api
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      {{- if and (eq $v.api.service.type "NodePort") $v.api.service.nodePort }}
+      nodePort: {{ $v.api.service.nodePort }}
+      {{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $name }}
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ $v.api.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app: admission-api
+      app.kubernetes.io/instance: {{ .Release.Name }}
+{{- if $v.api.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ $name }}
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ $name }}
+  minReplicas: {{ $min }}
+  maxReplicas: {{ $v.api.autoscaling.maxReplicas }}
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 600
+      policies:
+        - type: Percent
+          value: 25
+          periodSeconds: 60
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $v.api.autoscaling.cpuUtilization }}
+    {{- with $v.api.autoscaling.customMetrics }}
+    {{- if .requestRatePerPod }}
+    - type: Pods
+      pods:
+        metric:
+          name: http_requests_per_second
+        target:
+          type: AverageValue
+          averageValue: {{ .requestRatePerPod | quote }}
+    {{- end }}
+    {{- end }}
+{{- end }}

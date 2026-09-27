@@ -19,6 +19,8 @@ jobs:
       - run: npm ci
       - run: npm run typecheck -w @wonseoro/contracts
       - run: npm run typecheck -w @wonseoro/server-kit
+      # 운영 이미지는 서비스별 의존성만 설치한다 — 선언이 빠지면 거기서 처음 깨진다 (T-M4-01)
+      - run: node scripts/check-deps.mjs
       # TODO(M1): OpenAPI lint + breaking-change 검사 (첨부 배치 후)
       # TODO(M1): CloudEvents JSON Schema 검증
 

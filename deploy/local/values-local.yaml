@@ -1,0 +1,74 @@
+# 로컬 축소 환경 (kind) — 모든 대학 공통
+#
+# ⚠️ 운영 값이 아니다. 개발용 비밀·Mock PG·Mock 검사 엔진·헤더 인증을 쓴다.
+# 수치(동시 접속·RPS)는 이 환경에서 내지 않는다 — "축소 환경" 결과로만 적는다.
+#
+# 네트워크: kind 노드(172.20.0.0/16)에서 Docker Desktop 호스트(192.168.65.254)의
+#   DB·MinIO·중앙 API 로 나간다. 다른 대학 클러스터로 가는 길은 열지 않는다.
+global:
+  environment: local
+  imageRegistry: k-admission
+  imageTag: dev
+  imagePullPolicy: Never           # kind load 로 올린 이미지만 쓴다
+
+api:
+  replicas: 2
+  autoscaling: { enabled: false }  # kind 에는 metrics-server 가 없다
+  resources:
+    requests: { cpu: "100m", memory: "192Mi" }
+    limits: { cpu: "1", memory: "512Mi" }
+  podDisruptionBudget: { minAvailable: 1 }
+  service: { type: NodePort }
+  env:
+    AUTH_MODE: dev-headers
+    PAYMENT_PROVIDER: mock
+    ALLOW_ENV_DEADLINE_POLICY: "true"
+    CENTRAL_GATE_INTERVAL_MS: "5000"
+    S3_REGION: us-east-1
+    S3_FORCE_PATH_STYLE: "true"
+    S3_AUTO_CREATE_BUCKET: "true"
+    CENTRAL_SUBJECT_KEY_ID: k1
+
+eventRelay:
+  replicas: 1
+  resources:
+    requests: { cpu: "50m", memory: "128Mi" }
+    limits: { cpu: "500m", memory: "384Mi" }
+
+documentService:
+  replicas: 1
+  scannerEngine: mock
+  resources:
+    requests: { cpu: "50m", memory: "128Mi" }
+    limits: { cpu: "500m", memory: "384Mi" }
+
+database:
+  host: host.docker.internal
+  sslMode: disable
+  pool: { maxPerPod: 5, minPerPod: 1, connectionBudget: 30 }
+
+objectStorage:
+  endpoint: http://host.docker.internal:9000
+
+centralSync:
+  endpoint: http://host.docker.internal:3000/internal/v1/events
+  mtls: false
+
+runtimeSecret:
+  create: true
+
+nodePlacement:
+  whenUnsatisfiable: ScheduleAnyway   # 노드 하나, 존 하나
+
+networkPolicy:
+  defaultDeny: true
+  ingressFrom:
+    - ipBlock: { cidr: 172.20.0.0/16 }   # NodePort 로 들어온 요청 (kind 노드 SNAT)
+  dataEgress:
+    to:
+      - ipBlock: { cidr: 192.168.65.254/32 }
+    ports: [5432, 5442, 6379]
+  controlledEgress:
+    to:
+      - ipBlock: { cidr: 192.168.65.254/32 }
+    ports: [3000, 9000]

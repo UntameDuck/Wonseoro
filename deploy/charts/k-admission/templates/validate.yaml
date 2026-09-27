@@ -1,0 +1,37 @@
+{{- /*
+  렌더링 단계에서 막는 것. 클러스터에 올라간 뒤 발견하면 늦다.
+*/ -}}
+{{- $v := .Values -}}
+{{- if not $v.global.universityId -}}
+{{- fail "global.universityId 가 필요하다 — 대학마다 하나씩 설치한다" -}}
+{{- end -}}
+{{- if not (has $v.global.environment (list "production" "staging" "local")) -}}
+{{- fail (printf "global.environment 는 production | staging | local 이어야 한다: %s" $v.global.environment) -}}
+{{- end -}}
+
+{{- /* DB 커넥션 예산 (§B2, T-M4-09): 최대로 늘어났을 때도 전체 예산 안이어야 한다 */ -}}
+{{- $apiMax := $v.api.replicas -}}
+{{- if $v.api.autoscaling.enabled }}{{ $apiMax = $v.api.autoscaling.maxReplicas }}{{ end -}}
+{{- $relay := 0 -}}{{- if $v.eventRelay.enabled }}{{ $relay = mul $v.eventRelay.replicas 3 }}{{ end -}}
+{{- $docs := 0 -}}{{- if $v.documentService.enabled }}{{ $docs = mul $v.documentService.replicas 5 }}{{ end -}}
+{{- $total := add (mul $apiMax $v.database.pool.maxPerPod) $relay $docs -}}
+{{- if gt (int $total) (int $v.database.pool.connectionBudget) -}}
+{{- fail (printf "DB 커넥션 예산 초과: 접수 API %d Pod × %d + Relay %d + 서류 워커 %d = %d > connectionBudget %d" (int $apiMax) (int $v.database.pool.maxPerPod) (int $relay) (int $docs) (int $total) (int $v.database.pool.connectionBudget)) -}}
+{{- end -}}
+
+{{- if eq $v.global.environment "production" -}}
+  {{- if $v.runtimeSecret.create -}}
+  {{- fail "production 에서는 차트가 Secret 을 만들지 않는다 — Vault 가 넣은 Secret 을 runtimeSecret.name 으로 참조한다 (§06)" -}}
+  {{- end -}}
+  {{- range $name, $img := dict "api" $v.api.image "eventRelay" $v.eventRelay.image "documentService" $v.documentService.image -}}
+    {{- if or (not $img.digest) (hasPrefix "sha256:REPLACE" $img.digest) -}}
+    {{- fail (printf "production 은 서명된 이미지 digest 가 필요하다 (%s.image.digest) — 태그로 배포하지 않는다 (§A6)" $name) -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if not $v.securityContext.readOnlyRootFilesystem -}}
+  {{- fail "production 은 readOnlyRootFilesystem 이 true 여야 한다 (§05 Runtime 기준)" -}}
+  {{- end -}}
+  {{- if or (not $v.documentService.scannerEngine) (eq $v.documentService.scannerEngine "mock") -}}
+  {{- fail "production 은 실 서류 검사 엔진이 필요하다 (documentService.scannerEngine, T-M5-08) — mock 이나 빈 값으로는 배포하지 않는다" -}}
+  {{- end -}}
+{{- end -}}

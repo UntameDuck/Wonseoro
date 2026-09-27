@@ -1,0 +1,9 @@
+K-Admission 대학 Data Plane — {{ .Values.global.universityId }} ({{ .Values.global.environment }})
+
+  접수 API   : {{ include "ka.fullname" . }}-api (port {{ .Values.api.port }})
+  Event Relay: {{ if .Values.eventRelay.enabled }}{{ .Values.eventRelay.replicas }} Pod{{ else }}꺼짐{{ end }}
+  서류 워커  : {{ if .Values.documentService.enabled }}{{ .Values.documentService.scannerEngine }}{{ else }}꺼짐{{ end }}
+  Peak Mode  : {{ if .Values.peakMode.enabled }}켜짐 (API 최소 {{ .Values.peakMode.apiMinReplicas }}){{ else }}꺼짐{{ end }}
+
+마감·설정 버전은 이 배포가 정하지 않는다 — 관리자 콘솔에서 2인 승인·서명된 활성화로 바꾼다.
+DB 스키마는 배포 파이프라인이 migrator 역할로 적용한다 (infra/db/migrations).

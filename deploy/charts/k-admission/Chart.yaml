@@ -1,0 +1,10 @@
+apiVersion: v2
+name: k-admission
+description: >
+  대학 Data Plane — 접수 API · Event Relay · 서류 검사 워커. 한 대학에 하나씩 설치한다.
+  같은 차트·같은 이미지를 대학별 values 로 띄운다 (code fork 0, §A5).
+type: application
+version: 0.1.0
+# 계약 버전 (packages/contracts/openapi/k-admission.v1.yaml)
+appVersion: "1.2.0"
+kubeVersion: ">=1.27.0-0"

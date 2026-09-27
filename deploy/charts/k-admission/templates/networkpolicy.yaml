@@ -1,0 +1,128 @@
+{{- /*
+  §06 첨부 network-rbac.yaml 을 따른다 — default deny 에서 시작해 필요한 길만 연다.
+  첨부에 더한 것: Relay·서류 워커 경로 (첨부에는 API 만 있다), 서류 워커 → API 내부 경로.
+  대학 간 경로는 어디에도 없다 — 다른 대학 클러스터로 나가는 규칙을 만들지 않는다.
+*/ -}}
+{{- $v := .Values -}}
+{{- if $v.networkPolicy.defaultDeny }}
+{{- $inst := .Release.Name }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ka.fullname" . }}-default-deny
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $inst }}
+  policyTypes: [Ingress, Egress]
+---
+# 공개 트래픽 → 접수 API
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ka.fullname" . }}-allow-ingress-to-api
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $inst }}
+      network-role: api
+  policyTypes: [Ingress]
+  ingress:
+    - from: {{- toYaml $v.networkPolicy.ingressFrom | nindent 8 }}
+      ports:
+        - protocol: TCP
+          port: {{ $v.api.port }}
+    # 서류 검사 워커 → 접수 API 내부 경로 (/internal/v1/documents)
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ $inst }}
+              app: document-service
+      ports:
+        - protocol: TCP
+          port: {{ $v.api.port }}
+---
+# DNS — 모든 워크로드
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ka.fullname" . }}-allow-dns
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $inst }}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# 접수 API · Relay → DB·Redis (클러스터 밖 HA 계층)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ka.fullname" . }}-allow-data-services
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app.kubernetes.io/instance, operator: In, values: [{{ $inst }}] }
+      - { key: network-role, operator: In, values: [api, relay] }
+  policyTypes: [Egress]
+  egress:
+    - to: {{- toYaml $v.networkPolicy.dataEgress.to | nindent 8 }}
+      ports:
+        {{- range $v.networkPolicy.dataEgress.ports }}
+        - { protocol: TCP, port: {{ . }} }
+        {{- end }}
+---
+# 접수 API · Relay → 외부(중앙 Sync·PG·Object Storage)는 통제된 출구로만
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ka.fullname" . }}-allow-controlled-egress
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app.kubernetes.io/instance, operator: In, values: [{{ $inst }}] }
+      - { key: network-role, operator: In, values: [api, relay] }
+  policyTypes: [Egress]
+  egress:
+    - to: {{- toYaml $v.networkPolicy.controlledEgress.to | nindent 8 }}
+      ports:
+        {{- range $v.networkPolicy.controlledEgress.ports }}
+        - { protocol: TCP, port: {{ . }} }
+        {{- end }}
+---
+# 서류 검사 워커 → 접수 API 만
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ka.fullname" . }}-allow-worker-to-api
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $inst }}
+      app: document-service
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ $inst }}
+              network-role: api
+      ports:
+        - { protocol: TCP, port: {{ $v.api.port }} }
+{{- end }}

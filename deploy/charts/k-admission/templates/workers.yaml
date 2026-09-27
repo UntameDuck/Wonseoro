@@ -1,0 +1,130 @@
+{{- /*
+  Event Relay (Outbox → 중앙) · 서류 검사 워커.
+  §05 첨부에는 values 만 있고 매니페스트가 없다 (D-44 ⑤). 접수 API 와 같은 보안 기준을 쓴다.
+*/ -}}
+{{- $v := .Values -}}
+{{- $root := . -}}
+{{- if $v.eventRelay.enabled }}
+{{- $name := printf "%s-event-relay" (include "ka.fullname" .) }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  labels: {{- include "ka.labels" . | nindent 4 }}
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "ka.labels" . | nindent 4 }}
+    app: event-relay
+spec:
+  # 여러 Pod 가 같은 Outbox 를 집어도 행 잠금(SKIP LOCKED)으로 나눠 가진다.
+  replicas: {{ $v.eventRelay.replicas }}
+  selector:
+    matchLabels:
+      app: event-relay
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "ka.labels" . | nindent 8 }}
+        app: event-relay
+        network-role: relay
+    spec:
+      serviceAccountName: {{ $name }}
+      terminationGracePeriodSeconds: 30
+      {{- include "ka.spread" (list . "event-relay") | nindent 6 }}
+      {{- include "ka.podSecurity" . | nindent 6 }}
+      containers:
+        - name: relay
+          image: {{ include "ka.image" (list . $v.eventRelay.image) }}
+          imagePullPolicy: {{ $v.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ $v.eventRelay.port }}
+          env:
+            {{- include "ka.commonEnv" . | nindent 12 }}
+            - name: PORT
+              value: {{ $v.eventRelay.port | quote }}
+            - name: RELAY_BATCH_SIZE
+              value: {{ $v.eventRelay.batchSize | quote }}
+            - name: RELAY_INTERVAL_MS
+              value: {{ $v.eventRelay.intervalMs | quote }}
+            {{- include "ka.extraEnv" $v.eventRelay.env | nindent 12 }}
+          envFrom:
+            - secretRef:
+                name: {{ include "ka.runtimeSecret" . }}
+          resources: {{- toYaml $v.eventRelay.resources | nindent 12 }}
+          {{- include "ka.containerSecurity" . | nindent 10 }}
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 15
+          {{- include "ka.tmpMount" . | nindent 10 }}
+      {{- include "ka.tmpVolume" . | nindent 6 }}
+{{- end }}
+{{- if $v.documentService.enabled }}
+{{- $name := printf "%s-document-service" (include "ka.fullname" .) }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  labels: {{- include "ka.labels" . | nindent 4 }}
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "ka.labels" . | nindent 4 }}
+    app: document-service
+spec:
+  replicas: {{ $v.documentService.replicas }}
+  selector:
+    matchLabels:
+      app: document-service
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "ka.labels" . | nindent 8 }}
+        app: document-service
+        network-role: worker
+    spec:
+      serviceAccountName: {{ $name }}
+      {{- include "ka.podSecurity" . | nindent 6 }}
+      containers:
+        - name: scanner
+          image: {{ include "ka.image" (list . $v.documentService.image) }}
+          imagePullPolicy: {{ $v.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ $v.documentService.port }}
+          env:
+            {{- include "ka.commonEnv" . | nindent 12 }}
+            - name: PORT
+              value: {{ $v.documentService.port | quote }}
+            - name: SCANNER_ENGINE
+              value: {{ $v.documentService.scannerEngine | quote }}
+            # 검사 결과는 DB 에 직접 쓰지 않고 접수 API 의 내부 경로로 보고한다 (ADR-0004)
+            - name: ADMISSION_API_URL
+              value: {{ printf "http://%s-api" (include "ka.fullname" .) | quote }}
+            {{- include "ka.extraEnv" $v.documentService.env | nindent 12 }}
+          resources: {{- toYaml $v.documentService.resources | nindent 12 }}
+          {{- include "ka.containerSecurity" . | nindent 10 }}
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 15
+          {{- include "ka.tmpMount" . | nindent 10 }}
+      {{- include "ka.tmpVolume" . | nindent 6 }}
+{{- end }}

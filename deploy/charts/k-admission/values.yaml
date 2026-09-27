@@ -1,0 +1,178 @@
+# K-Admission 대학 Data Plane — 기본값
+#
+# 키 구조는 노션 §05 첨부 `values-m.yaml`(canonical, 이 폴더에 그대로 둔다)을 따른다.
+# Size Profile 파일(values-s/m/l)이 이 기본값 위에 얹힌다. 대학별 값은 deploy/universities/<ID>/.
+#
+#   helm install univ-a deploy/charts/k-admission \
+#     -f deploy/charts/k-admission/values-m.yaml -f deploy/universities/UNIV-A/values.yaml
+#
+# 첨부와 다르게 다루는 것 — 불일치 대장 D-44
+#   · global.configVersion / deadlinePolicyVersion 은 **렌더링하지 않는다.** 마감·설정은 DB 의
+#     서명된 활성화 기록(2인 승인)이 기준이다. 배포 값으로 주입하면 단독 변경 경로가 된다
+#   · reconciliation.schedule 은 CronJob 이 아니다 — 대조는 접수 API 안의 스케줄러(advisory lock)가 돈다.
+#     reconciliation.intervalMs 로 주기를 준다
+#   · 포트 3001, 프로브 /healthz · /readyz (계약 v1.2.0, D-32)
+
+global:
+  universityId: ""                 # 필수. 대학 식별자 (예: UNIV-A)
+  environment: production          # production | staging | local
+  imageRegistry: registry.example.kr/k-admission
+  imagePullPolicy: IfNotPresent
+  # 이미지 태그. digest 가 있으면 digest 를 쓴다. production 은 digest 필수 (§A6 Digest Pinning)
+  imageTag: ""
+
+# 지원자 화면. Data Plane 에 함께 두지만 이 차트의 첫 판에서는 끈다 (이미지 미작성).
+frontend:
+  enabled: false
+  image: { repository: frontend, digest: "" }
+  replicas: 2
+  resources:
+    requests: { cpu: "250m", memory: "256Mi" }
+    limits: { cpu: "1", memory: "512Mi" }
+  podDisruptionBudget: { minAvailable: 1 }
+
+api:
+  image: { repository: admission-api, digest: "" }
+  replicas: 2
+  port: 3001
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    cpuUtilization: 60
+    # 커스텀 지표는 metrics adapter(Prometheus Adapter 등)가 있어야 동작한다 (T-M4-08).
+    customMetrics:
+      requestRatePerPod: 120
+  resources:
+    requests: { cpu: "1", memory: "2Gi" }
+    limits: { cpu: "4", memory: "8Gi" }
+  podDisruptionBudget: { minAvailable: 1 }
+  terminationGracePeriodSeconds: 45
+  # 운영은 ClusterIP 뒤에 Ingress(edge 존). NodePort 는 로컬(kind) 시험용
+  service: { type: ClusterIP, nodePort: null }
+  # 비밀이 아닌 추가 환경변수 (대학별 values 에서 준다)
+  env: {}
+
+eventRelay:
+  enabled: true
+  image: { repository: event-relay, digest: "" }
+  replicas: 2
+  port: 3002
+  batchSize: 100
+  maxInFlight: 500                 # 첨부 값. 현재 relay 는 배치 단위로 보내 쓰지 않는다
+  backoff: { initialMs: 500, maxMs: 30000, jitter: true }
+  intervalMs: 2000
+  resources:
+    requests: { cpu: "100m", memory: "256Mi" }
+    limits: { cpu: "1", memory: "512Mi" }
+  env: {}
+
+documentService:
+  enabled: true
+  image: { repository: document-service, digest: "" }
+  replicas: 1
+  port: 3003
+  # production 은 실 검사 엔진이 필요하다 (mock 이면 기동하지 않는다, T-M5-08)
+  scannerEngine: mock
+  resources:
+    requests: { cpu: "100m", memory: "256Mi" }
+    limits: { cpu: "1", memory: "1Gi" }
+  env: {}
+
+reconciliation:
+  schedule: "*/5 * * * *"          # 첨부 값 — 이 차트는 쓰지 않는다 (D-44 ④)
+  maxBatch: 500
+  intervalMs: 3600000              # 앱 안 스케줄러 주기
+  sinceHours: 48
+
+peakMode:
+  enabled: false
+  scheduledActivation: ""
+  apiMinReplicas: 4
+  frontendMinReplicas: 2
+  suspendNonCriticalJobs: true
+
+database:
+  mode: external-ha                # DB 는 클러스터 밖 HA 계층 (T-M4-06)
+  host: ""
+  port: 5432
+  sslMode: verify-full
+  pool:
+    maxPerPod: 10
+    minPerPod: 2
+    # 이 대학 DB 에 허용하는 전체 커넥션. 렌더링 때 Σ(replica 상한 × Pod 당 상한) 을 검사한다
+    connectionBudget: 200
+
+redis:
+  host: ""
+  port: 6379
+  tls: true
+
+objectStorage:
+  endpoint: ""
+  bucket: ""
+  directUpload: true
+  presignTtlSeconds: 600
+  publicAccess: false
+
+centralSync:
+  endpoint: ""                     # 중앙 Sync Gateway 이벤트 수신 URL (…/internal/v1/events)
+  mtls: true
+  offlineSpool:
+    enabled: true
+    maxAgeHours: 72
+    highWatermarkEvents: 100000
+
+# 비밀은 차트가 만들지 않는다 — Vault 등이 넣은 Secret 을 이름으로 참조한다 (§06).
+# 넣을 키: DATABASE_URL, AUDIT_IP_SALT, CENTRAL_ID_SALT, CENTRAL_SUBJECT_KEY, ADMIN_API_TOKEN,
+#          PG_CALLBACK_SECRET, POLICY_SIGNING_KEY, S3_ACCESS_KEY, S3_SECRET_KEY
+runtimeSecret:
+  name: ""                         # 기본: <release>-runtime
+  # local 환경에서만 허용. production 에서 true 면 렌더링이 실패한다
+  create: false
+  data: {}
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  seccompProfile: RuntimeDefault
+  dropAllCapabilities: true
+  automountServiceAccountToken: false
+
+observability:
+  otelEndpoint: ""
+  includeRequestBody: false
+  piiLabelsAllowed: false
+
+networkPolicy:
+  defaultDeny: true
+  # 공개 트래픽이 들어오는 경로 (§06 첨부: edge 네임스페이스의 ingress-nginx)
+  ingressFrom:
+    - namespaceSelector: { matchLabels: { kadmission-zone: edge } }
+      podSelector: { matchLabels: { app.kubernetes.io/name: ingress-nginx } }
+  # DB·Redis 로 나가는 경로. 첨부처럼 data 존 네임스페이스이거나, 클러스터 밖이면 CIDR
+  dataEgress:
+    to:
+      - namespaceSelector: { matchLabels: { kadmission-zone: data } }
+    ports: [5432, 6379]
+  # 외부(중앙·PG·Object Storage)로 나가는 경로. 첨부는 egress-gateway 하나로 모은다
+  controlledEgress:
+    to:
+      - namespaceSelector: { matchLabels: { kadmission-zone: egress } }
+        podSelector: { matchLabels: { app: egress-gateway } }
+    ports: [8443]
+
+rbac:
+  create: true
+  # 첨부 §06 의 그룹 이름
+  sreGroup: kadmission-sre
+  auditorGroup: kadmission-auditors
+
+nodePlacement:
+  topologyKey: topology.kubernetes.io/zone
+  spreadMaxSkew: 1
+  # 존이 하나인 로컬 클러스터에서는 ScheduleAnyway 로 둔다
+  whenUnsatisfiable: DoNotSchedule

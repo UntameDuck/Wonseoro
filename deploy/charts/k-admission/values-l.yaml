@@ -1,0 +1,29 @@
+# L Profile — 최종 지원 ~60,000건, 설계 CCU 3,000 (v1.0 §10.1)
+#
+# ⚠️ 파생값이다. 노션 첨부는 M(values-m.yaml)만 있다. v1.0 §10.1 의 "8 vCPU / 16GB × 4~6" 과
+# M 첨부의 리소스를 그대로 쓰고 replica 만 늘렸다. 실측으로 보정한다 (M4 수치 시험).
+api:
+  replicas: 4
+  autoscaling:
+    enabled: true
+    minReplicas: 4
+    maxReplicas: 12
+    cpuUtilization: 60
+    customMetrics:
+      requestRatePerPod: 120
+  resources:
+    requests: { cpu: "2", memory: "4Gi" }
+    limits: { cpu: "8", memory: "16Gi" }
+  podDisruptionBudget: { minAvailable: 3 }
+
+eventRelay:
+  replicas: 2
+
+database:
+  pool:
+    maxPerPod: 30
+    minPerPod: 5
+    connectionBudget: 400          # 12 × 30 + Relay 6 + 서류 워커 5 = 371
+
+peakMode:
+  apiMinReplicas: 10

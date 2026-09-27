@@ -1,0 +1,11 @@
+# 로컬 축소 환경 — 대학 B 의 독립 클러스터 (T-M4-04). 대학마다 클러스터가 따로다.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: univ-b
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      # 접수 API NodePort → 호스트 18082
+      - containerPort: 30082
+        hostPort: 18082
+        protocol: TCP
