@@ -18,7 +18,7 @@
 
 <p align="center">
   <img alt="Status" src="https://img.shields.io/badge/Status-Working_MVP-2563EB?style=flat-square" />
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-191_passing-16A34A?style=flat-square" />
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-277_passing-16A34A?style=flat-square" />
   <img alt="K-PaaS" src="https://img.shields.io/badge/Platform-K--PaaS-0F766E?style=flat-square" />
   <img alt="Kubernetes" src="https://img.shields.io/badge/Runtime-Kubernetes-326CE5?style=flat-square&amp;logo=kubernetes&amp;logoColor=white" />
   <img alt="KRDS" src="https://img.shields.io/badge/UI-KRDS-4F46E5?style=flat-square" />
@@ -302,7 +302,7 @@ dev-folder/
 
 ## Project Status
 
-> 기준일 2026-09-27 · 전체 139개 태스크 중 **58개 완료** · 테스트 **265개 통과**
+> 기준일 2026-09-27 · 전체 139개 태스크 중 **58개 완료** · **M3 종료** · 테스트 **277개 통과**
 
 지원자가 화면에서 원서를 만들어 서류를 올리고 결제한 뒤 **접수번호를 받는 전 과정이 동작합니다.**
 
@@ -318,7 +318,7 @@ dev-folder/
 | M0 기반 | 7/8 | 모노레포, 계약, ADR, 로컬 인프라 |
 | M1 접수 Core | **14/14** | 원서 생성·자동저장·추가문항·서류·감사 hash-chain |
 | M2 결제·Finalize·화면 | **24/24** | 결제 재검증, Finalize 트랜잭션, KRDS 6단계 화면, Dashboard |
-| M3 운영 안전장치 | **14/15** | 마감 정책 엔진, 설정 거버넌스, 4-way 대조, 증적 재구성, 의존성 차단, 서명된 적용 기록, 보존기간 매트릭스, 목적별 가명 참조, 관리자 콘솔. 결제 자동 정합화(PG 콜백·재확인·대조 스케줄), 감사 기록 삭제 차단(앱 최소권한 DB 역할) |
+| M3 운영 안전장치 | **14/15 · 종료** | 마감 정책 엔진, 설정 거버넌스, 4-way 대조, 증적 재구성, 의존성 차단, 서명된 적용 기록, 보존기간 매트릭스, 목적별 가명 참조, 관리자 콘솔. 결제 자동 정합화(PG 콜백·재확인·대조 스케줄), 감사 기록 삭제 차단(앱 최소권한 DB 역할), **결제 = 접수**(결제 확인 시 자동 접수), 한 전형 한 모집단위 |
 | M4 분산 실증 | 0/28 | K-PaaS 배포, 장애 격리 실증, 부하 시험 |
 | M5 신뢰성·보안·접근성 | 0/35 | OIDC·MFA, 실 PG, 실 AV, WORM 감사 |
 | M6 Pilot 준비 | 0/15 | 대학 1곳 Shadow Test |

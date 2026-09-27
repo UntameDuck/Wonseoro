@@ -246,6 +246,14 @@ describe('계약 적합성 — CloudEvents (k-admission-cloudevents.schema.json)
     assert.match(EVENTS, /"kadmissionsequence": \{ "type": "integer", "minimum": 1 \}/);
   });
 
+  it('subjectRef 는 optional 이고 목적 키 HMAC 형식이다 (D-27 · D-39, §04 Schema Evolution)', () => {
+    const data = JSON.parse(EVENTS).$defs.ApplicationFinalizedData;
+    assert.equal(data.required.includes('subjectRef'), false, 'required 추가는 호환 변경이 아니다');
+    const pattern = new RegExp(data.properties.subjectRef.pattern);
+    assert.ok(pattern.test(`k1.${'A'.repeat(43)}`));
+    assert.equal(pattern.test('sha256-of-token-without-key'), false);
+  });
+
   it('중앙 전송 payload 에 개인정보 필드가 없다 (v1.0 §17.1)', () => {
     const finalized = EVENTS.split('"ApplicationFinalizedData"')[1]?.split('"ApplicationFinalizedEvent"')[0] ?? '';
     for (const banned of ['name', 'phone', 'email', 'address', 'residentRegistration']) {

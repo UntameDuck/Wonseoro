@@ -36,6 +36,7 @@
       "properties": {
         "applicationId": { "type": "string", "minLength": 16, "maxLength": 160 },
         "applicantSubjectToken": { "type": "string", "minLength": 32, "maxLength": 256 },
+        "subjectRef": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}[.][A-Za-z0-9_-]{43}$", "description": "<keyId>.<base64url(HMAC-SHA256(purpose key, \"DASHBOARD|\" + subject token))> — optional, D-27/D-39" },
         "admissionYear": { "type": "integer", "minimum": 2020, "maximum": 2200 },
         "admissionTypeCode": { "type": "string", "maxLength": 64 },
         "departmentCode": { "type": "string", "maxLength": 64 },
