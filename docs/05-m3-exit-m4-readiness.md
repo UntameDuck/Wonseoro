@@ -213,33 +213,26 @@ G1 → G2 순서로 구현한다 (사용자 결정). 현재 위치는 ◀ 표시
 | v1.0 본문 | ✅ 2026-09-27 — §4 Backend(D-3) · §5.6 접수 전 취소(D-7) · §6.2 이벤트 예시(D-1·4·15) · §9 감사(D-7·36) · §12 6단계(D-2) · §17.1 접수번호(D-15) |
 | v1.1 §10 트래픽 | ⬜ D-18 (부록에서는 v1.0 으로 분류된다 — "§10 §1" 표기 때문) |
 
-<!-- 자동 생성: 불일치 대장의 "노션 반영 ⬜" 항목 29건에서 30개 수정 지점 -->
+<!-- 자동 생성: 불일치 대장의 "노션 반영 ⬜" 항목 29건에서 32개 수정 지점 -->
 
-### 먼저 결정·확인이 필요한 것 — 4건
-
-- **D-7** **접수 후 취소를 별도 레코드로 둘지 결정**  
-  <sub>Application 상태에 CANCELLED 가 있으나 상태머신에 정의가 없다</sub>
-- **D-23** §02 첨부 DDL 수정 — 스키마 변경(status·created_at 추가, 승인자 nullable) 제안이라 먼저 확인 필요  
-  <sub>deadline_policy 에 초안 상태를 표현할 컬럼이 없다</sub>
-- **D-27** §04 이벤트 스키마와 §10 §9 Dashboard 계약에 반영. **중앙에 가명 식별자를 두는 결정이라 §A3 과 함께 재검토해야 한다**  
-  <sub>중앙 요약에 지원자 참조가 없어 Dashboard 가 전체를 돌려준다 🔴</sub>
-- **D-30** §02 ERD 와 첨부 DDL 중 어느 쪽이 맞는지 확인  
-  <sub>`system_config` 가 canonical DDL 에 없다</sub>
-
-### §02 ERD·DDL — 5건
+### §02 ERD·DDL — 7건
 
 - **D-14** 중앙 DDL 을 §04 또는 새 절의 첨부로 추가해야 한다. 그래야 다음부터 저장소가 원본이 되지 않는다  
   <sub>중앙 DB 스키마에 canonical DDL 이 없다</sub>
-- **D-21** §02 첨부 DDL 에 0002 내용을 접어 넣고 이 파일을 삭제한다(D-29 확정 뒤 첨부 교체 때 함께). **반영 전까지 마이그레이션이 두 파일로 나뉜다**  
+- **D-21** §02 첨부 DDL 을 병합 DDL v1.2 로 교체한 뒤 0002 를 삭제한다. **반영 전까지 마이그레이션이 두 파일로 나뉜다**  
   <sub>config_version 은 단독 승인을 DB 가 막지 않는다</sub>
-- **D-25** §02 첨부 DDL 에 추가(D-29 확정 뒤 첨부 교체 때 함께)  
+- **D-23** §02 첨부 DDL 을 병합 DDL v1.2 로 교체 (status·created_by·created_at, 승인자 nullable)  
+  <sub>deadline_policy 에 초안 상태를 표현할 컬럼이 없다</sub>
+- **D-25** §02 첨부 DDL 을 병합 DDL v1.2 로 교체  
   <sub>reconciliation_exception 에 중복 방지 제약이 없다</sub>
-- **D-29** §02 첨부 DDL 의 `application` 자연키를 부분 유니크로 변경  
+- **D-29** §02 첨부 DDL 을 병합 DDL v1.2 로 교체 (자연키 `(cycle_id, applicant_id, admission_type_id) WHERE status <> 'CANCELLED'`)  
   <sub>취소한 원서가 재지원을 영구히 막았다 🔴</sub>
-- **D-35** §02 첨부 DDL 에 `activation_record`(D-29 확정 뒤 첨부 교체 때 함께)  
+- **D-30** §02 ERD 에서 `SystemConfig` 제거 — DDL 이 맞다 (2026-09-27 확정)  
+  <sub>`system_config` 가 canonical DDL 에 없다</sub>
+- **D-35** §02 첨부 DDL 을 병합 DDL v1.2 로 교체 (`activation_record`)  
   <sub>마감·설정을 "누가 언제 왜 적용했는지" 담을 자리가 DDL 에 없다</sub>
 
-### §03 OpenAPI — 14건
+### §03 OpenAPI — 15건
 
 - **D-7** §03 첨부 yaml 교체(cancel) — 저장소 yaml v1.2.0 ✅ (2026-09-27)  
   <sub>Application 상태에 CANCELLED 가 있으나 상태머신에 정의가 없다</sub>
@@ -257,6 +250,8 @@ G1 → G2 순서로 구현한다 (사용자 결정). 현재 위치는 ◀ 표시
   <sub>Evidence Package 조회에 사유 파라미터가 없다</sub>
 - **D-26** §03 첨부 yaml 교체 — 저장소 yaml v1.2.0 ✅ (2026-09-27)  
   <sub>Reconciliation 수동 실행 경로가 계약에 없다</sub>
+- **D-27** §04 이벤트 스키마·§10 §9 Dashboard 계약에 `subjectRef`(목적 키 HMAC) 반영 — 가명 참조 유지 (2026-09-27 확정)  
+  <sub>중앙 요약에 지원자 참조가 없어 Dashboard 가 전체를 돌려준다 🔴</sub>
 - **D-32** §03 첨부 yaml 교체 — 저장소 yaml v1.2.0 에 두 항목 ✅ (2026-09-27)  
   <sub>Circuit Breaker 가 열렸을 때의 규칙이 의존성마다 정해져 있지 않다</sub>
 - **D-34** §03 첨부 yaml 교체(operating-mode) — 저장소 yaml v1.2.0 ✅ (2026-09-27)  
@@ -270,19 +265,25 @@ G1 → G2 순서로 구현한다 (사용자 결정). 현재 위치는 ◀ 표시
 - **D-40** §03 첨부 yaml 교체(콜백) — 저장소 yaml v1.2.0 ✅ (2026-09-27)  
   <sub>결제 자동 정합화가 없다 — 콜백도, 재확인도, 대조 스케줄도 🔴</sub>
 
-### §04 CloudEvents — 2건
+### §04 CloudEvents — 3건
 
 - **D-14** 중앙 DDL 을 §04 또는 새 절의 첨부로 추가해야 한다. 그래야 다음부터 저장소가 원본이 되지 않는다  
   <sub>중앙 DB 스키마에 canonical DDL 이 없다</sub>
-- **D-39** §04 `subjectRef` 형식(D-27 확정 뒤 — 중앙에 가명 참조를 두는지가 먼저다)  
+- **D-27** §04 이벤트 스키마·§10 §9 Dashboard 계약에 `subjectRef`(목적 키 HMAC) 반영 — 가명 참조 유지 (2026-09-27 확정)  
+  <sub>중앙 요약에 지원자 참조가 없어 Dashboard 가 전체를 돌려준다 🔴</sub>
+- **D-39** §04 `subjectRef` 형식 (D-27: 둔다)  
   <sub>중앙의 지원자 참조가 Vault 와 조인됐고, 대학 내부 UUID 가 중앙에 갔다 🔴</sub>
 
-### v1.0 본문 — 3건
+### v1.0 본문 — 5건
 
+- **D-7** ⬜ v1.0 §5.6 에 "접수 후 취소 없음(409), 전형료 반환은 시행령 사유로 결제 쪽" 명시 (2026-09-27 확정)  
+  <sub>Application 상태에 CANCELLED 가 있으나 상태머신에 정의가 없다</sub>
 - **D-17** Vault API 계약을 §03 또는 §10 에 추가. 저장소 yaml v1.2.0 에 현재 형태로 적었다 (2026-09-27). 요청/응답 형태와 동의 범위 전달 방식을 정해야 한다  
   <sub>Common Profile Vault 의 API 가 어디에도 정의되어 있지 않다</sub>
 - **D-18** §10 §1 표에 "중앙 장애 시 신규 원서는 Snapshot 없이 생성" 을 명시  
   <sub>중앙 장애 시 원서 "생성"이 가능한지가 불명확하다</sub>
+- **D-27** §04 이벤트 스키마·§10 §9 Dashboard 계약에 `subjectRef`(목적 키 HMAC) 반영 — 가명 참조 유지 (2026-09-27 확정)  
+  <sub>중앙 요약에 지원자 참조가 없어 Dashboard 가 전체를 돌려준다 🔴</sub>
 - **D-38** v1.0 §9 에 Retention Matrix 표  
   <sub>Retention Matrix 의 하한값이 설계서에 없다</sub>
 
@@ -291,4 +292,4 @@ G1 → G2 순서로 구현한다 (사용자 결정). 현재 위치는 ◀ 표시
 - **D-2** 제출문서 정정 목록
 - **D-3** 개발보고서 "팀 기술 스택" 및 설계 서술 정정
 
-<!-- items=29 edits=30 -->
+<!-- items=29 edits=32 -->
