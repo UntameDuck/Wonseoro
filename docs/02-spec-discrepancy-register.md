@@ -324,8 +324,8 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **조치 (2026-09-23)** | `infra/db/migrations/0002_integrity_constraints.sql` 로 제약을 추가했다. **0001 은 손대지 않았다** — 첨부 DDL 과 바이트가 같아야 하므로, 테이블을 다시 정의하지 않고 `ALTER TABLE ... ADD CONSTRAINT` 만 덧붙였다. 원본은 여전히 노션 하나뿐이고, 0002 는 "노션에 아직 반영되지 않은 차이" 를 파일 하나로 모아 보여주는 역할을 한다 |
 | **함께 발견** | 검증 중에 같은 뿌리의 구멍 셋을 더 찾았다 — ① 작성자가 자기 변경을 승인할 수 있었다(§A14 위반) ② 한 전형에 `ACTIVE` 설정이 둘 이상 가능했다(적용 양식이 조회 순서에 달림) ③ `deadline_policy` 는 `DRAFT:` 접두사 상태로도 `activated_at` 을 채울 수 있었다(D-23 의 부작용). 셋 다 0002 에서 막았다 |
 | **검증** | `infra/db/verify-constraints.sql` 8·9·10 — 승인 0명 활성화 / 작성자 자기승인 / 전형당 ACTIVE 중복이 전부 DB 에서 거부됨 |
-| **노션 반영** | ⬜ §02 첨부 DDL 을 병합 DDL v1.2 로 교체한 뒤 0002 를 삭제한다. **반영 전까지 마이그레이션이 두 파일로 나뉜다** · ✅ §02 본문 "v1.1 구현 반영" 절 (2026-09-27) |
-| **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
+| **노션 반영** | ✅ §02 첨부 DDL v1.2 교체 · 0002 삭제 (2026-09-27). **반영 전까지 마이그레이션이 두 파일로 나뉜다** · ✅ §02 본문 "v1.1 구현 반영" 절 (2026-09-27) |
+| **상태** | 🟢 CLOSED — 저장소·노션 반영 (2026-09-27) |
 
 ---
 
@@ -352,10 +352,10 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **잠정 조치** | 승인 전에는 승인자 컬럼에 `DRAFT:` 접두사를 넣어 구분한다. **좋은 방법이 아니다** — 문자열 규약이라 DB 가 강제하지 못하고, 조회할 때마다 접두사를 벗겨야 한다 |
 | **추가 결함** | 같은 테이블에 **`created_at` 도 없다.** 다른 모든 테이블에는 있다. 생성 순서를 알 수 없어 이력 조회를 승인 시각으로 정렬해야 한다. 승인 전 초안은 정렬 기준이 아예 없다 |
 | **제안** | `deadline_policy` 에도 `status varchar(24) CHECK (status IN ('DRAFT','APPROVED','ACTIVE','RETIRED'))` 와 `created_at timestamptz NOT NULL DEFAULT now()` 를 두고 승인자 컬럼을 nullable 로 바꾼다. 대신 D-21 처럼 `CHECK (status <> 'ACTIVE' OR (승인자 둘 다 있고 서로 다름))` 로 막는다 |
-| **노션 반영** | ⬜ §02 첨부 DDL 을 병합 DDL v1.2 로 교체 (status·created_by·created_at, 승인자 nullable) |
+| **노션 반영** | ✅ §02 첨부 DDL v1.2 교체 (2026-09-27) (status·created_by·created_at, 승인자 nullable) |
 | **결정 (2026-09-27)** | **채택** — `status`·`created_at` 추가, 승인자 nullable + ACTIVE 는 서로 다른 두 승인자 CHECK. `DRAFT:` 접두사는 DB 가 강제하지 못한다. D-29 와 같은 §02 첨부 DDL 교체 때 함께 반영 |
 | **저장소 반영 (2026-09-27)** | ✅ `0006_deadline_policy_status.sql` — 상태는 **DRAFT → APPROVED → ACTIVATED** 셋이다. 제안의 ACTIVE/RETIRED 대신 이렇게 둔 이유: 마감 정책의 효력은 `activated_at` 순서로 정해지고(예약 활성화), "지금 적용 중" 을 행에 적으면 예약 시각마다 누군가 고쳐야 한다. `created_by` 도 컬럼으로 올려 **작성자 자기승인을 DB 가 막는다**(D-21 과 같은 수준). 승인은 조건부 UPDATE 로 바꿔 동시 승인에서 한쪽이 사라지지 않게 했다(늦은 쪽 409). `DRAFT:` 접두사 제거 · `db:verify` 20 · 시험 2종 |
-| **상태** | 🟡 결정·저장소 반영 완료 — 노션 반영 대기 (§02 첨부 DDL) |
+| **상태** | 🟢 CLOSED — 저장소·노션 반영 (2026-09-27) |
 
 ---
 
@@ -383,8 +383,8 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **조치 (2026-09-23)** | 0002 마이그레이션에 부분 유니크 인덱스 `uq_recon_open_per_type` 을 추가했다. 동시에 서비스의 조회-후-삽입을 `INSERT ... ON CONFLICT DO NOTHING` 한 방으로 바꿨다. 판정을 코드가 아니라 인덱스가 한다 (§B3 의 "읽고-검사하고-쓰기 금지" 와 같은 원칙) |
 | **범위** | 인덱스는 `OPEN`·`MANUAL_REVIEW` 에만 건다. **해소된 뒤의 재발은 새 사건이라 다시 열려야 한다.** 전체 UNIQUE 로 걸면 두 번째 사고를 놓친다 |
 | **검증** | `verify-constraints.sql` 11 (중복 거부) 과 11b (해소 후 재발 허용) |
-| **노션 반영** | ⬜ §02 첨부 DDL 을 병합 DDL v1.2 로 교체 · ✅ §02 본문 "v1.1 구현 반영" 절 (2026-09-27) |
-| **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
+| **노션 반영** | ✅ §02 첨부 DDL v1.2 교체 (2026-09-27) · ✅ §02 본문 "v1.1 구현 반영" 절 (2026-09-27) |
+| **상태** | 🟢 CLOSED — 저장소·노션 반영 (2026-09-27) |
 
 ---
 
@@ -444,10 +444,10 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **`EXPIRED` 는 제외하지 않는다** | 마감이 지난 것이라 어차피 재지원이 불가능하다. 범위를 넓힐수록 원래 보장에서 멀어진다 |
 | **⚠️ 주의** | 이것은 canonical DDL 의 제약을 **약화**하는 변경이다. 다른 항목(D-21·D-25)처럼 덧붙이는 것이 아니다. 노션 확인이 특히 필요하다 |
 | **저장소 반영** | ✅ `0002_integrity_constraints.sql` · `application.repository.ts` 의 `ON CONFLICT` 와 조회 조건 |
-| **노션 반영** | ⬜ §02 첨부 DDL 을 병합 DDL v1.2 로 교체 (자연키 `(cycle_id, applicant_id, admission_type_id) WHERE status <> 'CANCELLED'`) |
+| **노션 반영** | ✅ §02 첨부 DDL v1.2 교체 (2026-09-27) (자연키 `(cycle_id, applicant_id, admission_type_id) WHERE status <> 'CANCELLED'`) |
 | **결정 (2026-09-27)** | **채택하되 키를 고친다.** 취소 원서 제외는 맞다(결제 전 삭제·재작성은 현행 관행). 그러나 키에 `department_id` 가 있어 **같은 전형에 모집단위만 다른 유효 원서를 둘 가질 수 있었다** — 대학입학전형기본사항 "하나의 전형에서는 하나의 모집단위에만 지원할 수 있음" 위반. 키를 `(cycle_id, applicant_id, admission_type_id) WHERE status <> 'CANCELLED'` 로 바꾼다. 다른 모집단위로 생성·전형 변경 시 409 `ONE_DEPARTMENT_PER_ADMISSION_TYPE` |
 | **저장소 반영 (2026-09-27)** | ✅ `0005_one_department_per_admission_type.sql` · `application.repository.ts` · `db:verify` 19 · `natural-key.integration.test.ts` 4종 |
-| **상태** | 🟡 결정·저장소 반영 완료 — 노션 반영 대기 (§02 첨부 DDL) |
+| **상태** | 🟢 CLOSED — 저장소·노션 반영 (2026-09-27) |
 
 ---
 
@@ -460,9 +460,9 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **영향** | 운영 스위치를 담을 자리가 없다. Freeze 해제 기록, 기능 토글, 점검 모드 같은 것을 둘 곳이 마땅치 않다 |
 | **이번에 한 선택** | Freeze 를 **저장소 없이** 만들었다. 마감 정책의 마감시각에서 구간을 계산하고, 해제 경로를 두지 않는다. 필요해 보이는 해제 상황(마감 연장)은 `deadline_policy` 의 일이라 이 잠금에 걸리지 않는다 |
 | **판정** | 지금은 필요 없다. 다만 **문서와 DDL 이 어긋나 있는 것은 사실**이므로 둘 중 하나를 맞춰야 한다 — 테이블을 추가하거나, 엔티티 목록에서 빼거나 |
-| **노션 반영** | ⬜ §02 ERD 에서 `SystemConfig` 제거 — DDL 이 맞다 (2026-09-27 확정) |
+| **노션 반영** | ✅ §02 — ERD 에 `SystemConfig` 가 없음을 확인하고 첨부 설명에 명시 (2026-09-27) |
 | **결정 (2026-09-27)** | **DDL 이 맞다 — ERD·엔티티 목록에서 `SystemConfig` 를 뺀다.** Freeze 는 저장소 없이 계산되고 운영 스위치를 쓰는 곳이 없다. 필요해지면 그때 테이블과 승인 절차를 함께 설계한다 |
-| **상태** | 🟡 결정 완료 — 노션 반영 대기 (§02 ERD) |
+| **상태** | 🟢 CLOSED — 저장소·노션 반영 (2026-09-27) |
 
 ---
 
@@ -551,7 +551,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **남은 것** | ① 키 교체 시 옛 기록을 검증할 **검증 키 목록**이 없다 (지금은 `UNKNOWN_KEY` 로 표시) ② 서명 키 보관은 M5 Vault ③ 운영자 신원 증명은 T-M5-10 |
 | **계약 추가** | `POST /admin/v1/deadline-policies/extensions` · `GET /admin/v1/activations` · `GET /api/v1/meta/signing-keys` · activate 응답의 `activation` |
 | **저장소 반영** | ✅ `0003_signed_activation.sql` · `modules/activation/` · 마감·설정 서비스 · Evidence |
-| **노션 반영** | ⬜ §02 첨부 DDL 을 병합 DDL v1.2 로 교체 (`activation_record`) · ⬜ §03 첨부 yaml 교체(연장·적용 이력·공개키) — 저장소 yaml v1.2.0 ✅ (2026-09-27) · ✅ §03 본문 (2026-09-27) · ✅ §B17 연장 규칙 (2026-09-27) · ✅ §02 본문·ERD (2026-09-27) |
+| **노션 반영** | ✅ §02 첨부 DDL v1.2 교체 (2026-09-27) (`activation_record`) · ⬜ §03 첨부 yaml 교체(연장·적용 이력·공개키) — 저장소 yaml v1.2.0 ✅ (2026-09-27) · ✅ §03 본문 (2026-09-27) · ✅ §B17 연장 규칙 (2026-09-27) · ✅ §02 본문·ERD (2026-09-27) |
 | **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
 
 ---
@@ -664,7 +664,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **결정 (2026-09-27)** | **자동 Finalize 한다.** "전형료 결제하고 접수" 가 제출 의사 표시다. 결제 전에 "결제가 확인되면 바로 접수, 이후 수정·취소 불가" 를 고지한다. 마감 판정 방식은 대학이 고른 `deadline_policy.mode` 그대로 — 접수 요청 시각은 결제 의도를 만든 시각이다 |
 | **저장소 반영 (2026-09-27)** | ✅ ① **결제 전 확인** — 결제 의도는 지금 접수할 수 있는 원서에만 만든다(입력·필수 서류·상태·마감). 돈을 받은 뒤 "서류가 빠졌다" 를 알리면 환불 사건이 된다 ② **결제 확정 시 자동 접수** — 화면 verify·PG 콜백·재확인 워커 어느 쪽이든 처음 CONFIRMED 가 되면. 결제·접수 모듈이 서로 import 하지 않도록 접수 모듈이 기동할 때 결제 서비스에 훅을 건다. 실패하면 `FINALIZE_REQUESTED` REJECTED 감사 + 대조 `PAYMENT_CONFIRMED_WITHOUT_SUBMISSION` ③ **함께 고친 구멍** — Finalize 가 FINALIZED 만 막고 있어 **취소한 원서도 접수될 수 있었다**(취소 뒤 늦게 확인된 결제). CANCELLED·EXPIRED 는 409 ④ 자동 접수와 화면 제출이 겹치면 늦은 쪽도 같은 접수를 돌려준다 ⑤ 화면: 결제 전 고지 · 결제 확인 즉시 접수 완료 화면. 시험 5종(취소 가드는 가드를 빼면 깨지는 것까지 확인) · 브라우저 확인 |
 | **D-40 과의 관계** | D-40 의 "자동 Finalize 하지 않음" 을 이 결정이 대체한다. 콜백·재확인 워커·대조 스케줄은 그대로다 |
-| **노션 반영** | ⬜ §01 §A4·§B4 "자동 Finalize 하지 않음" 을 "결제 확정 시 자동 접수 · 결제 전 접수 가능 확인" 으로 · ⬜ §03 첨부 yaml 교체 — 저장소 yaml v1.2.0 ✅ (2026-09-27) · ⬜ §07 5단계 고지 문구 |
+| **노션 반영** | ⬜ §01 §A4·§B4 "자동 Finalize 하지 않음" 을 "결제 확정 시 자동 접수, 결제 전 접수 가능 점검" 으로 · ⬜ §03 첨부 yaml 교체 — 저장소 yaml v1.2.0 ✅ (2026-09-27) · ⬜ §07 5단계 고지 문구 |
 | **상태** | 🟡 결정·저장소 반영 완료 — 노션 반영 대기 |
 
 ---
