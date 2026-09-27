@@ -59,7 +59,7 @@ for did, title, status, todo, pdf in items:
     for p in pdf:
         grouped.setdefault('제출 PDF 정정', []).append(f'- **{did}** {p}')
     # 상태에 "확인" 이 적힌 항목은 반영보다 결정이 먼저다. (D-29 제약 약화, D-38 하한값 등)
-    if '확인' in status and not any(did in x for x in grouped.get('먼저 결정·확인이 필요한 것', [])):
+    if '확인' in status and not any(f'**{did}**' in x for x in grouped.get('먼저 결정·확인이 필요한 것', [])):
         grouped.setdefault('먼저 결정·확인이 필요한 것', []).append(f'- **{did}** {status}  \n  <sub>{title}</sub>')
 
 order = ['먼저 결정·확인이 필요한 것'] + [p for p, _ in PAGES] + ['제출 PDF 정정', '기타']

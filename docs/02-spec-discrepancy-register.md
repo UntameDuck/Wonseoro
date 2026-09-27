@@ -322,7 +322,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **조치 (2026-09-23)** | `infra/db/migrations/0002_integrity_constraints.sql` 로 제약을 추가했다. **0001 은 손대지 않았다** — 첨부 DDL 과 바이트가 같아야 하므로, 테이블을 다시 정의하지 않고 `ALTER TABLE ... ADD CONSTRAINT` 만 덧붙였다. 원본은 여전히 노션 하나뿐이고, 0002 는 "노션에 아직 반영되지 않은 차이" 를 파일 하나로 모아 보여주는 역할을 한다 |
 | **함께 발견** | 검증 중에 같은 뿌리의 구멍 셋을 더 찾았다 — ① 작성자가 자기 변경을 승인할 수 있었다(§A14 위반) ② 한 전형에 `ACTIVE` 설정이 둘 이상 가능했다(적용 양식이 조회 순서에 달림) ③ `deadline_policy` 는 `DRAFT:` 접두사 상태로도 `activated_at` 을 채울 수 있었다(D-23 의 부작용). 셋 다 0002 에서 막았다 |
 | **검증** | `infra/db/verify-constraints.sql` 8·9·10 — 승인 0명 활성화 / 작성자 자기승인 / 전형당 ACTIVE 중복이 전부 DB 에서 거부됨 |
-| **노션 반영** | ⬜ §02 첨부 DDL 에 0002 내용을 접어 넣고 이 파일을 삭제한다. **반영 전까지 마이그레이션이 두 파일로 나뉜다** |
+| **노션 반영** | ⬜ §02 첨부 DDL 에 0002 내용을 접어 넣고 이 파일을 삭제한다(D-29 확정 뒤 첨부 교체 때 함께). **반영 전까지 마이그레이션이 두 파일로 나뉜다** · ✅ §02 본문 "v1.1 구현 반영" 절 (2026-09-27) |
 | **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
 
 ---
@@ -350,7 +350,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **잠정 조치** | 승인 전에는 승인자 컬럼에 `DRAFT:` 접두사를 넣어 구분한다. **좋은 방법이 아니다** — 문자열 규약이라 DB 가 강제하지 못하고, 조회할 때마다 접두사를 벗겨야 한다 |
 | **추가 결함** | 같은 테이블에 **`created_at` 도 없다.** 다른 모든 테이블에는 있다. 생성 순서를 알 수 없어 이력 조회를 승인 시각으로 정렬해야 한다. 승인 전 초안은 정렬 기준이 아예 없다 |
 | **제안** | `deadline_policy` 에도 `status varchar(24) CHECK (status IN ('DRAFT','APPROVED','ACTIVE','RETIRED'))` 와 `created_at timestamptz NOT NULL DEFAULT now()` 를 두고 승인자 컬럼을 nullable 로 바꾼다. 대신 D-21 처럼 `CHECK (status <> 'ACTIVE' OR (승인자 둘 다 있고 서로 다름))` 로 막는다 |
-| **노션 반영** | ⬜ §02 첨부 DDL 수정 |
+| **노션 반영** | ⬜ §02 첨부 DDL 수정 — 스키마 변경(status·created_at 추가, 승인자 nullable) 제안이라 먼저 확인 필요 |
 | **상태** | 🟡 판정완료 — DDL 변경 제안 |
 
 ---
@@ -379,7 +379,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **조치 (2026-09-23)** | 0002 마이그레이션에 부분 유니크 인덱스 `uq_recon_open_per_type` 을 추가했다. 동시에 서비스의 조회-후-삽입을 `INSERT ... ON CONFLICT DO NOTHING` 한 방으로 바꿨다. 판정을 코드가 아니라 인덱스가 한다 (§B3 의 "읽고-검사하고-쓰기 금지" 와 같은 원칙) |
 | **범위** | 인덱스는 `OPEN`·`MANUAL_REVIEW` 에만 건다. **해소된 뒤의 재발은 새 사건이라 다시 열려야 한다.** 전체 UNIQUE 로 걸면 두 번째 사고를 놓친다 |
 | **검증** | `verify-constraints.sql` 11 (중복 거부) 과 11b (해소 후 재발 허용) |
-| **노션 반영** | ⬜ §02 첨부 DDL 에 추가 |
+| **노션 반영** | ⬜ §02 첨부 DDL 에 추가(D-29 확정 뒤 첨부 교체 때 함께) · ✅ §02 본문 "v1.1 구현 반영" 절 (2026-09-27) |
 | **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
 
 ---
@@ -542,7 +542,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **남은 것** | ① 키 교체 시 옛 기록을 검증할 **검증 키 목록**이 없다 (지금은 `UNKNOWN_KEY` 로 표시) ② 서명 키 보관은 M5 Vault ③ 운영자 신원 증명은 T-M5-10 |
 | **계약 추가** | `POST /admin/v1/deadline-policies/extensions` · `GET /admin/v1/activations` · `GET /api/v1/meta/signing-keys` · activate 응답의 `activation` |
 | **저장소 반영** | ✅ `0003_signed_activation.sql` · `modules/activation/` · 마감·설정 서비스 · Evidence |
-| **노션 반영** | ⬜ §02 DDL 에 `activation_record` · §03 OpenAPI 위 경로 · ✅ §B17 연장 규칙 (2026-09-27) |
+| **노션 반영** | ⬜ §02 첨부 DDL 에 `activation_record`(D-29 확정 뒤 첨부 교체 때 함께) · §03 OpenAPI 위 경로 · ✅ §B17 연장 규칙 (2026-09-27) · ✅ §02 본문·ERD (2026-09-27) |
 | **상태** | 🟡 저장소 해소 — 노션 반영 대기 |
 
 ---
@@ -589,7 +589,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **필요한 결정** | ① 개인정보 담당이 원서·신원·서류·결제·동의의 법정·기관 하한을 정해 준다 (정해지면 해당 항목을 `LEGAL` 로) ② 파기 실행을 누가 승인하는가 |
 | **계약 추가** | `GET /admin/v1/retention/matrix` · `GET /admin/v1/retention/plan` · Config `retention` 섹션 |
 | **저장소 반영** | ✅ `contracts/retention.ts` · `modules/retention/` · Config 검증·Diff |
-| **노션 반영** | ⬜ v1.0 §9 에 Retention Matrix 표 · §02 에 파기 = 내용 제거 명시 |
+| **노션 반영** | ⬜ v1.0 §9 에 Retention Matrix 표 · ✅ §02 파기 = 내용 제거 (2026-09-27) |
 | **상태** | 🟡 판정완료 — 하한값 확인 대기 |
 
 ---
@@ -636,7 +636,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **판정** | 역할 분리(`kadmission_app` 은 감사·적용 기록에 INSERT·SELECT 만) + `audit_event` 추가 전용 트리거 + 테스트 정리 방식 변경 + `db:verify` 에 거부 확인. 물리 분리(WORM)는 M5 |
 | **저장소 반영** | ✅ 2026-09-27 — `0004_db_roles_audit_append_only.sql`: `kadmission_app`(업무 테이블 DML · 감사·적용 기록은 **SELECT·INSERT 만** · TRUNCATE·DDL 없음) · `kadmission_migrator`(소유자) · `kadmission_auditor`(읽기). `audit_event` UPDATE·DELETE·TRUNCATE 트리거. admission-api · document-service · event-relay 가 앱 역할로 붙는다. 시험은 앱 역할로 돌고, 감사 기록 정리·변조 재현만 `test-support/break-glass.ts`(슈퍼유저 + `session_replication_role=replica`). `db:verify` 15~18 |
 | **남은 것** | 슈퍼유저가 트리거를 일부러 끄는 것은 DB 안에서 막을 수 없다 → WORM·Object Lock(M5). 중앙 DB(`central`)도 아직 슈퍼유저 하나 — 같은 방식으로 M5 |
-| **노션 반영** | ⬜ §06 DB 역할 표 · §02 |
+| **노션 반영** | ⬜ §06 DB 역할 표 · ✅ §02 역할·트리거 (2026-09-27) |
 | **상태** | 🟢 저장소 반영 완료 — 노션 반영 대기 |
 
 ---
