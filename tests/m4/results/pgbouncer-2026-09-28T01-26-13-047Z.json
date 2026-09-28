@@ -1,0 +1,51 @@
+{
+  "test": "T-M4-09",
+  "environment": "local-kind-univ-a (축소 환경)",
+  "limitation": "로컬 단일 DB에서 차트 배선·우회 차단·상한만 검증. 운영 HA/피크 부하는 미검증.",
+  "startedAt": "2026-09-28T01:26:13.047Z",
+  "checks": {
+    "pgbouncer-and-apps-ready": {
+      "pass": true,
+      "ready": {
+        "univ-a-api": {
+          "desired": 2,
+          "ready": 2
+        },
+        "univ-a-document-service": {
+          "desired": 1,
+          "ready": 1
+        },
+        "univ-a-event-relay": {
+          "desired": 1,
+          "ready": 1
+        },
+        "univ-a-pgbouncer": {
+          "desired": 1,
+          "ready": 1
+        }
+      }
+    },
+    "api-reaches-pooler": {
+      "pass": true,
+      "proxy": "connected",
+      "direct": "timeout"
+    },
+    "api-cannot-bypass-pooler": {
+      "pass": true,
+      "proxy": "connected",
+      "direct": "timeout"
+    },
+    "30-concurrent-queries-complete": {
+      "pass": true,
+      "total": 30,
+      "failures": []
+    },
+    "upstream-connections-stay-within-budget": {
+      "pass": true,
+      "observedMax": 10,
+      "configuredMax": 10
+    }
+  },
+  "finishedAt": "2026-09-28T01:26:36.349Z",
+  "passed": true
+}

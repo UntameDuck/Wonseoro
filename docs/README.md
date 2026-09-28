@@ -28,7 +28,7 @@
 | M5 | [신뢰성·보안·접근성](milestones/M5-reliability-security.md) | 35 | 대학에 넣을 수 있는 수준 |
 | M6 | [Pilot 준비](milestones/M6-pilot-readiness.md) | 15 | 대학 1곳 Shadow Test |
 
-총 **139개 태스크, 64개 완료 (2026-09-28)**. 각 태스크에 담당·근거 노션 절·인수기준이 붙어 있다.
+총 **139개 태스크, 65개 완료 (2026-09-28)**. 각 태스크에 담당·근거 노션 절·인수기준이 붙어 있다.
 
 | 단계 | 진행 |
 |---|---|
@@ -36,7 +36,7 @@
 | M1 접수 Core | 14/14 ✅ |
 | M2 결제·Finalize·화면 | 24/24 ✅ |
 | M3 운영 안전장치 | 14/15 ✅ 종료 (2026-09-27) |
-| M4 분산 실증 | 6/28 ◀ 차트·kind·격리·동시 Finalize ✅ — PgBouncer 구현, 런타임 검증·Peak Mode 대기 |
+| M4 분산 실증 | 7/28 ◀ 차트·kind·격리·동시 Finalize·PgBouncer ✅ — 다음: Peak Mode |
 | M5~M6 | 0/50 |
 
 진행 현황과 다음 착수 순서는 **[03-next-steps.md](03-next-steps.md)** 를 본다.

@@ -103,7 +103,7 @@ database:
     # 이 대학 DB 에 허용하는 전체 커넥션. 렌더링 때 Σ(replica 상한 × Pod 당 상한) 을 검사한다
     connectionBudget: 200
   pooler:
-    enabled: false
+    enabled: true
     image: { repository: pgbouncer, digest: "" }
     replicas: 2
     port: 6432

@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-28 (**M4 진행** — PgBouncer 코드·차트 구현 완료, Docker Desktop 복구 뒤 kind 런타임 검증 대기)
+> 최종 갱신: 2026-09-28 (**M4 진행** — PgBouncer kind 통합 시험 통과. 다음은 Peak Mode T-M4-07)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -10,7 +10,7 @@
 
 ## 현재 지점
 
-**M0·M1·M2·M3 완료, M4 진행 중** (6/28). MVP가 화면에서 끝까지 동작하고, 로컬 축소 환경에서 대학 간 장애 격리·동시 Finalize를 증명했다.
+**M0·M1·M2·M3 완료, M4 진행 중** (7/28). MVP가 화면에서 끝까지 동작하고, 로컬 축소 환경에서 대학 간 장애 격리·동시 Finalize·DB 연결 상한을 증명했다.
 
 | 단계 | 진행 | 비고 |
 |---|---|---|
@@ -18,11 +18,11 @@
 | M1 접수 Core | **14/14** | ✅ |
 | M2 결제·Finalize·화면 | **24/24** | ✅ Demo Gate 1~5 통과 |
 | M3 운영 안전장치 | **14/15** | ✅ **종료 2026-09-27** — T-M3-03 WORM·T-M3-06 JWKS 는 M5 |
-| **M4 분산 실증** | **6/28** | ◀ 진행 중 — 차트·kind·대학 간 격리·동시 Finalize ✅, PG·중앙·Pod 장애 축소 시험·Peak Mode·커넥션 예산 🟡 |
+| **M4 분산 실증** | **7/28** | ◀ 진행 중 — 차트·kind·대학 간 격리·동시 Finalize·PgBouncer ✅, PG·중앙·Pod 장애 축소 시험·Peak Mode 🟡 |
 | M5 신뢰성·보안·접근성 | 0/35 | |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 64/139 태스크** (🟡 부분 완료 별도). **293개 테스트**
+**총 65/139 태스크** (🟡 부분 완료 별도). **293개 테스트**
 (admission-api 234 · server-kit 35 · central-api 20 · event-relay 4) — 실패 0, 환경 조건으로 건너뛰는 3개(관리자 토큰 설정 여부).
 DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`) CI 포함.
 
@@ -95,7 +95,7 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 
 | ID | 할 일 |
 |---|---|
-| T-M4-09 | PgBouncer 1.26.0 이미지·차트·TLS 경계·DB/Redis NetworkPolicy 분리·예산 검사 구현. `tests/m4/pgbouncer.mjs` kind 실행 대기 |
+| T-M4-09 | ✅ PgBouncer 1.26.0 배포. 직접 DB 우회 차단, 동시 30쿼리 성공, upstream 최대 10/10 확인 (`pgbouncer-2026-09-28T01-26-13-047Z.json`) |
 | T-M4-07 | Peak Mode 예약 전환(scheduledActivation)·비핵심 Job 억제 |
 | T-M4-08 | HPA 커스텀 지표 — metrics adapter 설치 후 |
 | T-M4-05 | GitOps Pull 배포(Argo CD 또는 Flux) — 서명된 이미지만 |

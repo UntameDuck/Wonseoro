@@ -10,9 +10,9 @@
 ## 1. 30초 요약
 
 - **제품**: 원서로(K-Admission) — 대학 입학 원서접수를 대학별 Data Plane 으로 분산하는 플랫폼. 2026 GovTech 공모전 출품작
-- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 6/28 진행 중**. 전체 64/139 태스크
+- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 7/28 진행 중**. 전체 65/139 태스크
 - **완료한 핵심 증명**: 로컬 kind 2클러스터 축소 환경에서 **대학 간 장애 격리 T-M4-42 통과**. A대 전면 정지 중 B대 접수·중앙 반영, A대 복구 후 접수까지 확인
-- **바로 다음 할 일**: Docker Desktop 복구 후 **T-M4-09 PgBouncer kind 통합 시험** → [§4](#4-다음-작업--순서와-방법)
+- **바로 다음 할 일**: **T-M4-07 Peak Mode 예약 전환·비핵심 Job 억제** → [§4](#4-다음-작업--순서와-방법)
 
 ## 2. 반드시 지킬 규칙
 
@@ -82,19 +82,12 @@ A 클러스터 노드 컨테이너를 멈춘 동안 B 대학의 원서 생성→
 
 ### 목표 3 — 차트에 남은 운영 기능
 
-T-M4-09 PgBouncer는 이미지·차트·앱 연결 override·NetworkPolicy·TLS 경계·예산 검사까지 구현했다.
-Docker Desktop 복구 후 두 클러스터에 배포하고 `node tests/m4/pgbouncer.mjs`로 직접 DB 우회 차단과
-upstream 10개 상한을 확인한다. 그다음 T-M4-07 Peak Mode 예약 전환 · T-M4-08 HPA 커스텀 지표(metrics adapter) ·
+T-M4-09 PgBouncer는 두 kind 클러스터에 배포했고 직접 DB 우회 차단·동시 30쿼리·upstream 최대 10/10을 확인했다.
+결과는 `tests/m4/results/pgbouncer-2026-09-28T01-26-13-047Z.json`. 다음은 T-M4-07 Peak Mode 예약 전환 · T-M4-08 HPA 커스텀 지표(metrics adapter) ·
 T-M4-05 GitOps Pull(Argo CD/Flux) · T-M4-20~24 관측성 순서다. 각 인수기준은 [M4 마일스톤](milestones/M4-federated-proof.md).
 
-현재 PC의 Docker Desktop 4.62.0은 재기동 때
-`%LOCALAPPDATA%\Docker\run\dockerInference` 재분석 지점을 제거하지 못해 백엔드가 종료된다.
-WSL 종료·CLI 재시작으로는 복구되지 않았다. C: 여유 공간도 약 40MB뿐이다(실패한 kind 임시 tar는 남아 있지 않음).
-먼저 C: 공간을 확보하고 Windows 재부팅 후 Docker가 정상 기동하면 시험을 재개한다.
-중단 직전 namespace를 빠뜨린 첫 Helm 명령이 `default/univ-a` 실패 릴리스를 만들었고 제거 도중 Docker가
-멈췄다. 재부팅 뒤 `helm list -A --kube-context kind-univ-a`로 남았는지 확인해, 있으면
-`helm uninstall univ-a -n default --kube-context kind-univ-a`로 그 실패 릴리스만 제거한다. 이후 README의
-`-n kadmission-app` 명령으로 A·B를 업그레이드하고 `node tests/m4/pgbouncer.mjs`를 실행한다.
+Docker 데이터는 `E:\DockerData`로 이전되어 C: 여유 공간이 약 25GB로 회복됐다. 이전 공간 부족 때 B kind의
+Node 이미지 레이어가 손상되어 B 클러스터만 재생성했다. 대학 DB는 외부 Docker volume이라 데이터 손실은 없다.
 
 ### 목표 4 — 노션 반영 (R6)
 
@@ -115,7 +108,7 @@ WSL 종료·CLI 재시작으로는 복구되지 않았다. C: 여유 공간도 �
 
 ## 6. 전체 남은 규모
 
-139개 중 64개 완료, **75개 남음**.
+139개 중 65개 완료, **74개 남음**.
 AI 가 이 PC 에서 할 수 있는 것 약 45개, 외부 환경 필요 약 15개, 사람·기관 필요 약 15개.
 
 ## 7. 어디에 무엇이 있나

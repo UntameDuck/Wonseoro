@@ -15,7 +15,7 @@ const CONTEXT = 'kind-univ-a';
 const NAMESPACE = 'kadmission-app';
 const UPSTREAM_LIMIT = 10; // values-local: default 8 + reserve 2
 const result = {
-  test: 'T-M4-09-partial',
+  test: 'T-M4-09',
   environment: 'local-kind-univ-a (축소 환경)',
   limitation: '로컬 단일 DB에서 차트 배선·우회 차단·상한만 검증. 운영 HA/피크 부하는 미검증.',
   startedAt: new Date().toISOString(),

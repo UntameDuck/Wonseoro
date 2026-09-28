@@ -19,7 +19,7 @@
 | T-M4-03 대학별 values | ✅ | `deploy/universities/UNIV-A·B·C` — 같은 차트·같은 이미지, **마감·설정 버전은 values 에 없다**(D-44 ⑥) |
 | T-M4-04 kind 2 클러스터 | ✅ | univ-a·univ-b의 API 2개·Relay·서류 워커 모두 Ready. 서류 워커 수정 이미지 재배포·NetworkPolicy 실효성 확인 |
 | T-M4-07 Peak Mode | 🟡 | `peakMode.enabled` 가 API 최소 replica 를 올린다. 예약 시각 자동 전환·비핵심 Job 억제는 남음 |
-| T-M4-09 커넥션 예산 | 🟡 | PgBouncer 1.26.0 비루트 이미지·Helm Deployment/PDB·앱/DB TLS 경계·서버/클라이언트 예산·직접 DB 우회 차단 구현. 단독 연결 성공, kind 통합 시험은 Docker Desktop 런타임 오류로 대기. 첨부 values-m 예산 결정도 남음(D-44 ⑦) |
+| T-M4-09 커넥션 예산 | ✅ | PgBouncer 1.26.0 비루트 이미지·Helm Deployment/PDB·앱/DB TLS 경계·서버/클라이언트 예산·직접 DB 우회 차단. 동시 30쿼리 성공, upstream 최대 10/10. 로컬 축소 환경 결과 `tests/m4/results/pgbouncer-2026-09-28T01-26-13-047Z.json`. 첨부 values-m 수치 결정은 D-44 ⑦로 별도 대기 |
 | T-M4-42 대학 간 격리 | ✅ | 로컬 kind 2클러스터 축소 환경 통과. A 전면 정지 중 B 접수 2건·중앙 반영, A 복구 후 접수. `tests/m4/results/isolation-2026-09-27T16-42-39-057Z.json` |
 | T-M4-33 동시 Finalize | ✅ | 100회 동시 요청 전부 성공(201×1, 200×99), Submission·Outbox·감사 각 1건. 로컬 축소 환경 |
 | T-M4-34 PG 지연·UNKNOWN | 🟡 | SLOW·UNKNOWN→복구 시 자동 확정·접수, double-confirm 0. 워커 1초·Backoff 시간 압축 — 실제 10초·1~30분 시간 시험 남음 |
