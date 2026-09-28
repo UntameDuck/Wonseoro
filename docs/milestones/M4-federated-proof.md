@@ -24,6 +24,7 @@
 | T-M4-33 동시 Finalize | ✅ | 100회 동시 요청 전부 성공(201×1, 200×99), Submission·Outbox·감사 각 1건. 로컬 축소 환경 |
 | T-M4-34 PG 지연·UNKNOWN | 🟡 | SLOW·UNKNOWN→복구 시 자동 확정·접수, double-confirm 0. 워커 1초·Backoff 시간 압축 — 실제 10초·1~30분 시간 시험 남음 |
 | T-M4-35 중앙 단절 | 🟡 | 8.8초 단절 중 접수 2건·Outbox 보존·복구 후 event loss 0. 운영 인수기준 2시간 시험 남음 |
+| T-M4-38 Object Storage 장애 | ✅ | 로컬 축소 환경에서 MinIO 완전 단절 중 카탈로그 20회 오류 0·원서 생성/자동저장 지속·직접 업로드만 실패. 복구 515ms 뒤 같은 단기 URL 업로드 200·서버 검증 202. `tests/m4/results/object-storage-outage-2026-09-28T06-14-19-725Z.json` |
 | T-M4-39 API 종료 | 🟡 | Pod 강제 삭제 283건·RollingUpdate 504건 연속 요청 오류 0. 단일 kind 노드라 노드 전체 장애는 미검증 |
 | 나머지 | ⬜ | |
 

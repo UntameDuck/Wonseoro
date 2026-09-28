@@ -1,0 +1,45 @@
+{
+  "test": "T-M4-38",
+  "environment": "local-kind-univ-a + local MinIO (축소 환경)",
+  "limitation": "Object Storage 완전 단절을 짧게 재현했다. 운영 지연 시간·부하 수치가 아니다.",
+  "startedAt": "2026-09-28T06:14:19.725Z",
+  "checks": {
+    "object-storage-is-down": {
+      "pass": true,
+      "detectedMs": 10
+    },
+    "catalog-continues-during-outage": {
+      "pass": true,
+      "requests": 20,
+      "failures": 0
+    },
+    "draft-save-continues-during-outage": {
+      "pass": true,
+      "createStatus": 201,
+      "saveStatus": 200,
+      "persisted": "Object Storage 장애 시험 고등학교"
+    },
+    "only-direct-upload-fails-during-outage": {
+      "pass": true,
+      "uploadStatus": 0,
+      "error": "curl: (7) Failed to connect to host.docker.internal:9000 after 2038 ms: Could not connect to server",
+      "compressedOutageMs": 3941
+    },
+    "upload-recovers-after-storage-returns": {
+      "pass": true,
+      "recoveredMs": 515,
+      "uploadStatus": 200,
+      "completeStatus": 202,
+      "documentStatus": "QUARANTINED"
+    },
+    "object-storage-restored": {
+      "pass": true,
+      "restored": true
+    }
+  },
+  "applicationId": "df69990d-6ad9-4ac9-a34e-050dbbe10fad",
+  "documentId": "c0e077e7-0655-4a5a-94a1-de34875f2160",
+  "compressedOutageMs": 5640,
+  "finishedAt": "2026-09-28T06:14:26.612Z",
+  "passed": true
+}
