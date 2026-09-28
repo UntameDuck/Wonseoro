@@ -1,3 +1,4 @@
+import { shutdownTelemetry } from './instrumentation';
 import 'reflect-metadata';
 import { Logger } from '@nestjs/common';
 import { NestFactory, Reflector } from '@nestjs/core';
@@ -9,6 +10,11 @@ import { IdempotencyInterceptor } from './common/idempotency/idempotency.interce
 import { IdempotencyStore } from './common/idempotency/idempotency.store';
 import { ProblemFilter } from './common/problem/problem.filter';
 import { strictJsonParser } from './common/http/strict-json';
+import {
+  finishHttpRequestSpan,
+  recordHttpRequest,
+  startHttpRequestSpan,
+} from './common/telemetry/http-metrics';
 import { assertConfigured, isProduction } from '@wonseoro/server-kit';
 
 /**
@@ -43,6 +49,20 @@ async function bootstrap(): Promise<void> {
   // 기본 JSON 파서는 깨진 UTF-8 을 U+FFFD 로 바꿔 받아들인다. 거절하도록 바꾼다. (D-37)
   fastify.removeContentTypeParser('application/json');
   fastify.addContentTypeParser('application/json', { parseAs: 'buffer' }, strictJsonParser);
+  fastify.addHook('onRequest', (request, _reply, done) => {
+    startHttpRequestSpan(request, request.method, request.headers, done);
+  });
+  fastify.addHook('onResponse', (request, reply, done) => {
+    const metric = {
+      method: request.method,
+      route: request.routeOptions?.url,
+      statusCode: reply.statusCode,
+      durationMs: reply.elapsedTime,
+    };
+    recordHttpRequest(metric);
+    finishHttpRequestSpan(request, metric);
+    done();
+  });
 
   // 모든 오류를 problem+json 으로 통일한다.
   app.useGlobalFilters(new ProblemFilter());
@@ -70,6 +90,23 @@ async function bootstrap(): Promise<void> {
   await app.listen({ port: PORT, host: '0.0.0.0' });
 
   const logger = new Logger('admission-api');
+  let shuttingDown = false;
+  const shutdown = (signal: string): void => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    logger.log(`${signal} 수신 — HTTP 연결 종료 후 telemetry를 flush합니다.`);
+    void app
+      .close()
+      .then(() => shutdownTelemetry())
+      .then(() => process.exit(0))
+      .catch((error: unknown) => {
+        logger.error('정상 종료 중 오류', error);
+        process.exit(1);
+      });
+  };
+  process.once('SIGTERM', () => shutdown('SIGTERM'));
+  process.once('SIGINT', () => shutdown('SIGINT'));
+
   logger.log(`listening on :${PORT} (university=${UNIVERSITY_ID}, auth=${AUTH_MODE})`);
   if (!isProduction() && AUTH_MODE === 'dev-headers') {
     logger.warn(

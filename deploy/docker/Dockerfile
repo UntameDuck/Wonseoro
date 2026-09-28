@@ -60,5 +60,5 @@ RUN find /app/apps /app/packages -name '*.test.js*' -delete \
 USER 10001:10001
 
 WORKDIR /app/apps/${APP}
-EXPOSE 3000 3001 3002 3003
+EXPOSE 3000 3001 3002 3003 9464
 CMD ["node", "dist/main.js"]

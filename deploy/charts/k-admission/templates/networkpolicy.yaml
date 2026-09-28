@@ -44,6 +44,26 @@ spec:
         - protocol: TCP
           port: {{ $v.api.port }}
 ---
+{{- if $v.observability.metrics.enabled }}
+# Prometheus → 접수 API 지표 포트. 공개 API 포트와 수집 경로를 분리한다.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ka.fullname" . }}-allow-prometheus-to-api
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $inst }}
+      network-role: api
+  policyTypes: [Ingress]
+  ingress:
+    - from: {{- toYaml $v.observability.metrics.ingressFrom | nindent 8 }}
+      ports:
+        - protocol: TCP
+          port: {{ $v.observability.metrics.port }}
+---
+{{- end }}
 # DNS — 모든 워크로드
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -187,6 +207,27 @@ spec:
         - { protocol: TCP, port: {{ . }} }
         {{- end }}
 ---
+{{- if $v.observability.otelEndpoint }}
+# 접수 API → OpenTelemetry Collector (OTLP/gRPC)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ka.fullname" . }}-allow-api-to-otel-collector
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $inst }}
+      network-role: api
+  policyTypes: [Egress]
+  egress:
+    - to: {{- toYaml $v.observability.collectorEgress.to | nindent 8 }}
+      ports:
+        {{- range $v.observability.collectorEgress.ports }}
+        - { protocol: TCP, port: {{ . }} }
+        {{- end }}
+---
+{{- end }}
 # 서류 검사 워커 → 접수 API 만
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

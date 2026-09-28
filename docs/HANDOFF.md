@@ -37,7 +37,7 @@
 | 도구 | kind 0.33 · Helm **4.3** · k6 2.2 · kubectl 1.34 (winget 설치). 새 터미널부터 PATH 에 잡힌다. 안 잡히면 `%LOCALAPPDATA%\Microsoft\WinGet\Packages\` 아래 `Helm.Helm_*\windows-amd64`, `Kubernetes.kind_*` 를 PATH 에 더한다. k6 는 `C:\Program Files\k6` |
 | Docker | Desktop, VM 메모리 **약 7.5GB.** 이미지 빌드와 kind 클러스터 2개를 **동시에 돌리면 엔진이 멈춘다**(실제로 멈췄다). 빌드 → 클러스터 순서로, 하나씩 |
 | 로컬 DB | compose: `postgres-univ-a` :5432 · `postgres-univ-b` :5442(`--profile multi`) · `postgres-central` :5434 · redis :6379 · minio :9000 |
-| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 234 · server-kit 35 · central-api 20 · event-relay 4 (실패 0, 3개는 관리자 토큰 설정 여부로 건너뜀) |
+| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 242 · server-kit 35 · central-api 20 · event-relay 4 (전체 301, DB 없는 실행 160 pass·141 skip·실패 0) |
 | 검사 | `npm run db:verify`(DB 제약 20종) · `node scripts/check-deps.mjs`(의존성 선언) · `helm lint deploy/charts/k-admission` |
 
 ## 4. 다음 작업 — 순서와 방법
@@ -85,8 +85,9 @@ A 클러스터 노드 컨테이너를 멈춘 동안 B 대학의 원서 생성→
 T-M4-09 PgBouncer는 두 kind 클러스터에 배포했고 직접 DB 우회 차단·동시 30쿼리·upstream 최대 10/10을 확인했다.
 결과는 `tests/m4/results/pgbouncer-2026-09-28T01-26-13-047Z.json`. T-M4-07은 즉시 최소 replica 상향과 예약 시각 이후
 비핵심 자동 대조 억제까지 반영했다(시험 5건·Helm 렌더링 통과). 예약 시각에 HPA를 바꿀 실행 주체가 없던 공백은 D-48로 기록했으며,
-애플리케이션에 Kubernetes 수정 권한을 주지 않고 T-M4-05 GitOps Pull과 함께 해결한다. 그 다음은 T-M4-08 HPA 커스텀 지표(metrics adapter) ·
-T-M4-20~24 관측성 순서다. 각 인수기준은 [M4 마일스톤](milestones/M4-federated-proof.md).
+애플리케이션에 Kubernetes 수정 권한을 주지 않고 T-M4-05 GitOps Pull과 함께 해결한다. T-M4-20의 접수 API Prometheus Metrics·OTLP/gRPC Trace와
+PII allowlist는 구현·smoke test를 마쳤다. 다음은 T-M4-08 metrics adapter 연동, T-M4-20 로그 상관관계와 나머지 서비스 계측,
+T-M4-21~24 대시보드·마스킹이다. 각 인수기준은 [M4 마일스톤](milestones/M4-federated-proof.md).
 
 T-M4-38은 로컬 축소 환경에서 MinIO 완전 단절 중 카탈로그 20회·원서 생성·자동저장이 정상이고 직접 업로드만 실패하는 것을 확인했다.
 MinIO 복구 515ms 뒤 기존 단기 URL 업로드와 서버 검증까지 통과했다. 결과는

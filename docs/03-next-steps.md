@@ -98,9 +98,9 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 |---|---|
 | T-M4-09 | ✅ PgBouncer 1.26.0 배포. 직접 DB 우회 차단, 동시 30쿼리 성공, upstream 최대 10/10 확인 (`pgbouncer-2026-09-28T01-26-13-047Z.json`) |
 | T-M4-07 | 🟡 즉시 Peak Mode 최소 replica 상향·예약 시각 이후 비핵심 자동 대조 억제 완료. 예약 HPA 전환은 D-48에 따라 T-M4-05 GitOps 실행 주체와 함께 구현 |
-| T-M4-08 | HPA 커스텀 지표 — metrics adapter 설치 후 |
+| T-M4-08 | HPA 커스텀 지표 — `http_requests_total` 노출 완료, metrics adapter 설치·HPA 연동 시험 후 |
 | T-M4-05 | GitOps Pull 배포(Argo CD 또는 Flux) — 서명된 이미지만 |
-| T-M4-20~24 | OpenTelemetry 계측·대시보드·PII 마스킹 |
+| T-M4-20~24 | 🟡 접수 API Prometheus Metrics·OTLP/gRPC Trace·PII allowlist 완료(`tests/m4/telemetry-smoke.mjs`). 로그 상관관계·다른 서비스·대시보드 남음 |
 
 ### 🎯 목표 4 — 노션 반영 (D-43 · D-44)
 

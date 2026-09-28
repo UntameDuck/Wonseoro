@@ -165,6 +165,17 @@ observability:
   otelEndpoint: ""
   includeRequestBody: false
   piiLabelsAllowed: false
+  metrics:
+    enabled: true
+    port: 9464
+    ingressFrom:
+      - namespaceSelector: { matchLabels: { kadmission-zone: observability } }
+        podSelector: { matchLabels: { app.kubernetes.io/name: prometheus } }
+  collectorEgress:
+    to:
+      - namespaceSelector: { matchLabels: { kadmission-zone: observability } }
+        podSelector: { matchLabels: { app.kubernetes.io/name: opentelemetry-collector } }
+    ports: [4317]
 
 networkPolicy:
   defaultDeny: true
