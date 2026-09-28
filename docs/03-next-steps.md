@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-28 (**M4 진행** — PgBouncer kind 통합 시험 통과. 다음은 Peak Mode T-M4-07)
+> 최종 갱신: 2026-09-28 (**M4 진행** — Peak Mode 비핵심 작업 억제 반영. 예약 HPA 전환은 GitOps T-M4-05와 연계)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -22,8 +22,8 @@
 | M5 신뢰성·보안·접근성 | 0/35 | |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 65/139 태스크** (🟡 부분 완료 별도). **293개 테스트**
-(admission-api 234 · server-kit 35 · central-api 20 · event-relay 4) — 실패 0, 환경 조건으로 건너뛰는 3개(관리자 토큰 설정 여부).
+**총 65/139 태스크** (🟡 부분 완료 별도). **298개 테스트**
+(admission-api 239 · server-kit 35 · central-api 20 · event-relay 4) — 실패 0, 환경 조건으로 건너뛰는 3개(관리자 토큰 설정 여부).
 DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`) CI 포함.
 
 ### 동작하는 것 — End-to-End
@@ -96,7 +96,7 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 | ID | 할 일 |
 |---|---|
 | T-M4-09 | ✅ PgBouncer 1.26.0 배포. 직접 DB 우회 차단, 동시 30쿼리 성공, upstream 최대 10/10 확인 (`pgbouncer-2026-09-28T01-26-13-047Z.json`) |
-| T-M4-07 | Peak Mode 예약 전환(scheduledActivation)·비핵심 Job 억제 |
+| T-M4-07 | 🟡 즉시 Peak Mode 최소 replica 상향·예약 시각 이후 비핵심 자동 대조 억제 완료. 예약 HPA 전환은 D-48에 따라 T-M4-05 GitOps 실행 주체와 함께 구현 |
 | T-M4-08 | HPA 커스텀 지표 — metrics adapter 설치 후 |
 | T-M4-05 | GitOps Pull 배포(Argo CD 또는 Flux) — 서명된 이미지만 |
 | T-M4-20~24 | OpenTelemetry 계측·대시보드·PII 마스킹 |

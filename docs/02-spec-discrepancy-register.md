@@ -739,6 +739,20 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-48. Peak Mode 예약 시각은 있지만 HPA 전환 실행 주체가 없다
+
+| | |
+|---|---|
+| **발견** | 2026-09-28 (T-M4-07 구현 대조) |
+| **충돌** | §01 B1과 §05 첨부 `values-m.yaml`은 `peakMode.scheduledActivation`으로 D-1 사전 확장·마감 전 최소 replica 상향을 요구한다. 현재 차트는 배포할 때 `peakMode.enabled=true`인 경우에만 HPA 최소값을 올리고, 예약 시각을 읽어 실제 전환할 실행 주체는 없다. `suspendNonCriticalJobs`도 선언만 있고 사용하지 않는다. |
+| **위험** | 예약 시각만 설정하면 자동 전환된다고 오인할 수 있다. HPA가 트래픽을 본 뒤 반응하므로 피크 시작 전에 필요한 여유 용량을 확보하지 못하고, 비핵심 대조 작업도 피크 중 DB 자원을 계속 사용한다. |
+| **판정 방향** | 애플리케이션 Pod에 Kubernetes 수정 권한을 주지 않는다. 예약된 HPA/replica 변경은 T-M4-05 GitOps Pull의 운영 저장소·배포 자동화가 수행하고, Data Plane 앱은 예약 시각을 읽어 비핵심 내부 작업만 억제한다. GitOps 도구(Argo CD/Flux)와 예약 실행 방식이 확정되기 전에는 `scheduledActivation`만으로 Scale-out 완료를 주장하지 않는다. |
+| **저장소 반영** | 🟡 `PEAK_MODE_*` 설정과 예약 시각 이후 자동 대조 억제·시험은 반영. 예약 HPA 전환은 T-M4-05와 함께 남음 |
+| **노션 반영** | 해당 없음 — 기존 요구를 실행할 주체가 저장소에 빠진 구현 공백 |
+| **상태** | 🟡 부분 반영 — GitOps 예약 실행 결정 필요 |
+
+---
+
 <!--
 신규 항목 템플릿
 

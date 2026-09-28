@@ -12,7 +12,7 @@
 - **제품**: 원서로(K-Admission) — 대학 입학 원서접수를 대학별 Data Plane 으로 분산하는 플랫폼. 2026 GovTech 공모전 출품작
 - **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 7/28 진행 중**. 전체 65/139 태스크
 - **완료한 핵심 증명**: 로컬 kind 2클러스터 축소 환경에서 **대학 간 장애 격리 T-M4-42 통과**. A대 전면 정지 중 B대 접수·중앙 반영, A대 복구 후 접수까지 확인
-- **바로 다음 할 일**: **T-M4-07 Peak Mode 예약 전환·비핵심 Job 억제** → [§4](#4-다음-작업--순서와-방법)
+- **바로 다음 할 일**: **T-M4-05 GitOps Pull 실행 주체 확정·T-M4-07 예약 HPA 전환 연결** → [§4](#4-다음-작업--순서와-방법)
 
 ## 2. 반드시 지킬 규칙
 
@@ -83,8 +83,10 @@ A 클러스터 노드 컨테이너를 멈춘 동안 B 대학의 원서 생성→
 ### 목표 3 — 차트에 남은 운영 기능
 
 T-M4-09 PgBouncer는 두 kind 클러스터에 배포했고 직접 DB 우회 차단·동시 30쿼리·upstream 최대 10/10을 확인했다.
-결과는 `tests/m4/results/pgbouncer-2026-09-28T01-26-13-047Z.json`. 다음은 T-M4-07 Peak Mode 예약 전환 · T-M4-08 HPA 커스텀 지표(metrics adapter) ·
-T-M4-05 GitOps Pull(Argo CD/Flux) · T-M4-20~24 관측성 순서다. 각 인수기준은 [M4 마일스톤](milestones/M4-federated-proof.md).
+결과는 `tests/m4/results/pgbouncer-2026-09-28T01-26-13-047Z.json`. T-M4-07은 즉시 최소 replica 상향과 예약 시각 이후
+비핵심 자동 대조 억제까지 반영했다(시험 5건·Helm 렌더링 통과). 예약 시각에 HPA를 바꿀 실행 주체가 없던 공백은 D-48로 기록했으며,
+애플리케이션에 Kubernetes 수정 권한을 주지 않고 T-M4-05 GitOps Pull과 함께 해결한다. 그 다음은 T-M4-08 HPA 커스텀 지표(metrics adapter) ·
+T-M4-20~24 관측성 순서다. 각 인수기준은 [M4 마일스톤](milestones/M4-federated-proof.md).
 
 Docker 데이터는 `E:\DockerData`로 이전되어 C: 여유 공간이 약 25GB로 회복됐다. 이전 공간 부족 때 B kind의
 Node 이미지 레이어가 손상되어 B 클러스터만 재생성했다. 대학 DB는 외부 Docker volume이라 데이터 손실은 없다.

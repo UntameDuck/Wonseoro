@@ -1,7 +1,12 @@
-import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { Db, describeFailure } from '@wonseoro/server-kit';
 import { withLeaderLock } from '../../common/scheduling/leader-lock';
-import { RECON_SCHEDULE } from '../../config';
+import {
+  PeakModePolicy,
+  PEAK_MODE_POLICY,
+  shouldSuspendNonCriticalJobs,
+} from '../../common/scheduling/peak-mode';
+import { PEAK_MODE, RECON_SCHEDULE } from '../../config';
 import { ReconcileResult, ReconciliationService } from './reconciliation.service';
 
 /**
@@ -22,6 +27,8 @@ export class ReconciliationScheduler implements OnModuleInit, OnApplicationShutd
   constructor(
     private readonly db: Db,
     private readonly reconciliation: ReconciliationService,
+    @Inject(PEAK_MODE_POLICY)
+    private readonly peakMode: PeakModePolicy = PEAK_MODE,
   ) {}
 
   onModuleInit(): void {
@@ -42,8 +49,9 @@ export class ReconciliationScheduler implements OnModuleInit, OnApplicationShutd
     }
   }
 
-  /** 다른 Pod 가 돌고 있으면 null. */
+  /** Peak Mode로 억제됐거나 다른 Pod가 돌고 있으면 null. */
   async tick(sinceHours: number = RECON_SCHEDULE.sinceHours): Promise<ReconcileResult | null> {
+    if (shouldSuspendNonCriticalJobs(this.peakMode)) return null;
     return withLeaderLock(this.db, ReconciliationScheduler.LOCK, () =>
       this.reconciliation.reconcile(sinceHours),
     );

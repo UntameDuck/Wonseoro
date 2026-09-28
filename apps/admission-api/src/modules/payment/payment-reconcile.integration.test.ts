@@ -352,6 +352,24 @@ describe('결제 재확인 워커 (D-40)', () => {
 });
 
 describe('대조 스케줄 (D-40)', () => {
+  it('Peak Mode 예약 시각부터 비핵심 대조를 실행하지 않는다', async () => {
+    let runs = 0;
+    const reconciliation = {
+      async reconcile() {
+        runs += 1;
+        return { checked: 0, opened: 0, autoResolved: 0, stillOpen: 0 };
+      },
+    } as unknown as ReconciliationService;
+    const scheduler = new ReconciliationScheduler(db, reconciliation, {
+      enabled: false,
+      scheduledActivationMs: Date.parse('2026-09-11T03:00:00Z'),
+      suspendNonCriticalJobs: true,
+    });
+
+    assert.equal(await scheduler.tick(48), null);
+    assert.equal(runs, 0);
+  });
+
   it('한 Pod 만 대조를 돌린다', async (t) => {
     if (!available) return t.skip('DATABASE_URL 없음');
     let runs = 0;

@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { PEAK_MODE_POLICY } from '../../common/scheduling/peak-mode';
+import { PEAK_MODE } from '../../config';
 import { AuditModule } from '../audit/audit.module';
 import { ReconciliationController } from './reconciliation.controller';
 import { ReconciliationScheduler } from './reconciliation.scheduler';
@@ -7,7 +9,11 @@ import { ReconciliationService } from './reconciliation.service';
 @Module({
   imports: [AuditModule],
   controllers: [ReconciliationController],
-  providers: [ReconciliationService, ReconciliationScheduler],
+  providers: [
+    ReconciliationService,
+    { provide: PEAK_MODE_POLICY, useValue: PEAK_MODE },
+    ReconciliationScheduler,
+  ],
   exports: [ReconciliationService],
 })
 export class ReconciliationModule {}

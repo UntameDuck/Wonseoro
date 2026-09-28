@@ -74,6 +74,14 @@ spec:
               value: {{ $v.reconciliation.intervalMs | quote }}
             - name: RECON_SCHEDULE_SINCE_HOURS
               value: {{ $v.reconciliation.sinceHours | quote }}
+            - name: PEAK_MODE_ENABLED
+              value: {{ $v.peakMode.enabled | quote }}
+            {{- with $v.peakMode.scheduledActivation }}
+            - name: PEAK_MODE_ACTIVATES_AT
+              value: {{ . | quote }}
+            {{- end }}
+            - name: PEAK_MODE_SUSPEND_NON_CRITICAL_JOBS
+              value: {{ $v.peakMode.suspendNonCriticalJobs | quote }}
             - name: S3_ENDPOINT
               value: {{ $v.objectStorage.endpoint | quote }}
             - name: S3_BUCKET

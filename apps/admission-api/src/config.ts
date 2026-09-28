@@ -9,6 +9,7 @@ import {
   requireEnv,
   secretOrDev,
 } from '@wonseoro/server-kit';
+import { parsePeakModeActivation } from './common/scheduling/peak-mode';
 
 /**
  * admission-api 설정 — 기동 시점에 전부 확정한다.
@@ -171,6 +172,18 @@ export const RECON_SCHEDULE = {
   autostart: envBool('RECON_SCHEDULE_AUTOSTART', true),
   intervalMs: envInt('RECON_SCHEDULE_INTERVAL_MS', 3_600_000, { min: 60_000, max: 86_400_000 }),
   sinceHours: envInt('RECON_SCHEDULE_SINCE_HOURS', 48, { min: 1, max: 720 }),
+} as const;
+
+/**
+ * Admission Peak Mode (§01 B1, T-M4-07).
+ *
+ * HPA 최소 replica 전환은 GitOps가 담당한다(D-48). 이 프로세스는 같은 예약 시각부터
+ * 자동 대조처럼 접수 핵심 경로가 아닌 내부 작업을 멈춰 DB 여유를 보존한다.
+ */
+export const PEAK_MODE = {
+  enabled: envBool('PEAK_MODE_ENABLED', false),
+  scheduledActivationMs: parsePeakModeActivation(process.env.PEAK_MODE_ACTIVATES_AT),
+  suspendNonCriticalJobs: envBool('PEAK_MODE_SUSPEND_NON_CRITICAL_JOBS', true),
 } as const;
 
 /** 활성 마감정책이 없을 때 환경변수로 대신하는 개발용 경로. */
