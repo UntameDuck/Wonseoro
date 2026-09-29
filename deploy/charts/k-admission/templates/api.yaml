@@ -94,6 +94,8 @@ spec:
             - name: PEAK_MODE_ENDS_AT
               value: {{ . | quote }}
             {{- end }}
+            - name: THROTTLE_MODE
+              value: {{ $v.throttle.mode | quote }}
             - name: PEAK_MODE_SUSPEND_NON_CRITICAL_JOBS
               value: {{ $v.peakMode.suspendNonCriticalJobs | quote }}
             {{- include "ka.telemetryEnv" . | nindent 12 }}

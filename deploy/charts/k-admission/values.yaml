@@ -87,6 +87,11 @@ reconciliation:
   intervalMs: 3600000              # 앱 안 스케줄러 주기
   sinceHours: 48
 
+# 지원자 단위 Adaptive Throttling (T-M4-40, ADR-0007). IP 가 아니라 인증된 지원자·원서 기준이다.
+# enforce | observe(판정만 세고 막지 않음 — 운영 첫 적용 때) | off
+throttle:
+  mode: enforce
+
 # Peak Mode (T-M4-07). 운영에서는 대학별 peak-schedule.yaml → 예약 자동화가 만든
 # deploy/universities/<UNIV>/peak-mode.yaml 이 마지막에 얹혀 이 값을 정한다 (D-48, ADR-0006).
 peakMode:

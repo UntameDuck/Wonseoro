@@ -9,6 +9,7 @@ import { ADMIN_API_TOKEN, AUTH_MODE, CORS_ORIGINS, PORT, UNIVERSITY_ID } from '.
 import { IdempotencyInterceptor } from './common/idempotency/idempotency.interceptor';
 import { IdempotencyStore } from './common/idempotency/idempotency.store';
 import { ProblemFilter } from './common/problem/problem.filter';
+import { installAdaptiveThrottle } from './common/throttle/throttle.hook';
 import { strictJsonParser } from './common/http/strict-json';
 import {
   assertConfigured,
@@ -51,6 +52,8 @@ async function bootstrap(): Promise<void> {
   fastify.removeContentTypeParser('application/json');
   fastify.addContentTypeParser('application/json', { parseAs: 'buffer' }, strictJsonParser);
   installHttpTelemetry(fastify);
+  // 지원자 단위 Adaptive Throttling — IP 가 아니라 세션·원서 기준 (T-M4-40)
+  installAdaptiveThrottle(fastify);
 
   // 모든 오류를 problem+json 으로 통일한다.
   app.useGlobalFilters(new ProblemFilter());

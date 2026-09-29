@@ -53,7 +53,7 @@ export class ProblemFilter implements ExceptionFilter {
   }
 
   private toProblem(exception: unknown, request: FastifyRequest): ProblemDetails {
-    const traceId = this.traceId(request);
+    const traceId = requestTraceId(request);
 
     if (exception instanceof ProblemException) {
       return {
@@ -85,16 +85,16 @@ export class ProblemFilter implements ExceptionFilter {
       instance: request.url,
     };
   }
+}
 
-  /** traceparent: 00-<trace-id>-<span-id>-<flags> */
-  private traceId(request: FastifyRequest): string {
-    const tp = request.headers[HEADER_TRACEPARENT];
-    if (typeof tp === 'string') {
-      const parts = tp.split('-');
-      if (parts[1]) return parts[1];
-    }
-    const rid = request.headers[HEADER_REQUEST_ID];
-    if (typeof rid === 'string' && rid) return rid;
-    return request.id ?? '';
+/** traceparent: 00-<trace-id>-<span-id>-<flags>. Nest 밖(Fastify 훅)에서 만든 problem 도 같은 값을 쓴다. */
+export function requestTraceId(request: FastifyRequest): string {
+  const tp = request.headers[HEADER_TRACEPARENT];
+  if (typeof tp === 'string') {
+    const parts = tp.split('-');
+    if (parts[1]) return parts[1];
   }
+  const rid = request.headers[HEADER_REQUEST_ID];
+  if (typeof rid === 'string' && rid) return rid;
+  return request.id ?? '';
 }

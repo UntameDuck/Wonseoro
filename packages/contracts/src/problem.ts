@@ -41,6 +41,11 @@ export const ProblemCode = {
   FORBIDDEN: 'FORBIDDEN',
   INTERNAL: 'INTERNAL',
   NOT_FOUND: 'NOT_FOUND',
+  /**
+   * 지원자 단위 Adaptive Throttling (v1.1 §01 B6, T-M4-40). 429 + Retry-After.
+   * IP 가 아니라 인증된 지원자 기준이다. OpenAPI 에 429 응답을 적는 일은 노션 §03 첨부 교체와 함께 (D-51)
+   */
+  RATE_LIMITED: 'RATE_LIMITED',
 } as const;
 
 export type ProblemCodeValue = (typeof ProblemCode)[keyof typeof ProblemCode];

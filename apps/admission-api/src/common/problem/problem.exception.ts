@@ -124,6 +124,19 @@ export class ProblemException extends HttpException {
     });
   }
 
+  /** 지원자 단위 요청 한도 초과 (T-M4-40). reason 은 BURST(짧은 폭주) 또는 RISK(위험 신호 누적). */
+  static rateLimited(reason: 'BURST' | 'RISK', retryAfterSeconds: number): ProblemException {
+    return new ProblemException({
+      code: ProblemCode.RATE_LIMITED,
+      title: '요청이 너무 많습니다',
+      status: 429,
+      detail:
+        reason === 'RISK'
+          ? `비정상 요청 신호가 누적되어 잠시 변경 요청을 멈췄습니다. ${retryAfterSeconds}초 뒤 다시 시도해 주십시오. 저장된 내용과 접수 상태는 그대로입니다.`
+          : `짧은 시간에 요청이 몰렸습니다. ${retryAfterSeconds}초 뒤 다시 시도해 주십시오. 저장된 내용은 그대로입니다.`,
+    });
+  }
+
   static alreadyFinalized(): ProblemException {
     return new ProblemException({
       code: ProblemCode.ALREADY_FINALIZED,

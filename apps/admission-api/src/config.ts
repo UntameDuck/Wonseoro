@@ -188,6 +188,18 @@ export const PEAK_MODE = {
   suspendNonCriticalJobs: envBool('PEAK_MODE_SUSPEND_NON_CRITICAL_JOBS', true),
 } as const;
 
+/**
+ * 지원자 단위 Adaptive Throttling (§01 B6, T-M4-40, ADR-0007).
+ * IP 가 아니라 인증된 지원자 기준이라 학교 NAT 뒤 정상 수험생을 묶어 막지 않는다.
+ * observe 는 판정만 세고 막지 않는다 — 운영 첫 적용·한도 조정 때 먼저 켠다.
+ */
+export const THROTTLE_MODE = envChoice(
+  'THROTTLE_MODE',
+  ['enforce', 'observe', 'off'] as const,
+  'enforce',
+  '지원자 단위 요청 한도를 적용할지',
+);
+
 /** 활성 마감정책이 없을 때 환경변수로 대신하는 개발용 경로. */
 export const ALLOW_ENV_DEADLINE_POLICY = devOnlyFlag(
   'ALLOW_ENV_DEADLINE_POLICY',

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../problem/problem.exception';
+import { noteOwnershipMiss } from '../throttle/throttle.hook';
 
 /**
  * 소유권 확인 — 기술설계서 v1.0 §8.3, v1.1 §09 (Information Disclosure)
@@ -22,7 +23,7 @@ export class Ownership {
       `SELECT 1 FROM application WHERE id = $1 AND applicant_id = $2`,
       [applicationId, applicantId],
     );
-    if (!rowCount) throw notFound('원서');
+    if (!rowCount) throw notFound('원서', applicantId);
   }
 
   async assertPayment(paymentId: string, applicantId: string): Promise<void> {
@@ -32,7 +33,7 @@ export class Ownership {
         WHERE p.id = $1 AND a.applicant_id = $2`,
       [paymentId, applicantId],
     );
-    if (!rowCount) throw notFound('결제');
+    if (!rowCount) throw notFound('결제', applicantId);
   }
 
   async assertDocument(documentId: string, applicantId: string): Promise<void> {
@@ -42,7 +43,7 @@ export class Ownership {
         WHERE d.id = $1 AND a.applicant_id = $2`,
       [documentId, applicantId],
     );
-    if (!rowCount) throw notFound('서류');
+    if (!rowCount) throw notFound('서류', applicantId);
   }
 
   async assertSubmission(submissionId: string, applicantId: string): Promise<void> {
@@ -52,7 +53,7 @@ export class Ownership {
         WHERE s.id = $1 AND a.applicant_id = $2`,
       [submissionId, applicantId],
     );
-    if (!rowCount) throw notFound('접수');
+    if (!rowCount) throw notFound('접수', applicantId);
   }
 }
 
@@ -60,6 +61,8 @@ export class Ownership {
  * 없는 것과 남의 것을 구분해서 알려주지 않는다 — 둘 다 같은 404. (D-28, OpenAPI)
  * 전에는 400 VALIDATION_FAILED 였다. 구분은 막았지만 계약(404)과 달랐다.
  */
-function notFound(what: string): ProblemException {
+function notFound(what: string, applicantId: string): ProblemException {
+  // 남의 것(또는 없는 것)을 찾은 지원자의 위험점수를 올린다 — 식별자를 바꿔 가며 훑는 BOLA 탐색 신호 (T-M4-40)
+  noteOwnershipMiss(applicantId);
   return ProblemException.notFound(`존재하지 않는 ${what}입니다.`);
 }
