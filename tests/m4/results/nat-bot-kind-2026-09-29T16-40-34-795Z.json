@@ -1,0 +1,80 @@
+{
+  "test": "T-M4-40",
+  "scenario": "학교 NAT(단일 출발지) 뒤 정상 지원자 200명 + 봇 5개 동시 90초",
+  "environment": "local-kind-univ-a (축소 환경, API Pod 2개, 한도 상태는 Pod 메모리)",
+  "limitations": [
+    "인증은 dev-headers 다. 운영에서는 게이트웨이가 검증한 지원자 신원이 키가 되므로 봇이 신원을 마음대로 바꿀 수 없다.",
+    "CAPTCHA 대체 확인 수단은 아직 없다(인증 연동 M5). 위험 차단은 Retry-After 로 시간이 지나면 풀린다.",
+    "처리 지연 수치는 축소 환경 값이다. 성능 수치가 아니다."
+  ],
+  "startedAt": "2026-09-29T16:40:34.795Z",
+  "checks": {
+    "정상 사용자 차단 0 (429 없음)": {
+      "pass": true,
+      "normal429": 0,
+      "normalRequests": 2728
+    },
+    "정상 사용자 서버 오류 0": {
+      "pass": false,
+      "normal5xx": 65
+    },
+    "정상 사용자 전원 접수": {
+      "pass": false,
+      "finalize": {
+        "200": 135
+      }
+    },
+    "봇은 대부분 막힌다": {
+      "pass": true,
+      "bot429": 6531,
+      "botRequests": 7692,
+      "ratio": 0.849
+    }
+  },
+  "stats": {
+    "normal": {
+      "create": {
+        "0": 65,
+        "201": 135
+      },
+      "save": {
+        "200": 1598,
+        "400": 43
+      },
+      "read": {
+        "200": 482
+      },
+      "paymentIntent": {
+        "201": 135
+      },
+      "paymentVerify": {
+        "200": 135
+      },
+      "finalize": {
+        "200": 135
+      }
+    },
+    "bot": {
+      "saveFlood": {
+        "0": 16,
+        "412": 296,
+        "429": 3588
+      },
+      "probeOthers": {
+        "404": 814,
+        "429": 2426
+      },
+      "saveOwn": {
+        "429": 162
+      },
+      "createFlood": {
+        "0": 2,
+        "200": 33,
+        "429": 355
+      }
+    }
+  },
+  "normalSaveLatencyP95Ms": 4740,
+  "finishedAt": "2026-09-29T16:42:14.753Z",
+  "pass": false
+}

@@ -76,6 +76,17 @@ export class ProblemFilter implements ExceptionFilter {
       };
     }
 
+    // DB 연결을 기다리다 시간이 다 됐다 — 마감 피크의 일시적 포화다. 500 이 아니라 재시도 안내(503)로 답한다.
+    // 변경 요청은 모두 Idempotency-Key 를 쓰고 핵심 변경은 한 트랜잭션이라, 같은 키로 다시 보내도 두 번 반영되지 않는다
+    // (T-M4-40 kind 시험에서 확인)
+    if (isTransientDbSaturation(exception)) {
+      return {
+        ...ProblemException.retryable('접속이 몰려 잠시 처리하지 못했습니다. 잠시 후 다시 시도해 주십시오.').problem,
+        instance: request.url,
+        traceId,
+      };
+    }
+
     return {
       type: problemType(ProblemCode.INTERNAL),
       title: '서버 내부 오류가 발생했습니다',
@@ -85,6 +96,15 @@ export class ProblemFilter implements ExceptionFilter {
       instance: request.url,
     };
   }
+}
+
+/**
+ * 연결 풀 포화 — pg-pool 이 connectionTimeoutMillis 안에 연결을 못 준 경우, PgBouncer 가 클라이언트 상한으로
+ * 거절한 경우. 그 쿼리는 연결을 얻지 못해 실행되지 않았다.
+ */
+export function isTransientDbSaturation(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return /timeout exceeded when trying to connect|no more connections allowed|too many clients already/i.test(error.message);
 }
 
 /** traceparent: 00-<trace-id>-<span-id>-<flags>. Nest 밖(Fastify 훅)에서 만든 problem 도 같은 값을 쓴다. */

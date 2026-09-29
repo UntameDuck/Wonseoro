@@ -72,8 +72,13 @@ sql(`INSERT INTO applicant (id, subject_token, pii_ciphertext, pii_key_version) 
 const headersOf = (i) => ({ 'x-applicant-id': i.applicantId, 'x-subject-token': i.subjectToken });
 
 const stats = { normal: {}, bot: {} };
+const causes = {};
 const saveMs = [];
-function count(kind, step, status) {
+function count(kind, step, status, response) {
+  if (kind === 'normal' && response && (response.status === 0 || response.status >= 400)) {
+    const cause = `${step} ${response.status} ${response.error ?? response.json?.code ?? ''}`;
+    causes[cause] = (causes[cause] ?? 0) + 1;
+  }
   const bucket = (stats[kind][step] ??= {});
   bucket[status] = (bucket[status] ?? 0) + 1;
 }
@@ -85,7 +90,7 @@ async function normalUser(identity, index) {
   await sleep(jitter(0, 5_000)); // 한꺼번에 몰리지 않고 몇 초에 걸쳐 들어온다
   const created = await http(id, 'POST', '/api/v1/applications', { headers: key('create'),
     body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT } });
-  count('normal', 'create', created.status);
+  count('normal', 'create', created.status, created);
   const applicationId = created.json?.id;
   if (!applicationId) return;
   let etag = (await http(id, 'GET', `/api/v1/applications/${applicationId}`)).etag;
@@ -96,22 +101,22 @@ async function normalUser(identity, index) {
       headers: { ...key('save'), 'if-match': etag, 'content-type': 'application/merge-patch+json' },
       body: { fields: { ...FIELDS, selfIntro: `${FIELDS.selfIntro} (${index}-${Date.now()})` } },
     });
-    count('normal', 'save', saved.status);
+    count('normal', 'save', saved.status, saved);
     saveMs.push(saved.ms);
     if (saved.etag) etag = saved.etag;
     if (Date.now() - lastRead > 15_000) {
       const read = await http(id, 'GET', `/api/v1/applications/${applicationId}`);
-      count('normal', 'read', read.status);
+      count('normal', 'read', read.status, read);
       if (read.etag) etag = read.etag;
       lastRead = Date.now();
     }
   }
   const intent = await http(id, 'POST', `/api/v1/applications/${applicationId}/payment-intents`, { headers: key('intent') });
-  count('normal', 'paymentIntent', intent.status);
+  count('normal', 'paymentIntent', intent.status, intent);
   const verified = await http(id, 'POST', `/api/v1/payments/${intent.json?.paymentId}/verify`, { headers: key('verify') });
-  count('normal', 'paymentVerify', verified.status);
+  count('normal', 'paymentVerify', verified.status, verified);
   const finalized = await http(id, 'POST', `/api/v1/applications/${applicationId}/finalize`, { headers: key('finalize') });
-  count('normal', 'finalize', finalized.status);
+  count('normal', 'finalize', finalized.status, finalized);
 }
 
 async function probeBot(identity) {
@@ -154,6 +159,8 @@ await Promise.all([
 const total = (kind, filter = () => true) => Object.values(stats[kind]).reduce((sum, byStatus) =>
   sum + Object.entries(byStatus).filter(([s]) => filter(Number(s))).reduce((a, [, n]) => a + n, 0), 0);
 result.stats = stats;
+result.normalFailureCauses = causes;
+console.log(`· 정상 사용자 실패 원인 ${JSON.stringify(causes)}`);
 const normal429 = total('normal', (s) => s === 429);
 const normal5xx = total('normal', (s) => s >= 500 || s === 0);
 const bot429 = total('bot', (s) => s === 429);

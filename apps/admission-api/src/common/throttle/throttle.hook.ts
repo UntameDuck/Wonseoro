@@ -63,8 +63,9 @@ export function installAdaptiveThrottle(
     decisions.add(1, { class: cls, decision: decision.reason.toLowerCase() });
     if (THROTTLE_MODE !== 'enforce') return;
 
-    if (decision.reason === 'RISK') {
-      // 사람이 찾을 문장. 지원자 식별자는 남기지 않는다 — trace_id 로 이어서 본다
+    if (decision.reason === 'RISK' && firstRiskBlock(subject)) {
+      // 사람이 찾을 문장. 지원자 식별자는 남기지 않는다 — trace_id 로 이어서 본다.
+      // 지원자마다 5분에 한 번만 — 공격 중에 요청마다 남기면 로그가 먼저 무너진다 (횟수는 지표가 센다)
       logger.warn(`RISK throttle class=${cls} retryAfter=${decision.retryAfterSeconds}s`);
     }
     const problem = {
@@ -85,6 +86,15 @@ export function installAdaptiveThrottle(
 }
 
 let active: AdaptiveThrottle | null = null;
+
+const riskLogged = new Map<string, number>();
+function firstRiskBlock(subject: string, now = Date.now()): boolean {
+  const last = riskLogged.get(subject);
+  if (last !== undefined && now - last < 5 * 60_000) return false;
+  if (riskLogged.size >= 10_000) riskLogged.clear();
+  riskLogged.set(subject, now);
+  return true;
+}
 
 /** 소유권 검사가 부른다(ownership.service). 훅이 걸려 있지 않으면(off·시험) 아무것도 하지 않는다. */
 export function noteOwnershipMiss(applicantId: string): void {

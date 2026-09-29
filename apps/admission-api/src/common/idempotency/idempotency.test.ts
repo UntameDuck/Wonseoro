@@ -79,3 +79,40 @@ describe('Idempotency Store (v1.1 §B12 / §01 E 인수기준)', () => {
     assert.equal(results.length, 100);
   });
 });
+
+describe('Idempotency 인터셉터 — 응답 기록 실패가 프로세스를 죽이지 않는다 (T-M4-40 에서 발견)', () => {
+  it('complete 가 실패해도 응답은 그대로 나가고, 처리되지 않은 Promise 거부가 생기지 않는다', async () => {
+    const { IdempotencyInterceptor } = await import('./idempotency.interceptor');
+    const { lastValueFrom, of } = await import('rxjs');
+
+    class FlakyStore extends InMemoryIdempotencyStore {
+      override async complete(): Promise<void> {
+        throw new Error('timeout exceeded when trying to connect');
+      }
+    }
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on('unhandledRejection', onUnhandled);
+
+    const request = {
+      method: 'PATCH',
+      url: '/api/v1/applications/55555555-5555-5555-5555-555555555555',
+      headers: { 'idempotency-key': 'k'.repeat(32) },
+      params: { applicationId: '55555555-5555-5555-5555-555555555555' },
+      body: { fields: { a: 1 } },
+    };
+    const context = {
+      switchToHttp: () => ({ getRequest: () => request, getResponse: () => ({ statusCode: 200, status: () => undefined }) }),
+      getHandler: () => () => undefined,
+    } as never;
+    const interceptor = new IdempotencyInterceptor(new FlakyStore());
+    try {
+      const body = await lastValueFrom(interceptor.intercept(context, { handle: () => of({ saved: true }) }));
+      assert.deepEqual(body, { saved: true });
+      await new Promise((r) => setImmediate(r));
+      assert.deepEqual(unhandled, []);
+    } finally {
+      process.off('unhandledRejection', onUnhandled);
+    }
+  });
+});

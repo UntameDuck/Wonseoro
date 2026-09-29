@@ -2,8 +2,10 @@ import {
   CallHandler,
   ExecutionContext,
   Injectable,
+  Logger,
   NestInterceptor,
 } from '@nestjs/common';
+import { describeFailure } from '@wonseoro/server-kit';
 import { Reflector } from '@nestjs/core';
 import { createHash } from 'node:crypto';
 import type { FastifyRequest } from 'fastify';
@@ -36,6 +38,8 @@ const MUTATION_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
  */
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
+  private readonly logger = new Logger('idempotency');
+
   constructor(
     private readonly store: IdempotencyStore,
     private readonly reflector: Reflector = new Reflector(),
@@ -100,15 +104,27 @@ export class IdempotencyInterceptor implements NestInterceptor {
             next: (body) => {
               const status =
                 context.switchToHttp().getResponse<{ statusCode?: number }>().statusCode ?? 200;
-              void this.store.complete(scope, status, body);
+              this.record(this.store.complete(scope, status, body), 'complete');
             },
             error: () => {
-              void this.store.fail(scope);
+              this.record(this.store.fail(scope), 'fail');
             },
           }),
         );
       }),
     );
+  }
+
+  /**
+   * 응답 기록은 기다리지 않는다 — 요청은 이미 커밋됐고, 기록이 늦거나 실패해도 그 결과를 바꾸지 않는다.
+   * 다만 실패를 잡지 않으면 처리되지 않은 Promise 거부로 **프로세스가 죽는다.** 마감 피크에 DB 풀이 잠깐
+   * 모자라자 이 한 줄 때문에 API Pod 두 개가 연달아 재시작했다(T-M4-40 kind 시험). 기록을 못 한 요청을
+   * 같은 키로 재시도하면 PROCESSING 으로 보여 재시도 안내(503)를 받는다 — 중복 실행보다 낫다.
+   */
+  private record(write: Promise<void>, what: 'complete' | 'fail'): void {
+    write.catch((err: unknown) => {
+      this.logger.warn(`idempotency ${what} not recorded (${describeFailure(err)})`);
+    });
   }
 
   private requireKey(request: FastifyRequest): string {
