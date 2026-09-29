@@ -1,0 +1,62 @@
+# 업무 KPI·Support 지표 recording rule (T-M4-21·22·23, 기술설계서 v1.0 §15·§10.4)
+#
+# 비율의 정의는 여기 한 곳에만 둔다. 대시보드(dashboards/*.json)와 경보는 이 규칙 이름을 쓴다.
+# 성공률 분모에서 업무 검증 거절(rejected)·If-Match 충돌(conflict)은 뺀다 — §16 "업무 Validation 오류 제외".
+# 스크레이프 간격이 1분이라 rate 창은 2분 이상으로 둔다. 트래픽이 없으면 0/0 = NaN 으로 "데이터 없음" 이 된다. 0% 로 보이지 않게 일부러 clamp 하지 않는다.
+#
+# 이 파일 자체가 Prometheus chart(29.x) values 다: helm upgrade prometheus ... -f prometheus-values.yaml -f kpi-rules.yaml
+# 순서: 업무 KPI 7종(§15) → Support 고정 지표(§10.4) → Golden Signals(§15)
+serverFiles:
+  recording_rules.yml:
+    groups:
+      - name: k-admission-business-kpi
+        interval: 30s
+        rules:
+          - record: kadmission:draft_save_success_rate:5m
+            expr: |
+              sum by (namespace) (rate(draft_saves_total{outcome="saved"}[5m]))
+              /
+              sum by (namespace) (rate(draft_saves_total{outcome=~"saved|error"}[5m]))
+          - record: kadmission:payment_verify_success_rate:5m
+            expr: |
+              sum by (namespace) (rate(payment_verifications_total{outcome="verified"}[5m]))
+              /
+              sum by (namespace) (rate(payment_verifications_total{outcome=~"verified|unverified|error"}[5m]))
+          - record: kadmission:finalize_success_rate:5m
+            expr: |
+              sum by (namespace) (rate(finalizations_total{outcome=~"finalized|already_finalized"}[5m]))
+              /
+              sum by (namespace) (rate(finalizations_total{outcome=~"finalized|already_finalized|error"}[5m]))
+          - record: kadmission:finalize_retry_rate:5m
+            expr: |
+              sum by (namespace) (rate(finalizations_total{outcome="already_finalized"}[5m]))
+              /
+              sum by (namespace) (rate(finalizations_total[5m]))
+          - record: kadmission:outbox_oldest_age_seconds
+            expr: max by (namespace) (outbox_oldest_age_seconds)
+          - record: kadmission:central_sync_lag_seconds
+            expr: max by (namespace) (central_sync_lag_seconds)
+          - record: kadmission:document_scan_pending
+            expr: max by (namespace) (document_scan_pending)
+          - record: kadmission:payment_verify_latency_p95_seconds:5m
+            expr: |
+              histogram_quantile(0.95,
+                sum by (namespace, le) (rate(payment_verify_duration_bucket[5m])))
+          - record: kadmission:outbox_backlog
+            expr: max by (namespace) (outbox_backlog)
+          - record: kadmission:db_lock_waiting_sessions
+            expr: max by (namespace) (db_lock_waiting_sessions)
+          - record: kadmission:http_error_rate:5m
+            expr: |
+              (sum by (namespace) (rate(http_requests_total{http_response_status_code=~"5.."}[5m]))
+                or on (namespace) 0 * sum by (namespace) (rate(http_requests_total[5m])))
+              /
+              sum by (namespace) (rate(http_requests_total[5m]))
+          - record: kadmission:http_requests_per_second:2m
+            expr: sum by (namespace, service_name) (rate(http_requests_total[2m]) * on (namespace, pod) group_left(service_name) max by (namespace, pod, service_name) (target_info))
+          - record: kadmission:finalize_tps:2m
+            expr: sum by (namespace) (rate(finalizations_total{outcome="finalized"}[2m]))
+          - record: kadmission:http_request_duration_p95_seconds:5m
+            expr: |
+              histogram_quantile(0.95,
+                sum by (namespace, le) (rate(http_server_request_duration_bucket{http_route!~"/healthz|/readyz"}[5m])))

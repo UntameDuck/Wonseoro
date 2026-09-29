@@ -6,6 +6,7 @@ import { Db } from '@wonseoro/server-kit';
 import { purposeRef } from '@wonseoro/server-kit';
 import { CENTRAL_ID_SALT, CENTRAL_SUBJECT_KEY, CENTRAL_SUBJECT_KEY_ID } from '../../config';
 import { ProblemException } from '../../common/problem/problem.exception';
+import { trackFinalize } from '../../common/telemetry/business-metrics';
 import { AuditService } from '../audit/audit.service';
 import { DeadlineService } from '../deadline/deadline.service';
 import { FormSchemaService } from '../config/form-schema.service';
@@ -174,6 +175,16 @@ export class FinalizationService implements OnModuleInit {
   }
 
   async finalize(input: FinalizeInput): Promise<{ submission: SubmissionRow; created: boolean }> {
+    // finalize_success_rate · finalize_retry_rate (T-M4-22)
+    return trackFinalize(
+      input.trigger === 'PAYMENT_CONFIRMED' ? 'payment_confirmed' : 'applicant',
+      () => this.finalizeTracked(input),
+    );
+  }
+
+  private async finalizeTracked(
+    input: FinalizeInput,
+  ): Promise<{ submission: SubmissionRow; created: boolean }> {
     // ── 트랜잭션 이전: 외부 호출과 무거운 검증을 모두 끝낸다 ──────────────
 
     const existing = await this.findSubmission(input.applicationId);
@@ -185,7 +196,19 @@ export class FinalizationService implements OnModuleInit {
     // 결제 확인. CONFIRMED 가 아니면 여기서 멈춘다.
     const payment = await this.payments.confirmedFor(input.applicationId);
 
-    const app = await this.assertReady(input.applicationId, null);
+    let app: Awaited<ReturnType<FinalizationService['assertReady']>>;
+    try {
+      app = await this.assertReady(input.applicationId, null);
+    } catch (err) {
+      // 위에서 확인한 뒤 검증하는 사이 다른 경로(결제 확인의 자동 접수)가 먼저 접수했다.
+      // 잠금 뒤에 알게 된 경우(아래 !submission)와 같은 재시도다 — 같은 접수를 성공으로 돌려준다.
+      const raced =
+        err instanceof ProblemException && err.problem.code === 'ALREADY_FINALIZED'
+          ? await this.findSubmission(input.applicationId)
+          : null;
+      if (raced) return { submission: raced, created: false };
+      throw err;
+    }
 
     const commitAt = new Date();
     const policy = await this.deadline.assertWithinDeadline(app.cycleId, {

@@ -18,6 +18,7 @@ import { ReconciliationModule } from './modules/reconciliation/reconciliation.mo
 import { RetentionModule } from './modules/retention/retention.module';
 import { MetaModule } from './modules/meta/meta.module';
 import { OperatingModeModule } from './modules/operating-mode/operating-mode.module';
+import { BusinessGauges } from './common/telemetry/business-gauges';
 
 @Module({
   imports: [
@@ -41,5 +42,7 @@ import { OperatingModeModule } from './modules/operating-mode/operating-mode.mod
     MetaModule,
     OperatingModeModule,
   ],
+  // 업무 KPI 게이지 — Outbox·중앙 반영·서류 검사 대기·잠금 대기 (T-M4-22·23)
+  providers: [BusinessGauges],
 })
 export class AppModule {}

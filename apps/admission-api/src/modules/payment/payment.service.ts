@@ -3,6 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { PaymentStatus, PAYMENT_FINALIZABLE } from '@wonseoro/contracts';
 import { CircuitOpenError, Db, describeFailure } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
+import { trackPaymentVerify } from '../../common/telemetry/business-metrics';
 import { DependencyBreakers } from '../../common/resilience/dependency-breakers';
 import { AuditService } from '../audit/audit.service';
 import { PaymentProviderPort, VerifyResult } from './payment.provider';
@@ -149,12 +150,20 @@ export class PaymentService {
    * 트랜잭션 안에서 부르면 락 유지 시간이 PG 지연에 묶인다. (v1.1 §B3)
    */
   async verify(paymentId: string, context: { traceId?: string } = {}): Promise<PaymentRow> {
+    // payment_verify_success_rate · payment verify latency (T-M4-22·23)
+    return trackPaymentVerify(() => this.verifyTracked(paymentId, context));
+  }
+
+  private async verifyTracked(
+    paymentId: string,
+    context: { traceId?: string },
+  ): Promise<{ row: PaymentRow; unverified: boolean }> {
     const payment = await this.load(paymentId);
     if (!payment.providerTxId) {
       throw ProblemException.validationFailed('결제 거래번호가 없습니다.');
     }
     // 이미 확정된 결제는 다시 묻지 않는다.
-    if (payment.status === 'CONFIRMED') return payment;
+    if (payment.status === 'CONFIRMED') return { row: payment, unverified: false };
 
     const providerTxId = payment.providerTxId;
     let result: VerifyResult;
@@ -166,8 +175,13 @@ export class PaymentService {
       // 재결제를 유도해 중복 결제가 된다. 둘 다 아니므로 UNKNOWN 이다. (§B4)
       const cause = describeCause(err);
       this.logger.warn(`payment ${paymentId} unverified (${cause}) — UNKNOWN 으로 두고 대조에 맡긴다`);
-      if (!PaymentService.UNVERIFIED_TO_UNKNOWN.includes(payment.status)) return payment;
-      return this.apply(payment, 'UNKNOWN', undefined, context, { unverifiedCause: cause });
+      if (!PaymentService.UNVERIFIED_TO_UNKNOWN.includes(payment.status)) {
+        return { row: payment, unverified: true };
+      }
+      return {
+        row: await this.apply(payment, 'UNKNOWN', undefined, context, { unverifiedCause: cause }),
+        unverified: true,
+      };
     }
 
     // 금액이 다르면 확정하지 않는다. 결제창에서 금액이 바뀐 경우를 잡는다.
@@ -177,12 +191,12 @@ export class PaymentService {
       Number(result.amount) !== payment.amount
     ) {
       this.logger.error(`payment ${paymentId} amount mismatch`);
-      return this.apply(payment, 'FAILED', result.providerApprovedAt, context);
+      return { row: await this.apply(payment, 'FAILED', result.providerApprovedAt, context), unverified: false };
     }
 
     const applied = await this.apply(payment, result.status, result.providerApprovedAt, context);
     if (applied.status === 'CONFIRMED') await this.notifyConfirmed(applied);
-    return applied;
+    return { row: applied, unverified: false };
   }
 
   /**

@@ -13,6 +13,7 @@ import {
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { CACHE_CONTROL_PII, HEADER_IF_MATCH } from '@wonseoro/contracts';
 import { ProblemException } from '../../common/problem/problem.exception';
+import { trackDraftSave } from '../../common/telemetry/business-metrics';
 import { UNIVERSITY_ID } from '../../config';
 import { applicantFrom } from '../../common/identity/identity';
 import { Ownership } from '../../common/identity/ownership.service';
@@ -113,6 +114,16 @@ export class ApplicationController {
     @Body() body: PatchBody,
     @Req() req: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    // draft_save_success_rate (T-M4-22)
+    return trackDraftSave(() => this.save(applicationId, body, req, reply));
+  }
+
+  private async save(
+    applicationId: string,
+    body: PatchBody,
+    req: FastifyRequest,
+    reply: FastifyReply,
   ) {
     await this.ownership.assertApplication(applicationId, applicantFrom(req).applicantId);
 

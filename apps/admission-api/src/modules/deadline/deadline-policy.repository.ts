@@ -216,6 +216,13 @@ export class DeadlinePolicyRepository extends DeadlinePolicyPort {
 
   async approve(policyId: string, approver: string): Promise<{ complete: boolean }> {
     const state = await this.loadApprovalState(policyId);
+    // 다른 두 사람이 먼저 승인을 끝냈다. 조건부 UPDATE 에서 진 경우와 같은 일이라 같은 409 로 답한다 —
+    // 읽는 시점이 조금 늦었다고 400 이 되면 같은 경합의 답이 타이밍에 따라 갈린다.
+    if (state.status === 'APPROVED') {
+      throw ProblemException.versionConflict(
+        '다른 승인으로 이미 두 사람 승인이 끝났습니다. 목록을 새로 고쳐 확인해 주십시오.',
+      );
+    }
     if (state.status !== 'DRAFT') {
       throw ProblemException.validationFailed(`승인할 수 없는 상태입니다. (현재: ${state.status})`);
     }
