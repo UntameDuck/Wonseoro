@@ -10,9 +10,9 @@
 ## 1. 30초 요약
 
 - **제품**: 원서로(K-Admission) — 대학 입학 원서접수를 대학별 Data Plane 으로 분산하는 플랫폼. 2026 GovTech 공모전 출품작
-- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 9/28 진행 중**. 전체 67/139 태스크
+- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 10/28 진행 중**. 전체 68/139 태스크
 - **완료한 핵심 증명**: 로컬 kind 2클러스터 축소 환경에서 **대학 간 장애 격리 T-M4-42 통과**. A대 전면 정지 중 B대 접수·중앙 반영, A대 복구 후 접수까지 확인
-- **바로 다음 할 일**: **T-M4-05 GitOps Pull 실행 주체 확정·T-M4-07 예약 HPA 전환 연결** → [§4](#4-다음-작업--순서와-방법)
+- **바로 다음 할 일**: **T-M4-07 예약 시각에 Flux desired state를 전환하는 자동화** → [§4](#4-다음-작업--순서와-방법)
 
 ## 2. 반드시 지킬 규칙
 
@@ -84,8 +84,8 @@ A 클러스터 노드 컨테이너를 멈춘 동안 B 대학의 원서 생성→
 
 T-M4-09 PgBouncer는 두 kind 클러스터에 배포했고 직접 DB 우회 차단·동시 30쿼리·upstream 최대 10/10을 확인했다.
 결과는 `tests/m4/results/pgbouncer-2026-09-28T01-26-13-047Z.json`. T-M4-07은 즉시 최소 replica 상향과 예약 시각 이후
-비핵심 자동 대조 억제까지 반영했다(시험 5건·Helm 렌더링 통과). 예약 시각에 HPA를 바꿀 실행 주체가 없던 공백은 D-48로 기록했으며,
-애플리케이션에 Kubernetes 수정 권한을 주지 않고 T-M4-05 GitOps Pull과 함께 해결한다. T-M4-20의 접수 API Prometheus Metrics·OTLP/gRPC Trace와
+비핵심 자동 대조 억제까지 반영했다(시험 5건·Helm 렌더링 통과). 실행 주체는 T-M4-05에서 Flux로 확정했고,
+애플리케이션에 Kubernetes 수정 권한을 주지 않는다. 예약 시각에 desired state를 바꾸는 자동화는 D-48에 남아 있다. T-M4-20의 접수 API Prometheus Metrics·OTLP/gRPC Trace와
 PII allowlist는 구현·smoke test를 마쳤다. 다음은 T-M4-20 로그 상관관계와 나머지 서비스 계측,
 T-M4-21~24 대시보드·마스킹이다. 각 인수기준은 [M4 마일스톤](milestones/M4-federated-proof.md).
 
@@ -98,12 +98,20 @@ Docker/kind 노드 강제 종료에서 PgBouncer의 `/tmp/pgbouncer.pid`가 `emp
 진입점이 새 컨테이너 기동 직전에 stale PID 파일을 제거한다. 수정 이미지를 A/B에 배포한 뒤 A 노드를 강제 재시작했고,
 PgBouncer가 같은 Pod에서 오류 없이 재기동하여 A의 앱 전체와 관측 스택이 Ready로 복구되는 동안 B는 계속 정상임을 확인했다.
 
+T-M4-05는 Flux 2.9.5를 대학 클러스터 내부 Pull 실행 주체로 채택했다(ADR-0005). 운영 bootstrap은 `main` HEAD의
+SSH/PGP 서명을 검증하며 HelmRelease는 `kadmission-app` 전용 `release-controller`로만 수렴한다. 로컬 A kind에서
+signed HEAD의 SourceVerified·Helm v25 적용, unsigned HEAD의 `InvalidCommitSignature` 거부와 last-good 유지,
+replica drift 1→2 자동 복구를 확인했다. 결과는 `tests/m4/results/gitops-pull-2026-09-29T04-24-15-000Z.json`.
+시험용 Flux 리소스는 성공 상태에서 suspend했고 앱은 Ready로 유지했다. 이미지 Cosign admission 검증은 실제 Registry·신뢰키가 필요한 M5 공급망 게이트다.
+
 T-M4-38은 로컬 축소 환경에서 MinIO 완전 단절 중 카탈로그 20회·원서 생성·자동저장이 정상이고 직접 업로드만 실패하는 것을 확인했다.
 MinIO 복구 515ms 뒤 기존 단기 URL 업로드와 서버 검증까지 통과했다. 결과는
 `tests/m4/results/object-storage-outage-2026-09-28T06-14-19-725Z.json`.
 
-Docker 데이터는 `E:\DockerData`로 이전되어 C: 여유 공간이 약 25GB로 회복됐다. 이전 공간 부족 때 B kind의
-Node 이미지 레이어가 손상되어 B 클러스터만 재생성했다. 대학 DB는 외부 Docker volume이라 데이터 손실은 없다.
+Docker 데이터는 `E:\DockerData\DockerDesktopWSL`로 이전되어 C: 여유 공간이 약 22GB로 회복됐다.
+Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, stale `dockerInference` 소켓으로 재기동이 충돌해
+`settings-store.json` 의 `EnableDockerAI=false`로 비활성화했다. 이전 공간 부족 때 B kind의 Node 이미지 레이어가
+손상되어 B 클러스터만 재생성했다. 대학 DB는 외부 Docker volume이라 데이터 손실은 없다.
 
 ### 목표 4 — 노션 반영 (R6)
 
@@ -124,7 +132,7 @@ Node 이미지 레이어가 손상되어 B 클러스터만 재생성했다. 대�
 
 ## 6. 전체 남은 규모
 
-139개 중 67개 완료, **72개 남음**.
+139개 중 68개 완료, **71개 남음**.
 AI 가 이 PC 에서 할 수 있는 것 약 44개, 외부 환경 필요 약 15개, 사람·기관 필요 약 15개.
 
 ## 7. 어디에 무엇이 있나

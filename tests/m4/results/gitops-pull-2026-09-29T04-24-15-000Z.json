@@ -1,0 +1,57 @@
+{
+  "scenario": "T-M4-05 Flux signed Git Pull",
+  "environment": "local kind scaled environment",
+  "cluster": "univ-a",
+  "fluxVersion": "v2.9.5",
+  "source": {
+    "transport": "local read-only smart HTTP fixture",
+    "signature": "ephemeral SSH signing key outside the repository",
+    "acceptedSignedRevision": "a3dfee6187aa72ccf9056d79645f14bcbe5dd1e2",
+    "sourceVerified": true,
+    "ready": true
+  },
+  "unsignedHeadRejection": {
+    "revision": "d8a41452945865c8dcfa4deb20f8f8f5b19cc702",
+    "ready": false,
+    "condition": "SourceVerified=False",
+    "reason": "InvalidCommitSignature",
+    "lastGoodArtifactRetained": "c0febff069cd20c4b94532e9e4e026ba4690985a",
+    "lastAppliedRevisionUnchanged": true
+  },
+  "reconciliation": {
+    "kustomizationReady": true,
+    "helmReleaseReady": true,
+    "helmReleaseRevision": 25,
+    "chartRevision": "0.1.0+a3dfee6187aa.2",
+    "deploymentsReady": {
+      "univ-a-api": "2/2",
+      "univ-a-document-service": "1/1",
+      "univ-a-event-relay": "1/1",
+      "univ-a-pgbouncer": "1/1"
+    }
+  },
+  "driftDetection": {
+    "field": "Deployment/univ-a-api spec.replicas",
+    "mutatedFrom": 2,
+    "mutatedTo": 1,
+    "restoredTo": 2,
+    "restoredWithinSeconds": 60
+  },
+  "authorization": {
+    "updateDeploymentInKadmissionApp": true,
+    "createClusterRole": false,
+    "updateDeploymentInKubeSystem": false
+  },
+  "cleanup": {
+    "localSourceSuspended": true,
+    "localKustomizationSuspended": true,
+    "localHelmReleaseSuspended": true,
+    "temporaryGitServerStopped": true,
+    "applicationWorkloadsLeftRunning": true
+  },
+  "limitations": [
+    "This is a local kind scaled-environment proof using an ephemeral SSH key and local Git remote.",
+    "Production registry credentials, release signing identities, and image signatures were not available.",
+    "Container image Cosign admission verification remains part of the M5 supply-chain security gate; production Helm rendering already requires digest pinning."
+  ]
+}

@@ -300,6 +300,7 @@ dev-folder/
 │   ├── charts/k-admission/   # 대학 Data Plane Helm 차트 · values-s/m/l
 │   ├── universities/         # 대학별 values (UNIV-A/B/C) — 코드 fork 0
 │   ├── platform/policies/    # 노션 §05·§06 첨부 (runtime · NetworkPolicy/RBAC · Vault)
+│   ├── gitops/               # Flux Pull bootstrap · 대학별 HelmRelease
 │   └── local/                # kind 2 클러스터 축소 환경
 ├── tests/
 │   ├── load/                 # k6 부하 시나리오 (노션 §08 첨부)
@@ -309,7 +310,7 @@ dev-folder/
 
 ## Project Status
 
-> 기준일 2026-09-28 · 전체 139개 태스크 중 **65개 완료** · **M3 종료 · M4 진행** · 테스트 **293개** (실패 0)
+> 기준일 2026-09-29 · 전체 139개 태스크 중 **68개 완료** · **M3 종료 · M4 진행** · 테스트 **301개** (실패 0)
 
 지원자가 화면에서 원서를 만들어 서류를 올리고 결제한 뒤 **접수번호를 받는 전 과정이 동작합니다.**
 
@@ -326,7 +327,7 @@ dev-folder/
 | M1 접수 Core | **14/14** | 원서 생성·자동저장·추가문항·서류·감사 hash-chain |
 | M2 결제·Finalize·화면 | **24/24** | 결제 재검증, Finalize 트랜잭션, KRDS 6단계 화면, Dashboard |
 | M3 운영 안전장치 | **14/15 · 종료** | 마감 정책 엔진, 설정 거버넌스, 4-way 대조, 증적 재구성, 의존성 차단, 서명된 적용 기록, 보존기간 매트릭스, 목적별 가명 참조, 관리자 콘솔. 결제 자동 정합화(PG 콜백·재확인·대조 스케줄), 감사 기록 삭제 차단(앱 최소권한 DB 역할), **결제 = 접수**(결제 확인 시 자동 접수), 한 전형 한 모집단위 |
-| M4 분산 실증 | 7/28 · 진행 중 | Helm·kind·대학 간 격리·동시 Finalize·PgBouncer 완료. PG·중앙·Pod 장애 축소 시험 통과, 실제 시간·다중 노드 시험 대기 |
+| M4 분산 실증 | 10/28 · 진행 중 | Helm·kind·Flux signed Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표 완료. 실제 시간·다중 노드·K-PaaS 시험 대기 |
 | M5 신뢰성·보안·접근성 | 0/35 | OIDC·MFA, 실 PG, 실 AV, WORM 감사 |
 | M6 Pilot 준비 | 0/15 | 대학 1곳 Shadow Test |
 
@@ -340,7 +341,7 @@ dev-folder/
 
 ### 아직 없는 것
 
-인증(`AUTH_MODE=dev-headers`), 실 PG 연동, 실 안티바이러스, WORM 감사 저장소 물리 분리, K-PaaS 실배포·GitOps, K-PaaS 부하·장애 시험 실측치. **흉내 구현은 운영 모드에서 선택되면 프로세스가 기동하지 않습니다.**
+인증(`AUTH_MODE=dev-headers`), 실 PG 연동, 실 안티바이러스, WORM 감사 저장소 물리 분리, 실제 K-PaaS·Registry 배포와 이미지 서명 admission, K-PaaS 부하·장애 시험 실측치. **흉내 구현은 운영 모드에서 선택되면 프로세스가 기동하지 않습니다.**
 
 이어받는 사람·AI는 [docs/HANDOFF.md](docs/HANDOFF.md)부터 읽습니다. 자세한 현황과 다음 착수 순서는 [docs/03-next-steps.md](docs/03-next-steps.md), 운영 준비 점검 내역은 [docs/04-production-readiness.md](docs/04-production-readiness.md)를 참조하십시오.
 

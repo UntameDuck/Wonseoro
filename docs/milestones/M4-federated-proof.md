@@ -18,7 +18,8 @@
 | T-M4-02 Runtime 보안 기준 | ✅ | runAsNonRoot(UID 10001)·readOnlyRootFS·seccomp·drop ALL·PDB·startup/readiness/liveness. 이미지를 같은 조건으로 띄워 확인 |
 | T-M4-03 대학별 values | ✅ | `deploy/universities/UNIV-A·B·C` — 같은 차트·같은 이미지, **마감·설정 버전은 values 에 없다**(D-44 ⑥) |
 | T-M4-04 kind 2 클러스터 | ✅ | univ-a·univ-b의 API 2개·Relay·서류 워커 모두 Ready. 서류 워커 수정 이미지 재배포·NetworkPolicy 실효성 확인 |
-| T-M4-07 Peak Mode | 🟡 | `peakMode.enabled`가 API 최소 replica를 올리고, 예약 시각부터 비핵심 자동 대조를 억제한다(시험 5건·Helm 렌더링 통과). 예약 HPA 전환 실행 주체는 T-M4-05 GitOps와 함께 남음(D-48) |
+| T-M4-05 GitOps Pull | ✅ | Flux 2.9.5가 signed Git HEAD만 Pull하고 namespace 한정 ServiceAccount로 HelmRelease를 수렴한다. unsigned HEAD 거부·last-good 유지·Helm v25 적용·replica drift 1→2 복구 확인. 로컬 축소 결과 `tests/m4/results/gitops-pull-2026-09-29T04-24-15-000Z.json` |
+| T-M4-07 Peak Mode | 🟡 | `peakMode.enabled`가 API 최소 replica를 올리고, 예약 시각부터 비핵심 자동 대조를 억제한다(시험 5건·Helm 렌더링 통과). 실행 주체는 Flux로 확정했으며 예약 desired-state 변경 자동화는 남음(D-48) |
 | T-M4-08 HPA 커스텀 지표 | ✅ | Prometheus가 API Pod 지표를 수집하고 Adapter가 RPS·p95 지연·처리 중 요청 수를 Custom Metrics API로 제공한다. 임시 HPA에서 세 지표와 `ScalingActive=True/ValidMetricFound` 확인 후 로컬 HPA 원복. 로컬 축소 결과 `tests/m4/results/hpa-custom-metrics-2026-09-29T03-27-10-000Z.json` |
 | T-M4-09 커넥션 예산 | ✅ | PgBouncer 1.26.0 비루트 이미지·Helm Deployment/PDB·앱/DB TLS 경계·서버/클라이언트 예산·직접 DB 우회 차단. 동시 30쿼리 성공, upstream 최대 10/10. 노드 강제 재시작 후 stale PID 자동 제거·A 전체 Ready 복구와 B 정상 유지 확인. 로컬 축소 환경 결과 `tests/m4/results/pgbouncer-2026-09-28T01-26-13-047Z.json`. 첨부 values-m 수치 결정은 D-44 ⑦로 별도 대기 |
 | T-M4-20 OpenTelemetry | 🟡 | 접수 API에 Prometheus 요청 수·지연·처리 중 요청 지표와 OTLP/gRPC Trace를 연결했다. HTTP 라벨·span은 메서드·라우트 템플릿·상태 코드 allowlist만 사용하며 UUID·쿼리·본문·헤더를 넣지 않는다. `tests/m4/telemetry-smoke.mjs`에서 Metrics 3종·Trace 전송·PII sentinel 미노출 통과. 로그 상관관계·나머지 서비스 계측은 남음 |

@@ -13,6 +13,7 @@ deploy/
 │   ├── policies/           # NetworkPolicy, RBAC, Vault policy, runtime 보안 기준
 │   ├── observability/
 │   └── admission-controller/
+├── gitops/                  # Flux bootstrap·대학별 HelmRelease·namespace 한정 reconciler
 ├── universities/UNIV-A/    # values.yaml, config-ref.yaml, policy-ref.yaml
 └── schemas/                # packages/contracts 에서 생성·복사
 ```
@@ -22,6 +23,10 @@ deploy/
 Commit → Build → Test → SBOM → Scan → Sign → Registry → Staging → 2인 승인
        → University GitOps Pull → Canary/Rolling → Health Gate
 ```
+
+Pull 실행 주체와 bootstrap 절차는 [gitops/README.md](gitops/README.md), 선택 근거는
+[ADR-0005](../docs/adr/ADR-0005-flux-pull-gitops.md)다. Flux는 signed Git HEAD만 artifact로 만들고,
+대학 namespace 전용 ServiceAccount로 HelmRelease를 reconcile한다.
 
 ## Runtime 보안 기준 (v1.1 §05)
 - `runAsNonRoot`, `readOnlyRootFilesystem`, seccomp `RuntimeDefault`
