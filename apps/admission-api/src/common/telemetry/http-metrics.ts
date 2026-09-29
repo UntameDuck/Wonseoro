@@ -17,6 +17,12 @@ const requestDuration = meter.createHistogram('http_server_request_duration', {
   description: '접수 API HTTP 요청 처리 시간',
   unit: 's',
 });
+const activeRequests = meter.createObservableGauge('http_server_active_requests', {
+  description: '접수 API 처리 중 요청 수',
+  unit: '{request}',
+});
+let activeRequestCount = 0;
+activeRequests.addCallback((result) => result.observe(activeRequestCount));
 const tracer = trace.getTracer('k-admission.http');
 const requestSpans = new WeakMap<object, Span>();
 
@@ -78,10 +84,12 @@ export function startHttpRequestSpan(
   const parentContext = propagation.extract(context.active(), headers, headerGetter);
   const span = tracer.startSpan('HTTP request', { kind: SpanKind.SERVER }, parentContext);
   requestSpans.set(request, span);
+  activeRequestCount += 1;
   context.with(trace.setSpan(parentContext, span), next);
 }
 
 export function finishHttpRequestSpan(request: object, input: HttpMetricInput): void {
+  activeRequestCount = Math.max(0, activeRequestCount - 1);
   const span = requestSpans.get(request);
   if (!span) return;
 

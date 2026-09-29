@@ -1,0 +1,40 @@
+# T-M4-08 — Prometheus Adapter 5.3.0 (adapter v0.12.0)
+prometheus:
+  url: http://prometheus-server.observability.svc
+  port: 80
+
+replicas: 1
+resources:
+  requests: { cpu: 25m, memory: 64Mi }
+  limits: { cpu: 250m, memory: 192Mi }
+
+rules:
+  default: false
+  custom:
+    - seriesQuery: 'http_requests_total{namespace!="",pod!=""}'
+      resources:
+        overrides:
+          namespace: { resource: namespace }
+          pod: { resource: pod }
+      name:
+        matches: '^http_requests_total$'
+        as: http_requests_per_second
+      metricsQuery: 'sum(rate(<<.Series>>{<<.LabelMatchers>>}[2m])) by (<<.GroupBy>>)'
+    - seriesQuery: 'http_server_request_duration_bucket{namespace!="",pod!="",le!=""}'
+      resources:
+        overrides:
+          namespace: { resource: namespace }
+          pod: { resource: pod }
+      name:
+        matches: '^http_server_request_duration_bucket$'
+        as: http_request_duration_p95_seconds
+      metricsQuery: 'histogram_quantile(0.95, sum(rate(<<.Series>>{<<.LabelMatchers>>}[2m])) by (le, <<.GroupBy>>))'
+    - seriesQuery: 'http_server_active_requests{namespace!="",pod!=""}'
+      resources:
+        overrides:
+          namespace: { resource: namespace }
+          pod: { resource: pod }
+      name:
+        matches: '^http_server_active_requests$'
+        as: http_active_requests
+      metricsQuery: 'sum(<<.Series>>{<<.LabelMatchers>>}) by (<<.GroupBy>>)'

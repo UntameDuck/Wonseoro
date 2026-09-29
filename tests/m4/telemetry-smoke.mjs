@@ -66,7 +66,7 @@ let logs = '';
 child.stdout.on('data', (chunk) => (logs += chunk.toString()));
 child.stderr.on('data', (chunk) => (logs += chunk.toString()));
 
-async function waitFor(url, timeoutMs = 30_000) {
+async function waitFor(url, timeoutMs = 60_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
@@ -102,6 +102,7 @@ try {
   const metrics = await (await fetch(METRICS_URL)).text();
   assert.match(metrics, /http_requests_total\{[^\n]*http_route="\/api\/v1\/admission-cycles\/current"/);
   assert.match(metrics, /http_server_request_duration_count/);
+  assert.match(metrics, /http_server_active_requests/);
   assert.equal(metrics.includes(PII_SENTINEL), false);
 
   const expectedSpanName = Buffer.from('GET /api/v1/admission-cycles/current');
@@ -123,7 +124,7 @@ try {
   assert.ok(tracePayload.includes(expectedSpanName));
   assert.equal(tracePayload.includes(Buffer.from(PII_SENTINEL)), false);
 
-  console.log('telemetry smoke: metrics 2종, OTLP/gRPC trace, PII sentinel 미노출 확인');
+  console.log('telemetry smoke: metrics 3종, OTLP/gRPC trace, PII sentinel 미노출 확인');
 } finally {
   if (child.exitCode === null) child.kill('SIGKILL');
   await new Promise((resolve) => setTimeout(resolve, 100));

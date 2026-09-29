@@ -1,0 +1,18 @@
+# T-M4-08 로컬 축소 검증용 Prometheus 29.35.0 (Prometheus v3.15.0)
+# 운영에서는 대학별 관측성 스택의 보존·HA·스토리지를 별도 결정한다.
+alertmanager:
+  enabled: false
+kube-state-metrics:
+  enabled: false
+prometheus-node-exporter:
+  enabled: false
+prometheus-pushgateway:
+  enabled: false
+
+server:
+  persistentVolume:
+    enabled: false
+  retention: 1h
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { cpu: 500m, memory: 384Mi }

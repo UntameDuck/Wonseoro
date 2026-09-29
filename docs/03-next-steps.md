@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-28 (**M4 진행** — Peak Mode 비핵심 작업 억제 반영. 예약 HPA 전환은 GitOps T-M4-05와 연계)
+> 최종 갱신: 2026-09-29 (**M4 진행** — RPS·p95 지연·처리 중 요청 수 기반 HPA 커스텀 지표 검증 완료)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -10,7 +10,7 @@
 
 ## 현재 지점
 
-**M0·M1·M2·M3 완료, M4 진행 중** (8/28). MVP가 화면에서 끝까지 동작하고, 로컬 축소 환경에서 대학 간 장애 격리·동시 Finalize·DB 연결 상한·Object Storage 장애 격리를 증명했다.
+**M0·M1·M2·M3 완료, M4 진행 중** (9/28). MVP가 화면에서 끝까지 동작하고, 로컬 축소 환경에서 대학 간 장애 격리·동시 Finalize·DB 연결 상한·Object Storage 장애 격리·HPA 커스텀 지표를 증명했다.
 
 | 단계 | 진행 | 비고 |
 |---|---|---|
@@ -18,12 +18,12 @@
 | M1 접수 Core | **14/14** | ✅ |
 | M2 결제·Finalize·화면 | **24/24** | ✅ Demo Gate 1~5 통과 |
 | M3 운영 안전장치 | **14/15** | ✅ **종료 2026-09-27** — T-M3-03 WORM·T-M3-06 JWKS 는 M5 |
-| **M4 분산 실증** | **8/28** | ◀ 진행 중 — 차트·kind·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애 ✅, PG·중앙·Pod 장애 축소 시험·Peak Mode 🟡 |
+| **M4 분산 실증** | **9/28** | ◀ 진행 중 — 차트·kind·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표 ✅, PG·중앙·Pod 장애 축소 시험·Peak Mode 🟡 |
 | M5 신뢰성·보안·접근성 | 0/35 | |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 66/139 태스크** (🟡 부분 완료 별도). **298개 테스트**
-(admission-api 239 · server-kit 35 · central-api 20 · event-relay 4) — 실패 0, 환경 조건으로 건너뛰는 3개(관리자 토큰 설정 여부).
+**총 67/139 태스크** (🟡 부분 완료 별도). **301개 테스트**
+(admission-api 242 · server-kit 35 · central-api 20 · event-relay 4) — DB 없는 실행 기준 160 pass·141 skip·실패 0.
 DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`) CI 포함.
 
 ### 동작하는 것 — End-to-End
@@ -68,7 +68,7 @@ DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-d
 
 ---
 
-## 다음 개발 목표 (2026-09-28 설정)
+## 다음 개발 목표 (2026-09-29 설정)
 
 M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 를 **숫자로** 증명하는 것이다.
 로컬(kind)로 증명할 수 있는 것을 먼저 끝내 구조 결함을 잡고, 수치는 K-PaaS 에서 낸다.
@@ -96,9 +96,9 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 
 | ID | 할 일 |
 |---|---|
-| T-M4-09 | ✅ PgBouncer 1.26.0 배포. 직접 DB 우회 차단, 동시 30쿼리 성공, upstream 최대 10/10 확인 (`pgbouncer-2026-09-28T01-26-13-047Z.json`) |
+| T-M4-09 | ✅ PgBouncer 1.26.0 배포. 직접 DB 우회 차단, 동시 30쿼리 성공, upstream 최대 10/10 확인. 노드 강제 재시작 뒤 stale PID 자동 제거·A 전체 Ready 복구 확인 (`pgbouncer-2026-09-28T01-26-13-047Z.json`) |
 | T-M4-07 | 🟡 즉시 Peak Mode 최소 replica 상향·예약 시각 이후 비핵심 자동 대조 억제 완료. 예약 HPA 전환은 D-48에 따라 T-M4-05 GitOps 실행 주체와 함께 구현 |
-| T-M4-08 | HPA 커스텀 지표 — `http_requests_total` 노출 완료, metrics adapter 설치·HPA 연동 시험 후 |
+| T-M4-08 | ✅ Prometheus 수집·Adapter 변환과 RPS·p95 지연·처리 중 요청 수 HPA `ValidMetricFound` 확인. 시험 뒤 로컬 HPA 원복 (`hpa-custom-metrics-2026-09-29T03-27-10-000Z.json`) |
 | T-M4-05 | GitOps Pull 배포(Argo CD 또는 Flux) — 서명된 이미지만 |
 | T-M4-20~24 | 🟡 접수 API Prometheus Metrics·OTLP/gRPC Trace·PII allowlist 완료(`tests/m4/telemetry-smoke.mjs`). 로그 상관관계·다른 서비스·대시보드 남음 |
 

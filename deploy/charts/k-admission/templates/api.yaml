@@ -209,5 +209,24 @@ spec:
           type: AverageValue
           averageValue: {{ .requestRatePerPod | quote }}
     {{- end }}
+    {{- if .p95LatencyMs }}
+    - type: Pods
+      pods:
+        metric:
+          name: http_request_duration_p95_seconds
+        target:
+          type: AverageValue
+          # Prometheus 단위는 초, Kubernetes quantity의 m은 1/1000이므로 ms와 수치가 같다.
+          averageValue: {{ printf "%dm" (int .p95LatencyMs) | quote }}
+    {{- end }}
+    {{- if .activeRequestsPerPod }}
+    - type: Pods
+      pods:
+        metric:
+          name: http_active_requests
+        target:
+          type: AverageValue
+          averageValue: {{ .activeRequestsPerPod | quote }}
+    {{- end }}
     {{- end }}
 {{- end }}
