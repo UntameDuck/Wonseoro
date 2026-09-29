@@ -9,7 +9,7 @@
 app.kubernetes.io/part-of: k-admission
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
-helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version }}
+helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 kadmission.kr/university: {{ .Values.global.universityId | quote }}
 {{- end -}}
 

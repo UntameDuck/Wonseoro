@@ -46,6 +46,13 @@ const role = rbac.find((item) => item.kind === 'Role');
 assert.equal(role.metadata.namespace, 'kadmission-app');
 assert.equal(role.rules.some((rule) => rule.resources?.includes('namespaces')), false);
 assert.equal(role.rules.some((rule) => rule.resources?.includes('clusterroles')), false);
+assert.match(
+  read('deploy/charts/k-admission/templates/_helpers.tpl'),
+  /replace \"\+\" \"_\"/,
+);
+
+const chartRbac = read('deploy/charts/k-admission/templates/rbac.yaml');
+assert.equal(chartRbac.includes('apiGroups: ["", "apps", "batch", "autoscaling"]'), false);
 
 const local = docs('deploy/gitops/local/bootstrap-univ-a.yaml');
 assert.equal(local[0].spec.verify.mode, 'HEAD');

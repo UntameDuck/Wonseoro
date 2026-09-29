@@ -6,8 +6,17 @@ metadata:
   name: {{ include "ka.fullname" . }}-platform-viewer
   labels: {{- include "ka.labels" . | nindent 4 }}
 rules:
-  - apiGroups: ["", "apps", "batch", "autoscaling"]
-    resources: ["pods","pods/log","services","deployments","replicasets","jobs","cronjobs","horizontalpodautoscalers"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "services"]
+    verbs: ["get","list","watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get","list","watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get","list","watch"]
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
     verbs: ["get","list","watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -17,13 +26,13 @@ metadata:
   labels: {{- include "ka.labels" . | nindent 4 }}
 rules:
   - apiGroups: ["apps"]
-    resources: ["deployments","deployments/scale"]
+    resources: ["deployments", "deployments/scale"]
     verbs: ["get","list","watch","patch","update"]
   - apiGroups: [""]
-    resources: ["pods","pods/log","events"]
+    resources: ["pods", "pods/log", "events"]
     verbs: ["get","list","watch"]
   - apiGroups: ["batch"]
-    resources: ["jobs","cronjobs"]
+    resources: ["jobs", "cronjobs"]
     verbs: ["get","list","watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
