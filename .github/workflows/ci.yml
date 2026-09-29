@@ -67,9 +67,23 @@ jobs:
       - run: npm ci
       # canonical DDL 을 그대로 적용한다. 저장소에서 따로 쓴 스키마가 아니다.
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0001_init.sql
+      # 앱 최소권한 역할(D-41). 검증 SQL 이 SET ROLE kadmission_app 으로 권한을 시험한다
+      - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0002_db_roles.sql
+      - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/dev-roles.sql
       # 제약이 실제로 막는지 먼저 확인한다
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/verify-constraints.sql
+      # 앱은 운영과 같은 앱 역할로 돈다. 관리자 URL 은 시험 뒤 감사 기록 정리에만 쓴다 (로컬과 같다)
+      - run: npm run build -w @wonseoro/contracts -w @wonseoro/server-kit
       - run: npm run test -w @wonseoro/admission-api
+        env:
+          DATABASE_URL: postgresql://kadmission_app:kadmission_app_dev@localhost:5432/univ_a
+          DATABASE_ADMIN_URL: postgresql://wonseoro:wonseoro@localhost:5432/univ_a
+          UNIVERSITY_ID: UNIV-A
+      # Outbox Relay — 중앙 장애·trace 전파 (직렬 실행)
+      - run: npm run test -w @wonseoro/event-relay
+        env:
+          DATABASE_URL: postgresql://kadmission_app:kadmission_app_dev@localhost:5432/univ_a
+          UNIVERSITY_ID: UNIV-A
       # 중앙 Plane 은 스키마가 다르다. 같은 인스턴스에 별도 DB 로 올린다.
       - run: psql "$DATABASE_URL" -c 'CREATE DATABASE central'
       - run: psql "${DATABASE_URL%/*}/central" -v ON_ERROR_STOP=1 -f infra/db/central/0001_init.sql
