@@ -72,6 +72,8 @@ jobs:
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/dev-roles.sql
       # 제약이 실제로 막는지 먼저 확인한다
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/verify-constraints.sql
+      # 통합 시험이 기대는 개발 시드(대학·전형 주기·모집단위) — 로컬 npm run db:seed 와 같다
+      - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/seed-dev.sql
       # 앱은 운영과 같은 앱 역할로 돈다. 관리자 URL 은 시험 뒤 감사 기록 정리에만 쓴다 (로컬과 같다)
       - run: npm run build -w @wonseoro/contracts -w @wonseoro/server-kit
       - run: npm run test -w @wonseoro/admission-api
