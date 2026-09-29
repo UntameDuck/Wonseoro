@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-29 (**M4 진행** — Peak Mode 예약 GitOps 전환 완료, T-M4-07·D-48 종결)
+> 최종 갱신: 2026-09-29 (**M4 진행** — 전 서비스 계측·구조화 로그·마스킹 강제 완료, T-M4-20·T-M4-24 종결)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -10,7 +10,7 @@
 
 ## 현재 지점
 
-**M0·M1·M2·M3 완료, M4 진행 중** (11/28). MVP가 화면에서 끝까지 동작하고, 로컬 축소 환경에서 대학 간 장애 격리·동시 Finalize·DB 연결 상한·Object Storage 장애 격리·HPA 커스텀 지표·signed GitOps Pull·예약 Peak Mode 전환을 증명했다.
+**M0·M1·M2·M3 완료, M4 진행 중** (13/28). MVP가 화면에서 끝까지 동작하고, 로컬 축소 환경에서 대학 간 장애 격리·동시 Finalize·DB 연결 상한·Object Storage 장애 격리·HPA 커스텀 지표·signed GitOps Pull·예약 Peak Mode 전환·전 서비스 관측성(지표·Trace·구조화 로그)을 증명했다.
 
 | 단계 | 진행 | 비고 |
 |---|---|---|
@@ -18,14 +18,19 @@
 | M1 접수 Core | **14/14** | ✅ |
 | M2 결제·Finalize·화면 | **24/24** | ✅ Demo Gate 1~5 통과 |
 | M3 운영 안전장치 | **14/15** | ✅ **종료 2026-09-27** — T-M3-03 WORM·T-M3-06 JWKS 는 M5 |
-| **M4 분산 실증** | **11/28** | ◀ 진행 중 — 차트·kind·Flux Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표·Peak Mode ✅, PG·중앙·Pod 장애 축소 시험·관측성 🟡 |
+| **M4 분산 실증** | **13/28** | ◀ 진행 중 — 차트·kind·Flux Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표·Peak Mode·계측·로그 마스킹 ✅, PG·중앙·Pod 장애 축소 시험 🟡, 대시보드(T-M4-21~23) ⬜ |
 | M5 신뢰성·보안·접근성 | 0/35 | |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 69/139 태스크** (🟡 부분 완료 별도). **304개 테스트**
-(admission-api 245 · server-kit 35 · central-api 20 · event-relay 4) — DB 없는 실행 기준 163 pass·141 skip·실패 0.
+**총 71/139 태스크** (🟡 부분 완료 별도). **314개 테스트**
+(admission-api 242 · server-kit 47 · central-api 20 · event-relay 5) — DB 없는 실행 기준 172 pass·142 skip·실패 0.
+DB 포함 실행은 admission-api 239 pass·3 skip(`ADMIN_API_TOKEN` 미설정)·실패 0, 나머지 전부 pass.
 배포 스크립트 시험 별도: Peak Mode 예약 계산 9건(`npm run test:m4:peak-schedule`).
-DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`) CI 포함.
+DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`)·로그 우회 금지 검사(`scripts/check-logging.mjs`) CI 포함.
+
+> ⚠️ **DB 통합 시험을 돌릴 때는 kind univ-a 의 API·Relay 를 0 으로 줄인다.** 클러스터의 결제 재확인 워커·Relay 가
+> 같은 로컬 `univ_a` DB 에서 시험이 넣은 행을 먼저 집어 가, 결제 재확인·Relay 시험이 실패하거나 멈춘다(2026-09-29 확인).
+> `kubectl --context kind-univ-a -n kadmission-app scale deploy univ-a-api univ-a-event-relay --replicas=0` → 시험 → 다시 2·1.
 
 ### 동작하는 것 — End-to-End
 
@@ -93,7 +98,7 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 | T-M4-38 | Object Storage 지연·단절 | ✅ MinIO 완전 단절 중 카탈로그 20회 오류 0·원서 생성/자동저장 지속, 직접 업로드만 실패. 복구 후 업로드·서버 검증 정상 (**로컬 축소 환경**) |
 | T-M4-39 | API Pod·노드 강제 종료 | 🟡 Pod 삭제·RollingUpdate 오류 0. 다중 노드 시험 남음 |
 
-### 🎯 목표 3 — 차트에 남은 운영 기능 · **현재 목표** (다음: T-M4-20 로그 상관관계·나머지 서비스 계측 → T-M4-21~24)
+### 🎯 목표 3 — 차트에 남은 운영 기능 · **현재 목표** (다음: T-M4-22 업무 KPI 지표 → T-M4-21·23 대시보드)
 
 | ID | 할 일 |
 |---|---|
@@ -101,7 +106,9 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 | T-M4-07 | ✅ 예약 창(`peak-schedule.yaml`) → 예약 워크플로 서명 커밋(`peak-mode.yaml`) → Flux Pull로 API 최소 replica 상향·원복, 앱은 억제~종료 시각에만 자동 대조를 멈춘다(ADR-0006, D-48 종결). 로컬 축소 환경 2→3(62초)·원복(33초) (`peak-mode-gitops-2026-09-29T11-43-36-484Z.json`). 첨부 예시 시각의 영구 억제 위험은 D-49 |
 | T-M4-08 | ✅ Prometheus 수집·Adapter 변환과 RPS·p95 지연·처리 중 요청 수 HPA `ValidMetricFound` 확인. 시험 뒤 로컬 HPA 원복 (`hpa-custom-metrics-2026-09-29T03-27-10-000Z.json`) |
 | T-M4-05 | ✅ Flux Pull — signed Git HEAD 검증, namespace 한정 reconcile, Helm 인수·drift 복구, unsigned HEAD 거부 확인 (`gitops-pull-2026-09-29T04-24-15-000Z.json`) |
-| T-M4-20~24 | 🟡 접수 API Prometheus Metrics·OTLP/gRPC Trace·PII allowlist 완료(`tests/m4/telemetry-smoke.mjs`). 로그 상관관계·다른 서비스·대시보드 남음 |
+| T-M4-20 | ✅ 네 서비스 공용 `server-kit` 계측 — 지표·OTLP Trace·내부 호출 traceparent 전파·JSON 로그 trace_id. smoke·Relay 통합 시험·kind 수집 확인 (`telemetry-kind-2026-09-29T14-05-37-946Z.json`). 로컬에 수집기가 없어 클러스터 안 Trace 전송은 미검증 |
+| T-M4-24 | ✅ `StructuredLogger` 본문 미기록·마스킹(주민번호·전화·이메일·카드·토큰·접속 비밀번호)·운영 스택 없음, `check-logging.mjs` 로 CI 강제 |
+| T-M4-21~23 | ⬜ 다음 — 먼저 T-M4-22 업무 KPI 지표(`finalize_success_rate`·`outbox_oldest_age_seconds`·`central_sync_lag_seconds` 등)를 코드에서 내고, Golden Signals·Support 대시보드를 Grafana JSON 으로 저장소에 둔다 |
 
 ### 🎯 목표 4 — 노션 반영 (D-43 · D-44)
 
@@ -115,7 +122,7 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 |---|---|
 | **K-PaaS(또는 클라우드) 시험 환경** | 3,000 CCU·1,000 RPS·6시간 Soak·DB Failover 실측은 이 PC 로 불가 (T-M4-30~32·36·41) |
 | 제출 PDF 정정 (D-2·D-3) | 개발보고서의 "Java/Spring" 표기 |
-| Peak Mode 예약 워크플로 켜기 | GitHub environment `peak-mode`·secret `PEAK_MODE_SSH_SIGNING_KEY` 등록, 대학 `wonseoro-git-authors` 에 공개키 추가 — 저장소·대학 관리자 권한 (ADR-0006) |
+| Peak Mode 예약 워크플로 켜기 | GitHub environment `peak-mode`·secret `PEAK_MODE_SSH_SIGNING_KEY` 등록, 저장소 변수 `PEAK_MODE_ENABLED=true`, 대학 `wonseoro-git-authors` 에 공개키 추가 — 저장소·대학 관리자 권한 (ADR-0006). 그 전에는 워크플로가 러너를 띄우지 않는다 |
 | 첨부 values-m 커넥션 수치 (D-44 ⑦) | Pod 당 38 로 줄일지, 예산을 411 이상으로 올릴지 — DB 쪽 사실이라 대학·운영이 정한다 |
 
 ---

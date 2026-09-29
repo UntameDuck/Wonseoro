@@ -1,5 +1,17 @@
 # 관측성 플랫폼
 
+## T-M4-20·T-M4-24 — 모든 서비스 계측과 로그
+
+| 신호 | 어디서 | 내용 |
+|---|---|---|
+| 지표 | API·Relay·서류 워커·중앙 `:9464/metrics` | `http_requests`·`http_server_request_duration`·`http_server_active_requests` (service.name 으로 구분), Relay `outbox_relay_events{outcome,event_type}`, 워커 `document_scans{verdict}` |
+| Trace | `OTEL_EXPORTER_OTLP_ENDPOINT` 가 있을 때만 OTLP/gRPC | HTTP 서버 span(라우트 템플릿만), Relay 이벤트별 PRODUCER span, 워커 검사 span. 내부 호출에 traceparent 전파 — 외부 PG·스토리지에는 싣지 않는다 |
+| 로그 | stdout 한 줄 JSON | `time·level·service·university·context·message·trace_id·span_id`. 본문 객체는 적지 않고 주민번호·전화·이메일·카드·토큰·접속 비밀번호를 가린다. 운영은 스택 없음 |
+
+공용 구현은 `packages/server-kit/src/telemetry*`. 서버 코드가 `console.*` 로 우회하지 못하게
+`scripts/check-logging.mjs` 가 CI 에서 막는다. 로컬 확인: `node tests/m4/telemetry-smoke.mjs`(모의 수집기·로그 상관관계),
+`node tests/m4/telemetry-kind.mjs`(kind 수집·로그 형식). 로컬에는 수집기(OTel Collector)·로그 저장소가 없다.
+
 ## T-M4-08 — RPS 커스텀 지표
 
 접수 API는 Pod의 `:9464/metrics`에서 요청 수·지연 히스토그램·처리 중 요청 수를 노출한다.

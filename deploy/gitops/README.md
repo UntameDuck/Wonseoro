@@ -55,6 +55,6 @@ kubectl --context <대학-context> -n kadmission-app create secret generic wonse
 ```
 
 저장소 관리자가 할 일: GitHub environment `peak-mode` 를 보호 규칙과 함께 만들고 secret
-`PEAK_MODE_SSH_SIGNING_KEY` 에 개인키를 넣는다. 워크플로는 overlay 밖 파일이 바뀌면 커밋하지 않는다.
+`PEAK_MODE_SSH_SIGNING_KEY` 에 개인키를 넣은 뒤, 저장소 변수 `PEAK_MODE_ENABLED=true` 로 켠다(그 전에는 러너가 뜨지 않는다). 워크플로는 overlay 밖 파일이 바뀌면 커밋하지 않는다.
 
 로컬 서명 Pull 시험 절차와 축소 환경 차이는 [local/README.md](local/README.md)에 있다.

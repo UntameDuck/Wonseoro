@@ -30,7 +30,7 @@ Kubernetes 상태를 바꿀 실행 주체는 없었다(D-48). ADR-0005로 대학
    시작은 `leadMinutes`(기본 60분)만큼 앞당기고, 종료는 앞당기지 않는다. 같은 계획이면 같은 바이트라서
    예약이 그대로면 커밋이 생기지 않는다.
 3. HelmRelease는 overlay를 **마지막 values 파일**로 얹는다. 평시 overlay는 첨부 예시 시각을 비운다(D-49).
-4. `.github/workflows/peak-mode.yml`이 10분마다 overlay를 계산하고, 바뀐 경우에만 전용 SSH 키로 서명 커밋해
+4. `.github/workflows/peak-mode.yml`이 10분마다 overlay를 계산하고(저장소 변수 `PEAK_MODE_ENABLED=true`일 때만 — 켜 두기만 해도 Actions 시간을 쓰므로 opt-in), 바뀐 경우에만 전용 SSH 키로 서명 커밋해
    `main`에 push한다. overlay 밖의 파일이 바뀌면 커밋하지 않는다. 서명키는 보호된 environment secret에만 둔다.
 5. 앱은 `PEAK_MODE_ACTIVATES_AT`부터 `PEAK_MODE_ENDS_AT`까지 비핵심 작업을 억제한다. 사전 확장(`enabled`)이
    먼저 켜져도 억제는 예약 시각에 시작하고, 종료 시각이 지나면 overlay가 늦게 바뀌어도 스스로 억제를 푼다.

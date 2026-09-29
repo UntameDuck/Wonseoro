@@ -10,10 +10,10 @@
 ## 1. 30초 요약
 
 - **제품**: 원서로(K-Admission) — 대학 입학 원서접수를 대학별 Data Plane 으로 분산하는 플랫폼. 2026 GovTech 공모전 출품작
-- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 11/28 진행 중**. 전체 69/139 태스크
+- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 13/28 진행 중**. 전체 71/139 태스크
 - **완료한 핵심 증명**: 로컬 kind 2클러스터 축소 환경에서 **대학 간 장애 격리 T-M4-42 통과**. A대 전면 정지 중 B대 접수·중앙 반영, A대 복구 후 접수까지 확인
-- **최근 완료**: T-M4-07 Peak Mode 예약 → 서명 커밋 → Flux Pull 전환(ADR-0006, D-48 종결)
-- **바로 다음 할 일**: **T-M4-20 로그 상관관계·나머지 서비스(Relay·서류 워커·중앙) 계측 → T-M4-21~24 대시보드·마스킹** → [§4](#4-다음-작업--순서와-방법)
+- **최근 완료**: T-M4-07 Peak Mode 예약 → 서명 커밋 → Flux Pull 전환(ADR-0006, D-48 종결) · T-M4-20 전 서비스 계측·로그 상관관계 · T-M4-24 로그 마스킹 강제
+- **바로 다음 할 일**: **T-M4-22 업무 KPI 지표(`finalize_success_rate`·`outbox_oldest_age_seconds`·`central_sync_lag_seconds` 등) → T-M4-21·23 대시보드** → [§4](#4-다음-작업--순서와-방법)
 
 ## 2. 반드시 지킬 규칙
 
@@ -37,9 +37,9 @@
 | 셸 | Git Bash 에서 `docker run -v/--tmpfs /tmp` 처럼 `/` 로 시작하는 인자는 경로 변환된다 → `export MSYS_NO_PATHCONV=1` |
 | 도구 | kind 0.33 · Helm **4.3** · k6 2.2 · kubectl 1.34 (winget 설치). 새 터미널부터 PATH 에 잡힌다. 안 잡히면 `%LOCALAPPDATA%\Microsoft\WinGet\Packages\` 아래 `Helm.Helm_*\windows-amd64`, `Kubernetes.kind_*` 를 PATH 에 더한다. k6 는 `C:\Program Files\k6` |
 | Docker | Desktop, VM 메모리 **약 7.5GB.** 이미지 빌드와 kind 클러스터 2개를 **동시에 돌리면 엔진이 멈춘다**(실제로 멈췄다). 빌드 → 클러스터 순서로, 하나씩 |
-| 로컬 Flux 시험 | `E:DockerDatagitops-test-20260929-1245` — bare `Wonseoro.git`·시험 사본 `work`(임시 SSH 서명키가 git 설정에 있음). kind-univ-a 의 Flux 리소스는 시험 뒤 suspend 상태. Git 서버는 `node tests/m4/helpers/git-smart-http-server.mjs <그 폴더> 9418` |
+| 로컬 Flux 시험 | `E:\DockerData\gitops-test-20260929-1245` — bare `Wonseoro.git`·시험 사본 `work`(임시 SSH 서명키가 git 설정에 있음). kind-univ-a 의 Flux 리소스는 시험 뒤 suspend 상태. Git 서버는 `node tests/m4/helpers/git-smart-http-server.mjs <그 폴더> 9418` |
 | 로컬 DB | compose: `postgres-univ-a` :5432 · `postgres-univ-b` :5442(`--profile multi`) · `postgres-central` :5434 · redis :6379 · minio :9000 |
-| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 245 · server-kit 35 · central-api 20 · event-relay 4 (전체 304, DB 없는 실행 163 pass·141 skip·실패 0). 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함) |
+| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 242 · server-kit 47 · central-api 20 · event-relay 5 (전체 314, DB 없는 실행 172 pass·142 skip·실패 0). 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함). **DB 통합 시험 전에 kind univ-a 의 API·Relay 를 0 으로 줄인다** — 같은 로컬 `univ_a` DB 를 봐서 시험 행을 먼저 집어 간다(결제 재확인·Relay 시험이 실패하거나 멈춘다). event-relay 시험은 직렬로 돈다 |
 | 검사 | `npm run db:verify`(DB 제약 20종) · `node scripts/check-deps.mjs`(의존성 선언) · `helm lint deploy/charts/k-admission` |
 
 ## 4. 다음 작업 — 순서와 방법
@@ -89,9 +89,17 @@ T-M4-09 PgBouncer는 두 kind 클러스터에 배포했고 직접 DB 우회 차�
 `peak-schedule.yaml` 을 예약 워크플로(`.github/workflows/peak-mode.yml`)가 10분마다 `peak-mode.yaml` overlay 로 계산해
 바뀐 경우만 서명 커밋하고, Flux 가 Pull 해 API 최소 replica 를 올리고 내린다. 앱은 억제~종료 시각에만 자동 대조를 멈춘다.
 로컬 kind 에서 2→3(push 뒤 62초)·원복(33초)을 확인했다 — `tests/m4/results/peak-mode-gitops-2026-09-29T11-43-36-484Z.json`,
-재실행 절차는 `deploy/gitops/local/README.md`. 첨부 values-m 예시 시각이 영구 억제를 만드는 문제는 D-49(노션 첨부 교체 대기). T-M4-20의 접수 API Prometheus Metrics·OTLP/gRPC Trace와
-PII allowlist는 구현·smoke test를 마쳤다. 다음은 T-M4-20 로그 상관관계와 나머지 서비스 계측,
-T-M4-21~24 대시보드·마스킹이다. 각 인수기준은 [M4 마일스톤](milestones/M4-federated-proof.md).
+재실행 절차는 `deploy/gitops/local/README.md`. 첨부 values-m 예시 시각이 영구 억제를 만드는 문제는 D-49(노션 첨부 교체 대기). 예약 워크플로는 저장소 변수 `PEAK_MODE_ENABLED=true` 일 때만 러너를 띄운다(opt-in).
+
+T-M4-20·T-M4-24는 완료했다. 계측은 `packages/server-kit` 에 모였다 — `telemetry-sdk`(SDK 진입점, **index 로 내보내지 않는다**:
+index 를 거치면 `pg` 가 먼저 로드돼 DB span 이 빠진다), `telemetry/http`(HTTP 지표·span), `telemetry/trace`(traceparent 전파·
+`withSpan`), `telemetry/logger`(한 줄 JSON·trace_id·마스킹). 네 서비스의 `src/instrumentation.ts` 가 main 의 첫 import 로
+SDK 를 켜고 전역 Nest 로거를 바꾼다. `scripts/check-logging.mjs` 가 CI 에서 console 직접 출력·로거 누락을 막는다.
+kind A 에 Flux(서명 병합 → Pull)로 새 이미지를 배포해 세 워크로드 수집 up=1·구조화 로그를 확인했다 —
+`tests/m4/results/telemetry-kind-2026-09-29T14-05-37-946Z.json`. B 와 클러스터 밖 `ka-central` 은 아직 이전 이미지다.
+**Flux 가 소유한 release 는 `helm upgrade` CLI 로 바꿀 수 없다**(server-side apply 충돌) — 시험 사본에 서명 병합 → bare 로 push → Flux 재개.
+
+다음은 T-M4-22 업무 KPI 지표 → T-M4-21·23 대시보드다. 각 인수기준은 [M4 마일스톤](milestones/M4-federated-proof.md).
 
 T-M4-08은 A kind에 Prometheus `29.35.0`·Adapter `5.3.0`을 설치하고 RPS·p95 지연·처리 중 요청 수를
 Custom Metrics API와 HPA에서 모두 확인해 완료했다. 설정은 `deploy/platform/observability/`, 결과는
@@ -133,13 +141,13 @@ Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, s
 | K-PaaS(또는 클라우드) 시험 환경 | 3,000 CCU·1,000 RPS·6시간 Soak·DB Failover 실측(T-M4-30~32·36·41)에 필요. 없음 |
 | 제출 PDF 정정 (D-2·D-3) | 개발보고서의 "Java/Spring" 표기 → NestJS·TypeScript |
 | values-m 커넥션 수치 (D-44 ⑦) | Pod 당 40 → 38 로 줄일지, 예산 400 → 411 이상으로 올릴지 |
-| Peak Mode 예약 워크플로 켜기 | GitHub environment `peak-mode` + secret `PEAK_MODE_SSH_SIGNING_KEY`, 대학 `wonseoro-git-authors` 에 예약 자동화 공개키 추가 (ADR-0006) |
+| Peak Mode 예약 워크플로 켜기 | GitHub environment `peak-mode` + secret `PEAK_MODE_SSH_SIGNING_KEY`, 저장소 변수 `PEAK_MODE_ENABLED=true`, 대학 `wonseoro-git-authors` 에 예약 자동화 공개키 추가 (ADR-0006) |
 | 노션 페이지 수정 승인 | R6 |
 
 ## 6. 전체 남은 규모
 
-139개 중 69개 완료, **70개 남음**.
-AI 가 이 PC 에서 할 수 있는 것 약 43개, 외부 환경 필요 약 15개, 사람·기관 필요 약 15개.
+139개 중 71개 완료, **68개 남음**.
+AI 가 이 PC 에서 할 수 있는 것 약 41개, 외부 환경 필요 약 15개, 사람·기관 필요 약 15개.
 
 ## 7. 어디에 무엇이 있나
 

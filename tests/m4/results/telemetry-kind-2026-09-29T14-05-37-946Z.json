@@ -1,0 +1,119 @@
+{
+  "test": "T-M4-20",
+  "scenario": "세 워크로드 지표 수집·구조화 로그 (kind)",
+  "environment": "local-kind-univ-a (축소 환경)",
+  "limitations": [
+    "로컬에는 OpenTelemetry Collector 가 없어 클러스터 안 Trace 전송은 확인하지 않았다 — telemetry-smoke(OTLP/gRPC 모의 수집기)와 Relay→중앙 traceparent 통합 시험이 맡는다.",
+    "로그 수집기(Loki 등)는 없다. kubectl logs 로 stdout 형식만 확인했다."
+  ],
+  "startedAt": "2026-09-29T14:05:37.946Z",
+  "checks": {
+    "admission-api 배포·지표 포트": {
+      "pass": true,
+      "ready": "2/2",
+      "metricsPort": 9464,
+      "scrape": "true"
+    },
+    "admission-api Prometheus 수집(up=1)": {
+      "pass": true,
+      "pods": 2,
+      "targets": [
+        "univ-a-api-655d47d5cf-7qxwl=1",
+        "univ-a-api-655d47d5cf-nlk2l=1"
+      ]
+    },
+    "admission-api HTTP 지표": {
+      "pass": true,
+      "routes": [
+        "/healthz=24",
+        "/readyz=47",
+        "/internal/v1/documents/pending-scan=38"
+      ]
+    },
+    "admission-api service.name 리소스 속성": {
+      "pass": true,
+      "serviceNames": [
+        "admission-api"
+      ]
+    },
+    "admission-api 로그 전부 구조화 JSON": {
+      "pass": true,
+      "lines": 99,
+      "plain": []
+    },
+    "admission-api 로그에 개인정보 형태 없음": {
+      "pass": true,
+      "lines": 99
+    },
+    "event-relay 배포·지표 포트": {
+      "pass": true,
+      "ready": "1/1",
+      "metricsPort": 9464,
+      "scrape": "true"
+    },
+    "event-relay Prometheus 수집(up=1)": {
+      "pass": true,
+      "pods": 1,
+      "targets": [
+        "univ-a-event-relay-6fdfc955df-lbjtx=1"
+      ]
+    },
+    "event-relay HTTP 지표": {
+      "pass": true,
+      "routes": [
+        "/healthz=23"
+      ]
+    },
+    "event-relay service.name 리소스 속성": {
+      "pass": true,
+      "serviceNames": [
+        "event-relay"
+      ]
+    },
+    "event-relay 로그 전부 구조화 JSON": {
+      "pass": true,
+      "lines": 12,
+      "plain": []
+    },
+    "event-relay 로그에 개인정보 형태 없음": {
+      "pass": true,
+      "lines": 12
+    },
+    "document-service 배포·지표 포트": {
+      "pass": true,
+      "ready": "1/1",
+      "metricsPort": 9464,
+      "scrape": "true"
+    },
+    "document-service Prometheus 수집(up=1)": {
+      "pass": true,
+      "pods": 1,
+      "targets": [
+        "univ-a-document-service-586dfc9ff6-kh6gs=1"
+      ]
+    },
+    "document-service HTTP 지표": {
+      "pass": true,
+      "routes": [
+        "/healthz=21"
+      ]
+    },
+    "document-service service.name 리소스 속성": {
+      "pass": true,
+      "serviceNames": [
+        "document-service"
+      ]
+    },
+    "document-service 로그 전부 구조화 JSON": {
+      "pass": true,
+      "lines": 11,
+      "plain": []
+    },
+    "document-service 로그에 개인정보 형태 없음": {
+      "pass": true,
+      "lines": 11
+    }
+  },
+  "finishedAt": "2026-09-29T14:05:44.166Z",
+  "pass": true
+}

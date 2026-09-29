@@ -52,9 +52,14 @@ for (const [deployment, service] of WORKLOADS) {
   check(`${service} 배포·지표 포트`, (d.status.readyReplicas ?? 0) === d.spec.replicas && metricsPort === 9464 && scrape === 'true',
     { ready, metricsPort, scrape });
 
-  const up = await prom(`up{namespace="${NAMESPACE}",pod=~"${deployment}-.*"}`);
-  check(`${service} Prometheus 수집(up=1)`, up.length > 0 && up.every((s) => s.value[1] === '1'),
-    { targets: up.map((s) => `${s.metric.pod}=${s.value[1]}`) });
+  // 지금 떠 있는 Pod 만 본다 — 롤아웃으로 사라진 Pod 의 시계열은 staleness 전까지 up=0 으로 남는다
+  const pods = JSON.parse(await kubectl(['-n', NAMESPACE, 'get', 'pods', '-o', 'json'])).items
+    .map((pod) => pod.metadata.name).filter((name) => name.startsWith(`${deployment}-`));
+  const up = (await prom(`up{namespace="${NAMESPACE}",pod=~"${deployment}-.*"}`))
+    .filter((series) => pods.includes(series.metric.pod));
+  check(`${service} Prometheus 수집(up=1)`,
+    up.length === pods.length && up.every((series) => series.value[1] === '1'),
+    { pods: pods.length, targets: up.map((series) => `${series.metric.pod}=${series.value[1]}`) });
 
   const requests = await prom(`sum by (http_route) (http_requests_total{namespace="${NAMESPACE}",pod=~"${deployment}-.*"})`);
   check(`${service} HTTP 지표`, requests.length > 0,
