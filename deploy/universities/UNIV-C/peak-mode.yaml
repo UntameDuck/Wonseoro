@@ -1,0 +1,8 @@
+# 자동 생성 — scripts/peak-mode-sync.mjs 가 peak-schedule.yaml 에서 만든다. 손으로 고치지 않는다.
+# UNIV-C Peak Mode desired state (T-M4-07, D-48)
+# 진행 중인 예약 창 없음 — 평시
+peakMode:
+  enabled: false
+  window: ""
+  scheduledActivation: ""
+  scheduledEnd: ""

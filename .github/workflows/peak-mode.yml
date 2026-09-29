@@ -1,0 +1,74 @@
+name: Peak Mode 예약
+
+# T-M4-07 · D-48 · ADR-0006
+# 대학별 peak-schedule.yaml 을 읽어 예약 시각에 peak-mode.yaml(desired state)을 서명 커밋으로 바꾼다.
+# 대학 클러스터의 Flux 가 그 커밋을 Pull 해 API 최소 replica 를 올리고 내린다.
+# 중앙이나 이 워크플로는 대학 클러스터 자격증명을 갖지 않는다 — Git 에 쓰기만 한다.
+#
+# GitHub 예약 실행은 수 분~수십 분 늦을 수 있다. 예약의 leadMinutes(기본 60분)가 그 지연을 흡수한다.
+# 종료는 앞당기지 않지만, 앱은 PEAK_MODE_ENDS_AT 에 스스로 억제를 푼다 — 이 워크플로가 늦어도
+# 남는 것은 "조금 늦게 줄어드는 확장" 뿐이다.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: peak-mode
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: 예약 → desired state
+    runs-on: ubuntu-latest
+    # 서명키는 보호된 environment 의 secret 에만 둔다 (배포 승인자만 바꿀 수 있다)
+    environment: peak-mode
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: 예약 검증 · overlay 생성
+        id: plan
+        run: |
+          node scripts/peak-mode-sync.mjs --check
+          node scripts/peak-mode-sync.mjs --write > "$RUNNER_TEMP/changed.txt" 2> "$RUNNER_TEMP/plan.txt"
+          cat "$RUNNER_TEMP/plan.txt"
+          echo "count=$(wc -l < "$RUNNER_TEMP/changed.txt")" >> "$GITHUB_OUTPUT"
+
+      - name: 바뀐 파일이 overlay 뿐인지
+        if: steps.plan.outputs.count != '0'
+        run: |
+          # 이 서명키로는 peak-mode.yaml 밖을 바꾸지 않는다 — Flux 는 HEAD 서명만 보므로 여기서 막는다
+          unexpected=$(git status --porcelain | awk '{print $2}' | grep -Ev '^deploy/universities/UNIV-[A-Z0-9-]+/peak-mode\.yaml$' || true)
+          if [ -n "$unexpected" ]; then
+            echo "::error::예약 자동화가 overlay 밖의 파일을 바꿨다: $unexpected"
+            exit 1
+          fi
+
+      - name: 서명 커밋 · push
+        if: steps.plan.outputs.count != '0'
+        env:
+          SIGNING_KEY: ${{ secrets.PEAK_MODE_SSH_SIGNING_KEY }}
+        run: |
+          install -m 600 /dev/null "$RUNNER_TEMP/signing_key"
+          printf '%s\n' "$SIGNING_KEY" > "$RUNNER_TEMP/signing_key"
+          git config user.name 'wonseoro-peak-mode'
+          git config user.email 'peak-mode@wonseoro.invalid'
+          git config gpg.format ssh
+          git config user.signingkey "$RUNNER_TEMP/signing_key"
+          git add $(cat "$RUNNER_TEMP/changed.txt")
+          { echo 'chore: Peak Mode 예약 desired state 전환'; echo; sed 's/^/- /' "$RUNNER_TEMP/plan.txt"; } > "$RUNNER_TEMP/message.txt"
+          git commit -S -F "$RUNNER_TEMP/message.txt"
+          rm -f "$RUNNER_TEMP/signing_key"
+          # main 이 그 사이 움직였으면 이번 실행은 실패하고 다음 실행(10분 뒤)이 새 HEAD 위에서 다시 계산한다
+          git push origin HEAD:main

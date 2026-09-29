@@ -90,6 +90,10 @@ spec:
             - name: PEAK_MODE_ACTIVATES_AT
               value: {{ . | quote }}
             {{- end }}
+            {{- with $v.peakMode.scheduledEnd }}
+            - name: PEAK_MODE_ENDS_AT
+              value: {{ . | quote }}
+            {{- end }}
             - name: PEAK_MODE_SUSPEND_NON_CRITICAL_JOBS
               value: {{ $v.peakMode.suspendNonCriticalJobs | quote }}
             - name: OTEL_ENABLED

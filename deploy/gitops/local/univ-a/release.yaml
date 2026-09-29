@@ -23,6 +23,7 @@ spec:
         - deploy/charts/k-admission/values-s.yaml
         - deploy/local/values-local.yaml
         - deploy/local/values-univ-a.yaml
+        - deploy/local/peak-mode-univ-a.yaml
   driftDetection:
     mode: enabled
   install:

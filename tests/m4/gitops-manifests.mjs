@@ -37,6 +37,8 @@ for (const [universityId, slug, profile] of universities) {
     'deploy/charts/k-admission/values.yaml',
     `deploy/charts/k-admission/${profile}`,
     `deploy/universities/${universityId}/values.yaml`,
+    // 예약 자동화가 만든 Peak Mode overlay 는 반드시 마지막 — 다른 values 가 덮지 못한다 (D-48)
+    `deploy/universities/${universityId}/peak-mode.yaml`,
   ]);
 }
 
@@ -63,6 +65,7 @@ assert.deepEqual(localRelease.spec.chart.spec.valuesFiles, [
   'deploy/charts/k-admission/values-s.yaml',
   'deploy/local/values-local.yaml',
   'deploy/local/values-univ-a.yaml',
+  'deploy/local/peak-mode-univ-a.yaml',
 ]);
 
 for (const path of [

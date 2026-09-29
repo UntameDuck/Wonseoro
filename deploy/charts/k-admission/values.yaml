@@ -87,9 +87,13 @@ reconciliation:
   intervalMs: 3600000              # 앱 안 스케줄러 주기
   sinceHours: 48
 
+# Peak Mode (T-M4-07). 운영에서는 대학별 peak-schedule.yaml → 예약 자동화가 만든
+# deploy/universities/<UNIV>/peak-mode.yaml 이 마지막에 얹혀 이 값을 정한다 (D-48, ADR-0006).
 peakMode:
-  enabled: false
-  scheduledActivation: ""
+  enabled: false                   # 사전 확장 — API 최소 replica 상향
+  window: ""                       # 예약 창 id (자동 생성 overlay 가 채운다)
+  scheduledActivation: ""          # 비핵심 작업 억제 시작 (RFC3339)
+  scheduledEnd: ""                 # 억제 종료 — 지나면 앱이 스스로 억제를 푼다
   apiMinReplicas: 4
   frontendMinReplicas: 2
   suspendNonCriticalJobs: true

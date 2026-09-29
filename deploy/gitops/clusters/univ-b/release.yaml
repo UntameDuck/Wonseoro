@@ -22,6 +22,7 @@ spec:
         - deploy/charts/k-admission/values.yaml
         - deploy/charts/k-admission/values-s.yaml
         - deploy/universities/UNIV-B/values.yaml
+        - deploy/universities/UNIV-B/peak-mode.yaml   # 예약 자동화가 만든 Peak Mode — 마지막에 얹는다 (ADR-0006)
   driftDetection:
     mode: enabled
   install:

@@ -1,0 +1,19 @@
+# UNIV-B 접수 Peak Mode 예약 (T-M4-07, D-48 · ADR-0006)
+#
+# 용량 예약이다. 마감시각의 원본이 아니다 — 마감은 관리자 콘솔 2인 승인·서명된 활성화로만 바뀐다(R9).
+# 예약 자동화(.github/workflows/peak-mode.yml)가 이 파일을 읽어 peak-mode.yaml 을 서명 커밋으로 바꾸고,
+# Flux 가 Pull 해 API 최소 replica 를 올린다. peak-mode.yaml 은 손으로 고치지 않는다.
+#
+#   scaleOutAt    : 사전 확장 (§01 B1 D-1). leadMinutes 만큼 앞서 커밋한다
+#   suspendJobsAt : 비핵심 작업(자동 대조) 억제 시작 (마감 6시간 전 권장). 앱이 이 시각을 직접 본다
+#   endsAt        : 원복. 앱은 이 시각에 억제를 스스로 풀고, 자동화가 확장을 되돌린다
+#   apiMinReplicas: 선택. 비우면 Size Profile 의 peakMode.apiMinReplicas
+#
+# 예시 (대학 입학처 일정이 확정되면 채운다):
+#   - id: 2028-susi
+#     scaleOutAt: "2027-09-07T00:00:00+09:00"
+#     suspendJobsAt: "2027-09-08T12:00:00+09:00"
+#     endsAt: "2027-09-09T06:00:00+09:00"
+university: UNIV-B
+leadMinutes: 60
+windows: []
