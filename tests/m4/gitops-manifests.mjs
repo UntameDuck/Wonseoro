@@ -34,6 +34,7 @@ for (const [universityId, slug, profile] of universities) {
   assert.equal(release.spec.driftDetection.mode, 'enabled');
   assert.equal(release.spec.kubeConfig, undefined);
   assert.deepEqual(release.spec.chart.spec.valuesFiles, [
+    'deploy/charts/k-admission/values.yaml',
     `deploy/charts/k-admission/${profile}`,
     `deploy/universities/${universityId}/values.yaml`,
   ]);
@@ -49,6 +50,13 @@ assert.equal(role.rules.some((rule) => rule.resources?.includes('clusterroles'))
 const local = docs('deploy/gitops/local/bootstrap-univ-a.yaml');
 assert.equal(local[0].spec.verify.mode, 'HEAD');
 assert.equal(local[1].spec.path, './deploy/gitops/local/univ-a');
+const localRelease = parse(read('deploy/gitops/local/univ-a/release.yaml'));
+assert.deepEqual(localRelease.spec.chart.spec.valuesFiles, [
+  'deploy/charts/k-admission/values.yaml',
+  'deploy/charts/k-admission/values-s.yaml',
+  'deploy/local/values-local.yaml',
+  'deploy/local/values-univ-a.yaml',
+]);
 
 for (const path of [
   'deploy/gitops/bootstrap/UNIV-A.yaml',

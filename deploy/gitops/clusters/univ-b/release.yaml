@@ -19,6 +19,7 @@ spec:
         namespace: kadmission-app
       reconcileStrategy: Revision
       valuesFiles:
+        - deploy/charts/k-admission/values.yaml
         - deploy/charts/k-admission/values-s.yaml
         - deploy/universities/UNIV-B/values.yaml
   driftDetection:

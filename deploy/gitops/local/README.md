@@ -3,6 +3,11 @@
 운영 bootstrap과 달리 로컬 kind는 개발 이미지·Secret을 쓰지만 Git HEAD 서명 검증은 그대로 켠다.
 시험용 bare repository를 `http://host.docker.internal:9418/Wonseoro.git`에서 제공하고, 임시 SSH 공개키를
 `wonseoro-git-authors` Secret에 넣는다. 개인키와 bare repository는 저장소 밖 `E:\DockerData`에 둔다.
+bare repository의 read-only smart HTTP는 다음 보조 스크립트로 연다.
+
+```powershell
+node tests/m4/helpers/git-smart-http-server.mjs E:\DockerData\gitops-test 9418
+```
 
 검증 기준:
 
