@@ -1,0 +1,12 @@
+# 노드 장애 시험(T-M4-39) 전용 — values-local·values-univ-a 위에 얹는다. kind-univ-a-multinode.yaml 클러스터에만 쓴다.
+#
+# 운영과 같게 되돌리는 것만 둔다:
+#   - zone 분산을 강제한다(운영 기본값). 평소 로컬은 노드·존이 하나라 ScheduleAnyway 다
+#   - PgBouncer 를 2개로 — 1개면 그 노드가 죽을 때 모든 DB 접근이 끊긴다(단일 장애점)
+nodePlacement:
+  whenUnsatisfiable: DoNotSchedule
+
+database:
+  pooler:
+    replicas: 2
+    podDisruptionBudget: { minAvailable: 1 }

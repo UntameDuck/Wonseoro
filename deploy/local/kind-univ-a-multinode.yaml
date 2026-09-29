@@ -1,0 +1,21 @@
+# 로컬 축소 환경 — 노드 장애 시험 전용 다중 노드 클러스터 (T-M4-39)
+#
+# 평소의 univ-a 는 노드 하나라 노드 장애를 시험할 수 없다. 이 클러스터는 시험할 때만 만들고 지운다.
+# 워커 두 개에 서로 다른 zone 라벨을 붙여 차트의 topology spread(zone, DoNotSchedule)가 운영처럼 동작하게 한다.
+# 메모리(Docker VM 약 7.5GB) 때문에 시험 동안 univ-a·univ-b 노드는 멈춘다 — tests/m4/node-failure-kind.mjs 참고.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: univ-m
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      # 접수 API NodePort → 호스트 18082 (평소 univ-a 의 18081 과 겹치지 않게)
+      - containerPort: 30081
+        hostPort: 18082
+        protocol: TCP
+  - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone-a
+  - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone-b

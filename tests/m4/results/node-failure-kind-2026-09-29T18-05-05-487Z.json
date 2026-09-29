@@ -1,0 +1,216 @@
+{
+  "test": "T-M4-39",
+  "scenario": "API 노드 계획 정비(drain)·강제 정지 중 연속 조회·자동저장",
+  "environment": "local-kind-univ-m (제어 1 + 워커 2, zone 2개, 축소 환경)",
+  "limitations": [
+    "kind 노드는 Docker 컨테이너다. 노드 강제 정지는 docker stop 으로 흉내 냈다.",
+    "노드가 NotReady 로 판정되기까지(kube-controller-manager node-monitor-grace-period) Service 가 죽은 Pod 로 요청을 보낸다 — kind 기본값을 그대로 썼다.",
+    "Edge/Ingress 의 재시도·능동 헬스체크는 없다. 요청은 NodePort(kube-proxy) 로 바로 간다."
+  ],
+  "startedAt": "2026-09-29T18:05:05.487Z",
+  "phases": {
+    "baseline": {
+      "requests": 395,
+      "firstAttemptFailures": 0,
+      "userVisibleFailures": 0,
+      "rawFailureWindowSeconds": 0,
+      "otherErrors": 0,
+      "otherByStatus": {}
+    },
+    "drain": {
+      "requests": 872,
+      "firstAttemptFailures": 4,
+      "userVisibleFailures": 3,
+      "rawFailureWindowSeconds": 45,
+      "otherErrors": 0,
+      "otherByStatus": {}
+    },
+    "hard-failure": {
+      "requests": 440,
+      "firstAttemptFailures": 317,
+      "userVisibleFailures": 314,
+      "rawFailureWindowSeconds": 141,
+      "otherErrors": 0,
+      "otherByStatus": {}
+    },
+    "recovery": {
+      "requests": 391,
+      "firstAttemptFailures": 2,
+      "userVisibleFailures": 0,
+      "rawFailureWindowSeconds": 0,
+      "otherErrors": 0,
+      "otherByStatus": {}
+    }
+  },
+  "checks": {
+    "API 가 zone 두 곳에 나뉘어 있다": {
+      "pass": true,
+      "api": [
+        {
+          "name": "univ-a-api-856888bbb8-8jtrz",
+          "node": "univ-m-worker",
+          "ready": true
+        },
+        {
+          "name": "univ-a-api-856888bbb8-w4s6m",
+          "node": "univ-m-worker2",
+          "ready": true
+        }
+      ],
+      "pgbouncer": [
+        "univ-m-worker2",
+        "univ-m-worker"
+      ]
+    },
+    "평시 실패 0": {
+      "pass": true,
+      "requests": 395,
+      "firstAttemptFailures": 0,
+      "userVisibleFailures": 0,
+      "rawFailureWindowSeconds": 0,
+      "otherErrors": 0,
+      "otherByStatus": {}
+    },
+    "계획 정비(drain) 무중단 — 첫 시도부터 실패 0": {
+      "pass": false,
+      "requests": 872,
+      "firstAttemptFailures": 4,
+      "userVisibleFailures": 3,
+      "rawFailureWindowSeconds": 45,
+      "otherErrors": 0,
+      "otherByStatus": {}
+    },
+    "노드 강제 정지 — 사용자 체감 실패 0 (재시도 3회 안에 성공)": {
+      "pass": false,
+      "requests": 440,
+      "firstAttemptFailures": 317,
+      "userVisibleFailures": 314,
+      "rawFailureWindowSeconds": 141,
+      "otherErrors": 0,
+      "otherByStatus": {}
+    },
+    "노드 복구 뒤 실패 0": {
+      "pass": true,
+      "requests": 391,
+      "firstAttemptFailures": 2,
+      "userVisibleFailures": 0,
+      "rawFailureWindowSeconds": 0,
+      "otherErrors": 0,
+      "otherByStatus": {}
+    }
+  },
+  "timeline": [
+    {
+      "at": "2026-09-29T18:05:08.720Z",
+      "event": "배치",
+      "api": [
+        {
+          "name": "univ-a-api-856888bbb8-8jtrz",
+          "node": "univ-m-worker",
+          "ready": true
+        },
+        {
+          "name": "univ-a-api-856888bbb8-w4s6m",
+          "node": "univ-m-worker2",
+          "ready": true
+        }
+      ],
+      "pgbouncer": [
+        "univ-m-worker2",
+        "univ-m-worker"
+      ]
+    },
+    {
+      "at": "2026-09-29T18:05:13.770Z",
+      "event": "평시 시작"
+    },
+    {
+      "at": "2026-09-29T18:05:34.237Z",
+      "event": "drain 시작",
+      "node": "univ-m-worker"
+    },
+    {
+      "at": "2026-09-29T18:05:47.920Z",
+      "event": "drain 끝",
+      "api": [
+        {
+          "name": "univ-a-api-856888bbb8-w4s6m",
+          "node": "univ-m-worker2",
+          "ready": true
+        },
+        {
+          "name": "univ-a-api-856888bbb8-x9j78",
+          "ready": false
+        }
+      ]
+    },
+    {
+      "at": "2026-09-29T18:06:20.441Z",
+      "event": "uncordon·API 2개 복구",
+      "api": [
+        {
+          "name": "univ-a-api-856888bbb8-w4s6m",
+          "node": "univ-m-worker2",
+          "ready": true
+        },
+        {
+          "name": "univ-a-api-856888bbb8-x9j78",
+          "node": "univ-m-worker",
+          "ready": true
+        }
+      ]
+    },
+    {
+      "at": "2026-09-29T18:06:39.236Z",
+      "event": "노드 강제 정지",
+      "node": "univ-m-worker2"
+    },
+    {
+      "at": "2026-09-29T18:07:28.913Z",
+      "event": "노드 NotReady 판정",
+      "afterSeconds": 50
+    },
+    {
+      "at": "2026-09-29T18:09:15.319Z",
+      "event": "노드 재기동",
+      "node": "univ-m-worker2"
+    },
+    {
+      "at": "2026-09-29T18:09:16.381Z",
+      "event": "API 2개 복구",
+      "api": [
+        {
+          "name": "univ-a-api-856888bbb8-w4s6m",
+          "node": "univ-m-worker2",
+          "ready": true
+        },
+        {
+          "name": "univ-a-api-856888bbb8-x9j78",
+          "node": "univ-m-worker",
+          "ready": true
+        }
+      ]
+    }
+  ],
+  "placement": {
+    "api": [
+      {
+        "name": "univ-a-api-856888bbb8-8jtrz",
+        "node": "univ-m-worker",
+        "ready": true
+      },
+      {
+        "name": "univ-a-api-856888bbb8-w4s6m",
+        "node": "univ-m-worker2",
+        "ready": true
+      }
+    ],
+    "pgbouncer": [
+      "univ-m-worker2",
+      "univ-m-worker"
+    ]
+  },
+  "nodeNotReadyAfterSeconds": 50,
+  "finishedAt": "2026-09-29T18:09:37.385Z",
+  "pass": false
+}

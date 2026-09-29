@@ -27,6 +27,10 @@ export class Db implements OnApplicationShutdown {
       max: budget.max,
       idleTimeoutMillis: budget.idleTimeoutMs,
       connectionTimeoutMillis: budget.acquireTimeoutMs,
+      // 죽은 상대(노드 장애의 PgBouncer)로 향한 연결이 끝없이 매달리지 않게 (T-M4-39)
+      query_timeout: budget.queryTimeoutMs,
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10_000,
       // 모든 세션이 같은 스키마를 보게 한다.
       options: `-c search_path=${schema},public`,
     });
@@ -60,12 +64,17 @@ export class Db implements OnApplicationShutdown {
       await client.query('BEGIN');
       const result = await fn(client);
       await client.query('COMMIT');
+      client.release();
       return result;
     } catch (err) {
+      if (isBrokenConnection(err)) {
+        // 연결이 죽었다 — ROLLBACK 도 매달린다. 풀에 돌려주지 않고 버린다(서버는 연결이 끊기면 스스로 롤백한다)
+        client.release(err as Error);
+        throw err;
+      }
       await client.query('ROLLBACK').catch(() => undefined);
-      throw err;
-    } finally {
       client.release();
+      throw err;
     }
   }
 
@@ -81,6 +90,16 @@ export class Db implements OnApplicationShutdown {
   async onApplicationShutdown(): Promise<void> {
     await this.pool.end().catch(() => undefined);
   }
+}
+
+/**
+ * 연결 자체가 죽었다는 신호 — 쿼리 시간 초과·연결 종료. 업무 오류(제약 위반 등)와 달리 그 연결은 다시 쓰면 안 된다.
+ */
+export function isBrokenConnection(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const code = (err as { code?: string }).code;
+  return /Query read timeout|Connection terminated|connection timeout/i.test(err.message)
+    || code === 'ECONNRESET' || code === 'EPIPE' || code === 'ETIMEDOUT';
 }
 
 /**

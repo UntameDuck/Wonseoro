@@ -104,7 +104,8 @@ export class ProblemFilter implements ExceptionFilter {
  */
 export function isTransientDbSaturation(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
-  return /timeout exceeded when trying to connect|no more connections allowed|too many clients already/i.test(error.message);
+  // 노드 장애로 끊긴 연결(쿼리 시간 초과·연결 종료)도 같다 — 연결은 버려졌고 다음 시도는 새 연결로 간다 (T-M4-39)
+  return /timeout exceeded when trying to connect|no more connections allowed|too many clients already|Query read timeout|Connection terminated/i.test(error.message);
 }
 
 /** traceparent: 00-<trace-id>-<span-id>-<flags>. Nest 밖(Fastify 훅)에서 만든 problem 도 같은 값을 쓴다. */

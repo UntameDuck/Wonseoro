@@ -17,6 +17,12 @@ export interface DbPoolBudget {
   acquireTimeoutMs: number;
   /** 기동 시 커넥션 폭주를 막는 지연 상한(ms). */
   startupJitterMs: number;
+  /**
+   * 쿼리 하나가 응답을 기다리는 상한(ms). 넘으면 그 연결을 버린다 (T-M4-39).
+   * 노드가 죽으면 그 노드의 PgBouncer 로 이미 열린 연결은 응답도 오류도 없이 매달린다 — 상한이 없으면
+   * 살아남은 API Pod 의 요청까지 끝없이 기다려 노드 하나의 장애가 전체 장애가 된다(kind 에서 확인).
+   */
+  queryTimeoutMs: number;
 }
 
 /**
@@ -66,12 +72,14 @@ export const DB_POOL_BUDGET: Record<string, DbPoolBudget> = {
     idleTimeoutMs: 10_000,
     acquireTimeoutMs: 3_000,
     startupJitterMs: 2_000,
+    queryTimeoutMs: 10_000,
   },
   'document-service': {
     max: 5,
     idleTimeoutMs: 10_000,
     acquireTimeoutMs: 3_000,
     startupJitterMs: 2_000,
+    queryTimeoutMs: 10_000,
   },
   // 중앙은 조회가 많고 쓰기는 이벤트 수신뿐이다.
   'central-api': {
@@ -79,6 +87,7 @@ export const DB_POOL_BUDGET: Record<string, DbPoolBudget> = {
     idleTimeoutMs: 10_000,
     acquireTimeoutMs: 3_000,
     startupJitterMs: 2_000,
+    queryTimeoutMs: 10_000,
   },
   // Relay 는 배치 처리라 커넥션이 적어도 된다. 접수 API 의 몫을 뺏지 않는다.
   'event-relay': {
@@ -86,6 +95,7 @@ export const DB_POOL_BUDGET: Record<string, DbPoolBudget> = {
     idleTimeoutMs: 30_000,
     acquireTimeoutMs: 5_000,
     startupJitterMs: 5_000,
+    queryTimeoutMs: 15_000,
   },
 };
 

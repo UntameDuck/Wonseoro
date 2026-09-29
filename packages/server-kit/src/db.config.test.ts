@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
-import { databaseConnectionString, poolBudgetFor } from './db.config';
+import { DB_POOL_BUDGET, databaseConnectionString, poolBudgetFor } from './db.config';
 
 describe('DB pool 예산 (§B2, T-M4-09)', () => {
   afterEach(() => {
@@ -71,5 +71,22 @@ describe('DB Pooler 목적지 override (T-M4-09)', () => {
     assert.throws(() => databaseConnectionString({ DATABASE_URL: direct, DB_PROXY_HOST: 'pooler' }));
     assert.throws(() => databaseConnectionString({ DATABASE_URL: direct, DB_PROXY_PORT: '6432' }));
     assert.throws(() => databaseConnectionString({ DATABASE_URL: direct, DB_PROXY_HOST: 'pooler', DB_PROXY_PORT: '0' }));
+  });
+});
+
+describe('끊긴 연결 판별 (T-M4-39)', () => {
+  it('쿼리 시간 초과·연결 종료·소켓 오류는 버릴 연결이고, 업무 오류는 아니다', async () => {
+    const { isBrokenConnection } = await import('./db.module');
+    assert.equal(isBrokenConnection(new Error('Query read timeout')), true);
+    assert.equal(isBrokenConnection(new Error('Connection terminated unexpectedly')), true);
+    assert.equal(isBrokenConnection(Object.assign(new Error('read'), { code: 'ECONNRESET' })), true);
+    assert.equal(isBrokenConnection(new Error('duplicate key value violates unique constraint')), false);
+    assert.equal(isBrokenConnection('Query read timeout'), false);
+  });
+
+  it('모든 서비스 예산에 쿼리 시간 상한이 있다', () => {
+    for (const [service, budget] of Object.entries(DB_POOL_BUDGET)) {
+      assert.ok(budget.queryTimeoutMs > 0, service);
+    }
   });
 });

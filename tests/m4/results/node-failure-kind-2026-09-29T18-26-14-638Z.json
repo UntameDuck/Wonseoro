@@ -1,0 +1,248 @@
+{
+  "test": "T-M4-39",
+  "scenario": "API 노드 계획 정비(drain)·강제 정지 중 연속 조회·자동저장",
+  "environment": "local-kind-univ-m (제어 1 + 워커 2, zone 2개, 축소 환경)",
+  "limitations": [
+    "kind 노드는 Docker 컨테이너다. 노드 강제 정지는 docker stop 으로 흉내 냈다.",
+    "노드가 NotReady 로 판정되기까지(kube-controller-manager node-monitor-grace-period) Service 가 죽은 Pod 로 요청을 보낸다 — kind 기본값을 그대로 썼다.",
+    "Edge/Ingress 의 재시도·능동 헬스체크는 없다. 요청은 NodePort(kube-proxy) 로 바로 간다."
+  ],
+  "startedAt": "2026-09-29T18:26:14.638Z",
+  "phases": {
+    "baseline": {
+      "requests": 398,
+      "firstAttemptFailures": 1,
+      "userVisibleFailures": 0,
+      "rawFailureWindowSeconds": 0,
+      "otherErrors": 0,
+      "otherByStatus": {},
+      "firstFailureErrors": {
+        "timeout": 1
+      },
+      "firstFailureFromSeconds": 20,
+      "lastFailureFromSeconds": 20
+    },
+    "drain": {
+      "requests": 879,
+      "firstAttemptFailures": 0,
+      "userVisibleFailures": 0,
+      "rawFailureWindowSeconds": 0,
+      "otherErrors": 0,
+      "otherByStatus": {},
+      "firstFailureErrors": {},
+      "firstFailureFromSeconds": null,
+      "lastFailureFromSeconds": null
+    },
+    "hard-failure": {
+      "requests": 1681,
+      "firstAttemptFailures": 160,
+      "userVisibleFailures": 160,
+      "rawFailureWindowSeconds": 65.1,
+      "otherErrors": 0,
+      "otherByStatus": {},
+      "firstFailureErrors": {
+        "timeout": 160
+      },
+      "firstFailureFromSeconds": 1.5,
+      "lastFailureFromSeconds": 66.6
+    },
+    "recovery": {
+      "requests": 400,
+      "firstAttemptFailures": 0,
+      "userVisibleFailures": 0,
+      "rawFailureWindowSeconds": 0,
+      "otherErrors": 0,
+      "otherByStatus": {},
+      "firstFailureErrors": {},
+      "firstFailureFromSeconds": null,
+      "lastFailureFromSeconds": null
+    }
+  },
+  "checks": {
+    "API 가 zone 두 곳에 나뉘어 있다": {
+      "pass": true,
+      "api": [
+        {
+          "name": "univ-a-api-6946b66744-kscs8",
+          "node": "univ-m-worker2",
+          "ready": true
+        },
+        {
+          "name": "univ-a-api-6946b66744-zh6fj",
+          "node": "univ-m-worker",
+          "ready": true
+        }
+      ],
+      "pgbouncer": [
+        "univ-m-worker2",
+        "univ-m-worker"
+      ]
+    },
+    "평시 실패 0": {
+      "pass": false,
+      "requests": 398,
+      "firstAttemptFailures": 1,
+      "userVisibleFailures": 0,
+      "rawFailureWindowSeconds": 0,
+      "otherErrors": 0,
+      "otherByStatus": {},
+      "firstFailureErrors": {
+        "timeout": 1
+      },
+      "firstFailureFromSeconds": 20,
+      "lastFailureFromSeconds": 20
+    },
+    "계획 정비(drain) 무중단 — 첫 시도부터 실패 0": {
+      "pass": true,
+      "requests": 879,
+      "firstAttemptFailures": 0,
+      "userVisibleFailures": 0,
+      "rawFailureWindowSeconds": 0,
+      "otherErrors": 0,
+      "otherByStatus": {},
+      "firstFailureErrors": {},
+      "firstFailureFromSeconds": null,
+      "lastFailureFromSeconds": null
+    },
+    "노드 강제 정지 — 사용자 체감 실패 0 (재시도 3회 안에 성공)": {
+      "pass": false,
+      "requests": 1681,
+      "firstAttemptFailures": 160,
+      "userVisibleFailures": 160,
+      "rawFailureWindowSeconds": 65.1,
+      "otherErrors": 0,
+      "otherByStatus": {},
+      "firstFailureErrors": {
+        "timeout": 160
+      },
+      "firstFailureFromSeconds": 1.5,
+      "lastFailureFromSeconds": 66.6
+    },
+    "노드 복구 뒤 실패 0": {
+      "pass": true,
+      "requests": 400,
+      "firstAttemptFailures": 0,
+      "userVisibleFailures": 0,
+      "rawFailureWindowSeconds": 0,
+      "otherErrors": 0,
+      "otherByStatus": {},
+      "firstFailureErrors": {},
+      "firstFailureFromSeconds": null,
+      "lastFailureFromSeconds": null
+    }
+  },
+  "timeline": [
+    {
+      "at": "2026-09-29T18:26:17.684Z",
+      "event": "배치",
+      "api": [
+        {
+          "name": "univ-a-api-6946b66744-kscs8",
+          "node": "univ-m-worker2",
+          "ready": true
+        },
+        {
+          "name": "univ-a-api-6946b66744-zh6fj",
+          "node": "univ-m-worker",
+          "ready": true
+        }
+      ],
+      "pgbouncer": [
+        "univ-m-worker2",
+        "univ-m-worker"
+      ]
+    },
+    {
+      "at": "2026-09-29T18:26:22.730Z",
+      "event": "평시 시작"
+    },
+    {
+      "at": "2026-09-29T18:26:43.387Z",
+      "event": "drain 시작",
+      "node": "univ-m-worker2"
+    },
+    {
+      "at": "2026-09-29T18:27:16.550Z",
+      "event": "drain 끝",
+      "api": [
+        {
+          "name": "univ-a-api-6946b66744-2865p",
+          "ready": false
+        },
+        {
+          "name": "univ-a-api-6946b66744-zh6fj",
+          "node": "univ-m-worker",
+          "ready": true
+        }
+      ]
+    },
+    {
+      "at": "2026-09-29T18:27:47.744Z",
+      "event": "uncordon·API 2개 복구",
+      "api": [
+        {
+          "name": "univ-a-api-6946b66744-2865p",
+          "node": "univ-m-worker2",
+          "ready": true
+        },
+        {
+          "name": "univ-a-api-6946b66744-zh6fj",
+          "node": "univ-m-worker",
+          "ready": true
+        }
+      ]
+    },
+    {
+      "at": "2026-09-29T18:28:04.483Z",
+      "event": "노드 강제 정지",
+      "node": "univ-m-worker2"
+    },
+    {
+      "at": "2026-09-29T18:28:53.055Z",
+      "event": "노드 NotReady 판정",
+      "afterSeconds": 49
+    },
+    {
+      "at": "2026-09-29T18:30:38.377Z",
+      "event": "노드 재기동",
+      "node": "univ-m-worker2"
+    },
+    {
+      "at": "2026-09-29T18:30:39.314Z",
+      "event": "API 2개 복구",
+      "api": [
+        {
+          "name": "univ-a-api-6946b66744-2865p",
+          "node": "univ-m-worker2",
+          "ready": true
+        },
+        {
+          "name": "univ-a-api-6946b66744-zh6fj",
+          "node": "univ-m-worker",
+          "ready": true
+        }
+      ]
+    }
+  ],
+  "placement": {
+    "api": [
+      {
+        "name": "univ-a-api-6946b66744-kscs8",
+        "node": "univ-m-worker2",
+        "ready": true
+      },
+      {
+        "name": "univ-a-api-6946b66744-zh6fj",
+        "node": "univ-m-worker",
+        "ready": true
+      }
+    ],
+    "pgbouncer": [
+      "univ-m-worker2",
+      "univ-m-worker"
+    ]
+  },
+  "nodeNotReadyAfterSeconds": 49,
+  "finishedAt": "2026-09-29T18:30:59.519Z",
+  "pass": false
+}

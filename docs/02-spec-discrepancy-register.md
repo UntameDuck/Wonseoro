@@ -797,6 +797,20 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-52. "API 노드 강제 종료 무중단"은 Pod 설정만으로는 지킬 수 없다
+
+| | |
+|---|---|
+| **발견** | 2026-09-30 (T-M4-39 다중 노드 kind 시험) |
+| **충돌** | §08 시나리오 10 · M4 T-M4-39 는 "API Node 강제 종료 → 무중단" 을 요구한다. 차트는 API·PgBouncer 2개 이상, zone 분산, PDB, `maxUnavailable: 0`, preStop 을 갖췄다. 그러나 노드가 **예고 없이** 죽으면 쿠버네티스가 그 노드를 NotReady 로 판정할 때까지(kind 기본값에서 49초) Service 가 죽은 Pod 로 요청·DB 연결을 계속 보낸다. |
+| **실측(축소 환경)** | 계획 정비(drain)는 무중단 — 요청 879건 실패 0. 강제 정지는 **정지 1.5초 뒤부터 66.6초까지 요청의 약 10%(1,681건 중 160건)가 2초 안에 응답받지 못했고**, 이후 노드가 죽은 채로 스스로 회복했다. 수정 전에는 DB 연결 시간 제한이 없어 141초 내내 72% 가 실패했다(노드 하나의 장애가 전체 장애) — 쿼리 시간 제한·끊긴 연결 폐기로 고쳤다. `tests/m4/results/node-failure-kind-2026-09-29T18-05-05-487Z.json`(전)·`…18-26-14-638Z.json`(후) |
+| **판정** | 앱이 할 수 있는 것은 했다: 매달린 DB 연결을 10초 안에 버리고 503 재시도 안내, 멱등키로 재시도를 안전하게. 남은 구간은 플랫폼 몫이다 — ① Edge/Ingress 가 연결 실패·시간 초과를 다른 Pod 로 재시도(모든 변경 요청에 Idempotency-Key 가 있어 POST/PATCH 재시도도 안전하다), ② K-PaaS 의 노드 장애 판정 시간(`node-monitor-grace-period`)을 대학 SLO 에 맞게 조정, ③ PgBouncer 를 API Pod 옆(sidecar)으로 옮겨 노드 간 DB 경로 의존을 없애는 안을 K-PaaS 부하 시험 때 비교. 또한 차트·첨부가 zone 분산을 `DoNotSchedule` 로 두어 **zone 이 2개면 한 zone 이 죽는 동안 대체 Pod 를 남은 zone 에 둘 수 없다**(maxSkew 1) — 3개 zone 또는 `minDomains` 검토가 필요하다(로컬에서는 기본 toleration 300초라 재배치 전에 노드를 되살려 미관측). |
+| **저장소 반영** | 🟡 DB 풀 시간 제한·끊긴 연결 폐기·503(`server-kit` db, 문제 필터), 다중 노드 시험(`kind-univ-a-multinode.yaml`·`values-multinode.yaml`·`node-failure-kind.mjs`). Ingress 재시도·노드 판정 시간·zone 수는 운영 환경 결정 |
+| **노션 반영** | ⬜ §08 시나리오 10 의 합격 기준에 "노드 장애 판정 전 구간은 Edge 재시도로 흡수" 를, §05 에 zone 수·Ingress 재시도 정책을 적는다 — 사용자 확인 필요(R6) |
+| **상태** | 🟡 판정 — 플랫폼 결정·노션 반영 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 
