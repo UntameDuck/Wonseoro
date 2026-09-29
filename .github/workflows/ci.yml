@@ -21,6 +21,8 @@ jobs:
       - run: npm run typecheck -w @wonseoro/server-kit
       # 운영 이미지는 서비스별 의존성만 설치한다 — 선언이 빠지면 거기서 처음 깨진다 (T-M4-01)
       - run: node scripts/check-deps.mjs
+      # 서버 코드가 구조화·마스킹 로거를 우회하지 않는지 (T-M4-24)
+      - run: node scripts/check-logging.mjs
       # GitOps가 서명 검증·namespace 한정 권한·대학별 values를 우회하지 않는지 확인한다 (T-M4-05)
       - run: npm run test:m4:gitops
       # TODO(M1): OpenAPI lint + breaking-change 검사 (첨부 배치 후)
