@@ -51,7 +51,9 @@ function pairs() {
 const changed = [];
 for (const { schedulePath, overlayPath, university } of pairs()) {
   const schedule = parseSchedule(readFileSync(schedulePath, 'utf8'), university);
-  const current = existsSync(overlayPath) ? readFileSync(overlayPath, 'utf8') : null;
+  const current = existsSync(overlayPath)
+    ? readFileSync(overlayPath, 'utf8').replace(/\r\n/g, '\n')
+    : null;
 
   if (check) {
     if (current === null) throw new Error(`${overlayPath} 가 없다 — HelmRelease 가 이 파일을 읽는다`);

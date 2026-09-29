@@ -63,6 +63,7 @@ describe('Peak Mode 예약 → desired state (T-M4-07, D-48)', () => {
   it('CI 는 평시·예약된 창 overlay 를 받고 손으로 고친 overlay 는 거부한다', () => {
     const active = renderOverlay(parsed, planPeakMode(parsed, at('2026-09-09T00:00:00+09:00')));
     assert.equal(assertOverlayConsistent(parsed, active), '2027-susi-1');
+    assert.equal(assertOverlayConsistent(parsed, active.replace(/\n/g, '\r\n')), '2027-susi-1');
     assert.equal(assertOverlayConsistent(parsed, renderOverlay(parsed, { active: false, window: null })), null);
     assert.throws(() => assertOverlayConsistent(parsed, active.replace('apiMinReplicas: 8', 'apiMinReplicas: 80')), /손으로/);
     assert.throws(() => assertOverlayConsistent(parsed, active.replaceAll('2027-susi-1', '2027-susi-9')), /예약에 없다/);

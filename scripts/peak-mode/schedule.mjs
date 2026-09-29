@@ -133,7 +133,9 @@ export function renderOverlay(schedule, plan) {
  * 저장소에 들어 있는 overlay 가 예약과 맞는지 — 평시이거나, 예약된 창 하나를 그대로 옮긴 것이어야 한다.
  * 시각에 따라 달라지는 판정은 하지 않는다(CI 가 시계에 따라 깨지면 안 된다).
  */
-export function assertOverlayConsistent(schedule, overlayText) {
+export function assertOverlayConsistent(schedule, rawOverlayText) {
+  // Windows 체크아웃(autocrlf)의 CRLF 는 내용 차이가 아니다
+  const overlayText = rawOverlayText.replace(/\r\n/g, '\n');
   const overlay = parse(overlayText)?.peakMode;
   if (!overlay || typeof overlay !== 'object') fail('overlay 에 peakMode 가 없다');
   if (overlay.enabled === false) {
