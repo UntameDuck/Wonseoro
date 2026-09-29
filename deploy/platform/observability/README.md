@@ -17,7 +17,7 @@
 | 파일 | 내용 |
 |---|---|
 | `kpi-rules.yaml` | recording rule 14개 — **비율 정의는 여기 한 곳**. 이 파일 자체가 Prometheus chart values 다 |
-| `dashboards/golden-signals.json` | T-M4-21 Traffic(서비스별 RPS·Finalize TPS)·Errors·Latency·Saturation |
+| `dashboards/golden-signals.json` | T-M4-21 Traffic(서비스별 RPS·Finalize TPS)·Errors·Latency·Saturation + 요청 한도 거절(`throttle_decisions`, T-M4-40) |
 | `dashboards/business-kpi.json` | T-M4-22 설계서 §15 업무 KPI 7종 + 결과별 추이 |
 | `dashboards/support.json` | T-M4-23 §10.4 마감일 고정 5종 — finalize success rate·payment verify latency·outbox backlog·DB lock wait·error rate |
 | `grafana-values.yaml` | 로컬 검증용 Grafana(익명 Viewer). 운영 인증·보존은 정하지 않았다 |

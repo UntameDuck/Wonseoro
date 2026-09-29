@@ -28,7 +28,7 @@
 | M5 | [신뢰성·보안·접근성](milestones/M5-reliability-security.md) | 35 | 대학에 넣을 수 있는 수준 |
 | M6 | [Pilot 준비](milestones/M6-pilot-readiness.md) | 15 | 대학 1곳 Shadow Test |
 
-총 **139개 태스크, 74개 완료 (2026-09-30)**. 각 태스크에 담당·근거 노션 절·인수기준이 붙어 있다.
+총 **139개 태스크, 76개 완료 (2026-09-30)**. 각 태스크에 담당·근거 노션 절·인수기준이 붙어 있다.
 
 | 단계 | 진행 |
 |---|---|
@@ -36,7 +36,7 @@
 | M1 접수 Core | 14/14 ✅ |
 | M2 결제·Finalize·화면 | 24/24 ✅ |
 | M3 운영 안전장치 | 14/15 ✅ 종료 (2026-09-27) |
-| M4 분산 실증 | 16/28 ◀ 차트·kind·Flux Pull·격리·동시 Finalize·PgBouncer·Object Storage·HPA 커스텀 지표·예약 Peak Mode·계측·로그 마스킹·KPI 대시보드 ✅ — 다음: T-M4-40 NAT Adaptive Throttling |
+| M4 분산 실증 | 18/28 ◀ 차트·kind·Flux Pull·격리·동시 Finalize·PgBouncer·Object Storage·HPA 커스텀 지표·예약 Peak Mode·계측·로그 마스킹·KPI 대시보드·NAT Adaptive Throttling·Redis 장애 ✅ — 다음: T-M4-39 다중 노드 |
 | M5~M6 | 0/50 |
 
 진행 현황과 다음 착수 순서는 **[03-next-steps.md](03-next-steps.md)** 를 본다.

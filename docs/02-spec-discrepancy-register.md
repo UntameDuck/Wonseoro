@@ -783,6 +783,20 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-51. 계약에 요청 한도 응답(429)이 없다
+
+| | |
+|---|---|
+| **발견** | 2026-09-30 (T-M4-40 Adaptive Throttling 구현) |
+| **충돌** | §01 B6·v1.0 §8.4·STRIDE D-02 는 세션·원서 단위 요청 한도를 요구하지만, §03 첨부 OpenAPI(v1.2.0)의 지원자 경로 어디에도 `429` 응답과 `Retry-After` 가 없다. 오류 코드도 `RATE_LIMITED` 가 없다. |
+| **영향** | 계약만 보고 만든 클라이언트는 429 를 알 수 없는 오류로 다룬다. 자동저장 화면이 Retry-After 를 지키지 않고 곧바로 다시 보내면 한도가 풀리지 않는다. |
+| **판정** | 구현은 요구대로 둔다(ADR-0007): `429` + `Retry-After` + problem `code: RATE_LIMITED`. 계약에는 지원자 경로 공통 응답으로 `429`(Problem, `Retry-After` 헤더)를 더한다 — optional 응답 추가라 호환 변경이다(§A16). |
+| **저장소 반영** | 🟡 코드 반영(`ProblemCode.RATE_LIMITED`·`ProblemException.rateLimited`·throttle 훅). OpenAPI yaml 은 아직 — 계약 파일을 바꾸면 같은 작업에서 노션 §03 첨부를 다시 올려야 한다(R5) |
+| **노션 반영** | ⬜ §03 OpenAPI 첨부에 429 응답 추가·교체 — 사용자 확인 필요(R6) |
+| **상태** | 🟡 판정 — 계약·노션 첨부 교체 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 

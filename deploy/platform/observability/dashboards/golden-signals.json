@@ -352,6 +352,44 @@
         "x": 12,
         "y": 24
       }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Errors — 요청 한도 거절 (Adaptive Throttling)",
+      "description": "T-M4-40 · 지원자 단위 한도 판정. burst=짧은 폭주, risk=위험 신호 누적. 정상 사용자에게 나오면 한도를 다시 본다 (ADR-0007)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (class, decision) (rate(throttle_decisions_total{decision!=\"allowed\"}[5m]))",
+          "legendFormat": "{{class}} {{decision}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      }
     }
   ]
 }

@@ -10,10 +10,10 @@
 ## 1. 30초 요약
 
 - **제품**: 원서로(K-Admission) — 대학 입학 원서접수를 대학별 Data Plane 으로 분산하는 플랫폼. 2026 GovTech 공모전 출품작
-- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 16/28 진행 중**. 전체 74/139 태스크. **CI 네 잡 모두 초록**(2026-09-30 복구)
+- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 18/28 진행 중**. 전체 76/139 태스크. **CI 네 잡 모두 초록**(2026-09-30 복구)
 - **완료한 핵심 증명**: 로컬 kind 2클러스터 축소 환경에서 **대학 간 장애 격리 T-M4-42 통과**. A대 전면 정지 중 B대 접수·중앙 반영, A대 복구 후 접수까지 확인
-- **최근 완료**: T-M4-07 Peak Mode(ADR-0006) · T-M4-20 전 서비스 계측·로그 상관관계 · T-M4-24 로그 마스킹 강제 · **T-M4-21~23 업무 KPI·대시보드 3종** · **D-50 취소 이벤트 계약 위반 수정** · CI 복구
-- **바로 다음 할 일**: **T-M4-40 NAT 뒤 정상 사용자 보호(Adaptive Throttling)** → T-M4-37 Redis 장애 → 시간 압축 시험의 실제 시간 판 → [§4](#4-다음-작업--순서와-방법)
+- **최근 완료**: T-M4-07 Peak Mode(ADR-0006) · T-M4-20 전 서비스 계측·로그 상관관계 · T-M4-24 로그 마스킹 강제 · **T-M4-21~23 업무 KPI·대시보드 3종** · **D-50 취소 이벤트 계약 위반 수정** · CI 복구 · **T-M4-40 NAT Adaptive Throttling(ADR-0007)** · 과부하 중 API 프로세스가 죽던 결함 수정 · **T-M4-37 Redis 장애 무영향**
+- **바로 다음 할 일**: **T-M4-39 다중 노드**(kind 에 워커 노드를 더해 노드 정지 중 무중단) → T-M4-34·35 실제 시간 판(긴 시험 — 돌릴 시간을 사람이 정한다) → [§4](#4-다음-작업--순서와-방법)
 
 ## 2. 반드시 지킬 규칙
 
@@ -41,7 +41,7 @@
 | CI 재현 | CI 통합 잡과 같은 순서를 빈 DB 로: `docker run -d --rm --name ci-pg -e POSTGRES_USER=wonseoro -e POSTGRES_PASSWORD=wonseoro -e POSTGRES_DB=univ_a -p 5499:5432 postgres:16-alpine` → `0001_init`·`0002_db_roles`·`dev-roles`·`verify-constraints`·`seed-dev`·`ci-seed-deadline` 적용 → `DATABASE_URL=…@localhost:5499/univ_a` 로 시험. kind 워크로드 간섭도 없다 |
 | 로컬 관측 스택 | kind A `observability` 네임스페이스: Prometheus(KPI 규칙 포함)·Adapter·Grafana(익명 Viewer). Grafana 는 `kubectl -n observability port-forward svc/grafana 13000:80` |
 | 로컬 DB | compose: `postgres-univ-a` :5432 · `postgres-univ-b` :5442(`--profile multi`) · `postgres-central` :5434 · redis :6379 · minio :9000 |
-| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 250 · server-kit 47 · central-api 20 · event-relay 5 (전체 322, DB 없는 실행 180 pass·142 skip·실패 0). 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함). **DB 통합 시험 전에 kind univ-a 의 API·Relay 를 0 으로 줄인다** — 같은 로컬 `univ_a` DB 를 봐서 시험 행을 먼저 집어 간다(결제 재확인·Relay 시험이 실패하거나 멈춘다). event-relay 시험은 직렬로 돈다 |
+| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 263 · server-kit 47 · central-api 20 · event-relay 5 (전체 335, DB 없는 실행 193 pass·142 skip·실패 0). 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함). **DB 통합 시험 전에 kind univ-a 의 API·Relay 를 0 으로 줄인다** — 같은 로컬 `univ_a` DB 를 봐서 시험 행을 먼저 집어 간다(결제 재확인·Relay 시험이 실패하거나 멈춘다). event-relay 시험은 직렬로 돈다 |
 | 검사 | `npm run db:verify`(DB 제약 20종) · `node scripts/check-deps.mjs`(의존성 선언) · `helm lint deploy/charts/k-admission` |
 
 ## 4. 다음 작업 — 순서와 방법
@@ -107,7 +107,19 @@ T-M4-21~23 도 끝냈다. admission-api 가 결과별 카운터(자동저장·�
 **취소 이벤트가 CloudEvents 스키마와 달라 중앙이 한 건도 받지 못하던 것(D-50)** 을 찾았다 — 이벤트 본문은 이제
 `apps/admission-api/src/common/central/central-events.ts` 한 곳에서 만들고 스키마로 직접 검증한다.
 
-다음은 T-M4-40(NAT Adaptive Throttling)이다. 각 인수기준은 [M4 마일스톤](milestones/M4-federated-proof.md).
+T-M4-40 도 끝냈다(ADR-0007). 요청 한도는 **IP 가 아니라 인증된 지원자** 기준이다 — `apps/admission-api/src/common/throttle/`.
+지원자×요청 종류 토큰 버킷과 위험점수(소유권 검사 실패·다수 원서·한도 초과, 5분 반감기)를 Pod 메모리에 둔다. 정상 세션의
+최종제출은 막지 않는다. `THROTTLE_MODE=enforce|observe|off`(차트 `throttle.mode`). kind NAT 시나리오(단일 출발지 정상 200명 +
+봇 5개)를 세 번 돌려 **세 번 모두 정상 사용자 429 = 0**. 그중 두 번은 과부하로 API Pod 가 재시작했는데, 원인은
+멱등 기록(`idempotency.interceptor`)의 기다리지 않은 Promise 가 DB 풀 포화로 거부되며 **프로세스를 죽인 것**이었다 — 고쳤고,
+DB 풀 포화는 이제 500 대신 503 재시도 안내다. 수정 이미지로 네 번 더 돌려 재시작 0·정상 사용자 429 0 을 확인했다. 5xx·지연은 봇 없는 기준 실행(`nat-bot-kind.mjs 90 no-bots`)에서도 같아
+축소 환경 용량(API Pod 2·Pod 당 DB 연결 5)의 한계다 — 시험은 인수기준만 판정하고 용량은 관찰로 기록한다.
+OpenAPI 에 429 를 적는 것은 노션 §03 첨부 교체와 함께다(D-51).
+
+T-M4-37 은 Redis 를 멈추고·비워도 접수 흐름이 그대로임을 확인했다(`tests/m4/redis-outage-kind.mjs`). **현재 구현은 Redis 를 쓰지 않는다** —
+차트의 Redis 주소·NetworkPolicy 는 설계(세션·캐시)를 위한 자리다. 세션을 Redis 에 두는 인증(M5)을 붙이면 다시 돌린다.
+
+다음은 T-M4-39 다중 노드다. 각 인수기준은 [M4 마일스톤](milestones/M4-federated-proof.md).
 
 T-M4-08은 A kind에 Prometheus `29.35.0`·Adapter `5.3.0`을 설치하고 RPS·p95 지연·처리 중 요청 수를
 Custom Metrics API와 HPA에서 모두 확인해 완료했다. 설정은 `deploy/platform/observability/`, 결과는
@@ -154,8 +166,8 @@ Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, s
 
 ## 6. 전체 남은 규모
 
-139개 중 74개 완료, **65개 남음**.
-AI 가 이 PC 에서 할 수 있는 것 약 38개, 외부 환경 필요 약 15개, 사람·기관 필요 약 15개.
+139개 중 76개 완료, **63개 남음**.
+AI 가 이 PC 에서 할 수 있는 것 약 36개, 외부 환경 필요 약 15개, 사람·기관 필요 약 15개.
 
 ## 7. 어디에 무엇이 있나
 
@@ -163,9 +175,9 @@ AI 가 이 PC 에서 할 수 있는 것 약 38개, 외부 환경 필요 약 15�
 |---|---|
 | 지금 할 일 | [03-next-steps.md](03-next-steps.md) |
 | 단계별 태스크·인수기준 | [milestones/](milestones/) |
-| 설계와 구현이 다른 곳 50건 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) |
+| 설계와 구현이 다른 곳 51건 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) |
 | 노션 문서 지도·동기화 규칙 | [01-notion-sync-protocol.md](01-notion-sync-protocol.md) |
-| 왜 이렇게 정했나 | [adr/](adr/) — 최신 ADR-0006 Peak Mode 예약 GitOps |
+| 왜 이렇게 정했나 | [adr/](adr/) — 최신 ADR-0007 지원자 단위 Adaptive Throttling |
 | 배포 | `deploy/` — 차트 `charts/k-admission`, 대학별 `universities/`, 로컬 `local/` |
 | API 계약 | `packages/contracts/openapi/k-admission.v1.yaml` (v1.2.0) — 컨트롤러와 다르면 계약 적합성 시험이 깨진다 |
 | DB 스키마 | `infra/db/migrations/0001_init.sql`(= 노션 §02 첨부 v1.2) · `0002_db_roles.sql` |
