@@ -12,8 +12,8 @@
 - **제품**: 원서로(K-Admission) — 대학 입학 원서접수를 대학별 Data Plane 으로 분산하는 플랫폼. 2026 GovTech 공모전 출품작
 - **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 18/28 진행 중**. 전체 76/139 태스크. **CI 네 잡 모두 초록**(2026-09-30 복구)
 - **완료한 핵심 증명**: 로컬 kind 2클러스터 축소 환경에서 **대학 간 장애 격리 T-M4-42 통과**. A대 전면 정지 중 B대 접수·중앙 반영, A대 복구 후 접수까지 확인
-- **최근 완료**: T-M4-07 Peak Mode(ADR-0006) · T-M4-20 전 서비스 계측·로그 상관관계 · T-M4-24 로그 마스킹 강제 · **T-M4-21~23 업무 KPI·대시보드 3종** · **D-50 취소 이벤트 계약 위반 수정** · CI 복구 · **T-M4-40 NAT Adaptive Throttling(ADR-0007)** · 과부하 중 API 프로세스가 죽던 결함 수정 · **T-M4-37 Redis 장애 무영향**
-- **바로 다음 할 일**: **T-M4-39 다중 노드**(kind 에 워커 노드를 더해 노드 정지 중 무중단) → T-M4-34·35 실제 시간 판(긴 시험 — 돌릴 시간을 사람이 정한다) → [§4](#4-다음-작업--순서와-방법)
+- **최근 완료**: T-M4-07 Peak Mode(ADR-0006) · T-M4-20 전 서비스 계측·로그 상관관계 · T-M4-24 로그 마스킹 강제 · **T-M4-21~23 업무 KPI·대시보드 3종** · **D-50 취소 이벤트 계약 위반 수정** · CI 복구 · **T-M4-40 NAT Adaptive Throttling(ADR-0007)** · 과부하 중 API 프로세스가 죽던 결함 수정 · **T-M4-37 Redis 장애 무영향** · T-M4-39 다중 노드 시험(drain 무중단·노드 장애 때 전체가 멈추던 DB 연결 결함 수정, D-52)
+- **바로 다음 할 일**: **T-M4-35 중앙 2시간 단절 실제 시간 판**(백그라운드로 돌리며 병행) → T-M4-34 PG 콜백 1~30분 지연 → [§4](#4-다음-작업--순서와-방법)
 
 ## 2. 반드시 지킬 규칙
 
@@ -41,7 +41,7 @@
 | CI 재현 | CI 통합 잡과 같은 순서를 빈 DB 로: `docker run -d --rm --name ci-pg -e POSTGRES_USER=wonseoro -e POSTGRES_PASSWORD=wonseoro -e POSTGRES_DB=univ_a -p 5499:5432 postgres:16-alpine` → `0001_init`·`0002_db_roles`·`dev-roles`·`verify-constraints`·`seed-dev`·`ci-seed-deadline` 적용 → `DATABASE_URL=…@localhost:5499/univ_a` 로 시험. kind 워크로드 간섭도 없다 |
 | 로컬 관측 스택 | kind A `observability` 네임스페이스: Prometheus(KPI 규칙 포함)·Adapter·Grafana(익명 Viewer). Grafana 는 `kubectl -n observability port-forward svc/grafana 13000:80` |
 | 로컬 DB | compose: `postgres-univ-a` :5432 · `postgres-univ-b` :5442(`--profile multi`) · `postgres-central` :5434 · redis :6379 · minio :9000 |
-| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 263 · server-kit 47 · central-api 20 · event-relay 5 (전체 335, DB 없는 실행 193 pass·142 skip·실패 0). 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함). **DB 통합 시험 전에 kind univ-a 의 API·Relay 를 0 으로 줄인다** — 같은 로컬 `univ_a` DB 를 봐서 시험 행을 먼저 집어 간다(결제 재확인·Relay 시험이 실패하거나 멈춘다). event-relay 시험은 직렬로 돈다 |
+| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 263 · server-kit 49 · central-api 20 · event-relay 5 (전체 337, DB 없는 실행 195 pass·142 skip·실패 0). 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함). **DB 통합 시험 전에 kind univ-a 의 API·Relay 를 0 으로 줄인다** — 같은 로컬 `univ_a` DB 를 봐서 시험 행을 먼저 집어 간다(결제 재확인·Relay 시험이 실패하거나 멈춘다). event-relay 시험은 직렬로 돈다 |
 | 검사 | `npm run db:verify`(DB 제약 20종) · `node scripts/check-deps.mjs`(의존성 선언) · `helm lint deploy/charts/k-admission` |
 
 ## 4. 다음 작업 — 순서와 방법
@@ -98,7 +98,7 @@ index 를 거치면 `pg` 가 먼저 로드돼 DB span 이 빠진다), `telemetry
 `withSpan`), `telemetry/logger`(한 줄 JSON·trace_id·마스킹). 네 서비스의 `src/instrumentation.ts` 가 main 의 첫 import 로
 SDK 를 켜고 전역 Nest 로거를 바꾼다. `scripts/check-logging.mjs` 가 CI 에서 console 직접 출력·로거 누락을 막는다.
 kind A 에 Flux(서명 병합 → Pull)로 새 이미지를 배포해 세 워크로드 수집 up=1·구조화 로그를 확인했다 —
-`tests/m4/results/telemetry-kind-2026-09-29T14-05-37-946Z.json`. A 의 API·Relay 와 클러스터 밖 `ka-central` 은 D-50 이후 이미지다(2026-09-30). A 의 서류 워커는 계측 추가(`506d1d2`) 시점 이미지다(카운터 0 초기화 이전). **B 클러스터는 아직 이전 이미지다** — B 를 쓰는 시험(격리 T-M4-42 등) 전에 이미지를 올린다.
+`tests/m4/results/telemetry-kind-2026-09-29T14-05-37-946Z.json`. A 의 API·Relay 와 클러스터 밖 `ka-central` 은 D-50 이후 이미지다(2026-09-30). A 의 서류 워커는 계측 추가(`506d1d2`) 시점 이미지다(카운터 0 초기화 이전). 2026-09-30 부터 A·B 모두 최신 이미지(API·Relay·서류 워커)다. B 의 Helm release 는 이전 차트 revision 이라 새 env(`THROTTLE_MODE` 등)가 없다 — 앱 기본값으로 동작한다.
 **Flux 가 소유한 release 는 `helm upgrade` CLI 로 바꿀 수 없다**(server-side apply 충돌) — 시험 사본에 서명 병합 → bare 로 push → Flux 재개.
 
 T-M4-21~23 도 끝냈다. admission-api 가 결과별 카운터(자동저장·결제 재검증·Finalize)와 DB 게이지(Outbox·중앙 반영·서류 대기·잠금 대기)를
@@ -119,7 +119,16 @@ OpenAPI 에 429 를 적는 것은 노션 §03 첨부 교체와 함께다(D-51).
 T-M4-37 은 Redis 를 멈추고·비워도 접수 흐름이 그대로임을 확인했다(`tests/m4/redis-outage-kind.mjs`). **현재 구현은 Redis 를 쓰지 않는다** —
 차트의 Redis 주소·NetworkPolicy 는 설계(세션·캐시)를 위한 자리다. 세션을 Redis 에 두는 인증(M5)을 붙이면 다시 돌린다.
 
-다음은 T-M4-39 다중 노드다. 각 인수기준은 [M4 마일스톤](milestones/M4-federated-proof.md).
+T-M4-39 는 🟡 다. 평소 로컬은 노드가 하나라, 시험할 때만 다중 노드 클러스터를 만든다 —
+`kind create cluster --config deploy/local/kind-univ-a-multinode.yaml`(univ-m, NodePort 18082) → 이미지 `kind load` →
+`helm upgrade --install univ-a … -f values-s -f values-local -f values-univ-a -f peak-mode-univ-a -f values-multinode` →
+`node tests/m4/node-failure-kind.mjs` → `kind delete cluster --name univ-m`. **메모리 때문에 그동안 univ-a·univ-b 노드를 멈춘다.**
+시험 클라이언트는 요청마다 새 TCP 연결을 연다 — keep-alive 로 재사용하면 요청이 한 Pod 로만 가서 장애가 안 보인다(처음에 그랬다).
+결과: drain 무중단, 강제 정지는 NotReady 판정(49초)까지 약 1분·10% 끊김 후 자동 회복. 원래는 DB 풀에 쿼리 시간 제한이 없어
+죽은 노드의 PgBouncer 로 열린 연결이 살아남은 Pod 의 요청까지 끝없이 붙잡았다(141초 내내 72% 실패) — `server-kit` Db 에
+`queryTimeoutMs`·keep-alive·끊긴 연결 폐기를 넣어 고쳤다. 남은 구간은 D-52(Edge 재시도·노드 판정 시간·zone 수).
+
+다음은 T-M4-35 중앙 2시간 단절 실제 시간 판이다. 각 인수기준은 [M4 마일스톤](milestones/M4-federated-proof.md).
 
 T-M4-08은 A kind에 Prometheus `29.35.0`·Adapter `5.3.0`을 설치하고 RPS·p95 지연·처리 중 요청 수를
 Custom Metrics API와 HPA에서 모두 확인해 완료했다. 설정은 `deploy/platform/observability/`, 결과는
@@ -175,7 +184,7 @@ AI 가 이 PC 에서 할 수 있는 것 약 36개, 외부 환경 필요 약 15�
 |---|---|
 | 지금 할 일 | [03-next-steps.md](03-next-steps.md) |
 | 단계별 태스크·인수기준 | [milestones/](milestones/) |
-| 설계와 구현이 다른 곳 51건 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) |
+| 설계와 구현이 다른 곳 52건 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) |
 | 노션 문서 지도·동기화 규칙 | [01-notion-sync-protocol.md](01-notion-sync-protocol.md) |
 | 왜 이렇게 정했나 | [adr/](adr/) — 최신 ADR-0007 지원자 단위 Adaptive Throttling |
 | 배포 | `deploy/` — 차트 `charts/k-admission`, 대학별 `universities/`, 로컬 `local/` |

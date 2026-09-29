@@ -34,7 +34,7 @@
 | T-M4-34 PG 지연·UNKNOWN | 🟡 | SLOW·UNKNOWN→복구 시 자동 확정·접수, double-confirm 0. 워커 1초·Backoff 시간 압축 — 실제 10초·1~30분 시간 시험 남음 |
 | T-M4-35 중앙 단절 | 🟡 | 8.8초 단절 중 접수 2건·Outbox 보존·복구 후 event loss 0. 운영 인수기준 2시간 시험 남음 |
 | T-M4-38 Object Storage 장애 | ✅ | 로컬 축소 환경에서 MinIO 완전 단절 중 카탈로그 20회 오류 0·원서 생성/자동저장 지속·직접 업로드만 실패. 복구 515ms 뒤 같은 단기 URL 업로드 200·서버 검증 202. `tests/m4/results/object-storage-outage-2026-09-28T06-14-19-725Z.json` |
-| T-M4-39 API 종료 | 🟡 | Pod 강제 삭제 283건·RollingUpdate 504건 연속 요청 오류 0. 단일 kind 노드라 노드 전체 장애는 미검증 |
+| T-M4-39 API 종료 | 🟡 | 단일 노드: Pod 강제 삭제 283건·RollingUpdate 504건 연속 요청 오류 0. **다중 노드(제어 1 + 워커 2, zone 2)**: 계획 정비(drain) 요청 879건 실패 0 — 무중단. 노드 강제 정지는 NotReady 판정(49초)까지 요청 약 10%가 끊겼다가(66초) 노드가 죽은 채로 자동 회복 `tests/m4/results/node-failure-kind-2026-09-29T18-26-14-638Z.json`. 이 시험에서 DB 연결 시간 제한이 없어 **노드 하나의 장애가 살아남은 Pod 까지 멈추던 결함**(141초 내내 72% 실패)을 찾아 고쳤다. 남은 구간은 Edge 재시도·노드 판정 시간·zone 수 등 플랫폼 결정(D-52) |
 | 나머지 | ⬜ | |
 
 **로컬 축소 환경의 한계** — Docker Desktop 8GB 에서 이미지 빌드와 kind 클러스터 2개를 함께 돌리자 엔진이 멈췄다.

@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-30 (**M4 진행** — NAT 뒤 정상 사용자 보호(T-M4-40)·Redis 장애 무영향(T-M4-37) 완료, 과부하 중 API 프로세스가 죽던 결함 수정)
+> 최종 갱신: 2026-09-30 (**M4 진행** — 다중 노드 장애 시험(T-M4-39): drain 무중단, 노드 강제 정지 때 전체가 멈추던 DB 연결 결함 수정, 남은 1분 구간은 D-52)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -22,8 +22,8 @@
 | M5 신뢰성·보안·접근성 | 0/35 | |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 76/139 태스크** (🟡 부분 완료 별도). **335개 테스트**
-(admission-api 263 · server-kit 47 · central-api 20 · event-relay 5) — DB 없는 실행 기준 193 pass·142 skip·실패 0.
+**총 76/139 태스크** (🟡 부분 완료 별도). **337개 테스트**
+(admission-api 263 · server-kit 49 · central-api 20 · event-relay 5) — DB 없는 실행 기준 195 pass·142 skip·실패 0.
 DB 포함 실행은 admission-api 3 skip(`ADMIN_API_TOKEN` 미설정) 외 전부 pass.
 배포 스크립트 시험 별도: Peak Mode 예약 계산 9건(`npm run test:m4:peak-schedule`), 대시보드·KPI 규칙 일관성(`npm run test:m4:observability`).
 DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`)·로그 우회 금지 검사(`scripts/check-logging.mjs`) CI 포함.
@@ -101,7 +101,7 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 | T-M4-34 | PG 지연·timeout·콜백 1~30분 지연 | 🟡 SLOW·UNKNOWN 자동 복구는 시간 압축 통과. 실제 시간 시험 남음 |
 | T-M4-35 | 중앙 Sync 차단 | 🟡 8.8초 축소 단절·event loss 0. 2시간 시험 남음 |
 | T-M4-38 | Object Storage 지연·단절 | ✅ MinIO 완전 단절 중 카탈로그 20회 오류 0·원서 생성/자동저장 지속, 직접 업로드만 실패. 복구 후 업로드·서버 검증 정상 (**로컬 축소 환경**) |
-| T-M4-39 | API Pod·노드 강제 종료 | 🟡 Pod 삭제·RollingUpdate 오류 0. 다중 노드 시험 남음 |
+| T-M4-39 | API Pod·노드 강제 종료 | 🟡 Pod 삭제·RollingUpdate 오류 0, 다중 노드 drain 무중단. 노드 강제 정지는 NotReady 판정까지 약 1분·요청 10% 끊김 — 플랫폼 결정 필요(D-52) |
 
 ### 🎯 목표 3 — 차트에 남은 운영 기능 · ✅ 로컬에서 할 수 있는 것 완료 (다음 목표는 아래 「목표 5」)
 
@@ -121,7 +121,8 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 |---|---|
 | T-M4-40 | ✅ 지원자 단위 Adaptive Throttling(ADR-0007) — IP 미사용, 지원자×요청 종류 버킷 + 위험점수, 정상 세션 최종제출 불차단, 429+Retry-After, `THROTTLE_MODE`. kind NAT 시나리오 세 번 모두 정상 사용자 429 = 0·봇 78~85% 거절. 과부하 중 멱등 기록 실패로 **API 프로세스가 죽던 결함**을 찾아 고쳤다 — 수정 이미지로 반복해 재시작 0·정상 사용자 429 0 확인. 5xx·지연은 봇 없는 기준 실행에서도 같아 축소 환경 용량 한계다. OpenAPI 429 는 D-51 |
 | T-M4-37 | ✅ Redis 정지·재기동+FLUSHALL 중 접수 흐름 무영향 — 현재 구현이 Redis 를 쓰지 않는다. 세션을 Redis 에 두는 인증(M5) 때 다시 시험 |
-| **다음** | **남은 로컬 시험 중 T-M4-39 다중 노드**(kind 워커 노드 추가 → 노드 정지 중 무중단) → T-M4-34·35 실제 시간 판(PG 콜백 1~30분·중앙 2시간 단절, 긴 시험이라 사람이 돌리는 시간을 정해야 한다) |
+| T-M4-39 | 🟡 다중 노드 kind(`kind-univ-a-multinode.yaml`, 시험 때만 만들고 지운다): drain 무중단. 강제 정지 때 DB 연결 시간 제한이 없어 전체가 멈추던 결함 수정 → 66초·약 10% 끊김 후 자동 회복. Edge 재시도·노드 판정 시간·zone 3개 여부는 D-52 |
+| **다음** | **T-M4-35 중앙 2시간 단절 실제 시간 판** — 백그라운드로 2시간 돌리면서 다른 일을 병행할 수 있다. 그다음 T-M4-34 PG 콜백 1~30분 지연 실제 시간 판 |
 
 ### 🎯 목표 4 — 노션 반영 (D-43 · D-44)
 
@@ -130,6 +131,7 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 - §05 첨부 values-m 의 `peakMode.scheduledActivation` 예시 시각 비우기 — D-49 (D-44 교체와 함께)
 - §04 CloudEvents 첨부의 `subjectRef` 키 ID 상한 — D-47
 - §03 OpenAPI 첨부에 지원자 경로 공통 `429`(RATE_LIMITED·Retry-After) 추가 — D-51
+- §08 시나리오 10 합격 기준·§05 zone 수·Ingress 재시도 정책 — D-52
 
 ### 사람이 정하거나 해야 하는 것
 
