@@ -1,0 +1,99 @@
+{
+  "test": "T-M4-07",
+  "scenario": "Peak Mode 예약 → 서명 커밋 → Flux Pull → API 최소 replica 전환·원복",
+  "environment": "local-kind-univ-a (축소 환경)",
+  "limitations": [
+    "로컬 kind 단일 노드·autoscaling off — HPA minReplicas 대신 Deployment replicas 로 같은 values 경로를 확인했다.",
+    "예약 실행 주체(GitHub Actions 예약 워크플로)는 대신 이 스크립트가 같은 생성기(scripts/peak-mode-sync.mjs)와 git commit -S 로 흉내 냈다. GitHub 예약 지연은 측정하지 않았다.",
+    "서명키는 T-M4-05 의 임시 SSH 키다. 운영 서명 주체·보호된 environment secret 은 미검증.",
+    "실행 중인 이미지는 이전 빌드라 PEAK_MODE_ENDS_AT 의 앱 동작은 단위 시험으로만 확인했다. 여기서는 env 전달까지 본다."
+  ],
+  "startedAt": "2026-09-29T11:43:36.484Z",
+  "checks": {
+    "시작 상태 평시": {
+      "pass": true,
+      "replicas": 2,
+      "ready": 2,
+      "updated": 2,
+      "generationObserved": true,
+      "env": {
+        "PEAK_MODE_ENABLED": "false",
+        "PEAK_MODE_SUSPEND_NON_CRITICAL_JOBS": "true"
+      }
+    },
+    "사본 트리 = dev-folder main": {
+      "pass": true,
+      "main": "feef902"
+    },
+    "예약 창 시작 → API replica 상향": {
+      "pass": true,
+      "from": 2,
+      "to": 3,
+      "env": {
+        "PEAK_MODE_ENABLED": "true",
+        "PEAK_MODE_ACTIVATES_AT": "2026-09-29T11:48:39Z",
+        "PEAK_MODE_ENDS_AT": "2026-09-29T12:43:39Z",
+        "PEAK_MODE_SUSPEND_NON_CRITICAL_JOBS": "true"
+      },
+      "helmRevision": "0.1.0+3356ee9eec92.3",
+      "secondsFromPush": 62
+    },
+    "억제·종료 시각이 예약과 같다": {
+      "pass": true,
+      "PEAK_MODE_ENABLED": "true",
+      "PEAK_MODE_ACTIVATES_AT": "2026-09-29T11:48:39Z",
+      "PEAK_MODE_ENDS_AT": "2026-09-29T12:43:39Z",
+      "PEAK_MODE_SUSPEND_NON_CRITICAL_JOBS": "true"
+    },
+    "예약 창 종료 → API replica 원복·억제 env 제거": {
+      "pass": true,
+      "from": 3,
+      "to": 2,
+      "env": {
+        "PEAK_MODE_ENABLED": "false",
+        "PEAK_MODE_SUSPEND_NON_CRITICAL_JOBS": "true"
+      },
+      "helmRevision": "0.1.0+813d3b1e292d.3",
+      "secondsFromPush": 33
+    },
+    "서명 검증 통과 유지": {
+      "pass": true,
+      "artifact": "main@sha1:813d3b1e292de3bd8ff86a411c7895c2d58b5cdd",
+      "reason": "Succeeded"
+    }
+  },
+  "timeline": [
+    {
+      "at": "2026-09-29T11:43:42.129Z",
+      "event": "push",
+      "sha": "3356ee9eec92e75476baf01478fcfa077528ca37",
+      "sshSignatureHeader": true
+    },
+    {
+      "at": "2026-09-29T11:43:44.664Z",
+      "event": "flux resumed"
+    },
+    {
+      "at": "2026-09-29T11:44:46.448Z",
+      "event": "push",
+      "sha": "813d3b1e292de3bd8ff86a411c7895c2d58b5cdd",
+      "sshSignatureHeader": true
+    },
+    {
+      "at": "2026-09-29T11:45:20.418Z",
+      "event": "flux suspended"
+    }
+  ],
+  "window": {
+    "id": "local-peak-test",
+    "scaleOutAt": "2026-09-29T11:42:39Z",
+    "suspendJobsAt": "2026-09-29T11:48:39Z",
+    "endsAt": "2026-09-29T12:43:39Z",
+    "apiMinReplicas": 3
+  },
+  "finishedAt": "2026-09-29T11:45:20.419Z",
+  "pass": true,
+  "notes": [
+    "push 항목의 sshSignatureHeader 는 실행 뒤 git cat-file 로 확인해 기록했다. 최초 실행은 로컬 allowedSigners 미설정으로 %G?=N 을 적었으나, 두 커밋 모두 SSH 서명 헤더가 있고 Flux SourceVerified=True(Succeeded)로 검증됐다."
+  ]
+}

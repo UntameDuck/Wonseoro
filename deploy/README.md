@@ -28,6 +28,9 @@ Pull 실행 주체와 bootstrap 절차는 [gitops/README.md](gitops/README.md), 
 [ADR-0005](../docs/adr/ADR-0005-flux-pull-gitops.md)다. Flux는 signed Git HEAD만 artifact로 만들고,
 대학 namespace 전용 ServiceAccount로 HelmRelease를 reconcile한다.
 
+Peak Mode 예약(D-1 사전 확장·비핵심 작업 억제·원복)도 같은 경로를 탄다 — 예약 워크플로가 대학별
+`peak-mode.yaml` 을 서명 커밋으로 바꾸면 Flux가 Pull한다 ([ADR-0006](../docs/adr/ADR-0006-scheduled-peak-mode-gitops.md)).
+
 ## Runtime 보안 기준 (v1.1 §05)
 - `runAsNonRoot`, `readOnlyRootFilesystem`, seccomp `RuntimeDefault`
 - `allowPrivilegeEscalation=false`, capabilities `drop: ALL`

@@ -31,3 +31,4 @@ T-M5 공급망 보안 게이트에서 활성화한다. 따라서 T-M4-05의 서�
 - 서명되지 않았거나 신뢰하지 않는 HEAD는 Source가 Ready가 되지 않아 배포로 이어지지 않는다.
 - 대학별 코드 fork 없이 같은 차트와 서로 다른 values를 사용한다.
 - D-48의 실행 주체는 정해졌지만, 예약 시각에 Peak Mode desired state를 바꾸는 자동화는 별도 구현이 필요하다.
+  → [ADR-0006](ADR-0006-scheduled-peak-mode-gitops.md)에서 서명 커밋 방식으로 구현했다(2026-09-29).

@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-29 (**M4 진행** — Flux signed Git Pull·drift 복구 검증 완료)
+> 최종 갱신: 2026-09-29 (**M4 진행** — Peak Mode 예약 GitOps 전환 완료, T-M4-07·D-48 종결)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -10,7 +10,7 @@
 
 ## 현재 지점
 
-**M0·M1·M2·M3 완료, M4 진행 중** (10/28). MVP가 화면에서 끝까지 동작하고, 로컬 축소 환경에서 대학 간 장애 격리·동시 Finalize·DB 연결 상한·Object Storage 장애 격리·HPA 커스텀 지표·signed GitOps Pull을 증명했다.
+**M0·M1·M2·M3 완료, M4 진행 중** (11/28). MVP가 화면에서 끝까지 동작하고, 로컬 축소 환경에서 대학 간 장애 격리·동시 Finalize·DB 연결 상한·Object Storage 장애 격리·HPA 커스텀 지표·signed GitOps Pull·예약 Peak Mode 전환을 증명했다.
 
 | 단계 | 진행 | 비고 |
 |---|---|---|
@@ -18,12 +18,13 @@
 | M1 접수 Core | **14/14** | ✅ |
 | M2 결제·Finalize·화면 | **24/24** | ✅ Demo Gate 1~5 통과 |
 | M3 운영 안전장치 | **14/15** | ✅ **종료 2026-09-27** — T-M3-03 WORM·T-M3-06 JWKS 는 M5 |
-| **M4 분산 실증** | **10/28** | ◀ 진행 중 — 차트·kind·Flux Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표 ✅, PG·중앙·Pod 장애 축소 시험·Peak Mode 🟡 |
+| **M4 분산 실증** | **11/28** | ◀ 진행 중 — 차트·kind·Flux Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표·Peak Mode ✅, PG·중앙·Pod 장애 축소 시험·관측성 🟡 |
 | M5 신뢰성·보안·접근성 | 0/35 | |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 68/139 태스크** (🟡 부분 완료 별도). **301개 테스트**
-(admission-api 242 · server-kit 35 · central-api 20 · event-relay 4) — DB 없는 실행 기준 160 pass·141 skip·실패 0.
+**총 69/139 태스크** (🟡 부분 완료 별도). **304개 테스트**
+(admission-api 245 · server-kit 35 · central-api 20 · event-relay 4) — DB 없는 실행 기준 163 pass·141 skip·실패 0.
+배포 스크립트 시험 별도: Peak Mode 예약 계산 9건(`npm run test:m4:peak-schedule`).
 DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`) CI 포함.
 
 ### 동작하는 것 — End-to-End
@@ -92,12 +93,12 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 | T-M4-38 | Object Storage 지연·단절 | ✅ MinIO 완전 단절 중 카탈로그 20회 오류 0·원서 생성/자동저장 지속, 직접 업로드만 실패. 복구 후 업로드·서버 검증 정상 (**로컬 축소 환경**) |
 | T-M4-39 | API Pod·노드 강제 종료 | 🟡 Pod 삭제·RollingUpdate 오류 0. 다중 노드 시험 남음 |
 
-### 🎯 목표 3 — 차트에 남은 운영 기능 · **현재 목표**
+### 🎯 목표 3 — 차트에 남은 운영 기능 · **현재 목표** (다음: T-M4-20 로그 상관관계·나머지 서비스 계측 → T-M4-21~24)
 
 | ID | 할 일 |
 |---|---|
 | T-M4-09 | ✅ PgBouncer 1.26.0 배포. 직접 DB 우회 차단, 동시 30쿼리 성공, upstream 최대 10/10 확인. 노드 강제 재시작 뒤 stale PID 자동 제거·A 전체 Ready 복구 확인 (`pgbouncer-2026-09-28T01-26-13-047Z.json`) |
-| T-M4-07 | 🟡 즉시 Peak Mode 최소 replica 상향·예약 시각 이후 비핵심 자동 대조 억제 완료. 실행 주체는 Flux로 확정했으며 예약 시각에 desired state를 바꾸는 자동화가 남음(D-48) |
+| T-M4-07 | ✅ 예약 창(`peak-schedule.yaml`) → 예약 워크플로 서명 커밋(`peak-mode.yaml`) → Flux Pull로 API 최소 replica 상향·원복, 앱은 억제~종료 시각에만 자동 대조를 멈춘다(ADR-0006, D-48 종결). 로컬 축소 환경 2→3(62초)·원복(33초) (`peak-mode-gitops-2026-09-29T11-43-36-484Z.json`). 첨부 예시 시각의 영구 억제 위험은 D-49 |
 | T-M4-08 | ✅ Prometheus 수집·Adapter 변환과 RPS·p95 지연·처리 중 요청 수 HPA `ValidMetricFound` 확인. 시험 뒤 로컬 HPA 원복 (`hpa-custom-metrics-2026-09-29T03-27-10-000Z.json`) |
 | T-M4-05 | ✅ Flux Pull — signed Git HEAD 검증, namespace 한정 reconcile, Helm 인수·drift 복구, unsigned HEAD 거부 확인 (`gitops-pull-2026-09-29T04-24-15-000Z.json`) |
 | T-M4-20~24 | 🟡 접수 API Prometheus Metrics·OTLP/gRPC Trace·PII allowlist 완료(`tests/m4/telemetry-smoke.mjs`). 로그 상관관계·다른 서비스·대시보드 남음 |
@@ -106,6 +107,7 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 
 - §05 첨부 runtime·values-m 교체 — 포트·프로브·NODE_ENV·대조 방식·마감버전 제거, **커넥션 예산 초과(⑦) 수정**
 - §07 와이어프레임 결제 화면 문구 — "결제가 확인되면 바로 접수"(D-42)
+- §05 첨부 values-m 의 `peakMode.scheduledActivation` 예시 시각 비우기 — D-49 (D-44 교체와 함께)
 
 ### 사람이 정하거나 해야 하는 것
 
@@ -113,6 +115,7 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 |---|---|
 | **K-PaaS(또는 클라우드) 시험 환경** | 3,000 CCU·1,000 RPS·6시간 Soak·DB Failover 실측은 이 PC 로 불가 (T-M4-30~32·36·41) |
 | 제출 PDF 정정 (D-2·D-3) | 개발보고서의 "Java/Spring" 표기 |
+| Peak Mode 예약 워크플로 켜기 | GitHub environment `peak-mode`·secret `PEAK_MODE_SSH_SIGNING_KEY` 등록, 대학 `wonseoro-git-authors` 에 공개키 추가 — 저장소·대학 관리자 권한 (ADR-0006) |
 | 첨부 values-m 커넥션 수치 (D-44 ⑦) | Pod 당 38 로 줄일지, 예산을 411 이상으로 올릴지 — DB 쪽 사실이라 대학·운영이 정한다 |
 
 ---

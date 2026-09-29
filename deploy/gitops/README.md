@@ -8,7 +8,7 @@ T-M4-05의 실행 주체는 Flux다. Flux는 **각 대학 클러스터 안에서
 ```text
 bootstrap/<UNIV>.yaml       # 서명 검증 GitRepository + 대학별 Kustomization
 base/reconciler-rbac.yaml   # kadmission-app 안에서만 동작하는 release-controller
-clusters/<univ>/            # 동일 차트 + Size Profile + 대학 values HelmRelease
+clusters/<univ>/            # 동일 차트 + Size Profile + 대학 values + Peak overlay HelmRelease
 local/                      # kind 검증 전용. 운영에 적용 금지
 ```
 
@@ -38,5 +38,23 @@ kubectl --context <대학-context> -n kadmission-app describe gitrepository wons
 - 이미지: production values는 digest를 강제한다. Cosign admission 검증은 T-M5 공급망 게이트다.
 - 권한: `release-controller`는 `kadmission-app` 네임스페이스 리소스만 관리한다.
 - 비밀: runtime Secret·Git 인증·서명 개인키는 저장소에 넣지 않는다.
+
+## Peak Mode 예약 (T-M4-07, ADR-0006)
+
+HelmRelease 의 마지막 values 는 `deploy/universities/<UNIV>/peak-mode.yaml` 이다. 이 파일은
+`.github/workflows/peak-mode.yml` 이 대학별 `peak-schedule.yaml` 에서 10분마다 계산해, 바뀐 경우에만
+**전용 SSH 키로 서명 커밋**한다. Flux 는 평소처럼 서명을 검증하고 Pull 한다 — 중앙이나 워크플로에 대학
+클러스터 자격증명은 없다.
+
+대학이 할 일: 예약 자동화 공개키를 `wonseoro-git-authors` Secret 에 추가로 넣는다.
+
+```powershell
+kubectl --context <대학-context> -n kadmission-app create secret generic wonseoro-git-authors `
+  --from-file=release-manager.sshpub=<승인된 SSH 공개키> `
+  --from-file=peak-mode.sshpub=<예약 자동화 SSH 공개키> --dry-run=client -o yaml | kubectl --context <대학-context> apply -f -
+```
+
+저장소 관리자가 할 일: GitHub environment `peak-mode` 를 보호 규칙과 함께 만들고 secret
+`PEAK_MODE_SSH_SIGNING_KEY` 에 개인키를 넣는다. 워크플로는 overlay 밖 파일이 바뀌면 커밋하지 않는다.
 
 로컬 서명 Pull 시험 절차와 축소 환경 차이는 [local/README.md](local/README.md)에 있다.

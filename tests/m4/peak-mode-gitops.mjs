@@ -116,9 +116,10 @@ async function waitFor(label, predicate, timeoutMs = 600_000) {
 async function signedCommitAndPush(message) {
   await git(['commit', '-q', '-S', '-m', message]);
   const sha = await git(['rev-parse', 'HEAD']);
-  const verify = await run('git', ['log', '-1', '--format=%G?', sha], work);
+  // 검증은 Flux(SourceVerified)가 한다. 여기서는 SSH 서명 헤더가 실렸는지만 본다 (로컬 git 에는 allowedSigners 가 없다)
+  const signed = (await git(['cat-file', 'commit', sha])).includes('gpgsig -----BEGIN SSH SIGNATURE');
   await git(['push', '-q', bare, 'HEAD:main']);
-  mark('push', { sha, signature: verify });
+  mark('push', { sha, sshSignatureHeader: signed });
   return sha;
 }
 

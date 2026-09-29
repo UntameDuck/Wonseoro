@@ -739,7 +739,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
-## D-48. Peak Mode 예약 시각은 있지만 HPA 전환 실행 주체가 없다
+## D-48. Peak Mode 예약 시각은 있지만 HPA 전환 실행 주체가 없다 🟢
 
 | | |
 |---|---|
@@ -747,9 +747,25 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **충돌** | §01 B1과 §05 첨부 `values-m.yaml`은 `peakMode.scheduledActivation`으로 D-1 사전 확장·마감 전 최소 replica 상향을 요구한다. 현재 차트는 배포할 때 `peakMode.enabled=true`인 경우에만 HPA 최소값을 올리고, 예약 시각을 읽어 실제 전환할 실행 주체는 없다. `suspendNonCriticalJobs`도 선언만 있고 사용하지 않는다. |
 | **위험** | 예약 시각만 설정하면 자동 전환된다고 오인할 수 있다. HPA가 트래픽을 본 뒤 반응하므로 피크 시작 전에 필요한 여유 용량을 확보하지 못하고, 비핵심 대조 작업도 피크 중 DB 자원을 계속 사용한다. |
 | **판정 방향** | 애플리케이션 Pod에 Kubernetes 수정 권한을 주지 않는다. 예약된 HPA/replica 변경은 Flux Pull 운영 저장소·배포 자동화가 수행하고, Data Plane 앱은 예약 시각을 읽어 비핵심 내부 작업만 억제한다. `scheduledActivation`만으로 Scale-out 완료를 주장하지 않는다. 도구 선택과 신뢰 경계는 ADR-0005로 확정했다. |
-| **저장소 반영** | 🟡 `PEAK_MODE_*`·예약 시각 이후 자동 대조 억제·Flux signed Pull은 반영. 예약 시각에 Git desired state를 변경하는 자동화가 남음 |
+| **판정** | **예약 시각에 Git desired state를 서명 커밋으로 바꾸고 Flux가 Pull한다** (ADR-0006). 대학별 `peak-schedule.yaml`(사전 확장·작업 억제·종료) → 생성기 → HelmRelease 마지막 values `peak-mode.yaml`. 앱은 억제 시각~종료 시각에만 비핵심 작업을 멈추고, 종료 시각이 지나면 overlay가 늦어도 스스로 푼다 |
+| **저장소 반영** | ✅ `scripts/peak-mode-sync.mjs`·`scripts/peak-mode/`·`.github/workflows/peak-mode.yml`·대학별 `peak-schedule.yaml`/`peak-mode.yaml`·HelmRelease valuesFiles·차트 `PEAK_MODE_ENDS_AT`·앱 억제 정책. 시험: 예약 계산 9건·앱 정책 3건 추가, CI overlay 일관성 검사 |
 | **노션 반영** | 해당 없음 — 기존 요구를 실행할 주체가 저장소에 빠진 구현 공백 |
-| **상태** | 🟡 부분 반영 — Flux 실행 주체 확정, 예약 desired-state 변경 자동화 필요 |
+| **검증** | 로컬 kind 축소 환경 — 예약 창 시작 서명 커밋 → Flux 수렴 → API replica 2→3·억제/종료 env 전달(push 뒤 62초), 종료 커밋 → 2로 원복(33초), SourceVerified 유지. `tests/m4/results/peak-mode-gitops-2026-09-29T11-43-36-484Z.json`. GitHub 예약 워크플로 실행·운영 서명 주체는 실제 저장소 설정 필요 |
+| **상태** | 🟢 CLOSED — 저장소 반영·로컬 Flux 실측 (2026-09-29) |
+
+---
+
+## D-49. 첨부 values-m 의 예시 예약 시각이 지나면 자동 대조가 영구히 멈춘다
+
+| | |
+|---|---|
+| **발견** | 2026-09-29 (T-M4-07 예약 자동화 구현 대조) |
+| **충돌** | §05 첨부 `values-m.yaml`은 `peakMode.scheduledActivation: "2026-09-11T03:00:00Z"`를 고정값으로 둔다. 앱은 이 시각부터 비핵심 작업을 억제하는데 종료 시각이 없어서, 첨부 values 그대로 배포하면 그 뒤로 1시간 자동 대조(D-40)가 **영구히** 돌지 않는다. |
+| **위험** | 대조가 조용히 멈추면 결제·접수·중앙 ACK 불일치가 예외 큐에 올라오지 않는다. 피크를 지난 뒤에도 운영자는 알 수 없다. |
+| **판정** | 예약 시각은 배포 기본값이 아니라 대학별 예약에서 온다(ADR-0006). HelmRelease가 마지막에 얹는 `peak-mode.yaml`이 평시에는 `scheduledActivation`을 비우고, 예약 창에서는 억제·종료 시각을 함께 준다. 앱은 `PEAK_MODE_ENDS_AT`이 지나면 억제를 푼다. 첨부 파일은 R5에 따라 고치지 않는다. |
+| **저장소 반영** | ✅ 대학별 `peak-mode.yaml` overlay(평시 비움) · `tests/m4/gitops-manifests.mjs`가 overlay가 마지막 values인지 검사 |
+| **노션 반영** | ⬜ §05 첨부 values-m 교체(D-44) 때 `scheduledActivation`을 비우고 예약은 `peak-schedule.yaml`에서 온다고 적는다 — 사용자 확인 필요(R6) |
+| **상태** | 🟡 저장소 반영 — 노션 첨부 교체 대기 |
 
 ---
 
