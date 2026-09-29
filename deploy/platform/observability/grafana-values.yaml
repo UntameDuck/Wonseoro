@@ -1,0 +1,35 @@
+# T-M4-21~23 로컬 축소 검증용 Grafana chart 10.5.15 (Grafana 12.3.1)
+# 운영에서는 대학별 관측성 스택의 인증(OIDC)·권한·보존을 별도로 정한다. 여기 값은 운영용이 아니다.
+#
+# 대시보드는 dashboards/*.json 을 그대로 ConfigMap(label grafana_dashboard=1)으로 올리고 사이드카가 읽는다.
+# 로컬은 관리자 비밀번호를 쓰지 않도록 익명 Viewer 로만 본다.
+persistence:
+  enabled: false
+resources:
+  requests: { cpu: 50m, memory: 128Mi }
+  limits: { cpu: 500m, memory: 256Mi }
+
+grafana.ini:
+  auth.anonymous:
+    enabled: true
+    org_role: Viewer
+  users:
+    allow_sign_up: false
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        uid: prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus-server.observability.svc
+        isDefault: true
+
+sidecar:
+  dashboards:
+    enabled: true
+    label: grafana_dashboard
+    labelValue: "1"
+    searchNamespace: observability

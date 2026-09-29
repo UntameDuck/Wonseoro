@@ -1,0 +1,30 @@
+{
+  "test": "D-50",
+  "scenario": "접수 전 취소 → Outbox → 중앙 Sync Gateway → 요약 CANCELLED",
+  "environment": "local-kind-univ-a + ka-central (축소 환경)",
+  "startedAt": "2026-09-29T15:44:43.044Z",
+  "checks": {
+    "원서 생성·취소": {
+      "pass": true,
+      "create": 201,
+      "cancel": 200
+    },
+    "Outbox 취소 이벤트가 중앙 ACK 로 SENT": {
+      "pass": true,
+      "outboxStatus": "SENT"
+    },
+    "중앙 요약이 CANCELLED": {
+      "pass": true,
+      "summary": "CANCELLED|1"
+    },
+    "중앙에 대학 내부 원서 UUID 가 없다": {
+      "pass": true,
+      "internalIdRows": "0/0"
+    },
+    "중앙으로 간 본문에 취소 사유 문장이 없다": {
+      "pass": true
+    }
+  },
+  "finishedAt": "2026-09-29T15:45:06.994Z",
+  "pass": true
+}

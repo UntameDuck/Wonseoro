@@ -1,0 +1,54 @@
+{
+  "test": "T-M4-21·22·23",
+  "scenario": "Grafana 에 대시보드 3종을 불러와 Prometheus 규칙 값으로 그리는가",
+  "environment": "local-kind-univ-a (축소 환경)",
+  "grafana": {
+    "chart": "grafana/grafana 10.5.15",
+    "version": "12.3.1",
+    "auth": "anonymous Viewer (로컬 전용)"
+  },
+  "datasourceHealth": "OK",
+  "dashboards": [
+    {
+      "uid": "kadmission-golden-signals",
+      "title": "K-Admission · Golden Signals"
+    },
+    {
+      "uid": "kadmission-support",
+      "title": "K-Admission · Support (마감일 고정)"
+    },
+    {
+      "uid": "kadmission-business-kpi",
+      "title": "K-Admission · 업무 KPI"
+    }
+  ],
+  "observedInBrowser": {
+    "source": "브라우저 pane 에서 kiosk 모드로 연 화면의 텍스트·스크린샷(2026-09-30)",
+    "business_kpi": {
+      "draft_save_success_rate": "100%",
+      "payment_verify_success_rate": "100%",
+      "finalize_success_rate": "100%",
+      "finalize_retry_rate": "42.9%",
+      "outbox_oldest_age_seconds": "0 s",
+      "central_sync_lag_seconds": "6.65 days (옛 DEAD 취소 이벤트 6건, D-50)",
+      "document_scan_pending": "0"
+    },
+    "support": {
+      "finalize_success_rate": "100%",
+      "payment_verify_latency_p95": "450 ms",
+      "outbox_backlog": "0",
+      "db_lock_wait": "0",
+      "error_rate": "0%"
+    },
+    "golden_signals": "Traffic(서비스별 RPS·Finalize TPS)·Errors·Latency·Saturation 패널 렌더링 확인"
+  },
+  "fixesFromThisCheck": [
+    "비율 패널 축을 0~100% 로 고정 — 값이 0 일 때 축이 10000% 까지 늘어났다"
+  ],
+  "limitations": [
+    "값은 business-kpi-kind 시험의 원서 12건 흐름에서 나왔다. 성능 수치가 아니다.",
+    "운영 Grafana 인증(OIDC)·권한·보존은 정하지 않았다."
+  ],
+  "startedAt": "2026-09-29T15:52:02.577Z",
+  "pass": true
+}
