@@ -13,6 +13,8 @@ import {
 const scanResults = metrics.getMeter('k-admission.document').createCounter('document_scans', {
   description: '서류 검사 판정별 수 (보고까지 끝난 것만)',
 });
+// 첫 검사에서 처음 생긴 시계열은 rate() 가 그 증가를 놓친다. 판정 라벨을 0 으로 만들어 둔다.
+for (const verdict of ['CLEAN', 'MALICIOUS', 'ERROR']) scanResults.add(0, { verdict });
 import { ADMISSION_API_URL, BREAKER, SCANNER } from './config';
 
 export interface ScanTarget {

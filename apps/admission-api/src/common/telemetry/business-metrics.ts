@@ -30,6 +30,16 @@ const finalizations = meter.createCounter('finalizations', {
   description: 'Finalize 결과별 수 (finalized·already_finalized·rejected·error), trigger=applicant|payment_confirmed',
 });
 
+// 알려진 결과 라벨을 기동 때 0 으로 만들어 둔다. 첫 요청에서 처음 생긴 시계열은 Prometheus 가 이미
+// 올라간 값으로 처음 보게 돼 rate()·increase() 가 그 증가를 놓친다 — 마감 직후 첫 오류가 안 보이는 식이다.
+for (const outcome of ['saved', 'conflict', 'rejected', 'error']) draftSaves.add(0, { outcome });
+for (const outcome of ['verified', 'pending', 'failed', 'unverified', 'rejected', 'error']) {
+  paymentVerifications.add(0, { outcome });
+}
+for (const trigger of ['applicant', 'payment_confirmed']) {
+  for (const outcome of ['finalized', 'already_finalized', 'rejected', 'error']) finalizations.add(0, { outcome, trigger });
+}
+
 export type Outcome = 'success' | 'conflict' | 'rejected' | 'error';
 
 /** 던져진 예외를 KPI 결과로 나눈다. 4xx 업무 예외는 거절, 412 는 충돌, 나머지는 시스템 오류다. */

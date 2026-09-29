@@ -34,6 +34,10 @@ type SendOutcome = 'SENT' | 'RETRY' | 'DEAD' | 'HELD';
 const relayEvents = metrics.getMeter('k-admission.relay').createCounter('outbox_relay_events', {
   description: 'Outbox 전송 결과별 이벤트 수',
 });
+// 첫 전송에서 처음 생긴 시계열은 rate() 가 그 증가를 놓친다. 알려진 결과·이벤트 타입을 0 으로 만들어 둔다.
+for (const outcome of ['SENT', 'RETRY', 'DEAD', 'HELD'] satisfies SendOutcome[]) {
+  relayEvents.add(0, { outcome, event_type: 'kr.kadmission.application.finalized.v1' });
+}
 
 interface OutboxRow {
   id: string;
