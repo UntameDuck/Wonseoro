@@ -769,6 +769,20 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-50. 중앙 이벤트 본문이 CloudEvents 스키마와 다르다 — 취소 이벤트는 전부 거절됐다 🔴
+
+| | |
+|---|---|
+| **발견** | 2026-09-30 (T-M4-22 업무 KPI `central_sync_lag_seconds` 가 로컬에서 6.6일로 나와 추적) |
+| **충돌** | §04 첨부 `k-admission-cloudevents.schema.json`(저장소 사본과 바이트 동일)은 ① 취소 이벤트 본문에 `applicationId`·`cancelledAt`·`reasonCode`·`integrityHash` 를 요구하는데 구현은 `universityId`·`admissionYear`·`status`·`cancelledAt`·`refundRequired` 를 보냈다. ② 접수 이벤트는 `additionalProperties: false` 인데 `universityId`·`submittedAt` 을 더 실었다. ③ Relay 가 CloudEvents `subject` 에 대학 내부 원서 UUID(`aggregate_id`)를 그대로 실었다 — v1.0 §17.1 "Opaque Application ID" 위반. |
+| **영향** | 중앙 Sync Gateway 는 `data.applicationId` 가 없으면 400 으로 거절하고, Relay 는 4xx 를 DEAD 로 보낸다. **접수 전 취소는 한 건도 중앙에 반영되지 않았다**(로컬 DB DEAD 6건, 2026-09-23). 중앙 "내 원서" 에 취소한 원서가 계속 작성 중으로 보일 수 있다. ③은 대학 내부 식별자가 중앙으로 새는 개인정보 최소화 위반이다. |
+| **판정** | **스키마(첨부)가 canonical** — 구현을 스키마에 맞춘다. 본문은 `common/central/central-events.ts` 한 곳에서 만들고 스키마로 직접 검증한다(ajv). 취소 사유 문장은 여전히 보내지 않고 분류 `reasonCode: APPLICANT_REQUEST` 만 보낸다(취소는 지원자 본인만, D-7). 환불 필요 여부는 대학 예외 큐의 일이라 중앙에 보내지 않는다. `subject` 는 본문의 불투명 ID 를 쓴다. 중앙은 취소 이벤트의 상태를 이벤트 타입으로 정한다. |
+| **저장소 반영** | ✅ `central-events.ts`(+ 스키마 검증 시험 4건) · 취소·접수 서비스 · `contracts/src/events.ts` 타입 · Relay `subject` · 중앙 상태 매핑 · 취소 통합 시험. 이미 DEAD 인 옛 본문 6건은 로컬 개발 데이터라 재전송하지 않는다(새 본문으로 다시 만들 수 없다) |
+| **노션 반영** | 해당 없음 — 첨부 스키마는 그대로이고 구현이 따르게 했다 |
+| **상태** | 🟢 CLOSED — 저장소 반영·CI 재현 DB 시험 통과 (2026-09-30) |
+
+---
+
 <!--
 신규 항목 템플릿
 

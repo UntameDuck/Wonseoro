@@ -201,7 +201,8 @@ export class RelayService implements OnModuleInit, OnApplicationShutdown {
       id: row.id,
       source: `urn:k-admission:university:${UNIVERSITY_ID}`,
       type: row.event_type,
-      subject: row.aggregate_id,
+      // 대학 내부 원서 UUID(aggregate_id) 는 중앙에 보내지 않는다 — 본문의 불투명 ID 를 쓴다. (v1.0 §17.1, D-50)
+      subject: String(row.payload.applicationId ?? ''),
       time: new Date().toISOString(),
       datacontenttype: 'application/json',
       dataschema: 'https://schemas.k-admission.kr/events/bundle/v1.json',

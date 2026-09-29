@@ -1,0 +1,194 @@
+{
+  "test": "T-M4-22",
+  "scenario": "실제 접수 흐름 → 업무 KPI 카운터·게이지·recording rule",
+  "environment": "local-kind-univ-a (축소 환경)",
+  "limitations": [
+    "원서 5건의 기능 확인이다. 비율 수치는 성능·품질 지표가 아니다.",
+    "Mock PG 를 쓴다. 실 PG 지연·실패 분포는 T-M4-34·K-PaaS 시험의 몫이다."
+  ],
+  "startedAt": "2026-09-29T15:14:52.238Z",
+  "flows": [
+    {
+      "create": 201,
+      "save": 200,
+      "staleSave": 412,
+      "unknownField": 400,
+      "intent": 201,
+      "verify": 200,
+      "paymentStatus": "CONFIRMED",
+      "finalizeAgain": 200
+    },
+    {
+      "create": 201,
+      "save": 200,
+      "staleSave": 412,
+      "unknownField": 400,
+      "intent": 201,
+      "verify": 200,
+      "paymentStatus": "CONFIRMED",
+      "finalizeAgain": 200
+    },
+    {
+      "create": 201,
+      "save": 200,
+      "staleSave": 412,
+      "unknownField": 400,
+      "intent": 201,
+      "verify": 200,
+      "paymentStatus": "CONFIRMED",
+      "finalizeAgain": 200
+    },
+    {
+      "create": 201,
+      "save": 200,
+      "staleSave": 412,
+      "unknownField": 400,
+      "intent": 201,
+      "verify": 200,
+      "paymentStatus": "CONFIRMED",
+      "finalizeAgain": 200
+    },
+    {
+      "create": 201,
+      "save": 200,
+      "staleSave": 412,
+      "unknownField": 400,
+      "intent": 201,
+      "verify": 200,
+      "paymentStatus": "CONFIRMED",
+      "finalizeAgain": 200
+    },
+    {
+      "create": 201,
+      "save": 200,
+      "staleSave": 412,
+      "unknownField": 400,
+      "intent": 201,
+      "verify": 200,
+      "paymentStatus": "CONFIRMED",
+      "finalizeAgain": 200
+    },
+    {
+      "create": 201,
+      "save": 200,
+      "staleSave": 412,
+      "unknownField": 400,
+      "intent": 201,
+      "verify": 200,
+      "paymentStatus": "CONFIRMED",
+      "finalizeAgain": 200
+    },
+    {
+      "create": 201,
+      "save": 200,
+      "staleSave": 412,
+      "unknownField": 400,
+      "intent": 201,
+      "verify": 200,
+      "paymentStatus": "CONFIRMED",
+      "finalizeAgain": 200
+    },
+    {
+      "create": 201,
+      "save": 200,
+      "staleSave": 412,
+      "unknownField": 400,
+      "intent": 201,
+      "verify": 200,
+      "paymentStatus": "CONFIRMED",
+      "finalizeAgain": 200
+    },
+    {
+      "create": 201,
+      "save": 200,
+      "staleSave": 412,
+      "unknownField": 400,
+      "intent": 201,
+      "verify": 200,
+      "paymentStatus": "CONFIRMED",
+      "finalizeAgain": 200
+    },
+    {
+      "create": 201,
+      "save": 200,
+      "staleSave": 412,
+      "unknownField": 400,
+      "intent": 201,
+      "verify": 200,
+      "paymentStatus": "CONFIRMED",
+      "finalizeAgain": 200
+    },
+    {
+      "create": 201,
+      "save": 200,
+      "staleSave": 412,
+      "unknownField": 400,
+      "intent": 201,
+      "verify": 200,
+      "paymentStatus": "CONFIRMED",
+      "finalizeAgain": 200
+    }
+  ],
+  "checks": {
+    "접수 흐름 응답": {
+      "pass": true,
+      "flows": 12
+    },
+    "draft_saves: saved·conflict·rejected 가 흐름대로 늘었다": {
+      "pass": true,
+      "saved": 12,
+      "conflict": 12,
+      "rejected": 12,
+      "error": 0
+    },
+    "payment_verifications: verified 가 늘고 error 는 없다": {
+      "pass": true,
+      "verified": 12,
+      "pending": 0,
+      "failed": 0,
+      "unverified": 0,
+      "rejected": 0,
+      "error": 0
+    },
+    "finalizations: 자동 접수 finalized, 화면 재제출 already_finalized": {
+      "pass": true,
+      "finalized/applicant": 0,
+      "already_finalized/applicant": 12,
+      "rejected/applicant": 0,
+      "error/applicant": 0,
+      "finalized/payment_confirmed": 12,
+      "already_finalized/payment_confirmed": 0,
+      "rejected/payment_confirmed": 0,
+      "error/payment_confirmed": 0
+    },
+    "성공률 3종이 1 (업무 거절·충돌은 분모에서 빠진다)": {
+      "pass": true,
+      "draft": 1,
+      "payment": 1,
+      "finalize": 1
+    },
+    "KPI 규칙 14개 모두 값이 있다": {
+      "pass": true,
+      "missing": []
+    }
+  },
+  "kpi": {
+    "kadmission:draft_save_success_rate:5m": 1,
+    "kadmission:payment_verify_success_rate:5m": 1,
+    "kadmission:finalize_success_rate:5m": 1,
+    "kadmission:finalize_retry_rate:5m": 0.5335835724474015,
+    "kadmission:outbox_oldest_age_seconds": 0,
+    "kadmission:central_sync_lag_seconds": 572673,
+    "kadmission:document_scan_pending": 0,
+    "kadmission:payment_verify_latency_p95_seconds:5m": 0.38750000000000007,
+    "kadmission:outbox_backlog": 0,
+    "kadmission:db_lock_waiting_sessions": 0,
+    "kadmission:http_error_rate:5m": 0,
+    "kadmission:http_requests_per_second:5m": 0.14999475018374359,
+    "kadmission:finalize_tps:5m": 0.033748059486579524,
+    "kadmission:http_request_duration_p95_seconds:5m": 0.1949308409562953
+  },
+  "outboxDeadEvents": "6",
+  "finishedAt": "2026-09-29T15:20:24.957Z",
+  "pass": true
+}

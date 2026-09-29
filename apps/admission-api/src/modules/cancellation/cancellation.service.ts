@@ -4,6 +4,7 @@ import type { PoolClient } from 'pg';
 import { ApplicationStatus, EVENT_TYPE, canCancel } from '@wonseoro/contracts';
 import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
+import { cancelledEventData } from '../../common/central/central-events';
 import { AuditService } from '../audit/audit.service';
 
 export interface CancelInput {
@@ -202,14 +203,9 @@ export class CancellationService {
     );
     const sequence = Number(rows[0]?.next ?? 1);
 
-    // 중앙에는 "취소됐다" 는 사실만 보낸다. 사유는 개인정보일 수 있어 보내지 않는다.
-    const payload = {
-      universityId: src.universityId,
-      admissionYear: src.admissionYear,
-      status: 'CANCELLED',
-      cancelledAt: src.cancelledAt,
-      refundRequired: src.refundRequired,
-    };
+    // 중앙에는 "취소됐다" 는 사실과 사유 분류만 보낸다. 사유 문장은 개인정보일 수 있어 보내지 않는다.
+    // 본문은 CloudEvents 스키마에 맞춘다 — 전에는 필수 필드가 빠져 중앙이 전부 거절했다. (D-50)
+    const payload = cancelledEventData({ applicationId: src.applicationId, cancelledAt: src.cancelledAt });
 
     await client.query(
       `INSERT INTO outbox_event

@@ -48,14 +48,18 @@ export function dedupKey(event: Pick<CloudEventEnvelope<unknown>, 'source' | 'id
  * 별도 목적이 있을 때만 purpose-scoped applicantSubjectToken 프로파일을 사용한다.
  */
 export interface ApplicationFinalizedData {
-  universityId: string;
+  // 필드는 events/k-admission-cloudevents.schema.json 의 ApplicationFinalizedData 와 같다 (additionalProperties: false).
+  // 대학은 CloudEvents 확장 속성 kadmissionuniversity 로 전한다. 접수 시각은 finalizedAt 이다. (D-50)
   /** 대학 원본 식별자를 노출하지 않는 opaque id. */
   applicationId: string;
   admissionYear: number;
   admissionTypeCode: string;
   departmentCode: string;
   status: 'FINALIZED';
-  submittedAt: string;
+  requestedAt: string;
+  paymentApprovedAt: string | null;
+  finalizedAt: string;
+  applicationNumber: string;
   integrityHash: string;
   /**
    * 지원자 참조 — `<keyId>.<HMAC-SHA256("DASHBOARD"|subject_token)>`. (D-27 · D-39, §A12)
@@ -71,6 +75,14 @@ export interface ApplicationFinalizedData {
    * 이 필드를 모르는 기존 대학 릴리스도 계속 이벤트를 보낼 수 있어야 한다.
    */
   subjectRef?: string;
+}
+
+/** 접수 전 취소 — 스키마 ApplicationCancelledData. 취소 사유 문장은 보내지 않고 분류만 보낸다. (D-50) */
+export interface ApplicationCancelledData {
+  applicationId: string;
+  cancelledAt: string;
+  reasonCode: 'APPLICANT_REQUEST';
+  integrityHash: string;
 }
 
 export const OUTBOX_STATUS = ['PENDING', 'SENT', 'DEAD'] as const;

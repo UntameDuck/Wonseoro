@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { Db, isPurposeRef } from '@wonseoro/server-kit';
+import { EVENT_TYPE } from '@wonseoro/contracts';
 
 /** 대학이 보내는 CloudEvent. 확장 속성은 envelope 최상위에 붙는다. (v1.1 §04) */
 export interface IncomingEvent {
@@ -283,7 +284,8 @@ export class SyncGatewayService {
         Number(data.admissionYear ?? 0),
         String(data.admissionTypeCode ?? ''),
         String(data.departmentCode ?? ''),
-        String(data.status ?? 'UNKNOWN'),
+        // 취소 이벤트 본문에는 상태가 없다(스키마 ApplicationCancelledData) — 이벤트 타입이 곧 상태다. (D-50)
+        String(data.status ?? (event.type === EVENT_TYPE.APPLICATION_CANCELLED ? 'CANCELLED' : 'UNKNOWN')),
         data.applicationNumber ? String(data.applicationNumber) : null,
         data.finalizedAt ? String(data.finalizedAt) : (data.submittedAt as string) ?? null,
         sequence,

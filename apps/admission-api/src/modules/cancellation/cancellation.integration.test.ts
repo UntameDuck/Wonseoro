@@ -271,13 +271,17 @@ describe('취소의 흔적', () => {
       assert.equal(audit.rowCount, 1);
       assert.equal(audit.rows[0]?.details_redacted?.reason, '진로를 변경했습니다.');
 
-      const outbox = await db.query<{ event_type: string; payload: { status: string } }>(
+      const outbox = await db.query<{ event_type: string; payload: Record<string, unknown> }>(
         `SELECT event_type, payload FROM outbox_event WHERE aggregate_id = $1`,
         [appId],
       );
       assert.equal(outbox.rowCount, 1);
       assert.equal(outbox.rows[0]?.event_type, 'kr.kadmission.application.cancelled.v1');
-      assert.equal(outbox.rows[0]?.payload.status, 'CANCELLED');
+      // CloudEvents 스키마 ApplicationCancelledData 그대로 — 필드가 빠지면 중앙이 거절한다 (D-50)
+      assert.deepEqual(Object.keys(outbox.rows[0]!.payload).sort(),
+        ['applicationId', 'cancelledAt', 'integrityHash', 'reasonCode']);
+      assert.equal(outbox.rows[0]?.payload.reasonCode, 'APPLICANT_REQUEST');
+      assert.notEqual(outbox.rows[0]?.payload.applicationId, appId, '대학 내부 UUID 를 보내지 않는다');
     } finally {
       await cleanup(appId);
     }

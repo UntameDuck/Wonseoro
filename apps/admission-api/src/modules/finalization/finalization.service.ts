@@ -1,12 +1,13 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
-import { EVENT_TYPE, ApplicationFinalizedData } from '@wonseoro/contracts';
+import { EVENT_TYPE } from '@wonseoro/contracts';
 import { Db } from '@wonseoro/server-kit';
 import { purposeRef } from '@wonseoro/server-kit';
-import { CENTRAL_ID_SALT, CENTRAL_SUBJECT_KEY, CENTRAL_SUBJECT_KEY_ID } from '../../config';
+import { CENTRAL_SUBJECT_KEY, CENTRAL_SUBJECT_KEY_ID } from '../../config';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { trackFinalize } from '../../common/telemetry/business-metrics';
+import { finalizedEventData } from '../../common/central/central-events';
 import { AuditService } from '../audit/audit.service';
 import { DeadlineService } from '../deadline/deadline.service';
 import { FormSchemaService } from '../config/form-schema.service';
@@ -397,33 +398,19 @@ export class FinalizationService implements OnModuleInit {
     );
     const sequence = Number(rows[0]?.next ?? 1);
 
-    // 중앙에는 최소 정보만 보낸다.
-    // 이름·주민등록번호·연락처·주소·원서본문·첨부파일은 넣지 않는다. (v1.1 §04)
-    const data: ApplicationFinalizedData & {
-      requestedAt: string;
-      paymentApprovedAt: string | null;
-      finalizedAt: string;
-      applicationNumber: string;
-    } = {
-      universityId: src.universityId,
-      applicationId: this.opaqueId(src.applicationId),
-      // 중앙이 "내 원서"를 추려주려면 어느 지원자의 것인지 알아야 한다. (D-27)
-      // 대학마다 값이 같아야 하므로 대학별 소금은 쓰지 않고, 목적 키로 HMAC 한다.
-      // 키 없는 해시는 Vault 의 토큰으로 다시 만들 수 있어 분리가 아니었다. (D-39)
+    // 중앙에는 최소 정보만 보낸다. 본문은 스키마에 맞춘 한 곳에서 만든다. (v1.1 §04, D-50)
+    // 중앙이 "내 원서"를 추려주려면 어느 지원자의 것인지 알아야 한다 — 목적 키 HMAC 참조. (D-27·D-39)
+    const data = finalizedEventData({
+      applicationId: src.applicationId,
       subjectRef: subjectRefOf(src.subjectToken),
       admissionYear: src.admissionYear,
       admissionTypeCode: src.admissionTypeCode,
       departmentCode: src.departmentCode,
-      status: 'FINALIZED',
-      submittedAt: src.finalizedAt,
+      applicationNumber: src.applicationNumber,
       requestedAt: src.requestedAt,
       paymentApprovedAt: src.paymentApprovedAt,
       finalizedAt: src.finalizedAt,
-      applicationNumber: src.applicationNumber,
-      integrityHash: `sha256:${createHash('sha256')
-        .update(`${src.applicationId}|${src.applicationNumber}|${src.finalizedAt}`)
-        .digest('hex')}`,
-    };
+    });
 
     await client.query(
       `INSERT INTO outbox_event
@@ -464,15 +451,6 @@ export class FinalizationService implements OnModuleInit {
     return createHash('sha256').update(canonical).digest('hex');
   }
 
-  /** 중앙에 대학 원본 식별자를 그대로 노출하지 않는다. (v1.1 §A12) */
-  /**
-   * 중앙에는 원서 UUID 를 그대로 주지 않는다. (v1.1 §A3 최소 정보)
-   * 소금이 고정값이면 중앙이 대학 내부 식별자를 역산할 수 있어
-   * 가명처리의 의미가 사라진다. 운영에서는 필수다.
-   */
-  private opaqueId(applicationId: string): string {
-    return createHash('sha256').update(`${CENTRAL_ID_SALT}|${applicationId}`).digest('hex');
-  }
 
   private async assertRequiredDocuments(
     applicationId: string,

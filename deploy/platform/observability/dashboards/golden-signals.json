@@ -40,7 +40,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "kadmission:http_requests_per_second:2m",
+          "expr": "kadmission:http_requests_per_second:5m",
           "legendFormat": "{{service_name}}"
         }
       ],
@@ -77,7 +77,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "kadmission:finalize_tps:2m",
+          "expr": "kadmission:finalize_tps:5m",
           "legendFormat": "{{namespace}}"
         }
       ],

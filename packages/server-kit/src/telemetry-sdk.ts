@@ -61,6 +61,16 @@ export function startTelemetry(serviceName: string): () => Promise<void> {
           },
         },
       },
+      {
+        // 결제 재검증(PG 재조회 포함). 기본 경계(0·5·10…)는 밀리초용이라 초 단위 값이 전부 첫 구간에
+        // 들어가 p95 가 4.75초로 보였다(kind 확인). PG p95 10초 시험(T-M4-34)까지 가르도록 나눈다.
+        meterName: 'k-admission.business',
+        instrumentName: 'payment_verify_duration',
+        aggregation: {
+          type: AggregationType.EXPLICIT_BUCKET_HISTOGRAM,
+          options: { boundaries: [0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 3, 5, 10, 20, 30] },
+        },
+      },
     ],
     ...(collectorEndpoint
       ? { traceExporter: new OTLPTraceExporter({ url: collectorEndpoint }) }

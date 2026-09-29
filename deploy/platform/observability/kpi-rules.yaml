@@ -2,7 +2,7 @@
 #
 # 비율의 정의는 여기 한 곳에만 둔다. 대시보드(dashboards/*.json)와 경보는 이 규칙 이름을 쓴다.
 # 성공률 분모에서 업무 검증 거절(rejected)·If-Match 충돌(conflict)은 뺀다 — §16 "업무 Validation 오류 제외".
-# 스크레이프 간격이 1분이라 rate 창은 2분 이상으로 둔다. 트래픽이 없으면 0/0 = NaN 으로 "데이터 없음" 이 된다. 0% 로 보이지 않게 일부러 clamp 하지 않는다.
+# 스크레이프 간격이 1분이라 rate 창은 모두 5분으로 둔다(2분 창은 표본 1개일 때 값이 빠진다). 트래픽이 없으면 0/0 = NaN 으로 "데이터 없음" 이 된다. 0% 로 보이지 않게 일부러 clamp 하지 않는다.
 #
 # 이 파일 자체가 Prometheus chart(29.x) values 다: helm upgrade prometheus ... -f prometheus-values.yaml -f kpi-rules.yaml
 # 순서: 업무 KPI 7종(§15) → Support 고정 지표(§10.4) → Golden Signals(§15)
@@ -52,10 +52,10 @@ serverFiles:
                 or on (namespace) 0 * sum by (namespace) (rate(http_requests_total[5m])))
               /
               sum by (namespace) (rate(http_requests_total[5m]))
-          - record: kadmission:http_requests_per_second:2m
-            expr: sum by (namespace, service_name) (rate(http_requests_total[2m]) * on (namespace, pod) group_left(service_name) max by (namespace, pod, service_name) (target_info))
-          - record: kadmission:finalize_tps:2m
-            expr: sum by (namespace) (rate(finalizations_total{outcome="finalized"}[2m]))
+          - record: kadmission:http_requests_per_second:5m
+            expr: sum by (namespace, service_name) (rate(http_requests_total[5m]) * on (namespace, pod) group_left(service_name) max by (namespace, pod, service_name) (target_info))
+          - record: kadmission:finalize_tps:5m
+            expr: sum by (namespace) (rate(finalizations_total{outcome="finalized"}[5m]))
           - record: kadmission:http_request_duration_p95_seconds:5m
             expr: |
               histogram_quantile(0.95,

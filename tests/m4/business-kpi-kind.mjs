@@ -20,7 +20,10 @@ const CYCLE = '11111111-1111-1111-1111-111111111111';
 const TYPE = '22222222-2222-2222-2222-222222222222';
 const DEPT = '33333333-3333-3333-3333-333333333333';
 const FIELDS = { highSchool: 'KPI 시험 고등학교', graduationYear: 2026, selfIntro: '업무 KPI 지표 확인용 원서입니다.' };
-const N = 5;
+// 세 묶음으로 나눠 스크레이프 간격을 둔다 — 히스토그램은 0 으로 미리 만들 수 없어 Pod 마다 첫 관측이 rate() 에 안 잡힌다.
+// API Pod 가 둘이라 묶음이 Pod 에 고루 가도록 여러 번 보낸다. 운영처럼 트래픽이 이어지면 첫 스크레이프 뒤로는 정상 집계된다.
+const BATCHES = [4, 4, 4];
+const N = BATCHES.reduce((a, b) => a + b, 0);
 const PROM = '/api/v1/namespaces/observability/services/prometheus-server:80/proxy/api/v1/query';
 
 const result = {
@@ -61,9 +64,12 @@ function check(name, pass, detail = {}) {
   console.log(`${pass ? '✔' : '✖'} ${name} ${JSON.stringify(detail)}`);
 }
 
-// 누적 합계의 전후 차이로 잰다 — 시험 중에 처음 생긴 카운터 시계열은 increase() 가 첫 표본을 놓친다
+// 누적 합계의 전후 차이로 잰다 — 시험 중에 처음 생긴 카운터 시계열은 increase() 가 첫 표본을 놓친다.
+// 지금 떠 있는 API Pod 만 센다 — 롤아웃으로 사라진 Pod 의 시계열이 staleness 전까지 합계에 남는다.
+const livePods = JSON.parse(execFileSync('kubectl', ['--context', 'kind-univ-a', '-n', 'kadmission-app', 'get', 'pods',
+  '-l', 'app=admission-api', '-o', 'json'], { encoding: 'utf8' })).items.map((p) => p.metadata.name).join('|');
 const byOutcome = async (metric, extra = '') => Object.fromEntries((await prom(
-  `sum by (outcome${extra}) (${metric})`,
+  `sum by (outcome${extra}) (${metric}{pod=~"${livePods}"})`,
 )).map((s) => [extra ? `${s.metric.outcome}/${s.metric.trigger}` : s.metric.outcome, Math.round(Number(s.value[1]))]));
 
 const before = {
@@ -72,7 +78,7 @@ const before = {
   finalize: await byOutcome('finalizations_total', ', trigger'),
 };
 
-for (let i = 0; i < N; i += 1) {
+async function flow(i) {
   const applicantId = randomUUID();
   const subjectToken = `subj-kpi-${applicantId.slice(0, 8)}`;
   sql(`INSERT INTO applicant (id, subject_token, pii_ciphertext, pii_key_version) VALUES ('${applicantId}','${subjectToken}','\\x00','v1')`);
@@ -98,6 +104,12 @@ for (let i = 0; i < N; i += 1) {
   console.log(`· flow ${i + 1} ${JSON.stringify(flow)}`);
 }
 
+let index = 0;
+for (const [b, size] of BATCHES.entries()) {
+  if (b > 0) await new Promise((r) => setTimeout(r, 75_000));
+  for (let k = 0; k < size; k += 1) await flow(index++);
+}
+
 check('접수 흐름 응답', result.flows.every((f) => f.create === 201 && f.save === 200 && f.staleSave === 412
   && f.unknownField === 400 && f.intent === 201 && f.verify === 200 && f.paymentStatus === 'CONFIRMED' && f.finalizeAgain === 200),
 { flows: result.flows.length });
@@ -121,7 +133,7 @@ for (const name of ['kadmission:draft_save_success_rate:5m', 'kadmission:payment
   'kadmission:finalize_success_rate:5m', 'kadmission:finalize_retry_rate:5m', 'kadmission:outbox_oldest_age_seconds',
   'kadmission:central_sync_lag_seconds', 'kadmission:document_scan_pending', 'kadmission:payment_verify_latency_p95_seconds:5m',
   'kadmission:outbox_backlog', 'kadmission:db_lock_waiting_sessions', 'kadmission:http_error_rate:5m',
-  'kadmission:http_requests_per_second:2m', 'kadmission:finalize_tps:2m', 'kadmission:http_request_duration_p95_seconds:5m']) {
+  'kadmission:http_requests_per_second:5m', 'kadmission:finalize_tps:5m', 'kadmission:http_request_duration_p95_seconds:5m']) {
   kpi[name] = await rule(name);
 }
 result.kpi = kpi;
@@ -129,7 +141,8 @@ check('성공률 3종이 1 (업무 거절·충돌은 분모에서 빠진다)', k
   && kpi['kadmission:payment_verify_success_rate:5m'] === 1 && kpi['kadmission:finalize_success_rate:5m'] === 1,
 { draft: kpi['kadmission:draft_save_success_rate:5m'], payment: kpi['kadmission:payment_verify_success_rate:5m'], finalize: kpi['kadmission:finalize_success_rate:5m'] });
 check('KPI 규칙 14개 모두 값이 있다', Object.values(kpi).every((v) => v !== null && Number.isFinite(v)),
-  { missing: Object.entries(kpi).filter(([, v]) => v === null).map(([k]) => k) });
+  { missing: Object.entries(kpi).filter(([, v]) => v === null || !Number.isFinite(v)).map(([k]) => k) });
+result.outboxDeadEvents = (await prom('max(outbox_dead_events)'))[0]?.value[1] ?? null;
 
 result.finishedAt = new Date().toISOString();
 result.pass = Object.values(result.checks).every((c) => c.pass);
