@@ -1,0 +1,113 @@
+{
+  "test": "T-M4-40",
+  "scenario": "학교 NAT(단일 출발지) 뒤 정상 지원자 200명 + 봇 5개 동시 90초",
+  "environment": "local-kind-univ-a (축소 환경, API Pod 2개, 한도 상태는 Pod 메모리)",
+  "limitations": [
+    "인증은 dev-headers 다. 운영에서는 게이트웨이가 검증한 지원자 신원이 키가 되므로 봇이 신원을 마음대로 바꿀 수 없다.",
+    "CAPTCHA 대체 확인 수단은 아직 없다(인증 연동 M5). 위험 차단은 Retry-After 로 시간이 지나면 풀린다.",
+    "처리 지연 수치는 축소 환경 값이다. 성능 수치가 아니다."
+  ],
+  "startedAt": "2026-09-29T17:04:15.094Z",
+  "checks": {
+    "정상 사용자 차단 0 (429 없음)": {
+      "pass": true,
+      "normal429": 0,
+      "normalRequests": 1385
+    },
+    "정상 사용자 서버 오류 0": {
+      "pass": false,
+      "normal5xx": 350
+    },
+    "정상 사용자 전원 접수": {
+      "pass": false,
+      "finalize": {
+        "200": 107,
+        "409": 6
+      }
+    },
+    "봇은 대부분 막힌다": {
+      "pass": false,
+      "bot429": 411,
+      "botRequests": 829,
+      "ratio": 0.496
+    }
+  },
+  "stats": {
+    "normal": {
+      "create": {
+        "0": 87,
+        "201": 113
+      },
+      "save": {
+        "0": 23,
+        "200": 372,
+        "400": 34,
+        "412": 6,
+        "503": 152
+      },
+      "read": {
+        "0": 48,
+        "200": 178,
+        "503": 33
+      },
+      "paymentIntent": {
+        "0": 1,
+        "201": 110,
+        "422": 2
+      },
+      "paymentVerify": {
+        "0": 3,
+        "200": 107,
+        "500": 3
+      },
+      "finalize": {
+        "200": 107,
+        "409": 6
+      }
+    },
+    "bot": {
+      "saveFlood": {
+        "0": 81,
+        "412": 118,
+        "429": 372,
+        "503": 49
+      },
+      "createFlood": {
+        "0": 13,
+        "200": 11,
+        "429": 37,
+        "503": 1
+      },
+      "probeOthers": {
+        "0": 81,
+        "404": 54,
+        "503": 5
+      },
+      "saveOwn": {
+        "0": 4,
+        "412": 1,
+        "429": 2
+      }
+    }
+  },
+  "normalFailureCauses": {
+    "save 503 RETRYABLE": 152,
+    "create 0 TimeoutError": 80,
+    "create 0 ECONNRESET": 7,
+    "read 503 RETRYABLE": 33,
+    "save 0 TimeoutError": 22,
+    "save 400 VALIDATION_FAILED": 34,
+    "save 412 VERSION_CONFLICT": 6,
+    "read 0 ECONNRESET": 36,
+    "read 0 TimeoutError": 12,
+    "save 0 ECONNRESET": 1,
+    "paymentIntent 422 VALIDATION_FAILED": 2,
+    "paymentVerify 500 INTERNAL": 3,
+    "finalize 409 PAYMENT_NOT_CONFIRMED": 6,
+    "paymentVerify 0 ECONNRESET": 3,
+    "paymentIntent 0 ECONNRESET": 1
+  },
+  "normalSaveLatencyP95Ms": 19563,
+  "finishedAt": "2026-09-29T17:06:30.206Z",
+  "pass": false
+}

@@ -1,0 +1,83 @@
+{
+  "test": "T-M4-37",
+  "scenario": "Redis 정지·재기동(FLUSHALL 포함) 전·중·후 접수 흐름",
+  "environment": "local-kind-univ-a + compose Redis (축소 환경)",
+  "limitations": [
+    "현재 구현은 Redis 를 쓰지 않는다. Redis HA Failover(Sentinel/Cluster) 자체는 시험하지 않았다 — 영향이 없음을 확인했다.",
+    "지원자 세션을 Redis 에 두는 인증(M5)을 붙이면 세션 유실·재로그인 영향을 다시 시험한다."
+  ],
+  "startedAt": "2026-09-29T17:16:19.213Z",
+  "phases": {
+    "before": {
+      "create": 201,
+      "read": 200,
+      "save": 200,
+      "paymentIntent": 201,
+      "paymentVerify": "200/CONFIRMED",
+      "finalizeAgain": 200,
+      "selfCheck": 200
+    },
+    "redisDown": {
+      "create": 201,
+      "read": 200,
+      "save": 200,
+      "paymentIntent": 201,
+      "paymentVerify": "200/CONFIRMED",
+      "finalizeAgain": 200,
+      "selfCheck": 200
+    },
+    "afterFlush": {
+      "create": 201,
+      "read": 200,
+      "save": 200,
+      "paymentIntent": 201,
+      "paymentVerify": "200/CONFIRMED",
+      "finalizeAgain": 200,
+      "selfCheck": 200
+    }
+  },
+  "checks": {
+    "Redis 정상 — 접수 흐름": {
+      "pass": true,
+      "create": 201,
+      "read": 200,
+      "save": 200,
+      "paymentIntent": 201,
+      "paymentVerify": "200/CONFIRMED",
+      "finalizeAgain": 200,
+      "selfCheck": 200
+    },
+    "Redis 정지 중 — 작성·저장·결제·접수·Self-check 그대로": {
+      "pass": true,
+      "create": 201,
+      "read": 200,
+      "save": 200,
+      "paymentIntent": 201,
+      "paymentVerify": "200/CONFIRMED",
+      "finalizeAgain": 200,
+      "selfCheck": 200
+    },
+    "Redis 정지 중 — API readiness 유지": {
+      "pass": true,
+      "readyz": 200
+    },
+    "Redis 재기동·FLUSHALL 뒤 — 접수 흐름": {
+      "pass": true,
+      "create": 201,
+      "read": 200,
+      "save": 200,
+      "paymentIntent": 201,
+      "paymentVerify": "200/CONFIRMED",
+      "finalizeAgain": 200,
+      "selfCheck": 200
+    },
+    "워크로드 재시작 0": {
+      "pass": true,
+      "before": 0,
+      "after": 0
+    }
+  },
+  "redisFlushAll": "OK",
+  "finishedAt": "2026-09-29T17:16:29.279Z",
+  "pass": true
+}
