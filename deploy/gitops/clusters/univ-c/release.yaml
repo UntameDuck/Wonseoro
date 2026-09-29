@@ -1,0 +1,32 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: univ-c
+  namespace: kadmission-app
+spec:
+  interval: 5m
+  timeout: 10m
+  releaseName: univ-c
+  targetNamespace: kadmission-app
+  storageNamespace: kadmission-app
+  serviceAccountName: release-controller
+  chart:
+    spec:
+      chart: ./deploy/charts/k-admission
+      sourceRef:
+        kind: GitRepository
+        name: wonseoro
+        namespace: kadmission-app
+      reconcileStrategy: Revision
+      valuesFiles:
+        - deploy/charts/k-admission/values-l.yaml
+        - deploy/universities/UNIV-C/values.yaml
+  driftDetection:
+    mode: enabled
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+      strategy: rollback

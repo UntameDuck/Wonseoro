@@ -19,6 +19,7 @@
     "dev:web": "npm run dev -w @wonseoro/applicant-web",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "test:m4:gitops": "node tests/m4/gitops-manifests.mjs",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "build:contracts": "npm run build -w @wonseoro/contracts",
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "typescript": "^5.6.3",
-    "@types/node": "^22.9.0"
+    "@types/node": "^22.9.0",
+    "yaml": "^2.9.1"
   }
 }
