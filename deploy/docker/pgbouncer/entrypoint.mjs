@@ -1,4 +1,4 @@
-import { appendFileSync, chmodSync, writeFileSync } from 'node:fs';
+import { appendFileSync, chmodSync, rmSync, writeFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 
 const required = (name) => {
@@ -61,10 +61,15 @@ if ((sslMode === 'verify-ca' || sslMode === 'verify-full') && !caFile) {
 
 const authFile = '/tmp/pgbouncer-users.txt';
 const configFile = '/tmp/pgbouncer.ini';
+const pidFile = '/tmp/pgbouncer.pid';
+
+// 노드 강제 종료 시 emptyDir에는 이전 pidfile이 남을 수 있다. 새 컨테이너 PID namespace에는
+// 이전 PgBouncer 프로세스가 존재할 수 없으므로, 기동 직전에 stale 파일만 제거한다.
+rmSync(pidFile, { force: true });
 writeFileSync(authFile, `${authQuote(username)} ${authQuote(password)}\n`, { mode: 0o600 });
 writeFileSync(
   configFile,
-  `[databases]\n${database} = host=${connQuote(databaseUrl.hostname)} port=${databaseUrl.port || '5432'} dbname=${connQuote(database)} user=${connQuote(username)} password=${connQuote(password)} pool_size=${defaultPoolSize} reserve_pool_size=${reservePoolSize} max_db_connections=${defaultPoolSize + reservePoolSize}\n\n[pgbouncer]\nlisten_addr = 0.0.0.0\nlisten_port = ${listenPort}\nunix_socket_dir = /tmp\npidfile = /tmp/pgbouncer.pid\nlogfile = /dev/stderr\nauth_type = scram-sha-256\nauth_file = ${authFile}\npool_mode = ${poolMode}\nmax_client_conn = ${maxClientConnections}\ndefault_pool_size = ${defaultPoolSize}\nreserve_pool_size = ${reservePoolSize}\nreserve_pool_timeout = 3\nquery_wait_timeout = ${queryWaitTimeout}\nserver_login_retry = 1\nserver_tls_sslmode = ${sslMode}\n${caFile ? `server_tls_ca_file = ${caFile}\n` : ''}max_prepared_statements = 100\ntrack_extra_parameters = search_path,default_transaction_read_only\n`,
+  `[databases]\n${database} = host=${connQuote(databaseUrl.hostname)} port=${databaseUrl.port || '5432'} dbname=${connQuote(database)} user=${connQuote(username)} password=${connQuote(password)} pool_size=${defaultPoolSize} reserve_pool_size=${reservePoolSize} max_db_connections=${defaultPoolSize + reservePoolSize}\n\n[pgbouncer]\nlisten_addr = 0.0.0.0\nlisten_port = ${listenPort}\nunix_socket_dir = /tmp\npidfile = ${pidFile}\nlogfile = /dev/stderr\nauth_type = scram-sha-256\nauth_file = ${authFile}\npool_mode = ${poolMode}\nmax_client_conn = ${maxClientConnections}\ndefault_pool_size = ${defaultPoolSize}\nreserve_pool_size = ${reservePoolSize}\nreserve_pool_timeout = 3\nquery_wait_timeout = ${queryWaitTimeout}\nserver_login_retry = 1\nserver_tls_sslmode = ${sslMode}\n${caFile ? `server_tls_ca_file = ${caFile}\n` : ''}max_prepared_statements = 100\ntrack_extra_parameters = search_path,default_transaction_read_only\n`,
   { mode: 0o600 },
 );
 appendFileSync(
