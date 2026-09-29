@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
+import { metrics, SpanKind } from '@opentelemetry/api';
 import {
   CircuitBreaker,
   CircuitOpenError,
@@ -6,6 +7,8 @@ import {
   Db,
   describeFailure,
   httpServerError,
+  traceHeaders,
+  withSpan,
 } from '@wonseoro/server-kit';
 import { BREAKER, CENTRAL_SYNC_URL, RELAY, UNIVERSITY_ID } from './config';
 
@@ -26,6 +29,11 @@ export interface RelayStats {
 }
 
 type SendOutcome = 'SENT' | 'RETRY' | 'DEAD' | 'HELD';
+
+/** 전송 결과별 이벤트 수 (T-M4-20). 라벨은 결과와 이벤트 타입뿐 — 원서·지원자 식별자는 넣지 않는다. */
+const relayEvents = metrics.getMeter('k-admission.relay').createCounter('outbox_relay_events', {
+  description: 'Outbox 전송 결과별 이벤트 수',
+});
 
 interface OutboxRow {
   id: string;
@@ -170,7 +178,20 @@ export class RelayService implements OnModuleInit, OnApplicationShutdown {
     return stats;
   }
 
+  /** 이벤트 한 건 = span 한 개. traceparent 를 중앙으로 넘겨 수신 처리까지 한 trace 로 잇는다. */
   private async send(row: OutboxRow): Promise<SendOutcome> {
+    const outcome = await withSpan(
+      'k-admission.relay',
+      'outbox publish',
+      { 'messaging.operation.type': 'send', 'cloudevents.event_type': row.event_type },
+      () => this.sendUntraced(row),
+      SpanKind.PRODUCER,
+    );
+    relayEvents.add(1, { outcome, event_type: row.event_type });
+    return outcome;
+  }
+
+  private async sendUntraced(row: OutboxRow): Promise<SendOutcome> {
     const envelope = {
       specversion: '1.0',
       id: row.id,
@@ -194,7 +215,7 @@ export class RelayService implements OnModuleInit, OnApplicationShutdown {
         () =>
           fetch(`${this.centralUrl()}/internal/v1/events`, {
             method: 'POST',
-            headers: { 'content-type': 'application/cloudevents+json' },
+            headers: { 'content-type': 'application/cloudevents+json', ...traceHeaders() },
             body: JSON.stringify(envelope),
             signal: AbortSignal.timeout(RELAY.timeoutMs),
           }),

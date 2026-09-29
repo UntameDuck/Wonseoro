@@ -45,6 +45,7 @@ const child = spawn(process.execPath, ['apps/admission-api/dist/main.js'], {
     OTEL_METRICS_PORT: '9466',
     OTEL_EXPORTER_OTLP_ENDPOINT: `http://${COLLECTOR_ADDRESS}`,
     OTEL_BSP_SCHEDULE_DELAY: '100',
+    LOG_FORMAT: 'json',
     UNIVERSITY_ID: 'UNIV-A',
     NODE_ENV: 'development',
     DATABASE_URL: 'postgresql://kadmission_app:kadmission_app_dev@localhost:5432/univ_a',
@@ -63,7 +64,11 @@ const child = spawn(process.execPath, ['apps/admission-api/dist/main.js'], {
 });
 
 let logs = '';
-child.stdout.on('data', (chunk) => (logs += chunk.toString()));
+let stdout = '';
+child.stdout.on('data', (chunk) => {
+  logs += chunk.toString();
+  stdout += chunk.toString();
+});
 child.stderr.on('data', (chunk) => (logs += chunk.toString()));
 
 async function waitFor(url, timeoutMs = 60_000) {
@@ -99,6 +104,30 @@ try {
   });
   assert.equal(response.status, 200);
 
+  // 로그 상관관계 (T-M4-20): 요청 처리 중 남긴 로그에 같은 trace_id 가 붙고, 본문은 로그에 없다
+  const callback = await fetch(`${API_URL}/api/v1/payments/callbacks/mock-pg`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-pg-signature': 'invalid',
+      traceparent: '00-5bf92f3577b34da6a3ce929d0e0e4737-00f067aa0ba902b8-01',
+    },
+    body: JSON.stringify({ providerTxId: 'MOCK-TELEMETRY', email: PII_SENTINEL }),
+  });
+  assert.equal(callback.status, 403);
+  await waitUntil(() => stdout.includes('callback rejected'));
+  const logLines = stdout.split(/\r?\n/).filter((line) => line.trim() !== '');
+  // 모든 stdout 로그가 구조화돼 있어야 한다 — 기본 Nest 형식이 섞이면 수집기가 trace_id 를 못 뽑는다
+  const plain = logLines.filter((line) => !line.startsWith('{'));
+  assert.deepEqual(plain, [], `JSON 이 아닌 로그:\n${plain.slice(0, 8).join('\n')}`);
+  const records = logLines.map((line) => JSON.parse(line));
+  const rejected = records.find((r) => String(r.message).startsWith('callback rejected'));
+  assert.equal(rejected.trace_id, '5bf92f3577b34da6a3ce929d0e0e4737');
+  assert.match(rejected.span_id, /^[0-9a-f]{16}$/);
+  assert.equal(rejected.service, 'admission-api');
+  assert.equal(stdout.includes(PII_SENTINEL), false);
+  assert.equal(stdout.includes('MOCK-TELEMETRY'), false);
+
   const metrics = await (await fetch(METRICS_URL)).text();
   assert.match(metrics, /http_requests_total\{[^\n]*http_route="\/api\/v1\/admission-cycles\/current"/);
   assert.match(metrics, /http_server_request_duration_count/);
@@ -124,7 +153,7 @@ try {
   assert.ok(tracePayload.includes(expectedSpanName));
   assert.equal(tracePayload.includes(Buffer.from(PII_SENTINEL)), false);
 
-  console.log('telemetry smoke: metrics 3종, OTLP/gRPC trace, PII sentinel 미노출 확인');
+  console.log('telemetry smoke: metrics 3종, OTLP/gRPC trace, JSON 로그 trace_id 상관관계, PII sentinel 미노출 확인');
 } finally {
   if (child.exitCode === null) child.kill('SIGKILL');
   await new Promise((resolve) => setTimeout(resolve, 100));

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { CircuitOpenError, describeFailure, httpServerError } from '@wonseoro/server-kit';
+import { CircuitOpenError, describeFailure, httpServerError, traceHeaders } from '@wonseoro/server-kit';
 import { DependencyBreakers } from '../../common/resilience/dependency-breakers';
 import { CENTRAL_SYNC_URL, VAULT_TIMEOUT_MS } from '../../config';
 
@@ -61,7 +61,7 @@ export class ProfileVaultClient {
         () =>
           fetch(`${url}/internal/v1/profile-snapshots`, {
             method: 'POST',
-            headers: { 'content-type': 'application/json' },
+            headers: { 'content-type': 'application/json', ...traceHeaders() },
             body: JSON.stringify({
               subjectToken: args.subjectToken,
               universityId: args.universityId,

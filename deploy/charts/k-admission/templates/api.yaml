@@ -96,14 +96,7 @@ spec:
             {{- end }}
             - name: PEAK_MODE_SUSPEND_NON_CRITICAL_JOBS
               value: {{ $v.peakMode.suspendNonCriticalJobs | quote }}
-            - name: OTEL_ENABLED
-              value: {{ or $v.observability.metrics.enabled (ne $v.observability.otelEndpoint "") | quote }}
-            - name: OTEL_METRICS_PORT
-              value: {{ $v.observability.metrics.port | quote }}
-            {{- with $v.observability.otelEndpoint }}
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: {{ . | quote }}
-            {{- end }}
+            {{- include "ka.telemetryEnv" . | nindent 12 }}
             - name: S3_ENDPOINT
               value: {{ $v.objectStorage.endpoint | quote }}
             - name: S3_BUCKET

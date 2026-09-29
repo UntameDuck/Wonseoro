@@ -29,6 +29,7 @@ spec:
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
+      {{- include "ka.metricsAnnotations" . | nindent 6 }}
       labels:
         {{- include "ka.labels" . | nindent 8 }}
         app: event-relay
@@ -45,8 +46,10 @@ spec:
           ports:
             - name: http
               containerPort: {{ $v.eventRelay.port }}
+            {{- include "ka.metricsPort" . | nindent 12 }}
           env:
             {{- include "ka.commonEnv" . | nindent 12 }}
+            {{- include "ka.telemetryEnv" . | nindent 12 }}
             - name: PORT
               value: {{ $v.eventRelay.port | quote }}
             - name: RELAY_BATCH_SIZE
@@ -101,6 +104,7 @@ spec:
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
+      {{- include "ka.metricsAnnotations" . | nindent 6 }}
       labels:
         {{- include "ka.labels" . | nindent 8 }}
         app: document-service
@@ -115,8 +119,10 @@ spec:
           ports:
             - name: http
               containerPort: {{ $v.documentService.port }}
+            {{- include "ka.metricsPort" . | nindent 12 }}
           env:
             {{- include "ka.commonEnv" . | nindent 12 }}
+            {{- include "ka.telemetryEnv" . | nindent 12 }}
             - name: PORT
               value: {{ $v.documentService.port | quote }}
             - name: SCANNER_ENGINE

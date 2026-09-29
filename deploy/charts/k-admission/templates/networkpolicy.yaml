@@ -45,17 +45,17 @@ spec:
           port: {{ $v.api.port }}
 ---
 {{- if $v.observability.metrics.enabled }}
-# Prometheus → 접수 API 지표 포트. 공개 API 포트와 수집 경로를 분리한다.
+# Prometheus → 모든 워크로드의 지표 포트 (T-M4-20). 공개 API 포트와 수집 경로를 분리한다.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "ka.fullname" . }}-allow-prometheus-to-api
+  name: {{ include "ka.fullname" . }}-allow-prometheus-scrape
   labels: {{- include "ka.labels" . | nindent 4 }}
 spec:
   podSelector:
-    matchLabels:
-      app.kubernetes.io/instance: {{ $inst }}
-      network-role: api
+    matchExpressions:
+      - { key: app.kubernetes.io/instance, operator: In, values: [{{ $inst }}] }
+      - { key: network-role, operator: In, values: [api, relay, worker] }
   policyTypes: [Ingress]
   ingress:
     - from: {{- toYaml $v.observability.metrics.ingressFrom | nindent 8 }}
@@ -208,17 +208,17 @@ spec:
         {{- end }}
 ---
 {{- if $v.observability.otelEndpoint }}
-# 접수 API → OpenTelemetry Collector (OTLP/gRPC)
+# 모든 워크로드 → OpenTelemetry Collector (OTLP/gRPC) — Relay·서류 워커 span 도 같은 trace 로 모인다
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "ka.fullname" . }}-allow-api-to-otel-collector
+  name: {{ include "ka.fullname" . }}-allow-otel-collector
   labels: {{- include "ka.labels" . | nindent 4 }}
 spec:
   podSelector:
-    matchLabels:
-      app.kubernetes.io/instance: {{ $inst }}
-      network-role: api
+    matchExpressions:
+      - { key: app.kubernetes.io/instance, operator: In, values: [{{ $inst }}] }
+      - { key: network-role, operator: In, values: [api, relay, worker] }
   policyTypes: [Egress]
   egress:
     - to: {{- toYaml $v.observability.collectorEgress.to | nindent 8 }}

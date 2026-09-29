@@ -24,6 +24,9 @@ concurrency:
 jobs:
   sync:
     name: 예약 → desired state
+    # opt-in: 저장소 변수 PEAK_MODE_ENABLED=true 와 서명키가 갖춰지기 전에는 러너를 띄우지 않는다
+    # (10분 주기라 켜 두기만 해도 Actions 시간을 쓴다 — ADR-0006)
+    if: vars.PEAK_MODE_ENABLED == 'true'
     runs-on: ubuntu-latest
     # 서명키는 보호된 environment 의 secret 에만 둔다 (배포 승인자만 바꿀 수 있다)
     environment: peak-mode

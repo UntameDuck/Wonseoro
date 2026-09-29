@@ -1,10 +1,11 @@
+import { shutdownTelemetry } from './instrumentation';
 import 'reflect-metadata';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
 import { CORS_ORIGINS, PORT } from './config';
-import { assertConfigured } from '@wonseoro/server-kit';
+import { assertConfigured, installHttpTelemetry, StructuredLogger } from '@wonseoro/server-kit';
 
 /**
  * central-api — 중앙 Control + Convenience Plane
@@ -20,11 +21,16 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({ trustProxy: true, bodyLimit: 1_048_576 }),
+    { logger: new StructuredLogger('central-api') },
   );
+  app.enableShutdownHooks();
+  process.once('beforeExit', () => void shutdownTelemetry());
 
   // 대학이 보내는 CloudEvents 미디어 타입.
   // parseAs 는 'buffer' 여야 한다. 'string' 이면 한글 본문에서 길이 검증이 깨진다.
   const fastify = app.getHttpAdapter().getInstance();
+  // 대학 Relay 가 보낸 traceparent 를 이어 받는다 — Outbox 전송이 한 trace 로 보인다 (T-M4-20)
+  installHttpTelemetry(fastify);
   fastify.addContentTypeParser(
     'application/cloudevents+json',
     { parseAs: 'buffer' },

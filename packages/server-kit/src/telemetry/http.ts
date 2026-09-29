@@ -1,3 +1,7 @@
+/**
+ * HTTP 서버 지표·span (T-M4-20). 접수 API 에서 시작해 모든 Fastify 서비스가 같이 쓴다.
+ * 지표 이름은 HPA 커스텀 지표(T-M4-08)가 기대므로 바꾸지 않는다. 서비스는 service.name 으로 구분한다.
+ */
 import {
   context,
   metrics,
@@ -11,14 +15,14 @@ import {
 
 const meter = metrics.getMeter('k-admission.http');
 const requestCounter = meter.createCounter('http_requests', {
-  description: '접수 API HTTP 요청 수',
+  description: 'HTTP 요청 수',
 });
 const requestDuration = meter.createHistogram('http_server_request_duration', {
-  description: '접수 API HTTP 요청 처리 시간',
+  description: 'HTTP 요청 처리 시간',
   unit: 's',
 });
 const activeRequests = meter.createObservableGauge('http_server_active_requests', {
-  description: '접수 API 처리 중 요청 수',
+  description: '처리 중 HTTP 요청 수',
   unit: '{request}',
 });
 let activeRequestCount = 0;
@@ -99,4 +103,37 @@ export function finishHttpRequestSpan(request: object, input: HttpMetricInput): 
   if (input.statusCode >= 500) span.setStatus({ code: SpanStatusCode.ERROR });
   span.end();
   requestSpans.delete(request);
+}
+
+/** Fastify 의 필요한 부분만. server-kit 이 fastify 에 의존하지 않게 한다. */
+export interface HttpTelemetryHost {
+  addHook(name: 'onRequest' | 'onResponse', hook: (...args: any[]) => void): unknown;
+}
+
+/** Fastify 인스턴스에 요청 지표·서버 span 훅을 건다. 본문·쿼리·헤더 값은 어디에도 남기지 않는다. */
+export function installHttpTelemetry(fastify: HttpTelemetryHost): void {
+  fastify.addHook(
+    'onRequest',
+    (request: { method: string; headers: RequestHeaders }, _reply: unknown, done: () => void) => {
+      startHttpRequestSpan(request, request.method, request.headers, done);
+    },
+  );
+  fastify.addHook(
+    'onResponse',
+    (
+      request: { method: string; routeOptions?: { url?: string } },
+      reply: { statusCode: number; elapsedTime: number },
+      done: () => void,
+    ) => {
+      const metric = {
+        method: request.method,
+        route: request.routeOptions?.url,
+        statusCode: reply.statusCode,
+        durationMs: reply.elapsedTime,
+      };
+      recordHttpRequest(metric);
+      finishHttpRequestSpan(request, metric);
+      done();
+    },
+  );
 }

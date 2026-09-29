@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { safeHttpMetricAttributes } from './http-metrics';
+import { safeHttpMetricAttributes } from './http';
 
 test('HTTP 지표 라벨은 메서드·라우트 템플릿·상태 코드만 남긴다', () => {
   assert.deepEqual(

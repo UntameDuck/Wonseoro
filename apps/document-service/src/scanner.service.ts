@@ -1,10 +1,18 @@
 import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
+import { metrics } from '@opentelemetry/api';
 import {
   CircuitBreaker,
   CircuitOpenError,
   describeFailure,
   httpServerError,
+  traceHeaders,
+  withSpan,
 } from '@wonseoro/server-kit';
+
+/** 판정별 검사 수 (T-M4-20). 서류·원서 식별자는 라벨에 넣지 않는다. */
+const scanResults = metrics.getMeter('k-admission.document').createCounter('document_scans', {
+  description: '서류 검사 판정별 수 (보고까지 끝난 것만)',
+});
 import { ADMISSION_API_URL, BREAKER, SCANNER } from './config';
 
 export interface ScanTarget {
@@ -100,9 +108,13 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
     for (const target of targets) {
       // 보고할 수 없으면 검사하지 않는다. 판정을 버리게 된다.
       if (this.stopped || !this.admissionApi.allowsRequest()) break;
-      const verdict = await this.scan(target);
-      const reported = await this.report(target.documentId, verdict);
+      // 서류 한 건 = span 한 개. 결과 보고에 traceparent 를 실어 접수 API 처리까지 잇는다
+      const { verdict, reported } = await withSpan('k-admission.document', 'document scan', {}, async () => {
+        const verdict = await this.scan(target);
+        return { verdict, reported: await this.report(target.documentId, verdict) };
+      });
       if (!reported) continue;
+      scanResults.add(1, { verdict });
 
       stats.scanned += 1;
       if (verdict === 'CLEAN') stats.clean += 1;
@@ -145,6 +157,7 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
       const res = await this.admissionApi.run(
         () =>
           fetch(`${this.apiUrl()}/internal/v1/documents/pending-scan?limit=25`, {
+            headers: traceHeaders(),
             signal: AbortSignal.timeout(SCANNER.timeoutMs),
           }),
         { isFailure: httpServerError },
@@ -172,6 +185,7 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
               // **문서 단위로 고정된 키**를 쓴다. 같은 서류의 검사 결과를 다시 보고해도
               // 상태가 두 번 바뀌면 안 된다.
               'idempotency-key': `scan-${documentId}`,
+              ...traceHeaders(),
             },
             body: JSON.stringify({
               result,

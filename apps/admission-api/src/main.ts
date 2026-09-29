@@ -11,11 +11,11 @@ import { IdempotencyStore } from './common/idempotency/idempotency.store';
 import { ProblemFilter } from './common/problem/problem.filter';
 import { strictJsonParser } from './common/http/strict-json';
 import {
-  finishHttpRequestSpan,
-  recordHttpRequest,
-  startHttpRequestSpan,
-} from './common/telemetry/http-metrics';
-import { assertConfigured, isProduction } from '@wonseoro/server-kit';
+  assertConfigured,
+  installHttpTelemetry,
+  isProduction,
+  StructuredLogger,
+} from '@wonseoro/server-kit';
 
 /**
  * admission-api — 대학 Data Plane 메인 API
@@ -36,7 +36,8 @@ async function bootstrap(): Promise<void> {
     new FastifyAdapter({ trustProxy: true, bodyLimit: 1_048_576 }),
     // 본문 파서는 아래에서 직접 등록한다. Nest 가 자기 JSON 파서를 따로 올리면
     // 깨진 UTF-8 을 받아들이는 기본 동작이 되살아난다. (D-37)
-    { bodyParser: false },
+    // 로그는 한 줄 JSON + trace_id, 본문 없이 마스킹을 거친다. (T-M4-20 · T-M4-24)
+    { bodyParser: false, logger: new StructuredLogger('admission-api') },
   );
 
   // OpenAPI updateApplication 이 application/merge-patch+json 을 요구한다.
@@ -49,20 +50,7 @@ async function bootstrap(): Promise<void> {
   // 기본 JSON 파서는 깨진 UTF-8 을 U+FFFD 로 바꿔 받아들인다. 거절하도록 바꾼다. (D-37)
   fastify.removeContentTypeParser('application/json');
   fastify.addContentTypeParser('application/json', { parseAs: 'buffer' }, strictJsonParser);
-  fastify.addHook('onRequest', (request, _reply, done) => {
-    startHttpRequestSpan(request, request.method, request.headers, done);
-  });
-  fastify.addHook('onResponse', (request, reply, done) => {
-    const metric = {
-      method: request.method,
-      route: request.routeOptions?.url,
-      statusCode: reply.statusCode,
-      durationMs: reply.elapsedTime,
-    };
-    recordHttpRequest(metric);
-    finishHttpRequestSpan(request, metric);
-    done();
-  });
+  installHttpTelemetry(fastify);
 
   // 모든 오류를 problem+json 으로 통일한다.
   app.useGlobalFilters(new ProblemFilter());

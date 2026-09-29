@@ -1,10 +1,11 @@
+import { shutdownTelemetry } from './instrumentation';
 import 'reflect-metadata';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
 import { CENTRAL_SYNC_URL, PORT, UNIVERSITY_ID } from './config';
-import { assertConfigured } from '@wonseoro/server-kit';
+import { assertConfigured, installHttpTelemetry, StructuredLogger } from '@wonseoro/server-kit';
 
 /**
  * event-relay — Outbox 를 중앙으로 보낸다.
@@ -19,8 +20,12 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({ trustProxy: true }),
+    { logger: new StructuredLogger('event-relay') },
   );
   app.enableShutdownHooks();
+  installHttpTelemetry(app.getHttpAdapter().getInstance());
+  // Nest 종료 훅이 끝난 뒤 남은 지표·span 을 내보낸다
+  process.once('beforeExit', () => void shutdownTelemetry());
 
   const port = PORT;
   await app.listen({ port, host: '0.0.0.0' });

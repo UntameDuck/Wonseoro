@@ -100,6 +100,37 @@ volumeMounts:
   value: {{ include "ka.centralBase" . | quote }}
 {{- end -}}
 
+{{- /* 관측성 (T-M4-20) — 모든 서비스 공통. 지표는 Prometheus pull, Trace 는 수집기가 있을 때만 */ -}}
+{{- define "ka.telemetryEnv" -}}
+{{- $o := .Values.observability -}}
+- name: OTEL_ENABLED
+  value: {{ or $o.metrics.enabled (ne $o.otelEndpoint "") | quote }}
+- name: OTEL_METRICS_PORT
+  value: {{ $o.metrics.port | quote }}
+{{- with $o.otelEndpoint }}
+- name: OTEL_EXPORTER_OTLP_ENDPOINT
+  value: {{ . | quote }}
+{{- end }}
+- name: LOG_FORMAT
+  value: json
+{{- end -}}
+
+{{- define "ka.metricsAnnotations" -}}
+{{- if .Values.observability.metrics.enabled }}
+annotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: /metrics
+  prometheus.io/port: {{ .Values.observability.metrics.port | quote }}
+{{- end }}
+{{- end -}}
+
+{{- define "ka.metricsPort" -}}
+{{- if .Values.observability.metrics.enabled }}
+- name: metrics
+  containerPort: {{ .Values.observability.metrics.port }}
+{{- end }}
+{{- end -}}
+
 {{- define "ka.extraEnv" -}}
 {{- range $k, $v := . }}
 - name: {{ $k }}
