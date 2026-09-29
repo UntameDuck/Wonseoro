@@ -24,6 +24,9 @@
 | T-M4-09 커넥션 예산 | ✅ | PgBouncer 1.26.0 비루트 이미지·Helm Deployment/PDB·앱/DB TLS 경계·서버/클라이언트 예산·직접 DB 우회 차단. 동시 30쿼리 성공, upstream 최대 10/10. 노드 강제 재시작 후 stale PID 자동 제거·A 전체 Ready 복구와 B 정상 유지 확인. 로컬 축소 환경 결과 `tests/m4/results/pgbouncer-2026-09-28T01-26-13-047Z.json`. 첨부 values-m 수치 결정은 D-44 ⑦로 별도 대기 |
 | T-M4-20 OpenTelemetry | ✅ | 네 서비스(API·Relay·서류 워커·중앙)가 공용 `server-kit` 계측을 쓴다 — Prometheus 지표, OTLP/gRPC Trace, 내부 호출 traceparent 전파(Relay→중앙·워커→API·API→Vault), 한 줄 JSON 로그의 trace_id/span_id. HTTP 라벨·span 속성은 allowlist(메서드·라우트 템플릿·상태 코드, 식별자 형태 값)만 쓴다. smoke(모의 수집기)에서 Trace·로그 상관관계·PII 미노출, Relay 통합 시험에서 이벤트 span→중앙 헤더 전파, kind A 에서 세 워크로드 수집 up=1·구조화 로그 확인 `tests/m4/results/telemetry-kind-2026-09-29T14-05-37-946Z.json`. 로컬에 수집기가 없어 클러스터 안 Trace 전송은 미검증 |
 | T-M4-24 Log Masking 강제 | ✅ | `StructuredLogger` — 본문 객체 미기록, 주민번호·전화·이메일·카드·토큰·접속 비밀번호 마스킹, 운영 스택 없음. 전역 Nest 로거를 기동 전에 교체하고, `scripts/check-logging.mjs` 가 console·stdout 직접 출력과 로거 누락을 CI 에서 막는다 |
+| T-M4-21 Golden Signals 대시보드 | ✅ | `deploy/platform/observability/dashboards/golden-signals.json` — Traffic(서비스별 RPS·Finalize TPS)·Errors(5xx 비율·상태별)·Latency(p95, probe 제외)·Saturation(처리 중 요청·DB 잠금 대기·Outbox 적체). 로컬 Grafana 12.3.1 에서 렌더링 확인 `tests/m4/results/grafana-dashboards-2026-09-29T15-52-02-577Z.json` |
+| T-M4-22 업무 KPI | ✅ | §15 7종 — 결과별 카운터·DB 게이지를 앱이 내고 비율은 recording rule(`kpi-rules.yaml`)에서 한 번만 정의(업무 거절·충돌은 분모 제외). kind 에서 원서 12건 흐름의 카운터(저장 saved·conflict·rejected 각 12, 결제 verified 12, 자동 접수 finalized 12·화면 재제출 already_finalized 12)와 규칙 14개 값 확인 `tests/m4/results/business-kpi-kind-2026-09-29T15-14-52-238Z.json`. 이 확인에서 취소 이벤트 계약 위반(D-50)을 찾아 고쳤다 |
+| T-M4-23 Support Dashboard | ✅ | §10.4 고정 5종 `dashboards/support.json` — Grafana 에서 finalize success rate 100%·payment verify latency p95 450ms·outbox backlog 0·DB lock wait 0·error rate 0% 표시(축소 환경 값). 대시보드↔규칙 일관성·설계서 지표 누락 검사 `tests/m4/dashboards.mjs` CI 포함 |
 | T-M4-42 대학 간 격리 | ✅ | 로컬 kind 2클러스터 축소 환경 통과. A 전면 정지 중 B 접수 2건·중앙 반영, A 복구 후 접수. `tests/m4/results/isolation-2026-09-27T16-42-39-057Z.json` |
 | T-M4-33 동시 Finalize | ✅ | 100회 동시 요청 전부 성공(201×1, 200×99), Submission·Outbox·감사 각 1건. 로컬 축소 환경 |
 | T-M4-34 PG 지연·UNKNOWN | 🟡 | SLOW·UNKNOWN→복구 시 자동 확정·접수, double-confirm 0. 워커 1초·Backoff 시간 압축 — 실제 10초·1~30분 시간 시험 남음 |
@@ -144,4 +147,4 @@ D-1      : API/DB/Redis 사전 Scale-out
 - [ ] **실측값으로 노션 v1.0 §10.1 Size Profile 보정** — 추정치를 실측으로 교체
 - [ ] **노션 §08에 시나리오 13(대학 간 격리) 추가**
 - [ ] Helm values 기본값을 실측 기준으로 조정하고 §05 첨부 갱신
-- [ ] 발견한 불일치를 D-N으로 등록·처리
+- [ ] 발견한 불일치를 D-N으로 등록·처리 — M4 중 D-45~D-50 등록, D-47·D-49 는 노션 첨부 교체 대기

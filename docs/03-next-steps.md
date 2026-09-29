@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-29 (**M4 진행** — 전 서비스 계측·구조화 로그·마스킹 강제 완료, T-M4-20·T-M4-24 종결)
+> 최종 갱신: 2026-09-30 (**M4 진행** — 업무 KPI·대시보드 3종 완료(T-M4-21~23), 취소 이벤트 계약 위반 D-50 수정, CI 복구)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -10,7 +10,7 @@
 
 ## 현재 지점
 
-**M0·M1·M2·M3 완료, M4 진행 중** (13/28). MVP가 화면에서 끝까지 동작하고, 로컬 축소 환경에서 대학 간 장애 격리·동시 Finalize·DB 연결 상한·Object Storage 장애 격리·HPA 커스텀 지표·signed GitOps Pull·예약 Peak Mode 전환·전 서비스 관측성(지표·Trace·구조화 로그)을 증명했다.
+**M0·M1·M2·M3 완료, M4 진행 중** (16/28). MVP가 화면에서 끝까지 동작하고, 로컬 축소 환경에서 대학 간 장애 격리·동시 Finalize·DB 연결 상한·Object Storage 장애 격리·HPA 커스텀 지표·signed GitOps Pull·예약 Peak Mode 전환·전 서비스 관측성(지표·Trace·구조화 로그)·업무 KPI 대시보드를 증명했다.
 
 | 단계 | 진행 | 비고 |
 |---|---|---|
@@ -18,15 +18,20 @@
 | M1 접수 Core | **14/14** | ✅ |
 | M2 결제·Finalize·화면 | **24/24** | ✅ Demo Gate 1~5 통과 |
 | M3 운영 안전장치 | **14/15** | ✅ **종료 2026-09-27** — T-M3-03 WORM·T-M3-06 JWKS 는 M5 |
-| **M4 분산 실증** | **13/28** | ◀ 진행 중 — 차트·kind·Flux Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표·Peak Mode·계측·로그 마스킹 ✅, PG·중앙·Pod 장애 축소 시험 🟡, 대시보드(T-M4-21~23) ⬜ |
+| **M4 분산 실증** | **16/28** | ◀ 진행 중 — 차트·kind·Flux Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표·Peak Mode·계측·로그 마스킹·KPI 대시보드 ✅, PG·중앙·Pod 장애 축소 시험 🟡 |
 | M5 신뢰성·보안·접근성 | 0/35 | |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 71/139 태스크** (🟡 부분 완료 별도). **314개 테스트**
-(admission-api 242 · server-kit 47 · central-api 20 · event-relay 5) — DB 없는 실행 기준 172 pass·142 skip·실패 0.
-DB 포함 실행은 admission-api 239 pass·3 skip(`ADMIN_API_TOKEN` 미설정)·실패 0, 나머지 전부 pass.
-배포 스크립트 시험 별도: Peak Mode 예약 계산 9건(`npm run test:m4:peak-schedule`).
+**총 74/139 태스크** (🟡 부분 완료 별도). **322개 테스트**
+(admission-api 250 · server-kit 47 · central-api 20 · event-relay 5) — DB 없는 실행 기준 180 pass·142 skip·실패 0.
+DB 포함 실행은 admission-api 3 skip(`ADMIN_API_TOKEN` 미설정) 외 전부 pass.
+배포 스크립트 시험 별도: Peak Mode 예약 계산 9건(`npm run test:m4:peak-schedule`), 대시보드·KPI 규칙 일관성(`npm run test:m4:observability`).
 DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`)·로그 우회 금지 검사(`scripts/check-logging.mjs`) CI 포함.
+
+**CI 복구 (2026-09-30)** — 확인한 범위(`c232294` 이후)에서 통합 잡이 계속 실패하고 있었다. 원인은 CI 가 역할 마이그레이션·개발 시드·활성 마감정책 없이
+빈 DB 에서 시험을 돌린 것, 그리고 타이밍에 따라 갈리던 경합 두 건(마감정책 승인 400/409, 자동 접수와 화면 제출)이다.
+`0002_db_roles.sql`·`dev-roles.sql`·`seed-dev.sql`·`ci-seed-deadline.sql` 을 적용하고 경합을 고쳐 네 잡 모두 초록이다.
+CI 와 같은 순서를 로컬 빈 PostgreSQL 컨테이너로 재현하면 CI 를 왕복하지 않고 확인할 수 있다(HANDOFF §3).
 
 > ⚠️ **DB 통합 시험을 돌릴 때는 kind univ-a 의 API·Relay 를 0 으로 줄인다.** 클러스터의 결제 재확인 워커·Relay 가
 > 같은 로컬 `univ_a` DB 에서 시험이 넣은 행을 먼저 집어 가, 결제 재확인·Relay 시험이 실패하거나 멈춘다(2026-09-29 확인).
@@ -98,7 +103,7 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 | T-M4-38 | Object Storage 지연·단절 | ✅ MinIO 완전 단절 중 카탈로그 20회 오류 0·원서 생성/자동저장 지속, 직접 업로드만 실패. 복구 후 업로드·서버 검증 정상 (**로컬 축소 환경**) |
 | T-M4-39 | API Pod·노드 강제 종료 | 🟡 Pod 삭제·RollingUpdate 오류 0. 다중 노드 시험 남음 |
 
-### 🎯 목표 3 — 차트에 남은 운영 기능 · **현재 목표** (다음: T-M4-22 업무 KPI 지표 → T-M4-21·23 대시보드)
+### 🎯 목표 3 — 차트에 남은 운영 기능 · ✅ 로컬에서 할 수 있는 것 완료 (다음 목표는 아래 「목표 5」)
 
 | ID | 할 일 |
 |---|---|
@@ -108,13 +113,22 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 | T-M4-05 | ✅ Flux Pull — signed Git HEAD 검증, namespace 한정 reconcile, Helm 인수·drift 복구, unsigned HEAD 거부 확인 (`gitops-pull-2026-09-29T04-24-15-000Z.json`) |
 | T-M4-20 | ✅ 네 서비스 공용 `server-kit` 계측 — 지표·OTLP Trace·내부 호출 traceparent 전파·JSON 로그 trace_id. smoke·Relay 통합 시험·kind 수집 확인 (`telemetry-kind-2026-09-29T14-05-37-946Z.json`). 로컬에 수집기가 없어 클러스터 안 Trace 전송은 미검증 |
 | T-M4-24 | ✅ `StructuredLogger` 본문 미기록·마스킹(주민번호·전화·이메일·카드·토큰·접속 비밀번호)·운영 스택 없음, `check-logging.mjs` 로 CI 강제 |
-| T-M4-21~23 | ⬜ 다음 — 먼저 T-M4-22 업무 KPI 지표(`finalize_success_rate`·`outbox_oldest_age_seconds`·`central_sync_lag_seconds` 등)를 코드에서 내고, Golden Signals·Support 대시보드를 Grafana JSON 으로 저장소에 둔다 |
+| T-M4-21~23 | ✅ 업무 KPI 7종·Support 고정 5종·Golden Signals — 앱 카운터·DB 게이지 + recording rule 14개(`kpi-rules.yaml`) + Grafana 대시보드 3종. kind 에서 실제 접수 흐름으로 값 확인·Grafana 렌더링 확인 (`business-kpi-kind-…`·`grafana-dashboards-…`). 이 과정에서 취소 이벤트가 중앙에 한 건도 반영되지 않던 계약 위반(D-50)을 찾아 고쳤다 |
+
+### 🎯 목표 5 — 남은 로컬 기능 시험 · **현재 목표**
+
+| ID | 할 일 |
+|---|---|
+| **T-M4-40** | NAT 뒤 정상 사용자 보호 — IP 단독 rate-limit 대신 세션·계정·원서 기반 위험점수로 Adaptive Throttling. 검증: NAT 뒤 정상 200명 + 봇 동시 → 정상 차단 0 (축소 환경) |
+| T-M4-37 | Redis Failover / Cache 초기화 — 세션·접수 영향 확인 (로컬 compose Redis 재기동으로 축소) |
+| T-M4-34·35·39 | 시간 압축으로 끝낸 시험의 실제 시간 판(PG 콜백 1~30분, 중앙 2시간 단절)·다중 노드 kind |
 
 ### 🎯 목표 4 — 노션 반영 (D-43 · D-44)
 
 - §05 첨부 runtime·values-m 교체 — 포트·프로브·NODE_ENV·대조 방식·마감버전 제거, **커넥션 예산 초과(⑦) 수정**
 - §07 와이어프레임 결제 화면 문구 — "결제가 확인되면 바로 접수"(D-42)
 - §05 첨부 values-m 의 `peakMode.scheduledActivation` 예시 시각 비우기 — D-49 (D-44 교체와 함께)
+- §04 CloudEvents 첨부의 `subjectRef` 키 ID 상한 — D-47
 
 ### 사람이 정하거나 해야 하는 것
 

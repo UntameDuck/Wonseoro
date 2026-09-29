@@ -10,4 +10,4 @@
 - 노션 첨부 사본(`deploy/charts/k-admission/values-m.yaml`, `deploy/platform/policies/*`, `tests/load/k6-admission.js`, `docs/spec-assets/*`, `infra/db/migrations/0001_init.sql`, `packages/contracts/openapi/k-admission.v1.yaml`, `packages/contracts/events/*.json`)은 노션과 바이트가 같아야 한다
 - 노션 페이지 수정은 페이지마다 사용자 확인
 - 로컬 수치는 "축소 환경" 으로 명시, 수치를 지어내지 않는다
-- 지금 할 일: `docs/03-next-steps.md` 「다음 개발 목표」 — 다음은 T-M4-22 업무 KPI 지표 → T-M4-21·23 대시보드
+- 지금 할 일: `docs/03-next-steps.md` 「다음 개발 목표」 — 다음은 T-M4-40 NAT 뒤 정상 사용자 보호(Adaptive Throttling) → T-M4-37 Redis 장애

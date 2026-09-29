@@ -310,7 +310,7 @@ dev-folder/
 
 ## Project Status
 
-> 기준일 2026-09-29 · 전체 139개 태스크 중 **71개 완료** · **M3 종료 · M4 진행** · 테스트 **314개** (실패 0)
+> 기준일 2026-09-30 · 전체 139개 태스크 중 **74개 완료** · **M3 종료 · M4 진행** · 테스트 **322개** (실패 0) · CI 통과
 
 지원자가 화면에서 원서를 만들어 서류를 올리고 결제한 뒤 **접수번호를 받는 전 과정이 동작합니다.**
 
@@ -327,7 +327,7 @@ dev-folder/
 | M1 접수 Core | **14/14** | 원서 생성·자동저장·추가문항·서류·감사 hash-chain |
 | M2 결제·Finalize·화면 | **24/24** | 결제 재검증, Finalize 트랜잭션, KRDS 6단계 화면, Dashboard |
 | M3 운영 안전장치 | **14/15 · 종료** | 마감 정책 엔진, 설정 거버넌스, 4-way 대조, 증적 재구성, 의존성 차단, 서명된 적용 기록, 보존기간 매트릭스, 목적별 가명 참조, 관리자 콘솔. 결제 자동 정합화(PG 콜백·재확인·대조 스케줄), 감사 기록 삭제 차단(앱 최소권한 DB 역할), **결제 = 접수**(결제 확인 시 자동 접수), 한 전형 한 모집단위 |
-| M4 분산 실증 | 13/28 · 진행 중 | Helm·kind·Flux signed Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표·예약 Peak Mode(서명 커밋 → Flux Pull)·전 서비스 계측(지표·Trace·trace_id 로그)·로그 마스킹 강제 완료. 실제 시간·다중 노드·K-PaaS 시험 대기 |
+| M4 분산 실증 | 16/28 · 진행 중 | Helm·kind·Flux signed Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표·예약 Peak Mode(서명 커밋 → Flux Pull)·전 서비스 계측(지표·Trace·trace_id 로그)·로그 마스킹 강제·업무 KPI 대시보드(Golden Signals·업무 KPI 7종·Support 고정 5종) 완료. 실제 시간·다중 노드·K-PaaS 시험 대기 |
 | M5 신뢰성·보안·접근성 | 0/35 | OIDC·MFA, 실 PG, 실 AV, WORM 감사 |
 | M6 Pilot 준비 | 0/15 | 대학 1곳 Shadow Test |
 
@@ -338,6 +338,7 @@ dev-folder/
 - **단독 운영자 1명으로 마감시간을 바꿀 수 없다.** 작성자 자기승인 차단, 2인 승인, 과거 시각 예약 차단이 코드와 DB 제약 양쪽에서 막힙니다.
 - **재시도해도 접수는 한 건이다.** DB 제약 12종이 실제로 막는 것을 행동으로 검증합니다.
 - **배포 설정이 규칙을 우회하지 못한다.** Helm 차트는 운영 배포에서 서명된 이미지 digest가 없거나, 비밀을 차트가 만들거나, 서류 검사 엔진이 흉내이거나, DB 커넥션 예산을 넘으면 렌더링 단계에서 거절합니다. 마감·설정 버전은 배포 값이 아니라 2인 승인 기록으로만 바뀝니다.
+- **마감일 운영자가 볼 지표가 설계서 그대로 나온다.** 업무 KPI 7종과 Support 고정 5종(Finalize 성공률·결제 확인 지연·Outbox 적체·DB 잠금 대기·오류율)을 앱이 내고 Grafana 대시보드로 보여 줍니다. 성공률은 업무 검증 거절을 빼고 계산합니다(로컬 축소 환경 검증).
 - **마감 전 사전 확장이 사람 손 없이 일어난다.** 대학별 예약에 따라 자동화가 서명 커밋으로 desired state를 바꾸고, 각 대학 클러스터의 Flux가 서명을 검증해 Pull합니다. 중앙은 대학 클러스터 권한을 갖지 않습니다(로컬 축소 환경 검증).
 
 ### 아직 없는 것
@@ -362,7 +363,7 @@ dev-folder/
 
 - [다음 단계 및 현재 진행 현황](docs/03-next-steps.md)
 - [운영 준비 점검 — 하드코딩·기본값·인가](docs/04-production-readiness.md)
-- [설계 불일치 대장](docs/02-spec-discrepancy-register.md) — 설계서와 구현이 어긋난 49건의 판정 기록
+- [설계 불일치 대장](docs/02-spec-discrepancy-register.md) — 설계서와 구현이 어긋난 50건의 판정 기록
 - [문서 인덱스](docs/README.md)
 - [K-Admission 기술설계서](https://efficient-rook-e79.notion.site/K-Admission-K-PaaS-3de75ab5debe801f99c5fee017130c65)
 - [Wonseoro GitHub Repository](https://github.com/UntameDuck/Wonseoro)

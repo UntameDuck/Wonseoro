@@ -10,10 +10,10 @@
 ## 1. 30초 요약
 
 - **제품**: 원서로(K-Admission) — 대학 입학 원서접수를 대학별 Data Plane 으로 분산하는 플랫폼. 2026 GovTech 공모전 출품작
-- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 13/28 진행 중**. 전체 71/139 태스크
+- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 16/28 진행 중**. 전체 74/139 태스크. **CI 네 잡 모두 초록**(2026-09-30 복구)
 - **완료한 핵심 증명**: 로컬 kind 2클러스터 축소 환경에서 **대학 간 장애 격리 T-M4-42 통과**. A대 전면 정지 중 B대 접수·중앙 반영, A대 복구 후 접수까지 확인
-- **최근 완료**: T-M4-07 Peak Mode 예약 → 서명 커밋 → Flux Pull 전환(ADR-0006, D-48 종결) · T-M4-20 전 서비스 계측·로그 상관관계 · T-M4-24 로그 마스킹 강제
-- **바로 다음 할 일**: **T-M4-22 업무 KPI 지표(`finalize_success_rate`·`outbox_oldest_age_seconds`·`central_sync_lag_seconds` 등) → T-M4-21·23 대시보드** → [§4](#4-다음-작업--순서와-방법)
+- **최근 완료**: T-M4-07 Peak Mode(ADR-0006) · T-M4-20 전 서비스 계측·로그 상관관계 · T-M4-24 로그 마스킹 강제 · **T-M4-21~23 업무 KPI·대시보드 3종** · **D-50 취소 이벤트 계약 위반 수정** · CI 복구
+- **바로 다음 할 일**: **T-M4-40 NAT 뒤 정상 사용자 보호(Adaptive Throttling)** → T-M4-37 Redis 장애 → 시간 압축 시험의 실제 시간 판 → [§4](#4-다음-작업--순서와-방법)
 
 ## 2. 반드시 지킬 규칙
 
@@ -38,8 +38,10 @@
 | 도구 | kind 0.33 · Helm **4.3** · k6 2.2 · kubectl 1.34 (winget 설치). 새 터미널부터 PATH 에 잡힌다. 안 잡히면 `%LOCALAPPDATA%\Microsoft\WinGet\Packages\` 아래 `Helm.Helm_*\windows-amd64`, `Kubernetes.kind_*` 를 PATH 에 더한다. k6 는 `C:\Program Files\k6` |
 | Docker | Desktop, VM 메모리 **약 7.5GB.** 이미지 빌드와 kind 클러스터 2개를 **동시에 돌리면 엔진이 멈춘다**(실제로 멈췄다). 빌드 → 클러스터 순서로, 하나씩 |
 | 로컬 Flux 시험 | `E:\DockerData\gitops-test-20260929-1245` — bare `Wonseoro.git`·시험 사본 `work`(임시 SSH 서명키가 git 설정에 있음). kind-univ-a 의 Flux 리소스는 시험 뒤 suspend 상태. Git 서버는 `node tests/m4/helpers/git-smart-http-server.mjs <그 폴더> 9418` |
+| CI 재현 | CI 통합 잡과 같은 순서를 빈 DB 로: `docker run -d --rm --name ci-pg -e POSTGRES_USER=wonseoro -e POSTGRES_PASSWORD=wonseoro -e POSTGRES_DB=univ_a -p 5499:5432 postgres:16-alpine` → `0001_init`·`0002_db_roles`·`dev-roles`·`verify-constraints`·`seed-dev`·`ci-seed-deadline` 적용 → `DATABASE_URL=…@localhost:5499/univ_a` 로 시험. kind 워크로드 간섭도 없다 |
+| 로컬 관측 스택 | kind A `observability` 네임스페이스: Prometheus(KPI 규칙 포함)·Adapter·Grafana(익명 Viewer). Grafana 는 `kubectl -n observability port-forward svc/grafana 13000:80` |
 | 로컬 DB | compose: `postgres-univ-a` :5432 · `postgres-univ-b` :5442(`--profile multi`) · `postgres-central` :5434 · redis :6379 · minio :9000 |
-| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 242 · server-kit 47 · central-api 20 · event-relay 5 (전체 314, DB 없는 실행 172 pass·142 skip·실패 0). 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함). **DB 통합 시험 전에 kind univ-a 의 API·Relay 를 0 으로 줄인다** — 같은 로컬 `univ_a` DB 를 봐서 시험 행을 먼저 집어 간다(결제 재확인·Relay 시험이 실패하거나 멈춘다). event-relay 시험은 직렬로 돈다 |
+| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 250 · server-kit 47 · central-api 20 · event-relay 5 (전체 322, DB 없는 실행 180 pass·142 skip·실패 0). 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함). **DB 통합 시험 전에 kind univ-a 의 API·Relay 를 0 으로 줄인다** — 같은 로컬 `univ_a` DB 를 봐서 시험 행을 먼저 집어 간다(결제 재확인·Relay 시험이 실패하거나 멈춘다). event-relay 시험은 직렬로 돈다 |
 | 검사 | `npm run db:verify`(DB 제약 20종) · `node scripts/check-deps.mjs`(의존성 선언) · `helm lint deploy/charts/k-admission` |
 
 ## 4. 다음 작업 — 순서와 방법
@@ -96,10 +98,16 @@ index 를 거치면 `pg` 가 먼저 로드돼 DB span 이 빠진다), `telemetry
 `withSpan`), `telemetry/logger`(한 줄 JSON·trace_id·마스킹). 네 서비스의 `src/instrumentation.ts` 가 main 의 첫 import 로
 SDK 를 켜고 전역 Nest 로거를 바꾼다. `scripts/check-logging.mjs` 가 CI 에서 console 직접 출력·로거 누락을 막는다.
 kind A 에 Flux(서명 병합 → Pull)로 새 이미지를 배포해 세 워크로드 수집 up=1·구조화 로그를 확인했다 —
-`tests/m4/results/telemetry-kind-2026-09-29T14-05-37-946Z.json`. B 와 클러스터 밖 `ka-central` 은 아직 이전 이미지다.
+`tests/m4/results/telemetry-kind-2026-09-29T14-05-37-946Z.json`. A 의 API·Relay 와 클러스터 밖 `ka-central` 은 D-50 이후 이미지다(2026-09-30). A 의 서류 워커는 계측 추가(`506d1d2`) 시점 이미지다(카운터 0 초기화 이전). **B 클러스터는 아직 이전 이미지다** — B 를 쓰는 시험(격리 T-M4-42 등) 전에 이미지를 올린다.
 **Flux 가 소유한 release 는 `helm upgrade` CLI 로 바꿀 수 없다**(server-side apply 충돌) — 시험 사본에 서명 병합 → bare 로 push → Flux 재개.
 
-다음은 T-M4-22 업무 KPI 지표 → T-M4-21·23 대시보드다. 각 인수기준은 [M4 마일스톤](milestones/M4-federated-proof.md).
+T-M4-21~23 도 끝냈다. admission-api 가 결과별 카운터(자동저장·결제 재검증·Finalize)와 DB 게이지(Outbox·중앙 반영·서류 대기·잠금 대기)를
+내고, 비율은 `deploy/platform/observability/kpi-rules.yaml` recording rule 에서만 정의한다. Grafana 대시보드 3종은
+`dashboards/*.json` 이고 kind A 에 Grafana 를 올려 렌더링까지 확인했다(설치·검증 명령은 관측성 README). 이 과정에서
+**취소 이벤트가 CloudEvents 스키마와 달라 중앙이 한 건도 받지 못하던 것(D-50)** 을 찾았다 — 이벤트 본문은 이제
+`apps/admission-api/src/common/central/central-events.ts` 한 곳에서 만들고 스키마로 직접 검증한다.
+
+다음은 T-M4-40(NAT Adaptive Throttling)이다. 각 인수기준은 [M4 마일스톤](milestones/M4-federated-proof.md).
 
 T-M4-08은 A kind에 Prometheus `29.35.0`·Adapter `5.3.0`을 설치하고 RPS·p95 지연·처리 중 요청 수를
 Custom Metrics API와 HPA에서 모두 확인해 완료했다. 설정은 `deploy/platform/observability/`, 결과는
@@ -146,8 +154,8 @@ Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, s
 
 ## 6. 전체 남은 규모
 
-139개 중 71개 완료, **68개 남음**.
-AI 가 이 PC 에서 할 수 있는 것 약 41개, 외부 환경 필요 약 15개, 사람·기관 필요 약 15개.
+139개 중 74개 완료, **65개 남음**.
+AI 가 이 PC 에서 할 수 있는 것 약 38개, 외부 환경 필요 약 15개, 사람·기관 필요 약 15개.
 
 ## 7. 어디에 무엇이 있나
 
@@ -155,7 +163,7 @@ AI 가 이 PC 에서 할 수 있는 것 약 41개, 외부 환경 필요 약 15�
 |---|---|
 | 지금 할 일 | [03-next-steps.md](03-next-steps.md) |
 | 단계별 태스크·인수기준 | [milestones/](milestones/) |
-| 설계와 구현이 다른 곳 49건 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) |
+| 설계와 구현이 다른 곳 50건 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) |
 | 노션 문서 지도·동기화 규칙 | [01-notion-sync-protocol.md](01-notion-sync-protocol.md) |
 | 왜 이렇게 정했나 | [adr/](adr/) — 최신 ADR-0006 Peak Mode 예약 GitOps |
 | 배포 | `deploy/` — 차트 `charts/k-admission`, 대학별 `universities/`, 로컬 `local/` |
