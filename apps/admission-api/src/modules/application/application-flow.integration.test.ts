@@ -26,7 +26,7 @@ import { ApplicationRepository } from './application.repository';
 import { ProfileVaultClient } from './profile-vault.client';
 
 /**
- * 원서 흐름 전체 — 상태머신·결제·서류·시각이 서로 이어지는가 (D-54 · §A2 · §A9 · §B4)
+ * 원서 흐름 전체 — 상태머신·결제·서류·시각이 서로 이어지는가 (D-55 · §A2 · §A9 · §B4)
  *
  * 각 부분은 따로 시험되고 있었지만 **서로 연결되지 않은 곳**이 있었다. 원서 상태는 DRAFT 에서
  * 바로 FINALIZED 로 갔고(READY·PAYMENT_PENDING·PAID 가 쓰이지 않았다), 한 원서에 결제창을 몇 개든
@@ -165,7 +165,7 @@ after(async () => {
   await db.onApplicationShutdown();
 });
 
-describe('원서 상태머신이 실제 흐름에 연결된다 (D-54)', () => {
+describe('원서 상태머신이 실제 흐름에 연결된다 (D-55)', () => {
   it('최종 검증을 통과하면 READY, 다시 저장하면 DRAFT — 내용이 바뀌면 다시 검증해야 한다', async (t) => {
     if (!available) return t.skip('DATABASE_URL 없음');
     const { repo } = wire();
@@ -389,7 +389,7 @@ describe('원서 생성·수정의 입력 대조', () => {
   });
 });
 
-describe('서류는 작성 중에만, 전형이 받는 종류만 (§A5 · D-54)', () => {
+describe('서류는 작성 중에만, 전형이 받는 종류만 (§A5 · D-55)', () => {
   it('결제를 시작한 원서에는 서류를 올릴 수 없다', async (t) => {
     if (!available) return t.skip('DATABASE_URL 없음');
     const { documents } = wire();

@@ -6,11 +6,21 @@
  *
  * 전달 모델: At-least-once + 소비자 Idempotency.
  */
+/**
+ * 이벤트 타입 — 스키마(events/k-admission-cloudevents.schema.json)에 있는 것만 둔다.
+ * `scripts/check-contracts.mjs` 가 여기 있는 타입이 스키마에 있는지 CI 에서 본다.
+ *
+ * 대학이 실제로 보내는 것 (D-60)
+ *   APPLICATION_FINALIZED · APPLICATION_CANCELLED  Outbox 로 (원서 원장)
+ *   SYNC_HEARTBEAT                                  event-relay 가 주기적으로 (Outbox 를 거치지 않는다)
+ *   PAYMENT_CONFIRMED                               **보내지 않는다** — 결제 확정이 곧 접수라(D-42) 접수 이벤트가
+ *                                                  같은 사실을 전하고, 결제 금액·수단은 중앙이 알 필요가 없다(§A3 최소 정보)
+ * 환불 이벤트는 사람이 승인하는 환불 처리(T-M5-06)를 붙일 때 §04 스키마에 먼저 올린다.
+ */
 export const EVENT_TYPE = {
   APPLICATION_FINALIZED: 'kr.kadmission.application.finalized.v1',
   APPLICATION_CANCELLED: 'kr.kadmission.application.cancelled.v1',
   PAYMENT_CONFIRMED: 'kr.kadmission.payment.confirmed.v1',
-  PAYMENT_REFUNDED: 'kr.kadmission.payment.refunded.v1',
   SYNC_HEARTBEAT: 'kr.kadmission.sync.heartbeat.v1',
 } as const;
 

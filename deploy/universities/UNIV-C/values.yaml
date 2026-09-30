@@ -12,7 +12,7 @@ eventRelay:
   image: { repository: event-relay, digest: "" }
 documentService:
   image: { repository: document-service, digest: "" }
-  scannerEngine: ""               # 실 검사 엔진은 T-M5-08. 그 전에는 production 렌더링이 실패한다
+  scannerEngine: ""               # 실 검사 엔진은 clamav(D-58) — clamd 를 준비하고 clamav.host·scannerEgress 와 함께 켠다. 비우면 production 렌더링이 실패한다
 
 database:
   host: postgres-primary.univ-c.internal

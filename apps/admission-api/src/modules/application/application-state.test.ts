@@ -52,7 +52,7 @@ describe('Application 상태머신 (v1.0 §5.6)', () => {
   });
 });
 
-describe('Finalize 는 한 트랜잭션이다 (D-54)', () => {
+describe('Finalize 는 한 트랜잭션이다 (D-55)', () => {
   it('PAID 에서 FINALIZED 로 바로 간다 — FINALIZING 은 DB 에 남지 않는다', () => {
     assert.ok(svc.can('PAID', 'FINALIZED'));
   });

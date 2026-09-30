@@ -47,6 +47,9 @@ interface OutboxRow {
   schema_version: string;
   payload: Record<string, unknown>;
   attempt_count: number;
+  /** 접수 기록(submission)의 설정·마감정책 버전. 접수 이벤트에만 있다. */
+  config_version: string | null;
+  policy_version: string | null;
 }
 
 /**
@@ -138,14 +141,18 @@ export class RelayService implements OnModuleInit, OnApplicationShutdown {
     // FOR UPDATE SKIP LOCKED 로 여러 relay 인스턴스가 같은 행을 집지 않게 한다.
     const claimed = await this.db.tx(async (client) => {
       const { rows } = await client.query<OutboxRow>(
-        `SELECT id, aggregate_id, aggregate_sequence, event_type, schema_version,
-                payload, attempt_count
-           FROM outbox_event
-          WHERE status IN ('PENDING','SENDING')
-            AND (next_attempt_at IS NULL OR next_attempt_at <= now())
-          ORDER BY aggregate_id, aggregate_sequence
+        // 설정·마감정책 버전은 본문에 없다 — 스키마가 본문 필드를 막는다(D-50). 접수 기록에서 읽어
+        // CloudEvents 확장 속성으로 싣는다. 전에는 본문에서 찾다가 늘 빈 문자열을 보냈다.
+        `SELECT o.id, o.aggregate_id, o.aggregate_sequence, o.event_type, o.schema_version,
+                o.payload, o.attempt_count,
+                s.config_version, s.deadline_policy_version AS policy_version
+           FROM outbox_event o
+           LEFT JOIN submission s ON s.application_id = o.aggregate_id
+          WHERE o.status IN ('PENDING','SENDING')
+            AND (o.next_attempt_at IS NULL OR o.next_attempt_at <= now())
+          ORDER BY o.aggregate_id, o.aggregate_sequence
           LIMIT $1
-          FOR UPDATE SKIP LOCKED`,
+          FOR UPDATE OF o SKIP LOCKED`,
         [batchSize],
       );
       if (rows.length > 0) {
@@ -209,8 +216,9 @@ export class RelayService implements OnModuleInit, OnApplicationShutdown {
       // 확장 속성. §04 가 규정한 이름 그대로여야 한다.
       kadmissionuniversity: UNIVERSITY_ID,
       kadmissionsequence: Number(row.aggregate_sequence),
-      configversion: String(row.payload.configVersion ?? ''),
-      policyversion: String(row.payload.policyVersion ?? ''),
+      // 모르면 싣지 않는다(스키마상 선택). 빈 문자열을 보내면 중앙이 "버전 없음" 으로 기록한다.
+      ...(row.config_version ? { configversion: row.config_version } : {}),
+      ...(row.policy_version ? { policyversion: row.policy_version } : {}),
       data: row.payload,
     };
 

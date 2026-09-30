@@ -397,6 +397,16 @@ export class ConfigVersionService {
     return rows[0]?.config_json ?? {};
   }
 
+  /** 설정 본문. 관리자 콘솔이 새 초안의 출발점으로 쓴다. */
+  async contentOf(configId: string): Promise<Record<string, unknown>> {
+    const { rows } = await this.db.query<{ config_json: Record<string, unknown> }>(
+      `SELECT config_json FROM config_version WHERE id = $1`,
+      [configId],
+    );
+    if (!rows[0]) throw ProblemException.notFound('존재하지 않는 설정입니다.');
+    return rows[0].config_json;
+  }
+
   async active(cycleId: string): Promise<ConfigVersionRow | null> {
     const { rows } = await this.db.query<Record<string, unknown>>(
       `SELECT id FROM config_version WHERE cycle_id = $1 AND status = 'ACTIVE' LIMIT 1`,

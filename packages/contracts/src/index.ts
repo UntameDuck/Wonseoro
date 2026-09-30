@@ -6,3 +6,4 @@ export * from './events';
 export * from './audit';
 export * from './deadline-policy';
 export * from './retention';
+export * from './common-profile';

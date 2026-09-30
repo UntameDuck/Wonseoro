@@ -1,4 +1,11 @@
-import { envInt, envList, parseKeyRing, secretOrDev } from '@wonseoro/server-kit';
+import {
+  assertNotMockInProduction,
+  envChoice,
+  envInt,
+  envList,
+  parseKeyRing,
+  secretOrDev,
+} from '@wonseoro/server-kit';
 
 /** central-api 설정. */
 export const PORT = envInt('PORT', 3000, { min: 1, max: 65535 });
@@ -23,3 +30,25 @@ export const SUBJECT_REF_KEYS = parseKeyRing(
     '"내 원서" 조회용 지원자 참조 키 목록',
   ) || 'k0=unset',
 );
+
+/**
+ * 지원자 신원을 어디서 얻을지. (대학 admission-api 와 같은 규칙, R8)
+ *   dev-headers — `x-subject-token` 헤더를 그대로 믿는다. 누구나 남의 토큰을 보낼 수 있다. **개발 전용**
+ *   gateway     — 앞단 인증 게이트웨이가 검증해 넣어 준 `x-authenticated-subject` 만 믿는다 (T-M5-02)
+ *
+ * 전에는 중앙에 이 구분이 없어 운영 모드에서도 헤더 한 줄로 남의 "내 원서" 를 볼 수 있었다.
+ * 공통원서(이름·학교·연락처)를 읽고 쓰는 API 가 생기면서 더는 둘 수 없다.
+ */
+export const AUTH_MODE = envChoice(
+  'AUTH_MODE',
+  ['dev-headers', 'gateway'] as const,
+  'dev-headers',
+  '지원자 신원을 어디서 얻을지',
+);
+if (AUTH_MODE === 'dev-headers') assertNotMockInProduction('지원자 인증', 'dev-headers');
+
+/**
+ * 대학 심장박동이 이만큼(초) 끊기면 그 대학을 "확인 불가" 로 본다. (§04 sync.heartbeat, D-60)
+ * 대학 Relay 는 기본 60초마다 보낸다 — 세 번 연속 놓치면 끊긴 것이다.
+ */
+export const HEARTBEAT_STALE_SECONDS = envInt('HEARTBEAT_STALE_SECONDS', 180, { min: 30, max: 86_400 });

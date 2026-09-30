@@ -54,7 +54,7 @@ export function newIdempotencyKey(prefix: string): string {
 }
 
 interface CallOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   body?: unknown;
   idempotencyKey?: string;
   ifMatch?: string;
@@ -148,7 +148,8 @@ export interface SelfCheck {
     applicationNumber: string;
     finalizedAt: string;
   } | null;
-  payment: { exists: boolean; status?: string; guidance: string };
+  /** paymentId 가 있으면 새 결제를 만들지 않고 이 결제를 다시 확인한다 (재결제 방지). */
+  payment: { exists: boolean; paymentId?: string; status?: string; amount?: number; guidance: string };
   documents: Array<{ documentType: string; status: string; guidance: string }>;
   centralSync: { pending: number; sent: number; guidance: string };
   timeline: Array<{ at: string; what: string; result: string }>;
@@ -163,6 +164,20 @@ export interface OperatingModeView {
   sync: { pendingEvents: number; oldestPendingAgeSeconds: number; lagging: boolean };
   checkedAt: string;
   serverTime: string;
+}
+
+/** 전형이 받는 서류. 대학 설정에서 온다 — 화면에 서류 종류를 박지 않는다. (§A5, D-56) */
+export interface DocumentSpec {
+  documentType: string;
+  label: string;
+  required: boolean;
+}
+
+/** 공통원서 — 중앙 Vault 에 있는 지원자 본인의 것. (D-57) */
+export interface CommonProfile {
+  fields: Record<string, string | number>;
+  consents: Array<{ universityId: string; fieldCodes: string[]; grantedAt: string }>;
+  updatedAt: string | null;
 }
 
 export interface Submission {
@@ -217,6 +232,10 @@ export const api = {
       applicantId,
     }),
 
+  /**
+   * 최종 검증. 통과하면 서버가 원서를 READY 로 옮기고 새 ETag 를 준다 —
+   * 이어서 저장하려면 그 ETag 를 써야 한다(아니면 412).
+   */
   validate: (id: string, applicantId: string) =>
     call<ValidationResult>(`/api/v1/applications/${id}/validate`, {
       method: 'POST',
@@ -224,10 +243,28 @@ export const api = {
       applicantId,
     }),
 
+  /**
+   * 결제 의도. 201 새 결제창 · 200 이미 열린 결제창(같은 결제) ·
+   * 409 PAYMENT_IN_PROGRESS 확인 중·확정된 결제가 있다 — 다시 결제하지 않는다.
+   */
   createPaymentIntent: (id: string, applicantId: string, key: string) =>
     call<{ paymentId: string; amount: number; currency: string; provider: string }>(
       `/api/v1/applications/${id}/payment-intents`,
       { method: 'POST', idempotencyKey: key, applicantId },
+    ),
+
+  /** 접수 전 취소. 사유가 필요하다. 확인된 결제가 있으면 대학이 환불을 처리한다. (D-7) */
+  cancel: (id: string, reason: string, applicantId: string, key: string) =>
+    call<{ applicationId: string; status: 'CANCELLED'; cancelledAt: string; refundRequired: boolean }>(
+      `/api/v1/applications/${id}/cancel`,
+      { method: 'POST', body: { reason }, idempotencyKey: key, applicantId },
+    ),
+
+  /** 접수증. 발급할 때마다 서버가 기록한다(RECEIPT_ISSUED). */
+  receipt: (submissionId: string, applicantId: string) =>
+    call<{ submissionId: string; applicationNumber: string; finalizedAt: string }>(
+      `/api/v1/submissions/${submissionId}/receipt`,
+      { applicantId },
     ),
 
   verifyPayment: (paymentId: string, applicantId: string, key: string) =>
@@ -261,6 +298,10 @@ export const api = {
         properties?: Record<string, Record<string, unknown>>;
         required?: string[];
       };
+      /** 공통원서에서 가져오는 항목 — 1단계에 그린다 */
+      profileFields?: string[];
+      /** 이 전형이 받는 서류 */
+      documents?: DocumentSpec[];
     }>(`/api/v1/applications/${id}/form-schema`, { applicantId }),
 
   submission: (id: string, applicantId: string) =>
@@ -272,6 +313,7 @@ export const api = {
     call<{
       id: string;
       universityId: string;
+      universityName?: string;
       admissionYear: number;
       name: string;
       closesAt: string;
@@ -326,6 +368,10 @@ export const api = {
       serverTime: string;
       applications: Array<{
         universityId: string;
+        universityName?: string;
+        /** false 면 그 대학 심장박동이 끊겼다 — 이 행이 최신이 아닐 수 있다 (D-60) */
+        universityReachable?: boolean;
+        universityLastHeartbeatAt?: string | null;
         applicationNumber: string | null;
         status: string;
         admissionTypeCode: string;
@@ -338,9 +384,19 @@ export const api = {
       { base: 'central', subjectToken: applicantToken },
     ),
 
-  saveProfile: (body: {
-    subjectToken: string;
-    fields: Record<string, unknown>;
-    consents: Array<{ universityId: string; fieldCodes: string[] }>;
-  }) => call<{ ok: boolean }>('/internal/v1/profiles', { method: 'POST', body, base: 'central' }),
+  /** 내 공통원서. 중앙이 죽어 있으면 NetworkError — 원서 작성은 계속할 수 있다. (D-18) */
+  profile: (subjectToken: string) =>
+    call<CommonProfile>('/api/v1/profile', { base: 'central', subjectToken }),
+
+  /**
+   * 공통원서 저장 — 통째로 바꾼다(PUT). 동의 목록에서 뺀 대학의 동의는 철회된다.
+   * 신원은 헤더로만 보낸다. 본문에 토큰을 싣지 않는다.
+   */
+  saveProfile: (
+    subjectToken: string,
+    body: {
+      fields: Record<string, string | number | null>;
+      consents: Array<{ universityId: string; fieldCodes: string[] }>;
+    },
+  ) => call<CommonProfile>('/api/v1/profile', { method: 'PUT', body, base: 'central', subjectToken }),
 };

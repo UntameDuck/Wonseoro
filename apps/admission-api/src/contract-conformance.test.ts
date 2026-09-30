@@ -62,8 +62,6 @@ function openApiEnum(anchor: string): string[] {
  * 계약에 두지 않기로 한 경로. 이유 없이 늘리지 않는다.
  */
 const CONTRACT_EXEMPT = new Map<string, string>([
-  // 공통원서 저장 — M2 개발 편의용 통합 엔드포인트. 지원자용 공통원서 API 는 따로 연다 (D-17)
-  ['POST /internal/v1/profiles', 'dev convenience'],
   // relay 시험·운영 수동 트리거. 외부 계약이 아니다
   ['POST /internal/v1/sync/drain', 'ops trigger'],
 ]);

@@ -127,6 +127,13 @@ spec:
               value: {{ $v.documentService.port | quote }}
             - name: SCANNER_ENGINE
               value: {{ $v.documentService.scannerEngine | quote }}
+            {{- if eq $v.documentService.scannerEngine "clamav" }}
+            # clamd INSTREAM — 파일은 접수 API 가 준 서명 URL 로 읽어 흘려보낸다 (D-58)
+            - name: CLAMD_HOST
+              value: {{ $v.documentService.clamav.host | quote }}
+            - name: CLAMD_PORT
+              value: {{ $v.documentService.clamav.port | quote }}
+            {{- end }}
             # 검사 결과는 DB 에 직접 쓰지 않고 접수 API 의 내부 경로로 보고한다 (ADR-0004)
             - name: ADMISSION_API_URL
               value: {{ printf "http://%s-api" (include "ka.fullname" .) | quote }}

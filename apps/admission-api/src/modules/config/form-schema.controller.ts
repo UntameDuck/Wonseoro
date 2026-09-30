@@ -10,7 +10,7 @@ import { FormSchemaService } from './form-schema.service';
 /**
  * 추가문항 스키마 조회 — 기술설계서 v1.1 §A5
  *
- * 계약: OpenAPI getApplicationFormSchema (D-19). profileFields·documents 는 v1.4.0 에서 더했다 (D-55).
+ * 계약: OpenAPI getApplicationFormSchema (D-19). profileFields·documents 는 v1.4.0 에서 더했다 (D-56).
  *
  * **이 API 가 없으면 §A5 가 UI 에서 깨진다.**
  * 백엔드는 Config 만 바꿔 새 전형을 받을 수 있는데, 화면이 필드를 하드코딩하면

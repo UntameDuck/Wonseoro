@@ -29,8 +29,8 @@ import { ConfigVersionService } from './config-version.service';
  * 그때까지는 AdminGuard 의 공유 비밀이 문을 지키고, `x-admin-id` 는 감사 기록용으로만 쓴다.
  * 공유 비밀은 누가 했는지 구분하지 못한다 — 문과 기록은 다른 문제다.
  *
- * ⚠️ `deadline-policies/{id}/activate` 는 계약에 없는 경로다. (불일치 대장 D-22)
- * ⚠️ `deadline-policies/extensions` · `activations` 도 계약에 없다. (D-35)
+ * `deadline-policies/{id}/activate`(D-22)·`deadline-policies/extensions`·`activations`(D-35) 는
+ * 구현이 먼저 만들고 계약 v1.2.0 에 올렸다.
  *
  * 활성화·연장·되돌리기는 전부 **서명된 기록**으로 남는다. 누가 했는지는 `x-admin-id`
  * 에서 온다 — 공유 비밀 뒤라 신원 증명은 아니지만, 두 명의 서로 다른 승인자가
@@ -47,13 +47,17 @@ export class AdminController {
 
   /* ── Config ──────────────────────────────────────────────────────── */
 
+  /**
+   * 지금 적용 중인 설정 — 본문(config)까지 준다. 새 초안은 대개 지금 설정을 고쳐 만든다.
+   * 본문을 볼 수 없으면 콘솔에서 초안을 만들 방법이 없어 API 를 직접 불러야 했다. (D-59)
+   */
   @Get('config/active')
   @Header('cache-control', 'no-store')
   async activeConfig(@Query('cycleId') cycleId?: string) {
     if (!cycleId) throw ProblemException.validationFailed('cycleId 가 필요합니다.');
     const active = await this.configs.active(cycleId);
-    if (!active) throw ProblemException.validationFailed('활성화된 설정이 없습니다.');
-    return active;
+    if (!active) throw ProblemException.notFound('활성화된 설정이 없습니다.');
+    return { ...active, config: await this.configs.contentOf(active.id) };
   }
 
   /** 승인 대기함. 본문 없이 상태·승인자만. */

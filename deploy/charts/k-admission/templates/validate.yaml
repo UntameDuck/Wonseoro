@@ -55,6 +55,9 @@
   {{- fail "production 은 readOnlyRootFilesystem 이 true 여야 한다 (§05 Runtime 기준)" -}}
   {{- end -}}
   {{- if or (not $v.documentService.scannerEngine) (eq $v.documentService.scannerEngine "mock") -}}
-  {{- fail "production 은 실 서류 검사 엔진이 필요하다 (documentService.scannerEngine, T-M5-08) — mock 이나 빈 값으로는 배포하지 않는다" -}}
+  {{- fail "production 은 실 서류 검사 엔진이 필요하다 (documentService.scannerEngine: clamav, T-M5-08) — mock 이나 빈 값으로는 배포하지 않는다" -}}
   {{- end -}}
+{{- end -}}
+{{- if and $v.documentService.enabled (eq $v.documentService.scannerEngine "clamav") (not $v.documentService.clamav.host) -}}
+{{- fail "clamav 엔진은 clamd 주소가 필요하다 (documentService.clamav.host) — 없으면 워커가 기동하지 않는다 (D-58)" -}}
 {{- end -}}

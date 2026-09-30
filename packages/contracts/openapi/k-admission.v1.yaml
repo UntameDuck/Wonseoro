@@ -15,13 +15,15 @@ info:
     1.3.0 adds the common `429` response (`RateLimited`, `Retry-After`) to applicant operations (D-51).
 
 
-    1.4.0 connects what the implementation had but the contract did not describe (D-54, D-55, D-56):
+    1.4.0 connects what the implementation had but the contract did not describe (D-55 to D-61):
     the application state machine is driven by validate / payment / finalize (READY, PAYMENT_PENDING,
     PAID are now real states and editing stops at PAYMENT_PENDING); one live payment per application
     (`200` resumes the open checkout, `409 PAYMENT_IN_PROGRESS` refuses a second payment); the form
     schema carries `profileFields` and `documents` so the client draws everything from config; the
     receipt is audited; server clock offset against the DB is reported (§A9); the applicant-facing
-    common profile API on the central host. All additions are optional fields or new paths.
+    common profile API on the central host; the active config includes its body and config drafts
+    are linted (§A5); universities send the §04 heartbeat and the dashboard shows which university
+    is unreachable. All additions are optional fields or new paths.
 
 
     Common rules:
@@ -406,12 +408,12 @@ paths:
         application. So the intent is refused unless the application could be finalized now —
         valid fields, required documents AVAILABLE, a finalizable state, deadline not passed.
         Telling someone after they paid that a document is missing turns into a refund case.
-        One live payment per application (D-54): if a payment whose checkout was only opened
+        One live payment per application (D-55): if a payment whose checkout was only opened
         (CREATED) exists, the same checkout is returned with `200` instead of a new one; if a payment
         is being confirmed (PENDING, UNKNOWN) or is CONFIRMED, `409` with code `PAYMENT_IN_PROGRESS`
         — two checkouts can become two payments. The application moves to PAYMENT_PENDING and can no
         longer be edited.
-      x-kadmission-register: D-54
+      x-kadmission-register: D-55
       parameters:
         - $ref: '#/components/parameters/ApplicationId'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -595,6 +597,9 @@ paths:
     get:
       tags: [Admin]
       operationId: getActiveConfig
+      x-kadmission-register: D-59
+      description: >
+        Includes the configuration body (`config`) — a new draft usually starts from the active one.
       security: [{ oidc: [admin] }]
       parameters:
         - $ref: '#/components/parameters/CycleIdQuery'
@@ -603,9 +608,19 @@ paths:
           description: Active configuration
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ConfigVersion' }
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ConfigVersion'
+                  - type: object
+                    properties:
+                      config: { type: object, additionalProperties: true }
         '400':
           $ref: '#/components/responses/Problem'
+        '404':
+          description: No configuration is active for this cycle
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /admin/v1/config/versions:
     get:
       tags: [Admin]
@@ -636,6 +651,12 @@ paths:
     post:
       tags: [Admin]
       operationId: createConfigVersion
+      x-kadmission-register: D-59
+      description: >
+        The draft is linted with the same engine the runtime uses (§A5 Config Linter): a form JSON
+        Schema that does not compile, `required` naming an undefined field, or malformed document
+        lists refuse the draft with 400 — applied, they would stop every save and payment of that
+        admission type. Softer findings are returned as `warnings` in the diff.
       security: [{ oidc: [admin] }]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -1147,6 +1168,12 @@ paths:
                         mediaType: { type: string }
                         sizeBytes: { type: integer, minimum: 0 }
                         sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+                        downloadUrl:
+                          type: string
+                          format: uri
+                          description: >
+                            Short-lived presigned GET for this object only (D-58). The worker holds
+                            no object-storage credentials; the scan engine streams the file from here.
   /internal/v1/documents/{documentId}/scan-result:
     post:
       tags: [Internal]
@@ -1165,7 +1192,7 @@ paths:
               required: [result]
               properties:
                 result: { type: string, enum: [CLEAN, MALICIOUS, ERROR] }
-                scanner: { type: string, description: Engine name recorded in the evidence (D-56) }
+                scanner: { type: string, description: Engine name recorded in the evidence (D-58) }
                 engineVersion: { type: string, description: Engine and signature database version }
                 signature: { type: string, maxLength: 200, description: What the engine found (MALICIOUS only) }
       responses:
@@ -1186,9 +1213,16 @@ paths:
     post:
       tags: [Internal]
       operationId: ingestUniversityEvent
+      x-kadmission-register: D-60
+      x-kadmission-external-callback: true
+      description: >
+        Deduplicated by the CloudEvents `(source, id)` pair (§04), not by Idempotency-Key — the
+        relay retries the same event id. Events from a university that is not registered and
+        ACTIVE are refused with 400 (UNKNOWN_UNIVERSITY) so the relay parks them instead of
+        retrying. `kr.kadmission.sync.heartbeat.v1` updates the university's live state
+        (backlog, config version, clock offset, last heartbeat) and is not kept in the event
+        ledger; the dashboard marks a university unreachable when heartbeats stop.
       security: [{ mutualTLS: [] }]
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -1206,6 +1240,8 @@ paths:
                   eventId: { type: string }
                   receiptId: { type: string }
                   acknowledgedAt: { type: string, format: date-time }
+        '400':
+          $ref: '#/components/responses/Problem'
         '409': { description: Duplicate event; existing receipt may be returned }
   /internal/v1/events/{eventId}/receipt:
     get:
@@ -1285,7 +1321,7 @@ paths:
       description: >
         Circuit breaker state of this Pod's external dependencies. Not part of readiness —
         if a central or PG outage failed readiness, every Pod would leave traffic and all
-        submissions would stop. `clock` is this Pod's measured offset against the DB clock (§A9):
+        submissions would stop. `clock` is this Pod's measured offset against the DB clock (§A9, D-61):
         a Pod whose offset exceeds 1000 ms refuses finalization only (503), not all traffic.
       security: []
       responses:
@@ -1336,6 +1372,85 @@ paths:
                     type: array
                     maxItems: 100
                     items: { $ref: '#/components/schemas/ApplicationSummary' }
+        '400':
+          $ref: '#/components/responses/Problem'
+  /api/v1/profile:
+    get:
+      tags: [Central]
+      operationId: getMyProfile
+      x-kadmission-register: D-57
+      summary: My common profile and per-university release consents
+      description: >
+        The common profile is written once and copied, with consent, into each university
+        application as a point-in-time snapshot (§10 §3). Identity comes only from the
+        authenticated subject (`x-authenticated-subject` behind the gateway; `x-subject-token`
+        in dev-headers mode, refused in production). No subject token in the body or URL.
+      servers:
+        - url: https://central.k-admission.kr
+      parameters:
+        - $ref: '#/components/parameters/SubjectToken'
+      responses:
+        '200':
+          description: Profile (empty fields when none was saved)
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommonProfile' }
+        '400':
+          $ref: '#/components/responses/Problem'
+    put:
+      tags: [Central]
+      operationId: replaceMyProfile
+      x-kadmission-register: D-57
+      summary: Replace my common profile and release consents
+      description: >
+        Full replacement — sending the same body again gives the same result, so no
+        Idempotency-Key is needed. Universities missing from `consents` have their consent
+        revoked (recorded, not deleted); snapshots already copied into applications do not
+        change. Consent can only name saved fields. Only the platform-standard common profile
+        fields are accepted (highSchool, graduationYear, contactEmail, phone — contracts
+        COMMON_PROFILE_FIELDS); an empty string or null removes a field.
+      servers:
+        - url: https://central.k-admission.kr
+      parameters:
+        - $ref: '#/components/parameters/SubjectToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fields]
+              properties:
+                fields:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    highSchool: { type: [string, 'null'], maxLength: 100 }
+                    graduationYear: { type: [integer, 'null'], minimum: 1990, maximum: 2100 }
+                    contactEmail: { type: [string, 'null'], maxLength: 254 }
+                    phone: { type: [string, 'null'], maxLength: 20 }
+                consents:
+                  type: array
+                  items:
+                    type: object
+                    required: [universityId, fieldCodes]
+                    properties:
+                      universityId: { type: string }
+                      fieldCodes:
+                        type: array
+                        items: { type: string }
+      responses:
+        '200':
+          description: Saved profile
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommonProfile' }
         '400':
           $ref: '#/components/responses/Problem'
   /internal/v1/profile-snapshots:
@@ -1525,7 +1640,7 @@ components:
             DRAFT → READY (validate passed) → PAYMENT_PENDING (payment intent; no more edits) →
             PAID (payment confirmed) → FINALIZED (finalize transaction). A save moves READY back to
             DRAFT; a failed payment moves PAYMENT_PENDING back to READY. FINALIZING exists only inside
-            the finalize transaction and is not stored (D-54). EXPIRED is reserved.
+            the finalize transaction and is not stored (D-55). EXPIRED is reserved.
           enum: [DRAFT, READY, PAYMENT_PENDING, PAID, FINALIZING, FINALIZED, CANCELLED, EXPIRED]
         version: { type: integer, minimum: 1 }
         lastSavedAt: { type: [string, 'null'], format: date-time }
@@ -1857,6 +1972,23 @@ components:
         summary: { type: string }
         before: {}
         after: {}
+    CommonProfile:
+      type: object
+      required: [fields, consents, updatedAt]
+      properties:
+        fields: { type: object, additionalProperties: true }
+        consents:
+          type: array
+          items:
+            type: object
+            required: [universityId, fieldCodes, grantedAt]
+            properties:
+              universityId: { type: string }
+              fieldCodes:
+                type: array
+                items: { type: string }
+              grantedAt: { type: string, format: date-time }
+        updatedAt: { type: [string, 'null'], format: date-time }
     ClockReading:
       type: object
       description: This Pod's clock against the DB clock — the authority for submission time (§A2, §A9)
@@ -1933,13 +2065,13 @@ components:
             `x-profile: true` (copied from the common profile), `x-multiline` (long text).
         profileFields:
           type: array
-          description: Fields copied from the common profile vault (`x-profile`); drawn in step 1 (D-55)
+          description: Fields copied from the common profile vault (`x-profile`); drawn in step 1 (D-56)
           items: { type: string }
         documents:
           type: array
           description: >
             Documents this admission type accepts, from config `requiredDocuments` / `optionalDocuments`
-            / `documentLabels` (D-55). Upload intents for other types are refused when the list is not
+            / `documentLabels` (D-56). Upload intents for other types are refused when the list is not
             empty. Required ones must be AVAILABLE before the payment intent.
           items:
             type: object
@@ -2112,6 +2244,13 @@ components:
         status, applicationNumber, submittedAt, lastSyncedAt]
       properties:
         universityId: { type: string }
+        universityName: { type: string }
+        universityReachable:
+          type: boolean
+          description: >
+            False when the university's heartbeat stopped (D-60) — this row may be stale. It does
+            not mean the submission failed; the university page is the source of truth.
+        universityLastHeartbeatAt: { type: [string, 'null'], format: date-time }
         applicationId: { type: string }
         admissionYear: { type: integer }
         admissionTypeCode: { type: string }

@@ -2,6 +2,7 @@ import { Body, Controller, Get, Header, HttpCode, Param, Post, Query } from '@ne
 import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { DocumentService } from './document.service';
+import { ObjectStorage } from './object-storage';
 
 interface ScanResultBody {
   result?: 'CLEAN' | 'MALICIOUS' | 'ERROR';
@@ -24,6 +25,7 @@ export class DocumentScanController {
   constructor(
     private readonly documents: DocumentService,
     private readonly db: Db,
+    private readonly storage: ObjectStorage,
   ) {}
 
   /** 검사 대기 목록. 워커가 폴링한다. */
@@ -40,15 +42,20 @@ export class DocumentScanController {
         LIMIT $1`,
       [max],
     );
-    return {
-      documents: rows.map((r) => ({
+    // 검사 엔진이 파일을 읽을 짧은 수명의 다운로드 URL 을 함께 준다. 워커에 Object Storage 자격증명을
+    // 주지 않는다 — 워커는 이 URL 이 가리키는 파일 하나만, 몇 분 동안만 읽을 수 있다(최소권한, §06).
+    const documents = [];
+    for (const r of rows) {
+      documents.push({
         documentId: String(r.id),
         objectKey: String(r.object_key),
         mediaType: String(r.media_type),
         sizeBytes: Number(r.size_bytes),
         sha256: String(r.sha256_hex),
-      })),
-    };
+        downloadUrl: await this.storage.presignDownload(String(r.object_key), String(r.id)),
+      });
+    }
+    return { documents };
   }
 
   @Post(':documentId/scan-result')

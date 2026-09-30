@@ -248,4 +248,26 @@ spec:
               network-role: api
       ports:
         - { protocol: TCP, port: {{ $v.api.port }} }
+{{- if and (eq $v.documentService.scannerEngine "clamav") $v.documentService.scannerEgress.to }}
+---
+# 서류 검사 워커 → clamd · Object Storage (clamav 엔진일 때만, D-58). 워커는 저장소 자격증명이 없고
+# 접수 API 가 준 짧은 수명의 서명 URL 로 그 파일 하나만 읽는다
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ka.fullname" . }}-allow-worker-scanner
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $inst }}
+      app: document-service
+  policyTypes: [Egress]
+  egress:
+    - to: {{- toYaml $v.documentService.scannerEgress.to | nindent 8 }}
+      ports:
+        {{- range $v.documentService.scannerEgress.ports }}
+        - { protocol: TCP, port: {{ . }} }
+        {{- end }}
+{{- end }}
 {{- end }}

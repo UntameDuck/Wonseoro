@@ -43,7 +43,7 @@ export interface FinalizeInput {
  * 접수로 갈 수 있는 원서 상태. CANCELLED·EXPIRED 는 안 된다 —
  * 결제가 늦게 확인되는 동안 지원자가 취소했을 수 있다. 그 결제는 환불 대상이지 접수가 아니다.
  *
- * 결제가 확인되면 원서는 PAID 다(D-54). DRAFT·READY·PAYMENT_PENDING 은 결제 확인이 원서 상태에
+ * 결제가 확인되면 원서는 PAID 다(D-55). DRAFT·READY·PAYMENT_PENDING 은 결제 확인이 원서 상태에
  * 반영되기 전에 만들어진 원서를 위해 남긴다 — 어느 경우든 finalize 는 CONFIRMED 결제를 먼저 요구한다.
  * 결제 전 확인(guardIntent)도 같은 규칙을 쓴다.
  */

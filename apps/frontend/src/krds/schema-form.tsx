@@ -1,6 +1,6 @@
 'use client';
 
-import { Field } from '@wonseoro/krds';
+import { DescriptionList, Field } from '@wonseoro/krds';
 
 /**
  * JSON Schema 기반 동적 폼 — 기술설계서 v1.1 §A5
@@ -40,15 +40,6 @@ export interface JsonSchemaProperty {
   'x-multiline'?: boolean;
 }
 
-/** 스키마에 title 이 없을 때 쓰는 한글 라벨. 없으면 코드를 그대로 보여준다. */
-const FALLBACK_LABELS: Record<string, string> = {
-  highSchool: '출신 고등학교',
-  graduationYear: '졸업(예정) 연도',
-  selfIntro: '자기소개',
-  gpa: '내신 성적',
-  contactEmail: '이메일',
-  csatNumber: '수능 수험번호',
-};
 
 export function SchemaForm({
   schema,
@@ -57,12 +48,18 @@ export function SchemaForm({
   /** 이 단계에서 보여줄 필드만 고른다. 비우면 전부 보여준다. */
   only,
   errors,
+  readOnly,
 }: {
   schema: JsonSchema | null;
   values: Record<string, string>;
   onChange: (code: string, value: string) => void;
   only?: string[];
   errors?: Record<string, string>;
+  /**
+   * 결제를 시작했거나 접수·취소된 원서. 입력칸 대신 값을 보여 준다 — 입력칸을 두면 고쳐도
+   * 저장되지 않는 칸이 된다(서버가 거절한다). (D-55)
+   */
+  readOnly?: boolean;
 }) {
   if (!schema?.properties) {
     return (
@@ -81,6 +78,18 @@ export function SchemaForm({
     );
   }
 
+  // 라벨은 스키마의 title 에서만 온다. 없으면 코드를 그대로 보인다 — 설정 검사(config-lint)가
+  // title 없는 항목을 경고한다. 전에는 화면에 라벨 사전을 박아 두어 새 전형 항목만 코드로 보였다.
+  const labelOf = (code: string) => schema.properties![code]!.title ?? code;
+
+  if (readOnly) {
+    return (
+      <DescriptionList
+        items={codes.map((code) => [labelOf(code), values[code] ? values[code]! : '입력하지 않음'])}
+      />
+    );
+  }
+
   return (
     <>
       {codes.map((code) => {
@@ -90,7 +99,7 @@ export function SchemaForm({
         return (
           <Field
             key={code}
-            label={p.title ?? FALLBACK_LABELS[code] ?? code}
+            label={labelOf(code)}
             value={values[code] ?? ''}
             onChange={(v) => onChange(code, v)}
             hint={p.description ?? describe(p)}

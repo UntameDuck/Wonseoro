@@ -9,6 +9,9 @@ import { formatKst } from '../../lib/use-deadline';
 
 interface Row {
   universityId: string;
+  universityName?: string;
+  universityReachable?: boolean;
+  universityLastHeartbeatAt?: string | null;
   applicationNumber: string | null;
   status: string;
   admissionTypeCode: string;
@@ -101,7 +104,7 @@ export default function DashboardPage() {
               >
                 <div>
                   <h2 style={{ margin: 0, fontSize: 'var(--krds-text-lg)' }}>
-                    {r.universityId}
+                    {r.universityName ?? r.universityId}
                   </h2>
                   <p style={{ margin: 'var(--krds-space-1) 0', color: 'var(--krds-fg-muted)' }}>
                     {r.admissionTypeCode} · {r.departmentCode}
@@ -109,6 +112,16 @@ export default function DashboardPage() {
                   {r.applicationNumber && (
                     <p style={{ margin: 0 }}>
                       접수번호 <strong>{r.applicationNumber}</strong>
+                    </p>
+                  )}
+                  {/* 그 대학 서버 신호가 끊겼다. 이 카드만 "확인 불가" 다 — 다른 대학 원서는 평소대로다.
+                      접수 실패로 보이게 하지 않는다 (T-M4-42 · D-60) */}
+                  {r.universityReachable === false && (
+                    <p role="status" style={{ margin: 'var(--krds-space-2) 0 0', color: 'var(--krds-warning)', fontSize: 'var(--krds-text-sm)' }}>
+                      <span aria-hidden="true">⚠ </span>
+                      지금 이 대학 서버 상태를 확인할 수 없습니다
+                      {r.universityLastHeartbeatAt ? ` (마지막 확인 ${formatKst(r.universityLastHeartbeatAt)})` : ''}. 접수가
+                      취소된 것은 아닙니다 — 대학 접수 페이지에서 확인하실 수 있습니다.
                     </p>
                   )}
                 </div>

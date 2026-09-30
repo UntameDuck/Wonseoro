@@ -7,7 +7,8 @@ import {
   SyncGatewayService,
   SyncRejection,
 } from './modules/sync-gateway/sync-gateway.service';
-import { ProfileVaultService } from './modules/profile-vault/profile-vault.service';
+import { ApplicantProfileController } from './modules/profile-vault/profile-vault.controller';
+import { ProfileRejection, ProfileVaultService } from './modules/profile-vault/profile-vault.service';
 
 /**
  * 중앙 Sync Gateway 통합 테스트 — 실제 중앙 PostgreSQL 이 필요하다.
@@ -210,6 +211,76 @@ describe('Sync Gateway — 위장 발신 차단', () => {
     if (!available) return t.skip('DATABASE_URL 없음');
     assert.equal(await reject(event({ specversion: '0.3' })), 'SPECVERSION');
   });
+
+  it('등록되지 않은 대학의 이벤트는 400 으로 거부한다 — 전에는 외래키 오류 500 이라 Relay 가 계속 재시도했다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    assert.equal(
+      await reject(event({ source: 'urn:k-admission:university:UNIV-NOPE', kadmissionuniversity: 'UNIV-NOPE' })),
+      'UNKNOWN_UNIVERSITY',
+    );
+  });
+});
+
+describe('대학 심장박동 (§04 sync.heartbeat, D-60)', () => {
+  const beat = (data: Record<string, unknown>): IncomingEvent => ({
+    specversion: '1.0',
+    id: randomUUID(),
+    source: SOURCE,
+    type: 'kr.kadmission.sync.heartbeat.v1',
+    time: new Date().toISOString(),
+    datacontenttype: 'application/json',
+    kadmissionuniversity: UNIV,
+    kadmissionsequence: Math.floor(Date.now() / 1000),
+    data: {
+      universityId: UNIV,
+      platformVersion: 'test-1.4.0',
+      configVersion: 'cfg-hb',
+      pendingOutbox: 3,
+      oldestPendingAgeSeconds: 42,
+      clockOffsetMs: -12,
+      ...data,
+    },
+  });
+
+  it('심장박동이 대학의 지금 상태를 덮어쓰고, 원서 원장·gap 에는 남지 않는다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const gateway = new SyncGatewayService(db);
+    const result = await gateway.ingest(beat({}));
+    assert.match(result.receiptId, /^HB-/);
+
+    const status = (await gateway.syncStatus()).find((u) => u.universityId === UNIV);
+    assert.equal(status?.reachable, true);
+    assert.equal(status?.pendingOutbox, 3);
+    assert.equal(status?.oldestPendingAgeSeconds, 42);
+    assert.equal(status?.clockOffsetMs, -12);
+    assert.equal(status?.configVersion, 'cfg-hb');
+    assert.equal(status?.platformVersion, 'test-1.4.0');
+
+    const ledger = await db.query(
+      `SELECT 1 FROM received_event WHERE university_id = $1 AND event_type = 'kr.kadmission.sync.heartbeat.v1'`,
+      [UNIV],
+    );
+    assert.equal(ledger.rows.length, 0);
+  });
+
+  it('스키마와 다른 심장박동은 거부한다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const gateway = new SyncGatewayService(db);
+    await assert.rejects(gateway.ingest(beat({ pendingOutbox: -1 })), (err: unknown) => err instanceof SyncRejection);
+    await assert.rejects(gateway.ingest(beat({ universityId: 'UNIV-OTHER' })), (err: unknown) => err instanceof SyncRejection);
+  });
+
+  it('심장박동이 끊긴 대학은 "확인 불가" 다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const gateway = new SyncGatewayService(db);
+    await gateway.ingest(beat({}));
+    await db.query(
+      `UPDATE university_sync_state SET last_heartbeat_at = now() - interval '1 hour' WHERE university_id = $1`,
+      [UNIV],
+    );
+    const status = (await gateway.syncStatus()).find((u) => u.universityId === UNIV);
+    assert.equal(status?.reachable, false);
+  });
 });
 
 describe('중앙 저장 범위 (v1.0 §17.1)', () => {
@@ -283,13 +354,11 @@ describe('Common Profile Vault — 목적 최소화 (v1.0 §17, v1.1 §10 §3)',
     const vault = new ProfileVaultService(db);
     const subject = token();
 
-    await vault.upsertProfile(subject, {
-      highSchool: '원서로고등학교',
-      graduationYear: 2027,
-      contactEmail: 'me@example.kr',
-      phone: '010-0000-0000',
-    });
-    await vault.grantConsent(subject, UNIV, ['highSchool', 'graduationYear']);
+    await vault.replaceProfile(
+      subject,
+      { highSchool: '원서로고등학교', graduationYear: 2027, contactEmail: 'me@example.kr', phone: '010-0000-0000' },
+      [{ universityId: UNIV, fieldCodes: ['highSchool', 'graduationYear'] }],
+    );
 
     const result = await vault.release({
       subjectToken: subject,
@@ -307,8 +376,9 @@ describe('Common Profile Vault — 목적 최소화 (v1.0 §17, v1.1 §10 §3)',
     const vault = new ProfileVaultService(db);
     const subject = token();
 
-    await vault.upsertProfile(subject, { highSchool: 'X', contactEmail: 'a@b.kr' });
-    await vault.grantConsent(subject, UNIV, ['highSchool']);
+    await vault.replaceProfile(subject, { highSchool: 'X', contactEmail: 'a@b.kr' }, [
+      { universityId: UNIV, fieldCodes: ['highSchool'] },
+    ]);
 
     const result = await vault.release({
       subjectToken: subject,
@@ -323,7 +393,7 @@ describe('Common Profile Vault — 목적 최소화 (v1.0 §17, v1.1 §10 §3)',
     if (!available) return t.skip('DATABASE_URL 없음');
     const vault = new ProfileVaultService(db);
     const subject = token();
-    await vault.upsertProfile(subject, { highSchool: 'X' });
+    await vault.replaceProfile(subject, { highSchool: 'X' }, []);
 
     const result = await vault.release({
       subjectToken: subject,
@@ -339,8 +409,9 @@ describe('Common Profile Vault — 목적 최소화 (v1.0 §17, v1.1 §10 §3)',
     const vault = new ProfileVaultService(db);
     const subject = token();
 
-    await vault.upsertProfile(subject, { highSchool: '원서로고등학교' });
-    await vault.grantConsent(subject, UNIV, ['highSchool']);
+    await vault.replaceProfile(subject, { highSchool: '원서로고등학교' }, [
+      { universityId: UNIV, fieldCodes: ['highSchool'] },
+    ]);
     await vault.release({
       subjectToken: subject,
       universityId: UNIV,
@@ -362,6 +433,56 @@ describe('Common Profile Vault — 목적 최소화 (v1.0 §17, v1.1 §10 §3)',
     const names = cols.rows.map((r) => r.column_name);
     assert.equal(names.includes('values'), false);
     assert.equal(names.includes('fields'), false);
+  });
+
+  it('동의 목록에서 뺀 대학은 철회된다 — 지우지 않고 철회 시각을 남긴다 (D-57)', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const vault = new ProfileVaultService(db);
+    const subject = token();
+    await vault.replaceProfile(subject, { highSchool: 'X' }, [{ universityId: UNIV, fieldCodes: ['highSchool'] }]);
+    const saved = await vault.replaceProfile(subject, { highSchool: 'X' }, []);
+    assert.deepEqual(saved.consents, []);
+
+    const released = await vault.release({ subjectToken: subject, universityId: UNIV, requestedFields: ['highSchool'] });
+    assert.deepEqual(released.withheldFields, ['highSchool'], '철회 뒤에는 나가지 않는다');
+    const { rows } = await db.query<{ revoked_at: Date | null }>(
+      `SELECT revoked_at FROM kadmission_vault.profile_release_consent WHERE subject_token = $1`,
+      [subject],
+    );
+    assert.equal(rows.length, 1);
+    assert.ok(rows[0]?.revoked_at, '동의 기록은 남고 철회 시각이 찍힌다');
+  });
+
+  it('저장하지 않은 항목의 제공 동의·잘못된 항목은 거절한다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const vault = new ProfileVaultService(db);
+    await assert.rejects(
+      vault.replaceProfile(token(), { highSchool: 'X' }, [{ universityId: UNIV, fieldCodes: ['phone'] }]),
+      (err: unknown) => err instanceof ProfileRejection,
+    );
+    await assert.rejects(
+      vault.replaceProfile(token(), { selfIntro: '공통원서 표준에 없는 항목' }, []),
+      (err: unknown) => err instanceof ProfileRejection,
+    );
+    await assert.rejects(
+      vault.replaceProfile(token(), { contactEmail: 'not-an-email' }, []),
+      (err: unknown) => err instanceof ProfileRejection,
+    );
+    await assert.rejects(
+      vault.replaceProfile(token(), { highSchool: { nested: 1 } }, []),
+      (err: unknown) => err instanceof ProfileRejection,
+    );
+  });
+
+  it('지원자용 API 는 헤더의 신원으로만 읽고 쓴다 — 신원이 없으면 400', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const controller = new ApplicantProfileController(new ProfileVaultService(db));
+    const subject = token();
+    await controller.replace({ fields: { contactEmail: 'me@example.kr' }, consents: [] }, subject);
+    const mine = await controller.get(subject);
+    assert.deepEqual(mine.fields, { contactEmail: 'me@example.kr' });
+    assert.ok(mine.updatedAt);
+    await assert.rejects(controller.get(undefined), (err: unknown) => (err as { getStatus?: () => number }).getStatus?.() === 400);
   });
 
   it('Vault 는 집계 DB 와 다른 스키마에 있다 (v1.0 §5·§8.3)', async (t) => {

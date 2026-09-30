@@ -21,6 +21,7 @@ import { EXTERNAL_CALLBACK } from './external-callback.decorator';
 import { IdempotencyScope, IdempotencyStore } from './idempotency.store';
 
 const MUTATION_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * 모든 mutation 에 Idempotency-Key 를 강제한다. 예외 없음. (v1.1 §B12)
@@ -156,7 +157,9 @@ export class IdempotencyInterceptor implements NestInterceptor {
    */
   private async applicationId(request: FastifyRequest): Promise<string | null> {
     const params = (request.params as Record<string, string> | undefined) ?? {};
-    if (params.applicationId) return params.applicationId;
+    // 형식이 틀린 원서 ID 는 기록하지 않는다 — DB 에 넘기면 uuid 변환 오류로 500 이 된다.
+    // 핸들러의 소유권 검사가 404 로 답한다.
+    if (params.applicationId) return UUID.test(params.applicationId) ? params.applicationId : null;
     // 내부 경로(검사 워커의 결과 보고)는 제외한다. 워커는 서류마다 고정 키를 쓰는데, 일시 오류로
     // 기록이 FAILED 가 되면 같은 키가 영원히 거절돼 서류가 검사 대기에 묶인다. 그 경로는
     // "QUARANTINED 일 때만" 조건부 전이로 중복을 막는다.

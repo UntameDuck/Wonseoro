@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { DbModule } from '@wonseoro/server-kit';
+import { HeartbeatService } from './heartbeat.service';
 import { RelayController } from './relay.controller';
 import { RelayService } from './relay.service';
 
@@ -11,6 +12,7 @@ import { RelayService } from './relay.service';
     DbModule.forRoot('event-relay', 'kadmission'),
   ],
   controllers: [RelayController],
-  providers: [RelayService],
+  // 대학 상태 심장박동 — 조용한 대학과 죽은 대학을 중앙이 구별하게 한다 (D-60)
+  providers: [RelayService, HeartbeatService],
 })
 export class AppModule {}

@@ -8,7 +8,7 @@
  *   FINALIZING → PAID (재시도 가능 실패)
  *   DRAFT | READY | PAYMENT_PENDING | PAID → CANCELLED (접수 성립 전 취소, D-7)
  *
- * 누가 옮기는가 (D-54)
+ * 누가 옮기는가 (D-55)
  *   DRAFT → READY            최종 검증(POST /validate) 통과 · 결제 전 확인 통과
  *   READY → DRAFT            자동저장(내용이 바뀌면 다시 검증해야 한다)
  *   READY → PAYMENT_PENDING  결제 의도 생성. 이때부터 원서를 고칠 수 없다

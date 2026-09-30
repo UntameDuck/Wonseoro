@@ -845,6 +845,105 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+> **D-55 ~ D-61 — 미완결 기능 전수 점검 (2026-09-30).** "목업으로만 있거나 끝까지 이어지지 않은 코드" 를 전부 찾아 고친 결과다.
+> 요약은 [04-production-readiness.md §7](04-production-readiness.md#7-흉내미연결-전수-점검-2026-09-30).
+> ⚠️ 번호 정정: 커밋 `b05f629` 메시지의 `D-54 · D-55 · D-56` 은 같은 날 다른 작업이 D-54(리더 잠금)를 먼저 올려 **이 대장의 D-55 · D-56 · D-57/D-58** 이다. 코드·계약 주석은 새 번호로 고쳤다.
+
+## D-55. 원서 상태머신이 정의만 있고 흐름에 연결되지 않았다 — 한 원서에 결제창을 몇 개든 열 수 있었다 🔴
+
+| | |
+|---|---|
+| **발견** | 2026-09-30 (미완결 기능 전수 점검) |
+| **충돌** | v1.0 §5.6 은 `DRAFT → READY → PAYMENT_PENDING → PAID → FINALIZING → FINALIZED` 를 규정하고 `@wonseoro/contracts` 전이 표도 있었다. 그러나 코드는 원서 상태를 **DRAFT 에서 FINALIZED(또는 CANCELLED)로만** 옮겼다 — READY·PAYMENT_PENDING·PAID·FINALIZING·EXPIRED 를 쓰는 곳이 없었고, `ApplicationStateService.plan()` 은 "Postgres 어댑터는 T-M1-01 후 구현" 주석과 함께 어디서도 불리지 않았다 |
+| **드러난 결함** | ① 결제 의도를 **같은 원서에 몇 번이든** 만들 수 있었다(DDL 에 제약 없음). 새로고침하면 화면이 결제 상태를 잊어 다시 "결제" 를 보였다 — 결제창 둘 = 이중 결제(§B4). ② 결제를 시작한 원서를 계속 고칠 수 있었다 — 결제 전 확인(D-42)을 통과한 뒤 필수 항목을 지우면 돈만 받고 자동 접수가 거절된다. ③ Self-check 의 "결제 진행 중·결제 확인됨" 안내가 나올 수 없었다. ④ 취소 규칙(D-7)의 "환불이 따르는 상태(PAYMENT_PENDING·PAID)" 가 실제로는 오지 않았다 |
+| **판정** | 상태머신을 흐름에 잇는다 — 검증 통과 READY, 저장 시 READY→DRAFT, 결제 의도 PAYMENT_PENDING(이후 수정·서류 변경 409), 결제 확정 PAID(같은 트랜잭션), 실패·취소 READY. **한 원서에 살아 있는 결제는 하나** — 열린 결제창(CREATED)은 재사용(200), 확인 중·확정이면 409 `PAYMENT_IN_PROGRESS`, 동시 요청은 원서 행 잠금으로 줄 세운다. **FINALIZING 은 DB 에 쓰지 않는다** — §02 8단계 Finalize 가 한 트랜잭션이라 커밋 전에만 존재하고 실패는 롤백 = PAID 유지("FINALIZING → PAID" 와 같다). 전이 표에 `PAID → FINALIZED` 를 더했다. **EXPIRED 는 아직 옮기지 않는다** — 마감 연장(§B17)이 있어 마감 시각에 옮기면 되돌릴 수 없다. 모집 종료(주기 CLOSED) 처리와 함께 정한다 |
+| **함께 연결한 것** | PG 어댑터의 `reconcile()`(정산 목록)이 반환만 하고 어디서도 불리지 않았다 → 대조 9번 **PG 정산 대조**: PG 는 승인했는데 우리는 CREATED·PENDING·UNKNOWN 인 결제를 재조회해 자동 접수까지 잇고(재확인 워커는 CREATED 를 묻지 않아 콜백 유실 시 아무도 못 찾았다), 우리 확정·PG 미승인은 CRITICAL. Mock 정산 목록 구현. `cancel()` 은 **자동으로 부르지 않는다**(승인된 결제 취소 = 환불, 사람 승인 — D-7 ④) |
+| **저장소 반영** | ✅ (2026-09-30) `transitionApplication`·결제 서비스·Finalize·서류·대조·Self-check·지원자 화면(결제 복원·"결제 상태 다시 확인"·취소 화면). 시험: 상태 전이·결제창 재사용·동시 5요청 결제 1건·확인 중 409·정산 대조 |
+| **노션 반영** | ⬜ v1.0 §5.6 전이(`PAID → FINALIZED`, FINALIZING 비저장, EXPIRED 보류)·§03 첨부 v1.4.0 — [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 저장소 반영 — 노션 반영 대기 |
+
+---
+
+## D-56. 화면이 전형 설정을 다 읽지 않았다 — 서류 종류·공통원서 항목·항목 이름이 코드에 박혀 있었다 🔴
+
+| | |
+|---|---|
+| **발견** | 2026-09-30 (미완결 기능 전수 점검) |
+| **충돌** | §A5 "대학 차이는 Configuration + JSON Schema 로, 코드 fork 0". 그러나 ① 서류 단계가 `TRANSCRIPT`(학교생활기록부) 하나를 **화면에 박아** 올렸고, 접수 쪽 필수 서류(`requiredDocuments`)와 연결되지 않았다(업로드는 아무 서류 종류나 받았다) ② 공통원서에서 가져올 항목(`highSchool·graduationYear·contactEmail`)이 화면과 Vault 요청에 **각각** 박혀 있었다("전형 Config 로 옮기는 것이 M3 과제" 주석) ③ 항목 이름 사전(`FALLBACK_LABELS`)이 화면에 박혀 새 전형의 항목만 코드로 보였다 ④ 활성 설정이 있어도 전형 양식이 비어 있으면 **아무 항목이나** 저장했다("M1 개발 편의") ⑤ Config Linter(§A5)가 없었다 — 컴파일되지 않는 JSON Schema 가 2인 승인·적용되면 그 전형의 저장·검증·결제가 모두 503 이 된다 |
+| **판정** | 화면은 설정만 보고 그린다. form-schema 응답에 `profileFields`(속성 `"x-profile": true`)·`documents`(`requiredDocuments`·`optionalDocuments`·`documentLabels`)를 싣는다 — 필수 서류 검사·업로드 허용 종류·Vault 요청이 같은 출처를 쓴다. 표시가 없는 옛 설정은 기본 항목을 쓰고 설정 검사가 경고한다. **Config Linter** — 초안을 만들 때 런타임과 같은 Ajv 로 양식을 컴파일하고 서류 목록 형식을 본다(오류는 초안 거절, 모르는 전형 코드·title 없음·표준 밖 x-profile 은 Diff 경고) |
+| **저장소 반영** | ✅ (2026-09-30) `config-lint.ts`·form-schema·서류·Vault 요청·지원자 화면·개발 시드(title·x-profile·선택 서류). 서류 종류는 설정에 목록이 있을 때만 제한한다(옛 설정 호환) |
+| **노션 반영** | ⬜ §03 첨부 v1.4.0(FormSchema `profileFields`·`documents`, ConfigDiff `warnings`) · §A5 Config Linter 규칙 — [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 저장소 반영 — 노션 반영 대기 |
+
+---
+
+## D-57. 공통원서를 쓰는 길이 개발용 내부 API 뿐이었고, 화면은 가명 토큰을 지어냈다 🔴
+
+| | |
+|---|---|
+| **발견** | 2026-09-30 (미완결 기능 전수 점검) |
+| **충돌** | v1.1 §10 §3 은 공통원서를 한 번 쓰고 동의한 항목만 대학 원서로 복사한다. 그러나 ① 공통원서를 쓰는 경로는 `POST /internal/v1/profiles`("M2 개발 편의용")뿐 — 본문의 토큰으로 **누구의 공통원서든 덮어썼고** 입력 검사가 없었으며, 화면은 그것을 부르지 않았다(원서 1단계 "공통원서에서 가져온 정보" 는 늘 비어 있었다) ② 지원자 화면이 가명 토큰을 `subj-<식별자 앞 8자>` 로 **지어냈다** — 대학 DB 등록값과 달라 "내 원서" 가 늘 비었고 Vault 도 엉뚱한 토큰으로 조회했다 ③ 대학은 헤더가 주장하는 토큰을 그대로 믿어 Vault 에 물었다 ④ 중앙에는 운영 모드에서 개발용 신원 헤더를 막는 장치(R8)가 없었다 ⑤ 중앙은 깨진 UTF-8 을 U+FFFD 로 바꿔 저장했다(D-37 이 중앙엔 없었다) |
+| **판정** | 중앙에 지원자용 `GET·PUT /api/v1/profile`(신원은 인증 헤더로만, 본문 토큰 받지 않음, PUT 통째 교체·동의 목록에서 뺀 대학은 철회 기록). **공통원서 표준 항목**을 계약 패키지 한 곳(`COMMON_PROFILE_FIELDS`: 출신 고등학교·졸업 연도·이메일·휴대전화)에 두고 중앙 검증·화면·설정 검사가 같이 쓴다. 대학은 **등록된 지원자 토큰**으로 Vault 에 묻고 헤더가 다르면 403. 중앙 `AUTH_MODE`(운영에서 dev-headers 기동 거부)·엄격 UTF-8 파서. 개발용 내부 경로는 지웠다 |
+| **저장소 반영** | ✅ (2026-09-30) 중앙 profile API·검증·시험, 지원자 `/profile` 화면·개발 본인확인(등록 토큰 입력), 원서 생성 응답이 복사된 항목을 돌려준다(전에는 늘 빈 값) |
+| **노션 반영** | ⬜ §03 첨부 v1.4.0(`getMyProfile`·`replaceMyProfile`) · v1.0 §5 공통원서 표준 항목 — [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 저장소 반영 — 노션 반영 대기 |
+
+---
+
+## D-58. 서류 검사 엔진이 파일을 읽지 않는 흉내뿐이었고, 검사 기록은 늘 'mock-av' 였다
+
+| | |
+|---|---|
+| **발견** | 2026-09-30 (미완결 기능 전수 점검) |
+| **충돌** | v1.0 §5.4 · §B5 는 AV 검사를 요구한다. 검사 워커의 유일한 엔진은 파일명 표식으로 판정하는 Mock 이었고(운영 기동은 막혀 있다, R8), 접수 API 는 워커가 보낸 엔진·버전을 버리고 모든 검사 기록에 `mock-av` 를 남겼다 — 실엔진을 붙여도 증적(Evidence Package)은 거짓이 된다. 엔진 장애와 "검사 실패" 를 구분하지 않았다 |
+| **판정** | 엔진을 추상화하고 **ClamAV(clamd INSTREAM)** 어댑터를 둔다(`SCANNER_ENGINE=clamav`). 워커는 저장소 자격증명 없이 접수 API 가 검사 대기 목록에 싣는 **파일 하나·몇 분짜리 서명 URL** 로 읽어 흘려보내고, 흘리는 동안 SHA-256 을 기록과 맞춘다. 엔진·서명 DB 버전을 clamd 에 묻어 기록한다. 엔진에 닿지 못하면 판정하지 않고 검사 대기로 남긴다. 차트: `documentService.clamav.host`·`scannerEgress`(clamav 일 때만 워커 출구) |
+| **남은 것** | 실제 clamd·서명 DB 로 돌린 확인은 없다 — 시험은 같은 프로토콜의 가짜 clamd 다(clamd 이미지·서명 DB 내려받기 필요). clamd 배치(사이드카·공용 서비스)는 K-PaaS 착수 때 정한다 |
+| **저장소 반영** | ✅ (2026-09-30) `engines.ts`·시험 8개(서류 워커의 첫 시험)·검사 대기 목록 `downloadUrl`·검사 기록 엔진·버전·서명 이름 |
+| **노션 반영** | ⬜ §03 첨부 v1.4.0(`downloadUrl`·`signature`) · §05 서류 워커 구성(clamd) — [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 어댑터 구현 — 실 clamd 연동 확인 대기(T-M5-08) |
+
+---
+
+## D-59. 운영 콘솔에서 설정 초안을 만들 수 없었고, 보존기간 화면이 없었다
+
+| | |
+|---|---|
+| **발견** | 2026-09-30 (미완결 기능 전수 점검) |
+| **충돌** | §A14 "Configuration Governance" 는 콘솔에서 Diff·2인 승인·적용을 한다. 콘솔은 승인·적용·되돌리기만 있었고 **초안을 만드는 곳이 없어** API 를 직접 불러야 했다. 현재 설정 조회(`getActiveConfig`)는 본문을 주지 않아 고칠 출발점도 없었다. 보존기간(§A15) 계획 API 는 있는데 화면이 없었다 |
+| **판정** | 현재 설정 조회가 본문(`config`)을 준다. 콘솔 "새 설정 초안 만들기"(현재 설정 복사 → JSON 편집 → 초안), Diff 에 설정 검사 경고, 보존기간 화면(계획만 보인다 — 지우지 않는다). 초안 생성은 Config Linter(D-56)를 거친다 |
+| **저장소 반영** | ✅ (2026-09-30) admin-web `config`·`retention`, admission-api `config/active` |
+| **노션 반영** | ⬜ §03 첨부 v1.4.0(`getActiveConfig` 본문·`createConfigVersion` 검사 규칙) — [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 저장소 반영 — 노션 반영 대기 |
+
+---
+
+## D-60. §04 심장박동(sync.heartbeat)을 아무도 보내지 않아 중앙이 조용한 대학과 죽은 대학을 구별하지 못했다 🔴
+
+| | |
+|---|---|
+| **발견** | 2026-09-30 (계약 검사 스크립트가 코드·스키마 이벤트 타입을 대조하다가) |
+| **충돌** | §04 스키마는 `kr.kadmission.sync.heartbeat.v1`(적체·설정 버전·시계 offset)을 정의하고 중앙 DDL 에도 `last_heartbeat_at` 등 자리가 있었다. 그러나 대학은 보내지 않았고, 중앙은 `data.applicationId` 가 없다며 **받을 수도 없었다.** T-M4-42 의 "중앙 Dashboard 는 A대만 확인 불가로 표시" 를 뒷받침할 신호가 없었다. 또 ① Relay 가 모든 이벤트의 `configversion`·`policyversion` 을 **빈 문자열**로 보냈다(D-50 로 본문에서 두 값이 빠진 뒤 읽을 곳이 없었다) ② 등록되지 않은 대학의 이벤트가 외래키 오류로 500 이 되어 Relay 가 중앙 장애로 알고 재시도했다 ③ 계약은 이벤트 수신에 Idempotency-Key 를 요구했지만 실제 중복 제거는 CloudEvents `(source, id)` 였다 ④ 코드에 스키마에 없는 `payment.refunded.v1` 상수가 있었다 |
+| **판정** | event-relay 가 심장박동을 주기(기본 60초)로 보낸다 — Outbox 를 거치지 않는다(지난 상태를 나중에 현재처럼 보내지 않게, 중앙이 끊기면 건너뛴다). 중앙은 수신 원장·gap 을 거치지 않고 대학 상태를 덮어쓴다. "내 원서" 는 대학 이름과 `universityReachable`(심장박동 180초 끊김 = 확인 불가)을 준다. 버전 확장 속성은 접수 기록에서 읽어 싣고, 미등록 대학은 400. **`payment.confirmed.v1` 은 보내지 않는다** — 결제 확정이 곧 접수(D-42)라 접수 이벤트가 같은 사실을 전하고 금액·수단은 중앙이 알 필요가 없다(§A3). `payment.refunded` 상수는 지웠다(환불 처리 T-M5-06 때 스키마에 먼저 올린다) |
+| **저장소 반영** | ✅ (2026-09-30) `heartbeat.service.ts`(계약 스키마로 검증하는 시험)·중앙 수신·상태·Dashboard·화면 "이 대학 확인 불가" · `scripts/check-contracts.mjs` 가 코드 이벤트 타입을 스키마와 대조한다 |
+| **노션 반영** | ⬜ §04 본문 — 심장박동 발송·수신 규칙, payment.confirmed 미발송 판정 · §03 첨부 v1.4.0(`ApplicationSummary`·이벤트 수신 규칙) — [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 저장소 반영 — kind 재배포 확인·노션 반영 대기 |
+
+---
+
+## D-61. §A9 시각 동기화가 없었다 — clock offset 은 늘 0 이었고, 접수 시각은 Pod 시계였다 🔴
+
+| | |
+|---|---|
+| **발견** | 2026-09-30 (미완결 기능 전수 점검) |
+| **충돌** | §A9 "복수 독립 Time Source · clock offset 지속 측정 · 허용오차 초과 Node 는 Finalization 에서 제거 · 감사로그에 offset·time-source 상태 기록". §A2(D-31 반영)는 "접수·마감 판정 시각은 DB 시각". 그러나 `assertClockHealthy()` 는 시험에서만 불렸고("M4 에서 측정값과 연결한다" 주석), 서버 시각 응답의 `clockOffsetMs` 와 접수 기록의 `server_clock_offset_ms` 는 **0 고정**, Finalize 의 커밋 시각·마감 판정은 Pod 의 `new Date()` 였다(D-31 은 활성화 시각만 고쳤다) |
+| **판정** | 노드 시계와 DB 시계를 두 독립 시각원으로 **계속 대조**한다(10초마다 3회, 왕복이 가장 짧은 표본, 불확실성 = 왕복/2). DB 밖에서 쓰는 시각(요청 수신·화면 표시·감사)은 측정 offset 으로 DB 시계에 맞추고, **접수 커밋 시각은 트랜잭션 안에서 DB 에 묻는다.** 불확실성을 빼고도 1초를 넘은 노드는 Finalize 만 503(다른 Pod 가 받는다 — 전체 트래픽에서 빼면 접수가 줄어든다). 접수 기록·APPLICATION_FINALIZED 감사에 offset·불확실성·상태를 남긴다. `/healthz/dependencies`·지표 `clock_offset_ms` |
+| **남은 것** | 외부 NTP 와의 대조는 하지 않는다 — DB 시계 자체가 틀리면 모든 노드가 같은 방향으로 틀린다. K-PaaS 착수 때 DB 서버의 시각 동기 감시(chrony 등)를 인프라 요구로 둔다 |
+| **저장소 반영** | ✅ (2026-09-30) `common/time/server-clock.ts`·Finalize·마감 판정·감사·멱등 만료 시각. 시험: 표본 선택·상태 판정·허용오차 초과 노드 503·offset 기록. 로컬 축소 환경 측정 −31 ~ +151ms |
+| **노션 반영** | ⬜ §01 A9 구현 방식(두 시각원·Finalize 만 제외) — [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 저장소 반영 — 노션 반영 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 

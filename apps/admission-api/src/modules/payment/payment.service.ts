@@ -83,7 +83,7 @@ export class PaymentService {
    *   - 결제창만 연(CREATED) 결제가 있으면 새로 만들지 않고 **그 결제창을 다시 연다** (200)
    *   - 확인 중(PENDING·UNKNOWN)이거나 확정(CONFIRMED)이면 409 PAYMENT_IN_PROGRESS — 다시 결제하지 않게
    *   - 실패·취소(FAILED·CANCELLED)만 새 결제를 허용한다 (PAYMENT_RETRYABLE)
-   * 결제를 만들면 원서는 PAYMENT_PENDING 이 되고 더 고칠 수 없다 (D-54).
+   * 결제를 만들면 원서는 PAYMENT_PENDING 이 되고 더 고칠 수 없다 (D-55).
    */
   async createIntent(
     applicationId: string,
@@ -430,7 +430,7 @@ export class PaymentService {
         details: { paymentId: payment.id, status, ...extra },
       });
 
-      // 원서 상태를 결제에 맞춘다 (D-54). 같은 트랜잭션이라 결제와 원서가 어긋난 채 커밋되지 않는다.
+      // 원서 상태를 결제에 맞춘다 (D-55). 같은 트랜잭션이라 결제와 원서가 어긋난 채 커밋되지 않는다.
       await this.followApplication(client, payment.applicationId, payment.id, status);
 
       return {

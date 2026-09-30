@@ -11,6 +11,7 @@ import { IdempotencyStore } from './common/idempotency/idempotency.store';
 import { ProblemFilter } from './common/problem/problem.filter';
 import { installAdaptiveThrottle } from './common/throttle/throttle.hook';
 import { strictJsonParser } from './common/http/strict-json';
+import { installUuidParamGuard } from './common/http/uuid-params';
 import {
   assertConfigured,
   installHttpTelemetry,
@@ -54,6 +55,8 @@ async function bootstrap(): Promise<void> {
   installHttpTelemetry(fastify);
   // 지원자 단위 Adaptive Throttling — IP 가 아니라 세션·원서 기준 (T-M4-40)
   installAdaptiveThrottle(fastify);
+  // 형식이 틀린 식별자는 DB 에 가기 전에 404 — 전에는 uuid 변환 오류로 500 이었다
+  installUuidParamGuard(fastify);
 
   // 모든 오류를 problem+json 으로 통일한다.
   app.useGlobalFilters(new ProblemFilter());

@@ -85,7 +85,8 @@ export class ApplicationController {
     // 재시도로 기존 원서를 돌려준 경우는 200 이다. 새로 만든 경우만 201.
     reply.status(created ? 201 : 200);
     reply.header('etag', etagOf(row));
-    return this.present(row, {});
+    // 공통원서에서 복사된 항목(재시도면 그동안 저장한 항목)을 그대로 돌려준다. 전에는 늘 빈 값이었다.
+    return this.present(row, await this.repo.fields(row.id));
   }
 
   @Get(':applicationId')
@@ -187,7 +188,7 @@ export class ApplicationController {
     const fields = await this.repo.fields(applicationId);
     const result = await this.forms.validate(row.cycleId, row.admissionTypeCode, fields);
 
-    // 통과하면 작성 완료(READY), 저장 뒤 설정이 바뀌어 더는 맞지 않으면 작성 중(DRAFT)으로. (D-54)
+    // 통과하면 작성 완료(READY), 저장 뒤 설정이 바뀌어 더는 맞지 않으면 작성 중(DRAFT)으로. (D-55)
     // 상태가 바뀌면 버전도 오른다 — 화면이 이어서 저장할 수 있게 새 ETag 를 준다.
     const moved = await this.repo.markValidated(applicationId, result.valid);
     if (moved) reply.header('etag', etagOf(moved));

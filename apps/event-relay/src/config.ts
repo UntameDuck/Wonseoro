@@ -25,7 +25,15 @@ export const RELAY = {
   intervalMs: envInt('RELAY_INTERVAL_MS', 2000, { min: 100, max: 600_000 }),
   batchSize: envInt('RELAY_BATCH_SIZE', 100, { min: 1, max: 1000 }),
   timeoutMs: envInt('RELAY_TIMEOUT_MS', 5000, { min: 100, max: 60_000 }),
+  /** 대학 상태 심장박동 주기 (§04 sync.heartbeat, D-60). 중앙은 이 주기의 3배가 지나면 "확인 불가" 로 본다. */
+  heartbeatMs: envInt('RELAY_HEARTBEAT_INTERVAL_MS', 60_000, { min: 5_000, max: 3_600_000 }),
 } as const;
+
+/**
+ * 이 대학이 돌리는 플랫폼 버전 — 심장박동에 실린다. 중앙 관제가 "어느 대학이 옛 릴리스인가" 를 본다.
+ * 없어도 기동한다(unknown) — 버전을 모른다고 접수를 멈출 이유는 없다. 배포가 이미지 태그를 넣는다.
+ */
+export const PLATFORM_VERSION = (process.env.PLATFORM_VERSION ?? '').trim() || 'unknown';
 
 /**
  * 중앙 Circuit Breaker. (v1.1 §01 C8)

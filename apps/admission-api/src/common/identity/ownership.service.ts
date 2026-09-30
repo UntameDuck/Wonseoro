@@ -14,11 +14,23 @@ import { noteOwnershipMiss } from '../throttle/throttle.hook';
  * 403 과 404 를 구분해 주면 "이 식별자는 존재한다"를 알려주는 셈이라
  * 식별자를 훑어 유효한 원서를 찾아낼 수 있다.
  */
+/** 식별자 형식. 형식이 틀린 값을 DB 에 넘기면 uuid 변환 오류가 500 이 된다. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 @Injectable()
 export class Ownership {
   constructor(private readonly db: Db) {}
 
+  /**
+   * 형식이 틀린 식별자(`/applications/undefined`)는 없는 자원과 같다 — 404.
+   * 전에는 DB 가 uuid 변환에 실패해 500 이 났다. 500 은 "서버 고장" 이라 화면이 재시도를 권한다.
+   */
+  private assertWellFormed(id: string, what: string, applicantId: string): void {
+    if (!UUID.test(id)) throw notFound(what, applicantId);
+  }
+
   async assertApplication(applicationId: string, applicantId: string): Promise<void> {
+    this.assertWellFormed(applicationId, '원서', applicantId);
     const { rowCount } = await this.db.query(
       `SELECT 1 FROM application WHERE id = $1 AND applicant_id = $2`,
       [applicationId, applicantId],
@@ -27,6 +39,7 @@ export class Ownership {
   }
 
   async assertPayment(paymentId: string, applicantId: string): Promise<void> {
+    this.assertWellFormed(paymentId, '결제', applicantId);
     const { rowCount } = await this.db.query(
       `SELECT 1 FROM payment p
          JOIN application a ON a.id = p.application_id
@@ -37,6 +50,7 @@ export class Ownership {
   }
 
   async assertDocument(documentId: string, applicantId: string): Promise<void> {
+    this.assertWellFormed(documentId, '서류', applicantId);
     const { rowCount } = await this.db.query(
       `SELECT 1 FROM document d
          JOIN application a ON a.id = d.application_id
@@ -47,6 +61,7 @@ export class Ownership {
   }
 
   async assertSubmission(submissionId: string, applicantId: string): Promise<void> {
+    this.assertWellFormed(submissionId, '접수', applicantId);
     const { rowCount } = await this.db.query(
       `SELECT 1 FROM submission s
          JOIN application a ON a.id = s.application_id

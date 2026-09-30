@@ -65,7 +65,7 @@ export class DocumentService {
 
   /**
    * 서류를 올리거나 지울 수 있는 원서인가 — 작성 중(DRAFT·READY)일 때만.
-   * 결제를 시작한 원서의 서류를 바꾸면 결제 전 확인을 통과한 내용과 접수되는 내용이 달라진다(D-54).
+   * 결제를 시작한 원서의 서류를 바꾸면 결제 전 확인을 통과한 내용과 접수되는 내용이 달라진다(D-55).
    * 이 전형이 받는 서류 종류도 함께 돌려준다.
    */
   private async assertDocumentsEditable(

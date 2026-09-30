@@ -11,8 +11,8 @@ export default function Home() {
       <Card title="이 콘솔에서 하는 일">
         <ul style={{ margin: 0, paddingLeft: '1.2em', lineHeight: 1.8 }}>
           <li>
-            <a href="/config">설정 승인</a> — 전형 양식·전형료·보존정책 변경을{' '}
-            <strong>무엇이 바뀌는지 확인하고</strong> 두 명이 승인합니다
+            <a href="/config">설정 승인</a> — 전형 양식·서류·보존정책 변경 초안을 만들고,{' '}
+            <strong>무엇이 바뀌는지 확인하고</strong> 두 명이 승인합니다. 깨진 양식은 초안 단계에서 거절됩니다
           </li>
           <li>
             <a href="/deadline">마감 · 연장</a> — 입학처 결정에 따른 마감 연장을 기록하고 적용합니다.
@@ -24,6 +24,9 @@ export default function Home() {
           </li>
           <li>
             <a href="/evidence">증적 조회</a> — 한 원서의 접수 과정을 재구성합니다. 조회 사실이 기록됩니다
+          </li>
+          <li>
+            <a href="/retention">보존기간</a> — 데이터 종류별 파기 계획을 봅니다. 아무것도 지우지 않습니다
           </li>
         </ul>
       </Card>

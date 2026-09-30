@@ -66,7 +66,7 @@ describe('Config Linter (§A5)', () => {
   });
 });
 
-describe('설정에서 화면 정보 만들기 (§A5, D-55)', () => {
+describe('설정에서 화면 정보 만들기 (§A5, D-56)', () => {
   it('공통원서 항목은 x-profile 표시에서 온다', () => {
     assert.deepEqual(profileFieldsOf(GOOD.forms.EARLY), ['highSchool']);
   });

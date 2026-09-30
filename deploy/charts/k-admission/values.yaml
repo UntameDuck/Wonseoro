@@ -75,8 +75,17 @@ documentService:
   image: { repository: document-service, digest: "" }
   replicas: 1
   port: 3003
-  # production 은 실 검사 엔진이 필요하다 (mock 이면 기동하지 않는다, T-M5-08)
+  # production 은 실 검사 엔진이 필요하다 (mock 이면 기동하지 않는다, T-M5-08). 실 엔진: clamav (D-58)
   scannerEngine: mock
+  # clamav 엔진 — clamd 주소. 같은 Pod 사이드카면 127.0.0.1, 별도 서비스면 그 서비스 이름
+  clamav:
+    host: ""
+    port: 3310
+  # clamav 일 때 워커가 나가야 하는 곳 — clamd 와 Object Storage(접수 API 가 준 서명 URL 로 읽는다).
+  # 워커는 저장소 자격증명이 없다. 비우면 워커의 출구는 접수 API 뿐이다
+  scannerEgress:
+    to: []
+    ports: []
   resources:
     requests: { cpu: "100m", memory: "256Mi" }
     limits: { cpu: "1", memory: "1Gi" }

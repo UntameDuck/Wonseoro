@@ -51,7 +51,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             >
               원서로
             </a>
-            <nav aria-label="주요 메뉴">
+            <nav aria-label="주요 메뉴" style={{ display: 'flex', gap: 'var(--krds-space-4)' }}>
+              <a href="/profile" style={{ color: 'var(--krds-primary)' }}>
+                공통원서
+              </a>
               <a href="/dashboard" style={{ color: 'var(--krds-primary)' }}>
                 내 원서
               </a>

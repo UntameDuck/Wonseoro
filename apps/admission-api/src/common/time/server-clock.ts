@@ -4,7 +4,7 @@ import { Db, describeFailure } from '@wonseoro/server-kit';
 import { CLOCK } from '../../config';
 
 /**
- * 서버 시각 — 기술설계서 v1.1 §01 A2 · A9 (D-31)
+ * 서버 시각 — 기술설계서 v1.1 §01 A2 · A9 (D-31 · D-61)
  *
  * **시각의 권위는 DB 하나다.** (§A2) 접수·마감 판정 시각은 DB 시각으로 기록·비교한다.
  * Pod 가 여럿이면 각자 다른 시계를 갖고, 마감 직전에는 그 밀리초가 사람의 접수다.
@@ -148,11 +148,10 @@ export class ClockMonitor implements OnModuleInit, OnApplicationShutdown {
   private timer: NodeJS.Timeout | null = null;
   private failing = false;
   private lastStatus: ClockStatus = 'UNMEASURED';
+  /** 프로세스 공용 시각 상태에 기록한다. DI 로 받지 않는다 — 감사·마감·접수가 같은 값을 봐야 한다. */
+  private readonly clock: ServerClock = serverClock;
 
-  constructor(
-    private readonly db: Db,
-    private readonly clock: ServerClock = serverClock,
-  ) {
+  constructor(private readonly db: Db) {
     const meter = metrics.getMeter('k-admission.clock');
     meter
       .createObservableGauge('clock_offset_ms', {

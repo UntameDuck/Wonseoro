@@ -33,7 +33,7 @@ ON CONFLICT (id) DO NOTHING;
 -- 활성 Config. 추가문항 JSON Schema 가 여기에 들어간다.
 -- M3 에서는 2인 승인을 거쳐야 ACTIVE 가 된다. (T-M3-02)
 --
--- 화면은 이 설정만 보고 그린다 (§A5, D-55)
+-- 화면은 이 설정만 보고 그린다 (§A5, D-56)
 --   title          항목 이름
 --   x-profile      공통원서(중앙 Vault)에서 가져오는 항목 — 1단계에 그린다
 --   x-multiline    여러 줄 입력

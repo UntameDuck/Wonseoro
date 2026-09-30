@@ -13,7 +13,7 @@ export interface UploadedDocument {
 type Phase =
   | { kind: 'idle' }
   | { kind: 'preparing' }
-  | { kind: 'uploading'; percent: number }
+  | { kind: 'uploading' }
   | { kind: 'verifying' }
   | { kind: 'done' }
   | { kind: 'failed'; reason: string };
@@ -65,7 +65,8 @@ export function FileUpload({
       );
 
       // 2. 브라우저 → Object Storage 직접 PUT
-      setPhase({ kind: 'uploading', percent: 0 });
+      // fetch 는 업로드 진행률을 알려주지 않는다. 진행률 없이 "업로드 중" 을 글로 보인다.
+      setPhase({ kind: 'uploading' });
       const put = await fetch(intent.data.uploadUrl, {
         method: 'PUT',
         headers: intent.data.requiredHeaders,

@@ -1,5 +1,6 @@
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
+import { COMMON_PROFILE_CODES } from '@wonseoro/contracts';
 import { LEGACY_PROFILE_FIELDS } from './form-schema.service';
 
 /**
@@ -94,6 +95,12 @@ export function lintConfig(config: unknown, typeCodes: readonly string[] | null)
           .map(([field]) => field);
         if (untitled.length > 0) {
           warnings.push(`${at}: 이름(title)이 없는 항목은 화면에 항목 코드가 그대로 보입니다 — ${untitled.join(', ')}`);
+        }
+        const offStandard = Object.entries(properties)
+          .filter(([field, p]) => isObject(p) && p['x-profile'] === true && !COMMON_PROFILE_CODES.includes(field))
+          .map(([field]) => field);
+        if (offStandard.length > 0) {
+          warnings.push(`${at}: 공통원서 표준에 없는 항목은 Vault 에서 가져올 수 없습니다 — ${offStandard.join(', ')}`);
         }
         const marked = Object.values(properties).some((p) => isObject(p) && p['x-profile'] === true);
         const legacy = LEGACY_PROFILE_FIELDS.filter((f) => f in properties);

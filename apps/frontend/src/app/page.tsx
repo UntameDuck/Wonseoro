@@ -39,7 +39,18 @@ interface Department {
 
 export default function Home() {
   const router = useRouter();
-  const [applicantId, setApplicantId] = useState(loadSession()?.applicantId ?? '');
+  const [applicantId, setApplicantId] = useState('');
+  // 중앙이 발급한 가명 토큰. 지어내지 않는다 — 대학 DB 에 등록된 값과 달라지면 "내 원서" 가 비고
+  // 공통원서를 엉뚱한 토큰으로 조회한다. 대학 서버는 등록값과 다르면 거절한다(403).
+  const [subjectToken, setSubjectToken] = useState('');
+  // 세션은 브라우저에만 있다. 렌더링 중에 읽으면 서버 렌더링과 화면이 갈라진다 — 마운트 뒤에 읽는다.
+  useEffect(() => {
+    const session = loadSession();
+    if (session) {
+      setApplicantId(session.applicantId);
+      setSubjectToken(session.subjectToken);
+    }
+  }, []);
   const operatingMode = useOperatingMode();
 
   const [cycle, setCycle] = useState<Cycle | null>(null);
@@ -90,7 +101,6 @@ export default function Home() {
     if (!cycle || !typeId || !departmentId) return;
     setBusy(true);
     setError(null);
-    const subjectToken = `subj-${applicantId.slice(0, 8)}`;
     try {
       const { data } = await api.createApplication(
         { cycleId: cycle.id, admissionTypeId: typeId, departmentId },
@@ -173,8 +183,9 @@ export default function Home() {
           <p
             style={{ marginTop: 0, color: 'var(--krds-fg-muted)', fontSize: 'var(--krds-text-sm)' }}
           >
-            개발 단계에서는 지원자 식별자를 직접 입력합니다. 실제 서비스에서는 본인확인 절차로
-            대체됩니다.
+            개발 단계에서는 지원자 식별자와 공통원서 가명 토큰을 직접 입력합니다. 실제 서비스에서는
+            본인확인 절차로 대체됩니다. 개발 시드 지원자는 식별자{' '}
+            <code>44444444-4444-4444-4444-444444444444</code>, 토큰 <code>subj-dev-0001</code> 입니다.
           </p>
           <Field
             label="지원자 식별자"
@@ -183,6 +194,23 @@ export default function Home() {
             hint="대학 DB 에 등록된 지원자 UUID 를 입력하십시오."
             required
           />
+          <Field
+            label="공통원서 가명 토큰"
+            value={subjectToken}
+            onChange={setSubjectToken}
+            hint="대학에 등록된 값과 같아야 합니다. 공통원서와 내 원서 조회가 이 토큰을 씁니다."
+            required
+          />
+          <p style={{ margin: '0 0 var(--krds-space-4)', fontSize: 'var(--krds-text-sm)' }}>
+            <a
+              href="/profile"
+              onClick={() => saveSession({ applicantId, subjectToken })}
+              style={{ color: 'var(--krds-primary)' }}
+            >
+              공통원서 작성·제공 동의
+            </a>{' '}
+            — 한 번 써 두면 원서를 만들 때 동의한 항목이 채워집니다.
+          </p>
 
           {error && (
             <Alert tone="danger" title="원서를 시작할 수 없습니다">
@@ -192,7 +220,7 @@ export default function Home() {
 
           <Button
             onClick={() => void start()}
-            disabled={busy || applicantId.length < 8 || !typeId || !departmentId}
+            disabled={busy || applicantId.length < 8 || !subjectToken || !typeId || !departmentId}
           >
             {busy ? '원서를 준비하는 중…' : '원서 작성 시작'}
           </Button>

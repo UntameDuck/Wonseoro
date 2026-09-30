@@ -16,6 +16,7 @@ const NAV: Array<[string, string]> = [
   ['/deadline', '마감 · 연장'],
   ['/reconciliation', '대조 · 예외'],
   ['/evidence', '증적 조회'],
+  ['/retention', '보존기간'],
 ];
 
 export default function RootLayout({ children }: { children: ReactNode }) {

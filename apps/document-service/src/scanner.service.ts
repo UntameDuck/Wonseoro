@@ -15,17 +15,10 @@ const scanResults = metrics.getMeter('k-admission.document').createCounter('docu
 });
 // 첫 검사에서 처음 생긴 시계열은 rate() 가 그 증가를 놓친다. 판정 라벨을 0 으로 만들어 둔다.
 for (const verdict of ['CLEAN', 'MALICIOUS', 'ERROR']) scanResults.add(0, { verdict });
-import { ADMISSION_API_URL, BREAKER, SCANNER } from './config';
+import { ADMISSION_API_URL, BREAKER, CLAMD, SCANNER, SCANNER_ENGINE } from './config';
+import { ClamAvEngine, EngineUnavailable, MockEngine, ScanEngine, ScanTarget, ScanVerdict } from './engines';
 
-export interface ScanTarget {
-  documentId: string;
-  objectKey: string;
-  mediaType: string;
-  sizeBytes: number;
-  sha256: string;
-}
-
-export type ScanVerdict = 'CLEAN' | 'MALICIOUS' | 'ERROR';
+export type { ScanTarget, ScanVerdict } from './engines';
 
 export interface ScanStats {
   scanned: number;
@@ -45,9 +38,10 @@ export interface ScanStats {
  *   document-service: QUARANTINED 를 가져가 검사 → scan-result 보고
  *   admission-api  : CLEAN 이면 AVAILABLE, 아니면 REJECTED
  *
- * ⚠️ M2 의 엔진은 Mock 이다. 실제 안티바이러스 연동은 M5. (T-M5-08)
- * 다만 **상태 전이와 보고 경로는 실제로 동작한다.** 접수 확정이 AVAILABLE 기준이므로
- * 이 경로가 없으면 서류가 필요한 전형은 접수가 끝나지 않는다.
+ * 엔진은 SCANNER_ENGINE 으로 고른다 — clamav(clamd INSTREAM) 또는 개발용 mock. (engines.ts, D-58)
+ * 보고에는 **실제로 검사한 엔진의 이름과 버전**을 싣는다. 전에는 모든 보고가 'mock-av' 였다.
+ * 엔진에 닿지 못하면(EngineUnavailable) 보고하지 않는다 — 판정이 아니므로 서류를 떨어뜨리지 않고
+ * 검사 대기로 남겨 다음 주기에 다시 가져온다.
  *
  * **접수 API 가 끊기면 검사하지 않는다.** (v1.1 §01 C8)
  * 보고 경로가 막힌 채 검사를 계속하면 CPU 를 써서 얻은 판정을 버리게 된다.
@@ -71,6 +65,14 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
       else this.logger.warn(line);
     },
   });
+
+  private engineDown = false;
+
+  /** 검사 엔진. 시험이 바꿔 끼울 수 있다. */
+  engine: ScanEngine =
+    SCANNER_ENGINE === 'clamav'
+      ? new ClamAvEngine(CLAMD.host, CLAMD.port, CLAMD.timeoutMs)
+      : new MockEngine(SCANNER.delayMs, SCANNER.version);
 
   onModuleInit(): void {
     if (!SCANNER.autostart) {
@@ -107,14 +109,35 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
     if (!this.admissionApi.allowsRequest()) return stats;
     const targets = await this.fetchPending();
 
+    // 엔진 버전은 주기마다 한 번 묻는다 — 서명 DB 는 하루에도 여러 번 바뀐다.
+    let engineVersion: string | null = null;
     for (const target of targets) {
       // 보고할 수 없으면 검사하지 않는다. 판정을 버리게 된다.
       if (this.stopped || !this.admissionApi.allowsRequest()) break;
       // 서류 한 건 = span 한 개. 결과 보고에 traceparent 를 실어 접수 API 처리까지 잇는다
-      const { verdict, reported } = await withSpan('k-admission.document', 'document scan', {}, async () => {
-        const verdict = await this.scan(target);
-        return { verdict, reported: await this.report(target.documentId, verdict) };
+      const outcome = await withSpan('k-admission.document', 'document scan', {}, async () => {
+        try {
+          engineVersion ??= await this.engine.version();
+          const result = await this.engine.scan(target);
+          if (this.engineDown) this.logger.warn(`scan engine ${this.engine.name} 복구`);
+          this.engineDown = false;
+          return {
+            verdict: result.verdict,
+            reported: await this.report(target.documentId, result.verdict, engineVersion, result.signature),
+          };
+        } catch (err) {
+          if (err instanceof EngineUnavailable) {
+            // 판정이 아니다. 이번 주기의 남은 서류도 같은 엔진이라 멈춘다 — 다음 주기에 다시 가져온다.
+            // 죽어 있는 동안 주기마다 남기면 로그가 묻힌다. 바뀔 때 한 번만.
+            if (!this.engineDown) this.logger.error(`scan engine unavailable (${err.message}) — 서류는 검사 대기로 남는다`);
+            this.engineDown = true;
+            return null;
+          }
+          throw err;
+        }
       });
+      if (outcome === null) break;
+      const { verdict, reported } = outcome;
       if (!reported) continue;
       scanResults.add(1, { verdict });
 
@@ -130,28 +153,6 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
       );
     }
     return stats;
-  }
-
-  /**
-   * Mock 엔진.
-   *
-   * 실제 엔진처럼 **시간이 걸린다.** 즉시 CLEAN 을 돌려주면
-   * "검사 중" 상태가 화면에 한 번도 나타나지 않아 그 UX 를 검증할 수 없다.
-   *
-   * 판정 규칙은 파일명·크기로 고정한다. 무작위면 재현이 안 된다.
-   */
-  private async scan(target: ScanTarget): Promise<ScanVerdict> {
-    const delay = SCANNER.delayMs;
-    await new Promise((r) => setTimeout(r, delay));
-
-    // 시험용 판정. objectKey 에 표식이 있으면 그 결과를 낸다.
-    if (target.objectKey.includes('malicious')) return 'MALICIOUS';
-    if (target.objectKey.includes('scanerror')) return 'ERROR';
-
-    // 크기가 0이면 검사할 것이 없다. 통과시키지 않는다.
-    if (target.sizeBytes <= 0) return 'ERROR';
-
-    return 'CLEAN';
   }
 
   private async fetchPending(): Promise<ScanTarget[]> {
@@ -175,7 +176,12 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
     }
   }
 
-  private async report(documentId: string, result: ScanVerdict): Promise<boolean> {
+  private async report(
+    documentId: string,
+    result: ScanVerdict,
+    engineVersion: string,
+    signature?: string,
+  ): Promise<boolean> {
     try {
       const res = await this.admissionApi.run(
         () =>
@@ -191,8 +197,10 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
             },
             body: JSON.stringify({
               result,
-              scanner: 'mock-av',
-              engineVersion: SCANNER.version,
+              // 실제로 검사한 엔진 — Evidence Package 에 그대로 남는다
+              scanner: this.engine.name,
+              engineVersion,
+              ...(signature && result !== 'CLEAN' ? { signature } : {}),
             }),
             signal: AbortSignal.timeout(SCANNER.timeoutMs),
         }),

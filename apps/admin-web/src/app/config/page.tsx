@@ -36,6 +36,8 @@ interface Diff {
   destructive: Change[];
   digest: string;
   identical: boolean;
+  /** 설정 검사 경고 — 동작은 하지만 의도와 다를 수 있는 것 (§A5) */
+  warnings?: string[];
 }
 
 const STATUS_LABEL: Record<Version['status'], string> = {
@@ -129,7 +131,94 @@ function ConfigConsole({ cycleId }: { cycleId: string }) {
       {current && (
         <VersionReview key={current.id} version={current} operator={operator} onChanged={reload} />
       )}
+      <DraftCreator
+        cycleId={cycleId}
+        operator={operator}
+        onCreated={async (id) => {
+          await reload();
+          setSelected(id);
+        }}
+      />
     </>
+  );
+}
+
+/**
+ * 새 설정 초안 — 지금 적용 중인 설정을 복사해 고친다. (D-59)
+ *
+ * 전에는 콘솔에 초안을 만드는 곳이 없어 API 를 직접 불러야 했다. 초안은 효력이 없다 —
+ * 작성자가 아닌 두 명이 Diff 를 확인하고 승인해야 적용된다. 서버가 양식이 컴파일되는지
+ * 먼저 본다(Config Linter) — 깨진 양식은 초안조차 만들지 않는다.
+ */
+function DraftCreator({
+  cycleId,
+  operator,
+  onCreated,
+}: {
+  cycleId: string;
+  operator: string | null;
+  onCreated: (id: string) => Promise<void>;
+}) {
+  const [text, setText] = useState('');
+  const [version, setVersion] = useState('');
+  const [message, setMessage] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function startFromActive() {
+    try {
+      const active = await adminGet<{ version: string; config: Record<string, unknown> }>('config/active', { cycleId });
+      setText(JSON.stringify(active.config, null, 2));
+      setVersion(`${active.version}-next`);
+      setMessage(null);
+    } catch (err) {
+      setMessage({ tone: 'danger', text: describe(err) });
+    }
+  }
+
+  async function create() {
+    let config: unknown;
+    try {
+      config = JSON.parse(text);
+    } catch (err) {
+      setMessage({ tone: 'danger', text: `JSON 형식이 올바르지 않습니다 — ${(err as Error).message}` });
+      return;
+    }
+    setBusy(true);
+    try {
+      const row = await adminPost<{ id: string; version: string }>(
+        'config/versions',
+        { cycleId, version: version.trim(), config },
+        actionKey('cfg-create'),
+      );
+      setMessage({ tone: 'success', text: `초안 ${row.version} 을 만들었습니다. 작성자가 아닌 두 명의 승인이 필요합니다.` });
+      await onCreated(row.id);
+    } catch (err) {
+      setMessage({ tone: 'danger', text: describe(err) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card title="새 설정 초안 만들기">
+      <p style={{ marginTop: 0, fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)' }}>
+        초안은 효력이 없습니다. 만든 사람이 아닌 두 명이 변경 내역을 확인하고 승인해야 적용됩니다.
+        양식(forms)·서류(requiredDocuments·optionalDocuments·documentLabels)·보존(retention)을 고칩니다.
+      </p>
+      {message && <Alert tone={message.tone} title={message.text} />}
+      <Button variant="secondary" onClick={() => void startFromActive()}>
+        지금 적용 중인 설정에서 시작
+      </Button>
+      <Field label="초안 버전 이름" value={version} onChange={setVersion} required maxLength={64} />
+      <Field label="설정 (JSON)" value={text} onChange={setText} required multiline />
+      <Button
+        disabled={busy || !operator || !version.trim() || !text.trim()}
+        onClick={() => void create()}
+      >
+        {busy ? '만드는 중…' : '초안 만들기'}
+      </Button>
+      {!operator && <BlockReason reason="담당자를 먼저 입력해 주십시오." id="draft-reason" />}
+    </Card>
   );
 }
 
@@ -223,6 +312,15 @@ function VersionReview({
           {diff.destructive.length > 0 && (
             <Alert tone="danger" title={`되돌리기 어려운 변경 ${diff.destructive.length}건`}>
               <ChangeList changes={diff.destructive} />
+            </Alert>
+          )}
+          {(diff.warnings?.length ?? 0) > 0 && (
+            <Alert tone="warning" title={`설정 검사 경고 ${diff.warnings!.length}건 — 동작은 하지만 의도와 다를 수 있습니다`}>
+              <ul style={{ margin: 0, paddingLeft: '1.2em' }}>
+                {diff.warnings!.map((w) => (
+                  <li key={w}>{w}</li>
+                ))}
+              </ul>
             </Alert>
           )}
           <ChangeList changes={diff.changes.filter((c) => c.risk !== 'DESTRUCTIVE')} />

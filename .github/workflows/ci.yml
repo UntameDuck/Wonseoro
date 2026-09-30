@@ -12,6 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # 계약 호환성 검사가 직전 커밋(HEAD~1)의 계약 파일과 비교한다. PR 은 병합 커밋의 첫 부모가 기준 브랜치다
+          fetch-depth: 2
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -33,8 +36,8 @@ jobs:
           version: v4.3.0
       - run: helm lint deploy/charts/k-admission -f deploy/charts/k-admission/values-m.yaml --set api.image.digest=sha256:0000000000000000000000000000000000000000000000000000000000000000 --set eventRelay.image.digest=sha256:0000000000000000000000000000000000000000000000000000000000000000 --set documentService.image.digest=sha256:0000000000000000000000000000000000000000000000000000000000000000 --set database.pooler.image.digest=sha256:0000000000000000000000000000000000000000000000000000000000000000 --set documentService.scannerEngine=placeholder
       - run: node scripts/render-runtime-attachment.mjs --check
-      # TODO(M1): OpenAPI lint + breaking-change 검사 (첨부 배치 후)
-      # TODO(M1): CloudEvents JSON Schema 검증
+      # OpenAPI 구조($ref·operationId·대장 번호)·직전 커밋 대비 호환성(§A16), CloudEvents 스키마 컴파일·이벤트 타입 대조
+      - run: node scripts/check-contracts.mjs
 
   backend:
     name: backend
@@ -48,7 +51,10 @@ jobs:
       - run: npm ci
       - run: npm run build -w @wonseoro/contracts -w @wonseoro/server-kit
       - run: npm run typecheck -w @wonseoro/admission-api -w @wonseoro/central-api -w @wonseoro/document-service -w @wonseoro/event-relay
+      # 공용 계측·DB 풀·환경 설정 시험 — 전에는 CI 어디에서도 돌지 않았다
+      - run: npm run test -w @wonseoro/server-kit
       - run: npm run test -w @wonseoro/admission-api --if-present
+      - run: npm run test -w @wonseoro/document-service --if-present
 
   integration:
     name: integration (실 PostgreSQL)
@@ -114,7 +120,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run typecheck -w @wonseoro/frontend
+      - run: npm run build -w @wonseoro/contracts
+      # 지원자 웹·운영 콘솔·KRDS 공용 컴포넌트 — 전에는 지원자 웹만 검사했다
+      - run: npm run typecheck -w @wonseoro/krds -w @wonseoro/frontend -w @wonseoro/admin-web
 
   # M5에서 활성화 — 기술설계서 v1.0 §8.4 CI/CD Security Gate 10종
   # security:

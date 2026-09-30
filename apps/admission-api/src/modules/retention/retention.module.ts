@@ -11,7 +11,7 @@ import { RetentionService } from './retention.service';
  * 2인 승인·Diff·서명된 적용 기록을 그대로 탄다. 보존기간을 줄이는 것은 파기를
  * 앞당기는 일이라 Diff 에서 DESTRUCTIVE 로 보인다.
  *
- * 계약에 없는 경로다. (D-38)
+ * 계약: OpenAPI getRetentionMatrix · getRetentionPlan (D-38). 관리자 콘솔 `/retention` 이 보여 준다.
  */
 @UseGuards(AdminGuard)
 @Controller('admin/v1/retention')

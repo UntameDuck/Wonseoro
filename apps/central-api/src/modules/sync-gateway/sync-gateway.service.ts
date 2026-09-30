@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { Db, isPurposeRef } from '@wonseoro/server-kit';
 import { EVENT_TYPE } from '@wonseoro/contracts';
+import { HEARTBEAT_STALE_SECONDS } from '../../config';
 
 /** 대학이 보내는 CloudEvent. 확장 속성은 envelope 최상위에 붙는다. (v1.1 §04) */
 export interface IncomingEvent {
@@ -57,7 +58,10 @@ export class SyncGatewayService {
   constructor(private readonly db: Db) {}
 
   async ingest(event: IncomingEvent): Promise<IngestResult> {
+    // 심장박동은 원서 원장이 아니다 — 수신 원장·sequence gap·요약을 거치지 않는다. (D-60)
+    if (event?.type === EVENT_TYPE.SYNC_HEARTBEAT) return this.heartbeat(event);
     this.validate(event);
+    await this.assertRegistered(event.kadmissionuniversity);
 
     const universityId = event.kadmissionuniversity;
     const aggregateId = String(event.data.applicationId ?? '');
@@ -81,8 +85,8 @@ export class SyncGatewayService {
           universityId,
           aggregateId,
           sequence,
-          event.configversion ?? null,
-          event.policyversion ?? null,
+          event.configversion || null,
+          event.policyversion || null,
           event.traceparent ?? null,
           String(event.data.integrityHash ?? ''),
           event.time,
@@ -114,13 +118,14 @@ export class SyncGatewayService {
 
       // 4. 대학 동기화 상태 갱신
       await client.query(
+        // 설정 버전이 없는 이벤트(접수 전 취소)가 알던 버전을 지우지 않게 한다.
         `INSERT INTO university_sync_state (university_id, config_version, last_event_at)
          VALUES ($1,$2,now())
          ON CONFLICT (university_id) DO UPDATE
-           SET config_version = EXCLUDED.config_version,
+           SET config_version = COALESCE(EXCLUDED.config_version, university_sync_state.config_version),
                last_event_at = now(),
                updated_at = now()`,
-        [universityId, event.configversion ?? null],
+        [universityId, event.configversion || null],
       );
 
       this.logger.log(`ingested ${event.type} seq=${sequence} univ=${universityId}`);
@@ -156,18 +161,32 @@ export class SyncGatewayService {
     };
   }
 
-  /** 관제용. 어느 대학이 얼마나 밀려 있는가. */
+  /**
+   * 관제용. 어느 대학이 얼마나 밀려 있는가, 지금 살아 있는가.
+   * `reachable` 은 심장박동으로 판단한다 — 마지막 이벤트 시각으로는 조용한 대학과 죽은 대학을 가릴 수 없다.
+   */
   async syncStatus(): Promise<
     Array<{
       universityId: string;
+      name: string;
       lastEventAt: string | null;
+      lastHeartbeatAt: string | null;
+      reachable: boolean;
+      pendingOutbox: number | null;
+      oldestPendingAgeSeconds: number | null;
+      clockOffsetMs: number | null;
+      configVersion: string | null;
+      platformVersion: string | null;
       openGaps: number;
       summaries: number;
     }>
   > {
     const { rows } = await this.db.query<Record<string, unknown>>(
-      `SELECT u.id AS university_id,
-              s.last_event_at,
+      `SELECT u.id AS university_id, u.name,
+              s.last_event_at, s.last_heartbeat_at, s.pending_outbox, s.oldest_pending_age_seconds,
+              s.clock_offset_ms, s.config_version, s.platform_version,
+              (s.last_heartbeat_at IS NOT NULL
+                AND s.last_heartbeat_at > now() - make_interval(secs => $1)) AS reachable,
               (SELECT count(*) FROM sync_gap g
                 WHERE g.university_id = u.id AND g.state = 'OPEN') AS open_gaps,
               (SELECT count(*) FROM application_summary a
@@ -175,13 +194,97 @@ export class SyncGatewayService {
          FROM university_registry u
          LEFT JOIN university_sync_state s ON s.university_id = u.id
         ORDER BY u.id`,
+      [HEARTBEAT_STALE_SECONDS],
     );
+    const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
     return rows.map((r) => ({
       universityId: String(r.university_id),
+      name: String(r.name),
       lastEventAt: r.last_event_at ? (r.last_event_at as Date).toISOString() : null,
+      lastHeartbeatAt: r.last_heartbeat_at ? (r.last_heartbeat_at as Date).toISOString() : null,
+      reachable: r.reachable === true,
+      pendingOutbox: num(r.pending_outbox),
+      oldestPendingAgeSeconds: num(r.oldest_pending_age_seconds),
+      clockOffsetMs: num(r.clock_offset_ms),
+      configVersion: r.config_version ? String(r.config_version) : null,
+      platformVersion: r.platform_version ? String(r.platform_version) : null,
       openGaps: Number(r.open_gaps),
       summaries: Number(r.summaries),
     }));
+  }
+
+  /**
+   * 대학 심장박동 (§04 sync.heartbeat, D-60). 대학 상태의 "지금" 을 덮어쓴다.
+   * 수신 원장에 남기지 않는다 — 원서 원장이 아니고, 60초마다 오는 행을 쌓을 이유가 없다.
+   * 같은 심장박동이 두 번 와도 결과가 같다(덮어쓰기).
+   */
+  private async heartbeat(event: IncomingEvent): Promise<IngestResult> {
+    if (event.specversion !== '1.0') throw new SyncRejection('SPECVERSION', 'CloudEvents 1.0 만 받는다.');
+    if (!event.id || !/^urn:k-admission:university:[A-Za-z0-9_-]+$/.test(event.source ?? '')) {
+      throw new SyncRejection('ENVELOPE', 'id·source 가 올바르지 않다.');
+    }
+    const universityId = event.kadmissionuniversity;
+    if (event.source.split(':').pop() !== universityId) {
+      throw new SyncRejection('IDENTITY', 'source 와 kadmissionuniversity 가 일치하지 않는다.');
+    }
+    const d = (event.data ?? {}) as Record<string, unknown>;
+    const count = (v: unknown) => typeof v === 'number' && Number.isInteger(v) && v >= 0;
+    const text = (v: unknown) => typeof v === 'string' && v.length > 0 && v.length <= 64;
+    if (
+      d.universityId !== universityId ||
+      !text(d.platformVersion) ||
+      !text(d.configVersion) ||
+      !count(d.pendingOutbox) ||
+      !count(d.oldestPendingAgeSeconds) ||
+      (d.clockOffsetMs !== undefined && !(typeof d.clockOffsetMs === 'number' && Number.isInteger(d.clockOffsetMs)))
+    ) {
+      throw new SyncRejection('DATA', '심장박동 본문이 스키마(SyncHeartbeatData)와 다르다.');
+    }
+    await this.assertRegistered(universityId);
+
+    await this.db.query(
+      `INSERT INTO university_sync_state
+         (university_id, platform_version, config_version, last_heartbeat_at,
+          pending_outbox, oldest_pending_age_seconds, clock_offset_ms)
+       VALUES ($1,$2,$3,now(),$4,$5,$6)
+       ON CONFLICT (university_id) DO UPDATE
+         SET platform_version = EXCLUDED.platform_version,
+             config_version = EXCLUDED.config_version,
+             last_heartbeat_at = now(),
+             pending_outbox = EXCLUDED.pending_outbox,
+             oldest_pending_age_seconds = EXCLUDED.oldest_pending_age_seconds,
+             clock_offset_ms = EXCLUDED.clock_offset_ms,
+             updated_at = now()`,
+      [
+        universityId,
+        d.platformVersion,
+        d.configVersion,
+        d.pendingOutbox,
+        d.oldestPendingAgeSeconds,
+        typeof d.clockOffsetMs === 'number' ? d.clockOffsetMs : null,
+      ],
+    );
+    return {
+      eventId: event.id,
+      receiptId: `HB-${randomUUID().replace(/-/g, '').slice(0, 24).toUpperCase()}`,
+      acknowledgedAt: new Date().toISOString(),
+      duplicate: false,
+    };
+  }
+
+  /**
+   * 등록된 대학만 받는다. 전에는 모르는 대학의 이벤트가 외래키 오류로 500 이 되어 Relay 가
+   * 중앙 장애로 알고 재시도했다. 400 이면 Relay 는 곧바로 사람이 볼 곳(DEAD)으로 보낸다.
+   * 신원 확인 자체는 mTLS 의 일이다 (M5 T-M5-05).
+   */
+  private async assertRegistered(universityId: string): Promise<void> {
+    const { rows } = await this.db.query(
+      `SELECT 1 FROM university_registry WHERE id = $1 AND status = 'ACTIVE'`,
+      [universityId],
+    );
+    if (rows.length === 0) {
+      throw new SyncRejection('UNKNOWN_UNIVERSITY', `등록되지 않은 대학이다: ${universityId}`);
+    }
   }
 
   private validate(event: IncomingEvent): void {

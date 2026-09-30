@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, DescriptionList, ErrorSummary } from '@wonseoro/krds';
+import { Alert, Button, Card, DescriptionList, ErrorSummary, Field } from '@wonseoro/krds';
 import { SchemaForm, type JsonSchema } from '../../../krds/schema-form';
 import { DocumentStatusList, FileUpload } from '../../../krds/file-upload';
 import { Breadcrumb, STEPS, StepIndicator, type StepNo } from '../../../krds/navigation';
@@ -10,6 +10,7 @@ import {
   ApiError,
   NetworkError,
   type Application,
+  type DocumentSpec,
   type SelfCheck,
   type Submission,
   api,
@@ -51,6 +52,11 @@ export default function ApplyPage({
   /** 서버가 준 추가문항 스키마. 화면은 이걸 보고 필드를 그린다. (v1.1 §A5) */
   const [schema, setSchema] = useState<JsonSchema | null>(null);
   const [schemaVersion, setSchemaVersion] = useState<string | null>(null);
+  /** 공통원서에서 온 항목(1단계)과 이 전형이 받는 서류(4단계). 둘 다 대학 설정에서 온다. (D-56) */
+  const [profileFields, setProfileFields] = useState<string[]>([]);
+  const [documents, setDocuments] = useState<DocumentSpec[]>([]);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelOpen, setCancelOpen] = useState(false);
   /** 전형·모집단위·전형료는 대학 설정이 기준이다. 화면에 박지 않는다. (v1.1 §10 §1) */
   const [catalog, setCatalog] = useState<{
     universityName: string;
@@ -62,7 +68,14 @@ export default function ApplyPage({
   // 원서를 불러오기 전에는 전형을 모른다. 그때는 마감을 판단하지 않는다.
   const deadline = useDeadline(app?.cycleId ?? null);
   const operatingMode = useOperatingMode();
-  const frozen = app?.status === 'FINALIZED';
+  /**
+   * 고칠 수 있는 원서인가. 결제를 시작하면(PAYMENT_PENDING) 더 고칠 수 없다 — 결제가 곧 제출이라
+   * 결제 전 확인을 통과한 내용 그대로 접수된다. 서버도 거절한다. (D-42 · D-55)
+   */
+  const editable = app?.status === 'DRAFT' || app?.status === 'READY';
+  const frozen = app !== null && !editable;
+  /** 결제가 진행 중이거나 확인된 원서 — "결제하기" 대신 "결제 상태 다시 확인" 을 보인다. */
+  const paymentStarted = app?.status === 'PAYMENT_PENDING' || app?.status === 'PAID';
 
   const autosave = useAutosave({
     applicationId,
@@ -88,6 +101,18 @@ export default function ApplyPage({
         const sub = await api.submission(applicationId, applicantId).catch(() => null);
         if (sub) setSubmission(sub.data);
         setStep(6);
+      } else if (res.data.status === 'PAYMENT_PENDING' || res.data.status === 'PAID') {
+        // 결제를 시작한 원서다. 새로고침·재접속으로 결제 상태를 잃으면 지원자가 다시 결제한다 —
+        // 서버가 아는 결제를 되살린다 (재결제 방지, §B4).
+        const check = await api.selfCheck(applicationId, applicantId).catch(() => null);
+        if (check) {
+          setSelfCheck(check.data);
+          const p = check.data.payment;
+          if (p.exists && p.paymentId) {
+            setPayment({ id: p.paymentId, amount: p.amount ?? 0, status: p.status ?? 'UNKNOWN' });
+          }
+        }
+        setStep(5);
       }
     } catch (err) {
       setFailure({
@@ -117,7 +142,7 @@ export default function ApplyPage({
         const t = types.data.find((x) => x.id === app.admissionTypeId);
         const d = depts.data.find((x) => x.id === app.departmentId);
         setCatalog({
-          universityName: cycle.data.universityId,
+          universityName: cycle.data.universityName ?? cycle.data.universityId,
           typeName: t?.name ?? '-',
           departmentName: d?.name ?? '-',
           feeAmount: t?.feeAmount ?? 0,
@@ -135,22 +160,20 @@ export default function ApplyPage({
       .then(({ data }) => {
         setSchema(data.schema as JsonSchema);
         setSchemaVersion(data.schemaVersion);
+        setProfileFields(data.profileFields ?? []);
+        setDocuments(data.documents ?? []);
       })
       .catch(() => setSchema(null));
   }, [applicationId, applicantId]);
 
   /**
    * 어떤 필드를 어느 단계에 보여줄지.
-   * 공통원서에서 넘어오는 항목은 1단계, 나머지는 3단계다.
-   * 스키마에 없는 필드는 어느 단계에도 나타나지 않는다.
+   * 공통원서에서 넘어오는 항목(설정의 `x-profile`)은 1단계, 나머지는 3단계다.
+   * 스키마에 없는 필드는 어느 단계에도 나타나지 않는다. 필드명을 화면에 박지 않는다.
    */
-  const COMMON_FIELDS = ['highSchool', 'graduationYear', 'contactEmail'];
-  const commonCodes = Object.keys(schema?.properties ?? {}).filter((c) =>
-    COMMON_FIELDS.includes(c),
-  );
-  const extraCodes = Object.keys(schema?.properties ?? {}).filter(
-    (c) => !COMMON_FIELDS.includes(c),
-  );
+  const commonCodes = Object.keys(schema?.properties ?? {}).filter((c) => profileFields.includes(c));
+  const extraCodes = Object.keys(schema?.properties ?? {}).filter((c) => !profileFields.includes(c));
+  const documentLabel = (type: string) => documents.find((d) => d.documentType === type)?.label ?? type;
 
   /** 서류 검사 상태를 다시 읽는다. self-check 가 상태와 안내문구를 함께 준다. */
   const refreshDocuments = useCallback(async () => {
@@ -180,9 +203,11 @@ export default function ApplyPage({
     setBusy(true);
     try {
       await autosave.saveNow();
-      const { data } = await api.validate(applicationId, applicantId);
-      setIssues(data.issues);
-      if (data.valid) setStep(5);
+      const res = await api.validate(applicationId, applicantId);
+      // 통과하면 서버가 원서를 작성 완료(READY)로 옮기고 버전이 오른다. 새 ETag 로 이어서 저장한다.
+      if (res.etag) setEtag(res.etag);
+      setIssues(res.data.issues);
+      if (res.data.valid) setStep(5);
     } catch (err) {
       handle(err);
     } finally {
@@ -190,18 +215,28 @@ export default function ApplyPage({
     }
   }
 
+  /** 서버가 아는 결제를 다시 읽는다. 새 결제를 만들지 않는다. */
+  async function restorePayment() {
+    const check = await api.selfCheck(applicationId, applicantId).catch(() => null);
+    if (!check) return;
+    setSelfCheck(check.data);
+    const p = check.data.payment;
+    if (p.exists && p.paymentId) setPayment({ id: p.paymentId, amount: p.amount ?? 0, status: p.status ?? 'UNKNOWN' });
+  }
+
   async function pay() {
     setBusy(true);
     try {
-      const intentKey = newIdempotencyKey('payintent');
-      const intent = await api.createPaymentIntent(applicationId, applicantId, intentKey);
+      // 이미 시작한 결제가 있으면 **그 결제**를 다시 확인한다. 새 결제창을 열지 않는다 (§B4).
+      // 서버도 한 원서에 결제를 하나만 두지만(열린 결제창 재사용·확인 중이면 409), 화면이 먼저 지킨다.
+      let current = payment && payment.status !== 'FAILED' && payment.status !== 'CANCELLED' ? payment : null;
+      if (!current) {
+        const intent = await api.createPaymentIntent(applicationId, applicantId, newIdempotencyKey('payintent'));
+        current = { id: intent.data.paymentId, amount: intent.data.amount, status: 'CREATED' };
+      }
       const verifyKey = newIdempotencyKey('payverify');
-      const verified = await api.verifyPayment(intent.data.paymentId, applicantId, verifyKey);
-      setPayment({
-        id: intent.data.paymentId,
-        amount: intent.data.amount,
-        status: verified.data.status,
-      });
+      const verified = await api.verifyPayment(current.id, applicantId, verifyKey);
+      setPayment({ ...current, status: verified.data.status });
       if (verified.data.status === 'CONFIRMED') {
         // 결제가 확인되면 서버가 이미 접수했다 (D-42). 같은 제출 경로로 결과만 받는다 —
         // 이미 접수된 원서면 그 접수를 그대로 돌려준다. 서버 쪽 자동 접수가 실패했으면 여기서 다시 시도된다.
@@ -209,6 +244,33 @@ export default function ApplyPage({
         setSubmission(data);
         await reload();
         setStep(6);
+      } else {
+        // 결제를 시작했다 — 원서는 이제 고칠 수 없다(PAYMENT_PENDING). 화면을 서버 상태에 맞춘다.
+        await reload();
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.problem.code === 'PAYMENT_IN_PROGRESS') {
+        // 이미 확인 중이거나 확인된 결제가 있다. 다시 결제하지 않게 그 결제를 보여 준다.
+        await restorePayment();
+        setIssues([{ path: '', message: err.problem.detail ?? err.problem.title }]);
+      } else {
+        handle(err);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** 접수 전 취소 (D-7). 결제가 확인된 원서면 대학이 환불을 처리한다 — 자동으로 돈을 움직이지 않는다. */
+  async function cancel() {
+    setBusy(true);
+    try {
+      const { data } = await api.cancel(applicationId, cancelReason, applicantId, newIdempotencyKey('cancel'));
+      setCancelOpen(false);
+      setIssues([]);
+      await reload();
+      if (data.refundRequired) {
+        setIssues([{ path: '', message: '확인된 전형료가 있어 대학이 환불 절차를 안내합니다.' }]);
       }
     } catch (err) {
       handle(err);
@@ -266,6 +328,23 @@ export default function ApplyPage({
     );
   }
 
+  if (app?.status === 'CANCELLED') {
+    return (
+      <Card title="취소된 원서입니다">
+        <ErrorSummary issues={issues} />
+        <p style={{ marginTop: 0 }}>
+          이 원서는 접수 전에 취소되었습니다. 같은 전형에 다시 지원하려면 접수 홈에서 새 원서를 만드십시오.
+        </p>
+        <a href="/" style={{ color: 'var(--krds-primary)' }}>
+          접수 홈으로
+        </a>
+      </Card>
+    );
+  }
+
+  /** 접수 전이면 취소할 수 있다 (D-7). 접수가 끝난 원서는 입학처로 안내한다. */
+  const cancellable = app !== null && ['DRAFT', 'READY', 'PAYMENT_PENDING', 'PAID'].includes(app.status);
+
   return (
     <>
       <Breadcrumb
@@ -291,7 +370,21 @@ export default function ApplyPage({
           <p style={{ marginTop: 0, color: 'var(--krds-fg-muted)', fontSize: 'var(--krds-text-sm)' }}>
             공통원서에서 가져온 정보입니다. 동의하신 항목만 이 대학으로 전달됩니다.
           </p>
-          <SchemaForm schema={schema} values={fields} onChange={update} only={commonCodes} />
+          <SchemaForm
+            schema={schema}
+            values={fields}
+            onChange={update}
+            only={commonCodes}
+            readOnly={!editable}
+          />
+          {commonCodes.length === 0 && (
+            <p style={{ color: 'var(--krds-fg-muted)', fontSize: 'var(--krds-text-sm)' }}>
+              이 전형은 공통원서에서 가져오는 항목이 없습니다.{' '}
+              <a href="/profile" style={{ color: 'var(--krds-primary)' }}>
+                공통원서 작성
+              </a>
+            </p>
+          )}
           <Button onClick={() => setStep(2)}>다음 단계</Button>
         </Card>
       )}
@@ -334,7 +427,13 @@ export default function ApplyPage({
               </>
             )}
           </p>
-          <SchemaForm schema={schema} values={fields} onChange={update} only={extraCodes} />
+          <SchemaForm
+            schema={schema}
+            values={fields}
+            onChange={update}
+            only={extraCodes}
+            readOnly={!editable}
+          />
           <div style={{ display: 'flex', gap: 'var(--krds-space-3)' }}>
             <Button variant="secondary" onClick={() => setStep(2)}>
               이전
@@ -350,16 +449,26 @@ export default function ApplyPage({
             올리신 파일은 악성코드 검사를 거칩니다. 검사 중에는 접수가 완료되지 않습니다.
           </Alert>
 
-          <FileUpload
-            applicationId={applicationId}
-            applicantId={applicantId}
-            documentType="TRANSCRIPT"
-            label="학교생활기록부"
-            onUploaded={() => void refreshDocuments()}
-          />
+          {/* 올릴 서류는 대학 설정이 정한다. 화면에 서류 종류를 박지 않는다. (§A5, D-56) */}
+          {documents.length === 0 && (
+            <Alert tone="info" title="이 전형은 제출 서류가 없습니다" />
+          )}
+          {editable &&
+            documents.map((d) => (
+              <FileUpload
+                key={d.documentType}
+                applicationId={applicationId}
+                applicantId={applicantId}
+                documentType={d.documentType}
+                label={`${d.label}${d.required ? ' (필수)' : ' (선택)'}`}
+                onUploaded={() => void refreshDocuments()}
+              />
+            ))}
 
           <h3 style={{ fontSize: 'var(--krds-text-base)' }}>올린 서류</h3>
-          <DocumentStatusList documents={selfCheck?.documents ?? []} />
+          <DocumentStatusList
+            documents={(selfCheck?.documents ?? []).map((d) => ({ ...d, documentType: documentLabel(d.documentType) }))}
+          />
 
           <div
             style={{ display: 'flex', gap: 'var(--krds-space-3)', marginTop: 'var(--krds-space-4)' }}
@@ -370,9 +479,13 @@ export default function ApplyPage({
             <Button variant="secondary" onClick={() => void refreshDocuments()}>
               검사 상태 새로고침
             </Button>
-            <Button onClick={() => void runValidate()} disabled={busy}>
-              {busy ? '검증 중…' : '검토 단계로'}
-            </Button>
+            {editable ? (
+              <Button onClick={() => void runValidate()} disabled={busy}>
+                {busy ? '검증 중…' : '검토 단계로'}
+              </Button>
+            ) : (
+              <Button onClick={() => setStep(5)}>검토 단계로</Button>
+            )}
           </div>
         </Card>
       )}
@@ -391,13 +504,15 @@ export default function ApplyPage({
                 '서류',
                 (selfCheck?.documents ?? []).length === 0
                   ? '올린 서류 없음'
-                  : (selfCheck?.documents ?? []).map((d) => d.guidance).join(', '),
+                  : (selfCheck?.documents ?? [])
+                      .map((d) => `${documentLabel(d.documentType)} ${d.guidance}`)
+                      .join(', '),
               ],
               [
                 '전형료',
                 catalog ? `${catalog.feeAmount.toLocaleString('ko-KR')}원` : '-',
               ],
-              ['결제 상태', payment?.status ?? '결제 전'],
+              ['결제 상태', payment ? (PAYMENT_LABEL[payment.status] ?? payment.status) : '결제 전'],
               ['현재 서버 시각', formatKst(app?.serverTime ?? null)],
               ['마감 시각', formatKst(app?.deadlineAt ?? null)],
               ['결제 후 수정·취소', '불가능합니다'],
@@ -422,8 +537,12 @@ export default function ApplyPage({
             <Button variant="secondary" onClick={() => setStep(4)}>
               이전
             </Button>
-            <Button onClick={() => void pay()} disabled={busy || deadline.passed}>
-              {busy ? '결제·접수 처리 중…' : '전형료 결제하고 접수'}
+            <Button onClick={() => void pay()} disabled={busy || (deadline.passed && !paymentStarted)}>
+              {busy
+                ? '결제·접수 처리 중…'
+                : paymentStarted || (payment && payment.status !== 'FAILED' && payment.status !== 'CANCELLED')
+                  ? '결제 상태 다시 확인'
+                  : '전형료 결제하고 접수'}
             </Button>
           </div>
         </Card>
@@ -454,9 +573,17 @@ export default function ApplyPage({
                   {selfCheck.centralSync.guidance}
                 </Alert>
               )}
-              <Button variant="secondary" onClick={() => void recheck()}>
-                현재 상태 다시 확인
-              </Button>
+              <div style={{ display: 'flex', gap: 'var(--krds-space-3)', flexWrap: 'wrap' }}>
+                <a
+                  href={`/receipt/${submission.submissionId}`}
+                  style={{ color: 'var(--krds-primary)', alignSelf: 'center' }}
+                >
+                  접수증 보기·인쇄
+                </a>
+                <Button variant="secondary" onClick={() => void recheck()}>
+                  현재 상태 다시 확인
+                </Button>
+              </div>
             </>
           ) : (
             <>
@@ -465,7 +592,7 @@ export default function ApplyPage({
                 items={[
                   ['현재 서버 시각', formatKst(app?.serverTime ?? null)],
                   ['마감 시각', formatKst(app?.deadlineAt ?? null)],
-                  ['결제 검증 상태', payment?.status ?? '확인 필요'],
+                  ['결제 검증 상태', payment ? (PAYMENT_LABEL[payment.status] ?? payment.status) : '확인 필요'],
                   ['제출 후 수정', '불가능합니다'],
                   ['환불', '대학 환불 규정에 따릅니다'],
                 ]}
@@ -485,9 +612,54 @@ export default function ApplyPage({
           )}
         </Card>
       )}
+
+      {cancellable && step !== 6 && (
+        <Card title="원서 취소">
+          {!cancelOpen ? (
+            <Button variant="secondary" onClick={() => setCancelOpen(true)}>
+              이 원서 취소하기
+            </Button>
+          ) : (
+            <>
+              <Alert tone="warning" title="취소하면 되돌릴 수 없습니다">
+                {paymentStarted
+                  ? '결제가 확인된 전형료는 대학이 환불 절차를 안내합니다. 자동으로 환불되지 않습니다.'
+                  : '같은 전형에 다시 지원하려면 새 원서를 만들어야 합니다.'}
+              </Alert>
+              <Field
+                label="취소 사유"
+                value={cancelReason}
+                onChange={setCancelReason}
+                hint="2~500자. 대학에만 기록되고 통합 조회에는 보내지 않습니다."
+                maxLength={500}
+                required
+              />
+              <div style={{ display: 'flex', gap: 'var(--krds-space-3)' }}>
+                <Button variant="secondary" onClick={() => setCancelOpen(false)}>
+                  그만두기
+                </Button>
+                <Button onClick={() => void cancel()} disabled={busy || cancelReason.trim().length < 2}>
+                  {busy ? '취소 처리 중…' : '취소 확정'}
+                </Button>
+              </div>
+            </>
+          )}
+        </Card>
+      )}
     </>
   );
 }
+
+/** 결제 상태를 지원자가 읽을 말로. 확인되지 않은 결제를 "실패" 로 보이게 하지 않는다 (§B4). */
+const PAYMENT_LABEL: Record<string, string> = {
+  CREATED: '결제창을 열었습니다 — 결제를 마치셨다면 상태를 다시 확인해 주십시오',
+  PENDING: '결제 확인 중',
+  UNKNOWN: '결제 확인 중 (결제사 응답 대기)',
+  CONFIRMED: '결제 확인됨',
+  FAILED: '결제되지 않았습니다 — 다시 결제하실 수 있습니다',
+  CANCELLED: '결제가 취소되었습니다 — 다시 결제하실 수 있습니다',
+  REFUNDED: '환불되었습니다',
+};
 
 /**
  * 서버 스키마가 숫자를 요구하는 필드는 숫자로 바꿔 보낸다.
