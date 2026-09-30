@@ -5,7 +5,7 @@
 | **목표** | 두 사람이 각자 개발을 시작할 수 있는 저장소·계약·로컬 인프라를 세운다 |
 | **완료 기준** | `npm install` → `npm run dev:infra` → `admission-api`·`central-api` `/healthz` 200 |
 | **선행 조건** | 없음 |
-| **상태** | 🟡 진행 중 (T-M0-06, T-M0-07 남음) |
+| **상태** | 🟡 7/8 — 제출 PDF 정정(T-M0-08)만 남음 (정정 문구: [07-submission-errata.md](../07-submission-errata.md)) |
 
 ## 노션 확인 대상
 
@@ -24,7 +24,7 @@
 | T-M0-03 | `packages/contracts` 골격 | 공동 | v1.0 §5.6·§9, v1.1 §04 | 상태머신·결제·감사·이벤트·Problem 타입 정의 | ✅ |
 | T-M0-04 | 로컬 Compose 스택 | 권민준 | v1.0 §4 | postgres(대학/중앙 분리)·redis·minio 기동 | ✅ |
 | T-M0-05 | CI 골격 (앱별 독립 잡) | 권민준 | v1.0 §13.1 | contracts/backend/frontend 잡 분리 | ✅ |
-| T-M0-06 | **설계서 첨부 8종 배치** | 송리안 | 전 문서 | `docs/spec-assets/README.md` 10행 전부 ✅ | ⬜ |
+| T-M0-06 | **설계서 첨부 8종 배치** | 송리안 | 전 문서 | `docs/spec-assets/README.md` 10행 전부 ✅ | ✅ (2026-09-27, D-5 — 10종 SHA-256 일치. 2026-09-30 부터 5종은 저장소가 앞섬, 06-notion-changeset) |
 | T-M0-07 | `npm install` + 헬스체크 확인 | 권민준 | — | 두 API `/healthz` 200 | ✅ |
 | T-M0-08 | 제출 PDF "Java LTS" 문구 정정 | 송리안 | ADR-0001, D-3 | 정정본 확보 | ⬜ |
 

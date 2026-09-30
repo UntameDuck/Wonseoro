@@ -9,8 +9,8 @@
 | 02. PostgreSQL ERD | `k-admission-postgresql-ddl.txt` | `infra/db/migrations/0001_init.sql` | ✅ **v1.2 교체 (2026-09-27)** — 저장소 → 노션 업로드 (15,880바이트/397줄) |
 | 03. OpenAPI 계약 | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` | ⚠️ **저장소가 앞섬 (2026-09-30)** — v1.4.0(429 D-51, 흐름 연결 D-55~D-61) 90,088B. 노션 교체 승인 대기 → [06-notion-changeset](../06-notion-changeset.md) |
 | 04. CloudEvents | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | ⚠️ **저장소가 앞섬 (2026-09-30)** — keyId ≤16(D-47) 5,787B. 노션 교체 승인 대기 |
-| 05. Helm 배포 | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` | ⚠️ **저장소가 앞섬 (2026-09-30)** — v1.2(D-44·D-49·D-52) 3,813B. 노션 교체 승인 대기 |
-| 05. Helm 배포 | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` | ⚠️ **저장소가 앞섬 (2026-09-30)** — v1.2 = 차트 렌더링 결과 33,814B. 노션 교체 승인 대기 |
+| 05. Helm 배포 | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` | ⚠️ **저장소가 앞섬 (2026-09-30)** — v1.2(D-44·D-49·D-52) 4,036B. 노션 교체 승인 대기 |
+| 05. Helm 배포 | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` | ⚠️ **저장소가 앞섬 (2026-09-30)** — v1.2 = 차트 렌더링 결과 34,582B. 노션 교체 승인 대기 |
 | 06. 보안정책 | `k-admission-network-rbac.yaml` | `deploy/platform/policies/network-rbac.yaml` | ✅ 배치 (2026-09-27, SHA-256 원본 일치) 4,099B |
 | 06. 보안정책 | `k-admission-vault-policy.hcl.txt` | `deploy/platform/policies/vault-policy.hcl` | ✅ 배치 (2026-09-27, SHA-256 원본 일치) 1,177B |
 | 07. KRDS 와이어프레임 | `k-admission-krds-wireframe.html` | `docs/spec-assets/krds-wireframe.html` | ⚠️ **저장소가 앞섬 (2026-09-30)** — v1.2(결제 = 접수, D-43) 8,548B. 노션 교체 승인 대기 |

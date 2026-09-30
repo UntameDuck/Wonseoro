@@ -12,8 +12,8 @@
 |---|---|---|---|---|---|
 | [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.4.0) | 90,088 | `ca2b9fa0151cbf35143776d6ba40767e865c4ffe5780c6f72eef087023049a48` | D-51 · D-55 ~ D-61 |
 | [§04 CloudEvents](https://app.notion.com/p/3df75ab5debe81d68e37fabd3678dcc4) | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | 5,787 | `56719bada4a9439b5908df690508876b616bf5bfc53b7765fbee23b173b6f5db` | D-47 |
-| [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` (v1.2) | 3,813 | `a6c7bb1bacdb223e82a16ad806a36973a7486ddc146c2cfcc56d1b1edb73dfb5` | D-44 · D-49 · D-52 |
-| [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` (v1.2, 차트 렌더링) | 33,814 | `9b11f4c90e4faf6e80e85625b02bd7c22bf890f83c0fd6924256949746b35eb3` | D-44 |
+| [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` (v1.2) | 4,036 | `1aaef0db712e1d9a15da41fb86b7832a3da8c6decfdcd5992a57bb071e5b1975` | D-44 · D-49 · D-52 |
+| [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` (v1.2, 차트 렌더링) | 34,582 | `9446584b3462120941697fab13b5399a22bd5ffcc6430da592953ec5b20b5706` | D-44 · D-52 |
 | [§07 KRDS](https://app.notion.com/p/3df75ab5debe812db3d1e06d0761e38e) | `k-admission-krds-wireframe.html` | `docs/spec-assets/krds-wireframe.html` (v1.2) | 8,548 | `698d3abda827340f3abd40fceeb8b7ae63d7e2a6ea8d0e707d3cf4308562995e` | D-43 |
 
 파일을 다시 고치면 이 표의 바이트·해시도 다시 적는다:
@@ -77,9 +77,13 @@
 「Runtime 기준」 아래에 절을 더한다:
 
 > **노드 장애 흡수 (D-52, ADR-0008)**
-> - zone 분산은 `DoNotSchedule` + **`nodeTaintsPolicy: Honor`** — 장애로 taint 된 노드를 분산 계산에서 빼야 zone 이 2개일 때도 대체 Pod 가 살아 있는 zone 에 놓인다. 가능하면 zone 3개
-> - 노드 장애 판정 시간(`node-monitor-grace-period`)은 기본(약 50초) 대신 대학 SLO 에 맞춘다. 판정 전 구간은 Service 가 죽은 Pod 로 요청을 보낸다
-> - Edge(Gateway) 는 연결 실패·연결 시간 초과를 다른 엔드포인트로 1회 재시도한다. 모든 변경 요청에 Idempotency-Key 가 있어 POST/PATCH 도 안전하다
+> - zone 분산은 `DoNotSchedule` + **`nodeTaintsPolicy: Honor`** + **`matchLabelKeys: [pod-template-hash]`** — 장애로 taint 된 노드를 분산 계산에서 빼야
+>   zone 이 2개일 때도 대체 Pod·HPA 확장 Pod 가 살아 있는 zone 에 놓인다(기본값이면 zone 을 3개로 늘려도 막힌다). rollout 은 새 버전 Pod 끼리 분산을 센다
+> - **계획 정비 뒤 재분산** — Honor 는 cordon 된 zone 도 빼므로 drain 동안 Pod 가 한 zone 에 모이고 저절로 다시 나뉘지 않는다. uncordon 뒤 rollout restart(또는 descheduler)
+> - **PgBouncer 정상 종료** — preStop 10초 → SIGTERM(기존 클라이언트를 기다림), 앱 DB 풀은 연결을 사용 50회·idle 10초로 돌린다, grace 60초. 없으면 rolling restart 때 쓰던 연결이 SIGKILL 로 끊긴다
+> - 노드 장애 판정 시간(`node-monitor-grace-period`)은 기본(약 50초) 대신 대학 SLO 에 맞춘다. 판정 전 구간은 Service 가 죽은 Pod 로 연결을 보낸다
+> - **Edge(Gateway) 는 연결 실패·연결 시간 초과를 다른 엔드포인트로 1회 재시도한다** — 로컬 실측에서 남은 실패는 거의 다 죽은 Pod 로 간 연결 시간 초과였다.
+>   모든 변경 요청에 Idempotency-Key 가 있어 POST/PATCH 도 안전하다
 > - Edge 구현은 Gateway API 를 지원하는 유지보수 중인 컨트롤러로 한다 — ingress-nginx 는 2026년 3월 상위 프로젝트가 은퇴했다(D-53)
 
 「첨부」 절을 바꾼다:
@@ -87,7 +91,7 @@
 > `k-admission-values-m.yaml` — M Profile values (v1.2). `k-admission-runtime.yaml` — 차트 + values-m 의 **렌더링 결과**(v1.2).
 > 손으로 쓰지 않는다: 차트나 values-m 을 고치고 `scripts/render-runtime-attachment.mjs` 로 다시 만든다(CI 가 드리프트를 막는다).
 > v1.2 에서 바뀐 것 — NODE_ENV·포트 3001·프로브 `/healthz`·`/readyz`, 대조는 앱 안 스케줄러, 마감·설정 버전을 배포값에서 제거(2인 승인 우회 차단),
-> Pod 당 커넥션 38(최대 391 ≤ 예산 400), Peak Mode 예약 시각은 비우고 `peak-schedule.yaml` 에서 온다(D-49), `nodeTaintsPolicy: Honor`.
+> Pod 당 커넥션 38(최대 391 ≤ 예산 400), Peak Mode 예약 시각은 비우고 `peak-schedule.yaml` 에서 온다(D-49), `nodeTaintsPolicy: Honor`·`matchLabelKeys`, PgBouncer 정상 종료(preStop·grace 60초).
 
 「서류 검사 워커」 설명에 더한다 (D-58 — values-m·runtime 첨부는 그대로. 엔진은 대학 values 에서 켠다):
 
@@ -123,8 +127,8 @@
 | 6. Central Sync 2시간 차단 | **실제 120분.** 원서 24건(접수 18·취소 6) 모두 처리, API Ready·자율 운영 모드 유지, DEAD 0, 복구 10초 뒤 24건 전량 전송·중앙 수신 24/24(event loss 0), Pod 재시작 0 | `central-outage-realtime-2026-09-30T01-59-27-784Z.json` |
 | 8. Redis 장애 | 접수 흐름 무영향(현재 Redis 미사용) | `redis-outage-kind-2026-09-29T17-16-19-213Z.json` |
 | 9. Object Storage 단절 | 카탈로그·작성·저장 지속, 직접 업로드만 실패, 복구 후 정상 | `object-storage-outage-2026-09-28T06-14-19-725Z.json` |
-| 10. API Node 강제 종료 | drain 무중단(879건 실패 0). 강제 정지는 NotReady 판정(49초)까지 약 10% 끊김 → ADR-0008 | `node-failure-kind-2026-09-29T18-26-14-638Z.json` |
+| 5. PG callback 1~30분 지연 | **실제 시간.** 1·5·15·30분 지연 8건 모두 자동 접수 — 콜백 경로 PG 확정 뒤 4.7~7.9초, 콜백 없는 폴링 경로 49.9~171.3초. 이중 확정·중복 접수 0 | `pg-delay-realtime-2026-09-30T06-43-39-291Z.json` |
+| 10. API Node 강제 종료 | 제어 1 + 워커 2(zone 2개), 노드 판정 grace 16초, 부하는 클러스터 안. drain 0/666, 정비 뒤 재분산 0/1,139. 강제 정지는 첫 시도 6.1%·재시도 3회 뒤 체감 1.4% — 실패는 거의 다 NotReady(22초) 전 죽은 Pod 로 간 연결 시간 초과(Edge 재시도 대상). 대체 Pod 10초 뒤 살아 있는 zone 에 Ready | `node-failure-kind-2026-09-30T15-46-21-045Z.json` |
 | 11. 학교 NAT + 봇 | 정상 사용자 429 = 0, 봇 78~85% 거절, 재시작 0 | `nat-bot-kind-2026-09-29T17-13-42-873Z.json` |
 | 13. 대학 간 장애 격리 | A 전면 정지 중 B 접수·중앙 반영, A 복구 후 접수 | `isolation-2026-09-27T16-42-39-057Z.json` |
 
-시나리오 5(PG 지연)·10 재측정 결과는 시험이 끝나면 이 표에 더한다.

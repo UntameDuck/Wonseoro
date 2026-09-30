@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-30 (**M4 진행** — 맡겨진 결정 정리: D-44 ⑦·D-47·D-51·D-52·D-53 결정·저장소 반영, 노션 반영은 승인 대기. **T-M4-35 중앙 2시간 실제 단절 통과**, T-M4-34 PG 지연 실제 시간 시험 진행 중. **미완결 기능 전수 점검 D-55 ~ D-61** — 아래 「흉내·미연결 점검」)
+> 최종 갱신: 2026-10-01 (**M4 진행 20/28** — T-M4-35 중앙 2시간·**T-M4-34 PG 1~30분 지연 실제 시간 통과**, 리더 잠금 결함 D-54 수정, T-M4-39 다중 노드 재측정(ADR-0008·측정 도구 결함 수정), 미완결 기능 전수 점검 D-55 ~ D-61. **제품 완성까지 남은 것은 아래 「완성까지 남은 단계」**)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -10,20 +10,20 @@
 
 ## 현재 지점
 
-**M0·M1·M2·M3 완료, M4 진행 중** (19/28). MVP가 화면에서 끝까지 동작하고, 로컬 축소 환경에서 대학 간 장애 격리·동시 Finalize·DB 연결 상한·Object Storage 장애 격리·HPA 커스텀 지표·signed GitOps Pull·예약 Peak Mode 전환·전 서비스 관측성(지표·Trace·구조화 로그)·업무 KPI 대시보드·학교 NAT 뒤 정상 사용자 보호·**중앙 2시간 단절 중 접수 지속과 event loss 0** 을 증명했다.
+**M0·M1·M2·M3 완료, M4 진행 중** (20/28). MVP가 화면에서 끝까지 동작하고, 로컬 축소 환경에서 대학 간 장애 격리·동시 Finalize·DB 연결 상한·Object Storage 장애 격리·HPA 커스텀 지표·signed GitOps Pull·예약 Peak Mode 전환·전 서비스 관측성(지표·Trace·구조화 로그)·업무 KPI 대시보드·학교 NAT 뒤 정상 사용자 보호·**중앙 2시간 단절 중 접수 지속과 event loss 0**·**PG 확정 1~30분 지연에도 사람 손 없이 한 번만 접수**를 증명했다.
 
 | 단계 | 진행 | 비고 |
 |---|---|---|
 | M0 기반 | 7/8 | 제출문서 정정(T-M0-08)만 남음 |
 | M1 접수 Core | **14/14** | ✅ |
 | M2 결제·Finalize·화면 | **24/24** | ✅ Demo Gate 1~5 통과 |
-| M3 운영 안전장치 | **14/15** | ✅ **종료 2026-09-27** — T-M3-03 WORM·T-M3-06 JWKS 는 M5 |
-| **M4 분산 실증** | **19/28** | ◀ 진행 중 — 차트·kind·Flux Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표·Peak Mode·계측·로그 마스킹·KPI 대시보드·NAT Adaptive Throttling·Redis 장애·중앙 2시간 단절 ✅, PG 지연·노드 장애 🟡 |
+| M3 운영 안전장치 | **13/15** (+🟡 2) | ✅ **종료 2026-09-27** — 🟡 T-M3-03 WORM·T-M3-06 JWKS 는 M5 |
+| **M4 분산 실증** | **20/28** | ◀ 진행 중 — 차트·kind·Flux Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표·Peak Mode·계측·로그 마스킹·KPI 대시보드·NAT Adaptive Throttling·Redis 장애·중앙 2시간 단절·PG 지연 ✅, 노드 장애 🟡 |
 | M5 신뢰성·보안·접근성 | 0/35 | |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 77/139 태스크** (🟡 부분 완료 별도). **404개 테스트**
-(admission-api 312 · server-kit 49 · central-api 28 · event-relay 7 · document-service 8, 2026-09-30).
+**총 78/139 태스크** (✅ 만 센다. 🟡 3 — T-M3-03·T-M3-06·T-M4-39). **405개 테스트**
+(admission-api 312 · server-kit 50 · central-api 28 · event-relay 7 · document-service 8, 2026-10-01) — DB 없는 실행 231 pass·174 skip·실패 0.
 DB 포함 실행(CI 재현 DB)은 admission-api 3 skip(`ADMIN_API_TOKEN` 미설정) 외 전부 pass.
 배포 스크립트 시험 별도: Peak Mode 예약 계산 9건(`npm run test:m4:peak-schedule`), 대시보드·KPI 규칙 일관성(`npm run test:m4:observability`).
 DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`)·로그 우회 금지 검사(`scripts/check-logging.mjs`)·차트 lint·runtime 첨부 드리프트 검사(`scripts/render-runtime-attachment.mjs --check`)·**계약 검사(`scripts/check-contracts.mjs`)** CI 포함.
@@ -93,7 +93,7 @@ CI 와 같은 순서를 로컬 빈 PostgreSQL 컨테이너로 재현하면 CI �
 | D-60 | §04 심장박동 송수신 · 내 원서 대학별 확인 불가 · 이벤트 버전 확장 속성 |
 | D-61 | §A9 시각 — 노드–DB offset 측정, DB 커밋 시각, 초과 노드 Finalize 503 |
 
-kind 에는 아직 올리지 않았다 — 다음 kind 작업(T-M4-34·T-M4-39 재측정) 때 이미지를 다시 만들고 `seed-dev.sql` 을 다시 적용한다.
+✅ (2026-10-01) kind A·B 에 최신 이미지(API·Relay·서류 워커)·중앙 컨테이너 재배포, `seed-dev.sql` 재적용. 두 대학 심장박동이 중앙에 도착하고, 중앙 단절 1분 사전 점검(접수·재전송·중앙 반영) 11/11 통과.
 
 ### 화면 캡처 (2026-09-30)
 
@@ -103,6 +103,40 @@ kind 에는 아직 올리지 않았다 — 다음 kind 작업(T-M4-34·T-M4-39 �
 접수증에 전형·모집단위·상태 없음(U-6, T-M2-11 인수기준), 콘솔이 불러오는 중에 "정책 없음" 경고(U-9) 등.
 
 ---
+
+## 완성까지 남은 단계 (2026-10-01 전수 점검)
+
+**139개 중 78개 완료, 61개 남음**(🟡 부분 완료 3개 — T-M3-03·T-M3-06·T-M4-39 — 는 남은 쪽에 센다).
+코드에 TODO·FIXME 는 없다. 남은 일은 태스크 표와 아래 목록에 전부 있다. 흉내 구현(헤더 인증·관리자 공유 토큰·Mock PG·Mock 검사 엔진)은
+운영 모드에서 기동이 막혀 있다 — 그 넷을 실물로 바꾸는 것이 "제품" 과 "시연" 의 차이다.
+
+| 누가 할 수 있나 | 개수 | 태스크 |
+|---|---|---|
+| **A. AI 가 이 PC 에서 끝낼 수 있다** (코드·CI·kind) | **41** | T-M3-03(WORM — MinIO Object Lock 으로), T-M3-06(JWKS 캐시 — 로컬 OIDC 와 함께) · T-M4-10(Outbox 파티션·보관) · T-M5-01~10 보안 통제(인증 T-M5-02·MFA T-M5-10 은 로컬 OIDC 발급자로 먼저) · T-M5-20~29 보안 파이프라인(비밀 스캔·SAST·SCA·SBOM·이미지·IaC 스캔·보안 시험·DAST·서명·admission controller) · T-M5-40~47 접근성 · T-M5-62·63·65(복구 검증 자동화·Writer fencing·만료 경보) · T-M6-01·02·03·06·07·11·14(온보딩 도구·호환 시험·CSP 사전 점검·상태 페이지·최소 정보 지원 화면·처리 흐름도·온보딩 문서) |
+| **B. 외부 환경이 있어야 한다** (K-PaaS·HA DB·PG 계약) | **12** | T-M4-06(DB HA 계층) · T-M4-30·31·32(부하 500·1,500·3,000 VU) · T-M4-36(부하 중 DB Failover) · T-M4-39 판정(Edge 재시도) · T-M4-41(6시간 Soak) · T-M5-60·61·64(Multi-AZ·PITR·DR 훈련) · T-M6-04·05(실 PG sandbox·정산 실계정) |
+| **C. 사람·기관이 해야 한다** | **8** | T-M0-08(제출 PDF 정정 — 문구 준비됨) · T-M5-48(KWCAG 수동 검사) · T-M6-08·09(런북·운영 캘린더 확정) · T-M6-10(War-room 훈련) · T-M6-12(영향평가) · T-M6-13(Compliance 실증) · T-M6-15(대학 Shadow Test) |
+
+태스크 밖에 남은 것:
+
+| 항목 | 누가 | 근거 |
+|---|---|---|
+| 노션 반영(첨부 5종·본문) | 사람 — AI 노션 쓰기가 막혀 있다 | [06-notion-changeset.md](06-notion-changeset.md) |
+| 화면 결함 U-1~U-11 | AI (A) — 접근성 작업과 함께 | [screenshots/README.md](screenshots/README.md) |
+| 실 clamd 연동 확인 (D-58) | AI (A) — T-M5-08 | 어댑터는 있다 |
+| Peak Mode 예약 워크플로 켜기 | 사람 — 서명키·저장소 변수 | ADR-0006 |
+| 실 인증(대학 IdP·간편인증)·실 PG 계약·서명키·레지스트리 | 기관·운영 | M5·M6 |
+
+**A 를 하는 순서(권장)** — 지원자가 바로 체감하는 것부터, 뒤로 갈수록 운영 준비:
+
+1. 화면 결함 U-1~U-11 + 접근성 T-M5-40~47 — 검증 오류 문구·마감 배너 날짜·접수증 항목 등
+2. 보안 파이프라인 T-M5-20~29 — CI 에 스캔·SBOM·서명을 붙인다(운영 서명키만 사람)
+3. 인증 — 로컬 OIDC 발급자(개발용 컨테이너)로 `AUTH_MODE=gateway`·RBAC 6역할·관리자 MFA·JWKS 캐시(T-M5-02·10, T-M3-06)
+4. 보안 통제 T-M5-01·03~09 — 필드 암호화·SSRF 출구 허용 목록·실 clamd·Vault 경로 분리·mTLS
+5. T-M4-10 Outbox 파티션·보관 — DDL 변경이라 노션 §02 첨부 교체가 따른다
+6. 운영 자동화 T-M5-62·63·65·T-M3-03 — 복구 검증·Writer fencing·만료 경보·WORM
+7. Pilot 도구·문서 T-M6-01·02·03·06·07·11·14
+
+A 를 다 해도 **B·C 20개**가 남는다 — K-PaaS 시험 환경·실 PG sandbox·대학 협조가 있어야 끝난다.
 
 ## 다음 개발 목표 (2026-09-29 설정)
 
@@ -123,10 +157,10 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 | ID | 시험 | 로컬 방식 |
 |---|---|---|
 | T-M4-33 | 같은 원서 Finalize 100회 동시 | ✅ 100건 성공 → Submission·Outbox·감사 각 1건 |
-| T-M4-34 | PG 지연·timeout·콜백 1~30분 지연 | 🟡 SLOW·UNKNOWN 자동 복구는 시간 압축 통과. 실제 시간 판 스크립트·Mock PG 지연 모드 준비 완료 — 중앙 시험 뒤 실행 |
+| T-M4-34 | PG 지연·timeout·콜백 1~30분 지연 | ✅ 실제 시간 — 1·5·15·30분 지연 8건 모두 자동 접수(콜백 경로 확정 뒤 4.7~7.9초, 폴링 경로 49.9~171.3초), 이중 확정·중복 접수 0 (`pg-delay-realtime-2026-09-30T06-43-39-291Z.json`). 이 시험에서 리더 잠금 결함(D-54)을 찾아 고쳤다 |
 | T-M4-35 | 중앙 Sync 차단 | ✅ 중앙 2시간 실제 단절 통과 — 원서 24건 처리·DEAD 0·event loss 0·복구 10초 뒤 전량 전송·재시작 0 (`central-outage-realtime-2026-09-30T01-59-27-784Z.json`) |
 | T-M4-38 | Object Storage 지연·단절 | ✅ MinIO 완전 단절 중 카탈로그 20회 오류 0·원서 생성/자동저장 지속, 직접 업로드만 실패. 복구 후 업로드·서버 검증 정상 (**로컬 축소 환경**) |
-| T-M4-39 | API Pod·노드 강제 종료 | 🟡 Pod 삭제·RollingUpdate 오류 0, 다중 노드 drain 무중단. 노드 강제 정지는 NotReady 판정까지 약 1분·요청 10% 끊김 → **ADR-0008 로 결정**(nodeTaintsPolicy Honor·판정 시간 단축·Edge 1회 재시도). 로컬 재측정 대기 |
+| T-M4-39 | API Pod·노드 강제 종료 | 🟡 drain·정비 뒤 재분산 무중단, 노드 강제 정지 첫 시도 6.1%·체감 1.4%(NotReady 전 죽은 Pod 로 간 연결) — Edge 재시도는 K-PaaS 에서 판정 (ADR-0008) |
 
 ### 🎯 목표 3 — 차트에 남은 운영 기능 · ✅ 로컬에서 할 수 있는 것 완료 (다음 목표는 아래 「목표 5」)
 
@@ -146,9 +180,10 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 |---|---|
 | T-M4-40 | ✅ 지원자 단위 Adaptive Throttling(ADR-0007) — IP 미사용, 지원자×요청 종류 버킷 + 위험점수, 정상 세션 최종제출 불차단, 429+Retry-After, `THROTTLE_MODE`. kind NAT 시나리오 세 번 모두 정상 사용자 429 = 0·봇 78~85% 거절. 과부하 중 멱등 기록 실패로 **API 프로세스가 죽던 결함**을 찾아 고쳤다 — 수정 이미지로 반복해 재시작 0·정상 사용자 429 0 확인. 5xx·지연은 봇 없는 기준 실행에서도 같아 축소 환경 용량 한계다. OpenAPI 429 는 D-51 |
 | T-M4-37 | ✅ Redis 정지·재기동+FLUSHALL 중 접수 흐름 무영향 — 현재 구현이 Redis 를 쓰지 않는다. 세션을 Redis 에 두는 인증(M5) 때 다시 시험 |
-| T-M4-39 | 🟡 다중 노드 kind(`kind-univ-a-multinode.yaml`, 시험 때만 만들고 지운다): drain 무중단. 강제 정지 때 DB 연결 시간 제한이 없어 전체가 멈추던 결함 수정 → 66초·약 10% 끊김 후 자동 회복. Edge 재시도·노드 판정 시간·zone 3개 여부는 D-52 |
+| T-M4-39 | 🟡 다중 노드 kind(제어 1 + 워커 2, zone 2개) 재측정(2026-09-30, **부하는 kind 네트워크 안 컨테이너**): 계획 정비(drain) 0/666·정비 뒤 재분산 0/1,139 — 무중단. 노드 강제 정지는 첫 시도 6.1%·3번 재시도 뒤 사용자 체감 1.4%, 실패는 거의 다 NotReady(grace 16초 → 22초) 전 죽은 Pod 로 간 연결 시간 초과 — Edge 재시도(ADR-0008)가 흡수할 대상이라 K-PaaS 에서 판정. 대체 Pod 는 축출 10초 뒤 살아 있는 zone 에 Ready `node-failure-kind-2026-09-30T15-46-21-045Z.json`. 이 과정에서 고친 것: `nodeTaintsPolicy: Honor`·`matchLabelKeys`, 정비 뒤 재분산 절차(Honor 만 두면 정비 뒤 한 zone 에 모여 다음 장애가 전면 장애), PgBouncer 정상 종료(preStop·grace 60초)·앱 DB 풀 연결 사용 50회로 돌리기(rolling restart 체감 실패 2 → 0), 측정 도구 결함 둘(동기 kubectl·Docker Desktop 포트 전달 멈춤 — 이전 "약 10%·66초" 는 부풀려진 값). PgBouncer `trafficDistribution` 은 실측 뒤 기본에서 뺐다 |
 | T-M4-35 | ✅ 중앙 2시간 실제 단절 통과 — 원서 24건 처리·DEAD 0·event loss 0·복구 10초 뒤 전량 전송·재시작 0 (`central-outage-realtime-2026-09-30T01-59-27-784Z.json`). 단절 중 대조가 `CENTRAL_ACK_MISSING` 13건을 올렸다(30분 넘은 미확인 — 설계대로의 신호, 복구 뒤 다음 대조에서 자동 해소 확인 예정) |
-| **다음** | ② 이미지 재빌드(Mock PG 지연 모드·CORS) → **T-M4-34 실제 시간 판** (`kubectl set env deploy/univ-a-api MOCK_PG_CONFIRM_DELAYS_S=60,300,900,1800` → `node tests/m4/pg-delay-realtime.mjs`, 약 35분 → env 제거) ③ **T-M4-39 재측정** — `kind-univ-a-multinode-tuned.yaml` 로 판정 시간 단축·`nodeTaintsPolicy: Honor` 재배치 확인 |
+| T-M4-34 | ✅ PG 확정 1~30분 지연 실제 시간 통과 — 위 목표 2 |
+| **다음** | 로컬에서 할 수 있는 M4 기능 시험은 끝났다. 남은 M4(T-M4-06·10·30~32·36·41, T-M4-39 판정)는 K-PaaS 환경이 필요하다 — 아래 「완성까지 남은 단계」 |
 
 ### 🎯 목표 4 — 노션 반영 · 저장소 쪽은 끝, **노션 쓰기 승인 대기** (2026-09-30)
 

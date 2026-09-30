@@ -807,12 +807,13 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 |---|---|
 | **발견** | 2026-09-30 (T-M4-39 다중 노드 kind 시험) |
 | **충돌** | §08 시나리오 10 · M4 T-M4-39 는 "API Node 강제 종료 → 무중단" 을 요구한다. 차트는 API·PgBouncer 2개 이상, zone 분산, PDB, `maxUnavailable: 0`, preStop 을 갖췄다. 그러나 노드가 **예고 없이** 죽으면 쿠버네티스가 그 노드를 NotReady 로 판정할 때까지(kind 기본값에서 49초) Service 가 죽은 Pod 로 요청·DB 연결을 계속 보낸다. |
-| **실측(축소 환경)** | 계획 정비(drain)는 무중단 — 요청 879건 실패 0. 강제 정지는 **정지 1.5초 뒤부터 66.6초까지 요청의 약 10%(1,681건 중 160건)가 2초 안에 응답받지 못했고**, 이후 노드가 죽은 채로 스스로 회복했다. 수정 전에는 DB 연결 시간 제한이 없어 141초 내내 72% 가 실패했다(노드 하나의 장애가 전체 장애) — 쿼리 시간 제한·끊긴 연결 폐기로 고쳤다. `tests/m4/results/node-failure-kind-2026-09-29T18-05-05-487Z.json`(전)·`…18-26-14-638Z.json`(후) |
+| **실측(축소 환경)** | 계획 정비(drain)는 무중단 — 요청 879건 실패 0. 강제 정지는 **정지 1.5초 뒤부터 66.6초까지 요청의 약 10%(1,681건 중 160건)가 2초 안에 응답받지 못했고**, 이후 노드가 죽은 채로 스스로 회복했다. 수정 전에는 DB 연결 시간 제한이 없어 141초 내내 72% 가 실패했다(노드 하나의 장애가 전체 장애) — 쿼리 시간 제한·끊긴 연결 폐기로 고쳤다. `tests/m4/results/node-failure-kind-2026-09-29T18-05-05-487Z.json`(전)·`…18-26-14-638Z.json`(후). **⚠️ 이 수치(약 10%·66초)는 측정 도구로 부풀려졌다** — 아래 「재측정」 |
+| **재측정 (2026-09-30)** | 측정 도구 결함 둘을 찾았다 — 시험 스크립트가 부하 중 `kubectl` 을 동기로 불러 자기 이벤트 루프를 멈춰 요청을 한꺼번에 timeout 으로 셌고, Windows 호스트 → Docker Desktop 포트 전달이 노드 컨테이너 정지 때 50초 넘게 막혔다(클러스터 안 NodePort·Pod·DB 는 정상). 부하를 kind 네트워크 안 컨테이너로 옮기고 grace 16초·차트 결정값으로 다시 쟀다: drain 0/666, 정비 뒤 재분산 0/1,139, **노드 강제 정지 첫 시도 6.1%·체감 1.4%(3번 재시도 뒤)** — 실패는 거의 다 NotReady(22초) 전 죽은 Pod 로 간 연결 시간 초과(그 뒤 65~125초에 구간당 2~9건, 원인 미확인). 대체 Pod 는 살아 있는 zone 에 10초 뒤 Ready `node-failure-kind-2026-09-30T15-46-21-045Z.json` |
 | **판정** | 앱이 할 수 있는 것은 했다: 매달린 DB 연결을 10초 안에 버리고 503 재시도 안내, 멱등키로 재시도를 안전하게. 남은 구간은 플랫폼 몫이다 — ① Edge/Ingress 가 연결 실패·시간 초과를 다른 Pod 로 재시도(모든 변경 요청에 Idempotency-Key 가 있어 POST/PATCH 재시도도 안전하다), ② K-PaaS 의 노드 장애 판정 시간(`node-monitor-grace-period`)을 대학 SLO 에 맞게 조정, ③ PgBouncer 를 API Pod 옆(sidecar)으로 옮겨 노드 간 DB 경로 의존을 없애는 안을 K-PaaS 부하 시험 때 비교. 또한 차트·첨부가 zone 분산을 `DoNotSchedule` 로 두어 **zone 이 2개면 한 zone 이 죽는 동안 대체 Pod 를 남은 zone 에 둘 수 없다**(maxSkew 1) — 3개 zone 또는 `minDomains` 검토가 필요하다(로컬에서는 기본 toleration 300초라 재배치 전에 노드를 되살려 미관측). |
-| **결정 (2026-09-30, ADR-0008)** | ① zone 분산에 **`nodeTaintsPolicy: Honor`** — 장애로 taint 된 노드를 분산 계산에서 빼 zone 2개에서도 대체 Pod 가 살아 있는 zone 에 놓인다(`DoNotSchedule` 유지, 가능하면 zone 3개) ② 노드 판정 시간은 대학 SLO 에 맞춰 줄인다(grace ≥ 상태 보고 주기 × 4) ③ **Edge 가 연결 실패·연결 시간 초과를 다른 엔드포인트로 1회 재시도**하는 것을 플랫폼 필수 요구로 둔다(POST/PATCH 포함 — 멱등키) ④ Edge 는 Gateway API 컨트롤러(D-53) ⑤ PgBouncer sidecar 는 K-PaaS 부하 시험 때 비교 |
-| **저장소 반영** | 🟡 DB 풀 시간 제한·끊긴 연결 폐기·503(`server-kit` db, 문제 필터), 다중 노드 시험(`kind-univ-a-multinode.yaml`·`values-multinode.yaml`·`node-failure-kind.mjs`). ✅ (2026-09-30) 차트 `nodePlacement.nodeTaintsPolicy: Honor`(values·values-m v1.2), 판정 시간 비교용 `kind-univ-a-multinode-tuned.yaml`(grace 16초·상태 보고 4초), 시험에 "죽은 노드 Pod 축출 → 대체 Pod 가 살아 있는 zone 에 Ready" 단계 추가. 재측정 대기 |
+| **결정 (2026-09-30, ADR-0008)** | ① zone 분산에 **`nodeTaintsPolicy: Honor` + `matchLabelKeys: [pod-template-hash]`** — 장애 노드를 분산 계산에서 빼 zone 2개에서도 대체·확장 Pod 가 살아 있는 zone 에 놓인다(zone 3개로도 기본값의 막힘은 안 풀린다) ② **정비 뒤 재분산**(uncordon 뒤 rollout restart·descheduler) — Honor 는 cordon 된 zone 도 빼 정비 동안 한 zone 에 모인다(재분산 없이 노드를 멈추자 전면 장애 실측) ③ **PgBouncer 정상 종료** — preStop 10초·grace 60초·앱 풀이 연결을 사용 50회·idle 10초로 돌림(rolling restart 체감 실패 2 → 0. 시간 기준 수명은 pg-pool 대기열 멈춤으로 버렸다) ④ 노드 판정 시간은 대학 SLO 에 맞춰 줄인다(grace ≥ 상태 보고 × 4) ⑤ **Edge 가 연결 실패·연결 시간 초과를 다른 엔드포인트로 1회 재시도**(POST/PATCH 포함 — 멱등키) — 남은 실패가 바로 이것이다 ⑥ Edge 는 Gateway API 컨트롤러(D-53) ⑦ PgBouncer `trafficDistribution`(PreferSameZone)은 쓰지 않는다 — 이득이 작고 rolling restart 체감 실패 10건 ⑧ PgBouncer sidecar 는 K-PaaS 부하 시험 때 비교 |
+| **저장소 반영** | 🟡 DB 풀 시간 제한·끊긴 연결 폐기·503(`server-kit` db, 문제 필터), 다중 노드 시험(`kind-univ-a-multinode.yaml`·`values-multinode.yaml`·`node-failure-kind.mjs`). ✅ (2026-09-30) 차트 `nodeTaintsPolicy: Honor`·`matchLabelKeys`(values·values-m v1.2), PgBouncer preStop·grace·`server-kit` 연결 사용 횟수(`maxUses` 50), 선택 사항 `database.pooler.trafficDistribution`(기본 끔), 판정 시간 비교용 `kind-univ-a-multinode-tuned.yaml`, 시험에 정비 뒤 재분산·죽은 노드 Pod 축출·DB 세션 표본·구간별 경로 측정·이벤트 루프 지연 단계, 부하 생성기를 kind 네트워크 안 컨테이너로(`helpers/load-users.mjs`) |
 | **노션 반영** | ⬜ §08 시나리오 10 합격 기준·§05 노드 장애 흡수 절 — [06-notion-changeset.md](06-notion-changeset.md) (노션 쓰기 승인 대기) |
-| **상태** | 🟡 결정 — 로컬 재측정·노션 반영 대기 |
+| **상태** | 🟡 결정·로컬 재측정 완료 — Edge 재시도는 K-PaaS 에서 실측, 노션 반영 대기 |
 
 ---
 
@@ -841,7 +842,8 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **판정** | **트랜잭션 잠금으로 바꾼다** — 잠금 전용 연결에서 BEGIN → `pg_try_advisory_xact_lock` → 작업(다른 연결) → COMMIT. transaction 풀은 트랜잭션 동안 서버 연결을 바꾸지 않고, 트랜잭션이 끝나면 잠금이 반드시 풀린다. 이 트랜잭션은 행을 잠그지 않고 READ COMMITTED 라 스냅샷도 놓으므로 비용은 연결 하나(전과 같다). 키는 **두 정수 키 `(0x4B41, hashtext(name))`** — 운영에 이미 새어 남은 한 정수 키 세션 잠금이 있어도 새 잠금을 막지 못한다. |
 | **저장소 반영** | ✅ (2026-09-30) `common/scheduling/leader-lock.ts` · 회귀 시험 `leader-lock.integration.test.ts`(작업 성공·실패 뒤 잠금 0, 쥐는 동안 다른 호출 차단) · 결제 재확인 시험의 "다른 Pod 가 쥔 잠금" 흉내를 새 키로 |
 | **노션 반영** | 해당 없음 — 설계 요구(한 Pod 만·연결 풀)를 구현이 함께 지키지 못한 결함 |
-| **상태** | 🟡 저장소 반영 — 수정 이미지로 T-M4-34 재측정 중 |
+| **검증** | 수정 이미지로 T-M4-34 재실행 — 폴링 경로 49.9초(1분 지연)·171.3초(5분 지연)·52.6초·118.6초로 설계 Backoff 안, 8건 모두 통과 (\`pg-delay-realtime-2026-09-30T06-43-39-291Z.json\`). 수정 이미지를 올릴 때 PgBouncer 는 재시작하지 않았다 — 옛 세션 잠금이 서버 연결에 남아 있었을 수 있는 상태에서 워커가 정상 주기로 돌았다(옛 잠금의 존재는 따로 확인하지 않았다) |
+| **상태** | 🟢 CLOSED — 저장소 반영·실제 시간 재측정 통과 (2026-09-30) |
 
 ---
 
@@ -926,7 +928,8 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **판정** | event-relay 가 심장박동을 주기(기본 60초)로 보낸다 — Outbox 를 거치지 않는다(지난 상태를 나중에 현재처럼 보내지 않게, 중앙이 끊기면 건너뛴다). 중앙은 수신 원장·gap 을 거치지 않고 대학 상태를 덮어쓴다. "내 원서" 는 대학 이름과 `universityReachable`(심장박동 180초 끊김 = 확인 불가)을 준다. 버전 확장 속성은 접수 기록에서 읽어 싣고, 미등록 대학은 400. **`payment.confirmed.v1` 은 보내지 않는다** — 결제 확정이 곧 접수(D-42)라 접수 이벤트가 같은 사실을 전하고 금액·수단은 중앙이 알 필요가 없다(§A3). `payment.refunded` 상수는 지웠다(실 PG 연동 T-M6-04 의 환불 처리 때 스키마에 먼저 올린다) |
 | **저장소 반영** | ✅ (2026-09-30) `heartbeat.service.ts`(계약 스키마로 검증하는 시험)·중앙 수신·상태·Dashboard·화면 "이 대학 확인 불가" · `scripts/check-contracts.mjs` 가 코드 이벤트 타입을 스키마와 대조한다 |
 | **노션 반영** | ⬜ §04 본문 — 심장박동 발송·수신 규칙, payment.confirmed 미발송 판정 · §03 첨부 v1.4.0(`ApplicationSummary`·이벤트 수신 규칙) — [06-notion-changeset.md](06-notion-changeset.md) |
-| **상태** | 🟡 저장소 반영 — kind 재배포 확인·노션 반영 대기 |
+| **kind 확인** | ✅ (2026-10-01) 최신 이미지로 kind A·B 재배포 뒤 중앙 `university_sync_state` 에 두 대학 심장박동이 26초 전 기록(설정 버전·적체 0 포함) |
+| **상태** | 🟡 저장소 반영·kind 확인 — 노션 반영 대기 |
 
 ---
 

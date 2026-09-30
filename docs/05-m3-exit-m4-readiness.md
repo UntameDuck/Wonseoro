@@ -213,34 +213,69 @@ G1 → G2 순서로 구현한다 (사용자 결정). 현재 위치는 ◀ 표시
 | v1.0 본문 | ✅ 2026-09-27 — §4 Backend(D-3) · §5.6 접수 전 취소(D-7) · §6.2 이벤트 예시(D-1·4·15) · §9 감사(D-7·36) · §12 6단계(D-2) · §17.1 접수번호(D-15) |
 | v1.1 §10 트래픽 | ⬜ D-18 (부록에서는 v1.0 으로 분류된다 — "§10 §1" 표기 때문) |
 
-<!-- 자동 생성: 불일치 대장의 "노션 반영 ⬜" 항목 9건에서 9개 수정 지점 -->
+<!-- 자동 생성: 불일치 대장의 "노션 반영 ⬜" 항목 16건에서 23개 수정 지점 -->
 
-### §03 OpenAPI — 1건
+### 먼저 결정·확인이 필요한 것 — 2건
+
+- **D-58** 🟡 어댑터 구현 — 실 clamd 연동 확인 대기(T-M5-08)  
+  <sub>서류 검사 엔진이 파일을 읽지 않는 흉내뿐이었고, 검사 기록은 늘 'mock-av' 였다</sub>
+- **D-60** 🟡 저장소 반영·kind 확인 — 노션 반영 대기  
+  <sub>§04 심장박동(sync.heartbeat)을 아무도 보내지 않아 중앙이 조용한 대학과 죽은 대학을 구별하지 못했다 🔴</sub>
+
+### §01 운영 리스크 — 2건
+
+- **D-56** §A5 Config Linter 규칙 — [06-notion-changeset.md](06-notion-changeset.md)  
+  <sub>화면이 전형 설정을 다 읽지 않았다 — 서류 종류·공통원서 항목·항목 이름이 코드에 박혀 있었다 🔴</sub>
+- **D-61** §01 A9 구현 방식(두 시각원·Finalize 만 제외) — [06-notion-changeset.md](06-notion-changeset.md)  
+  <sub>§A9 시각 동기화가 없었다 — clock offset 은 늘 0 이었고, 접수 시각은 Pod 시계였다 🔴</sub>
+
+### §03 OpenAPI — 7건
 
 - **D-51** §03 첨부 v1.3.0 교체 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md)  
   <sub>계약에 요청 한도 응답(429)이 없다</sub>
+- **D-55** v1.0 §5.6 전이(`PAID → FINALIZED`, FINALIZING 비저장, EXPIRED 보류)·§03 첨부 v1.4.0 — [06-notion-changeset.md](06-notion-changeset.md)  
+  <sub>원서 상태머신이 정의만 있고 흐름에 연결되지 않았다 — 한 원서에 결제창을 몇 개든 열 수 있었다 🔴</sub>
+- **D-56** §03 첨부 v1.4.0(FormSchema `profileFields`·`documents`, ConfigDiff `warnings`)  
+  <sub>화면이 전형 설정을 다 읽지 않았다 — 서류 종류·공통원서 항목·항목 이름이 코드에 박혀 있었다 🔴</sub>
+- **D-57** §03 첨부 v1.4.0(`getMyProfile`·`replaceMyProfile`)  
+  <sub>공통원서를 쓰는 길이 개발용 내부 API 뿐이었고, 화면은 가명 토큰을 지어냈다 🔴</sub>
+- **D-58** §03 첨부 v1.4.0(`downloadUrl`·`signature`)  
+  <sub>서류 검사 엔진이 파일을 읽지 않는 흉내뿐이었고, 검사 기록은 늘 'mock-av' 였다</sub>
+- **D-59** §03 첨부 v1.4.0(`getActiveConfig` 본문·`createConfigVersion` 검사 규칙) — [06-notion-changeset.md](06-notion-changeset.md)  
+  <sub>운영 콘솔에서 설정 초안을 만들 수 없었고, 보존기간 화면이 없었다</sub>
+- **D-60** §03 첨부 v1.4.0(`ApplicationSummary`·이벤트 수신 규칙) — [06-notion-changeset.md](06-notion-changeset.md)  
+  <sub>§04 심장박동(sync.heartbeat)을 아무도 보내지 않아 중앙이 조용한 대학과 죽은 대학을 구별하지 못했다 🔴</sub>
 
 ### §06 보안정책 — 1건
 
 - **D-53** §06 NetworkPolicy 첨부의 edge 선택자와 §05 Edge 서술 — [06-notion-changeset.md](06-notion-changeset.md)  
   <sub>§06 첨부·차트가 Edge 로 가정한 ingress-nginx 가 은퇴했다</sub>
 
-### §04 CloudEvents — 1건
+### §04 CloudEvents — 2건
 
 - **D-47** §04 첨부 교체·본문 패턴 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md)  
   <sub>CloudEvents subjectRef 계약이 DB 길이보다 긴 키 ID를 허용한다</sub>
+- **D-60** §04 본문 — 심장박동 발송·수신 규칙, payment.confirmed 미발송 판정  
+  <sub>§04 심장박동(sync.heartbeat)을 아무도 보내지 않아 중앙이 조용한 대학과 죽은 대학을 구별하지 못했다 🔴</sub>
 
 ### §07 KRDS — 1건
 
 - **D-43** §07 첨부 교체 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md)  
   <sub>KRDS 와이어프레임 결제 화면이 "결제 = 접수"(D-42) 와 반대로 안내한다</sub>
 
+### v1.0 본문 — 2건
+
+- **D-55** v1.0 §5.6 전이(`PAID → FINALIZED`, FINALIZING 비저장, EXPIRED 보류)·§03 첨부 v1.4.0 — [06-notion-changeset.md](06-notion-changeset.md)  
+  <sub>원서 상태머신이 정의만 있고 흐름에 연결되지 않았다 — 한 원서에 결제창을 몇 개든 열 수 있었다 🔴</sub>
+- **D-57** v1.0 §5 공통원서 표준 항목 — [06-notion-changeset.md](06-notion-changeset.md)  
+  <sub>공통원서를 쓰는 길이 개발용 내부 API 뿐이었고, 화면은 가명 토큰을 지어냈다 🔴</sub>
+
 ### 제출 PDF 정정 — 2건
 
 - **D-2** 정정 문구 준비 완료 — [07-submission-errata.md](07-submission-errata.md). 제출처 반영은 사람
 - **D-3** 정정 문구 준비 완료 — [07-submission-errata.md](07-submission-errata.md). 제출처 반영은 사람
 
-### 기타 — 3건
+### 기타 — 4건
 
 - **D-44** §05 첨부 두 개 교체 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md)  
   <sub>§05 Helm 첨부(runtime·values-m)가 현재 구현과 다르다</sub>
@@ -248,5 +283,7 @@ G1 → G2 순서로 구현한다 (사용자 결정). 현재 위치는 ◀ 표시
   <sub>첨부 values-m 의 예시 예약 시각이 지나면 자동 대조가 영구히 멈춘다</sub>
 - **D-52** §08 시나리오 10 합격 기준·§05 노드 장애 흡수 절 — [06-notion-changeset.md](06-notion-changeset.md) (노션 쓰기 승인 대기)  
   <sub>"API 노드 강제 종료 무중단"은 Pod 설정만으로는 지킬 수 없다</sub>
+- **D-58** §05 서류 워커 구성(clamd) — [06-notion-changeset.md](06-notion-changeset.md)  
+  <sub>서류 검사 엔진이 파일을 읽지 않는 흉내뿐이었고, 검사 기록은 늘 'mock-av' 였다</sub>
 
-<!-- items=9 edits=9 -->
+<!-- items=16 edits=23 -->
