@@ -40,6 +40,42 @@
         "apps/central-api/dist/main.js"
       ],
       "port": 3000
+    },
+    {
+      "name": "shots-central",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--env-file=scripts/screenshots/env/central.env", "apps/central-api/dist/main.js"],
+      "port": 3100
+    },
+    {
+      "name": "shots-admission",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--env-file=scripts/screenshots/env/admission.env", "apps/admission-api/dist/main.js"],
+      "port": 3101
+    },
+    {
+      "name": "shots-scanner",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--env-file=scripts/screenshots/env/scanner.env", "apps/document-service/dist/main.js"],
+      "port": 3102
+    },
+    {
+      "name": "shots-relay",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--env-file=scripts/screenshots/env/relay.env", "apps/event-relay/dist/main.js"],
+      "port": 3103
+    },
+    {
+      "name": "shots-web",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--env-file=scripts/screenshots/env/web.env", "node_modules/next/dist/bin/next", "dev", "apps/frontend", "-p", "4001"],
+      "port": 4001
+    },
+    {
+      "name": "shots-admin",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--env-file=scripts/screenshots/env/admin.env", "node_modules/next/dist/bin/next", "dev", "apps/admin-web", "-p", "4101"],
+      "port": 4101
     }
   ]
 }

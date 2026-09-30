@@ -15,6 +15,7 @@
 - **최근 완료**: T-M4-07 Peak Mode(ADR-0006) · T-M4-20 전 서비스 계측·로그 상관관계 · T-M4-24 로그 마스킹 강제 · **T-M4-21~23 업무 KPI·대시보드 3종** · **D-50 취소 이벤트 계약 위반 수정** · CI 복구 · **T-M4-40 NAT Adaptive Throttling(ADR-0007)** · 과부하 중 API 프로세스가 죽던 결함 수정 · **T-M4-37 Redis 장애 무영향** · T-M4-39 다중 노드 시험(drain 무중단·노드 장애 때 전체가 멈추던 DB 연결 결함 수정, D-52) · **맡겨진 결정 정리(2026-09-30)** — D-44 ⑦(Pod 당 38)·D-47·D-51(OpenAPI v1.3.0 429)·D-52(ADR-0008)·D-53(ingress-nginx 은퇴) 결정·저장소 반영. §05 runtime 첨부를 차트 렌더링으로 바꿔 CI 가 드리프트를 막는다. **노션 반영은 AI 쓰기가 막혀 [06-notion-changeset.md](06-notion-changeset.md) 로 대기**
 - **T-M4-35 ✅** 중앙 2시간 실제 단절 통과 — 원서 24건 처리·DEAD 0·event loss 0·복구 10초 뒤 전량 전송·재시작 0 (`central-outage-realtime-2026-09-30T01-59-27-784Z.json`)
 - **미완결 기능 전수 점검 ✅ (2026-09-30, D-55 ~ D-61)** — 정의만 있고 흐름에 이어지지 않던 것·흉내뿐이던 것을 모두 잇거나 이유와 함께 남겼다: 원서 상태머신·한 원서 한 결제·PG 정산 대조, §A9 시각(노드–DB offset·DB 커밋 시각), 공통원서 지원자 API·화면, 설정 기반 서류·항목·Config Linter, §04 심장박동, ClamAV 어댑터, 운영 콘솔 초안·보존기간, 계약 검사 스크립트. OpenAPI **v1.4.0**. 정리표는 [04-production-readiness.md §7](04-production-readiness.md#7-흉내미연결-전수-점검-2026-09-30). **kind 에는 아직 이 코드의 이미지를 올리지 않았다** — 다음 kind 작업 때 이미지 재빌드·`seed-dev.sql` 재적용
+- **화면 캡처 27장 (2026-09-30)** — 지원자 웹 19장(정상 흐름·검증 오류·취소·중앙/대학 장애)과 관리자 콘솔 8장을 [docs/screenshots/](screenshots/README.md)에 두었다. 전용 DB(`ui-shots-pg` :5497)와 전용 포트로 찍어 kind 시험과 섞이지 않는다. 다시 찍는 스크립트는 `scripts/screenshots/`. 찍으며 **화면 결함 U-1~U-11** 을 찾았다(검증 오류가 영문 원문, 접수증에 전형·모집단위 없음 등). 고치지 않고 README 에 적어 두었다
 - **바로 다음 할 일**: **T-M4-34 PG 지연 실제 시간 판**(2026-09-30 실행 중) → **T-M4-39 재측정**(판정 시간 단축·Honor) → [§4](#4-다음-작업--순서와-방법)
 
 ## 2. 반드시 지킬 규칙
@@ -192,6 +193,7 @@ AI 가 이 PC 에서 할 수 있는 것 약 36개, 외부 환경 필요 약 15�
 | 지금 할 일 | [03-next-steps.md](03-next-steps.md) |
 | 단계별 태스크·인수기준 | [milestones/](milestones/) |
 | 설계와 구현이 다른 곳 61건 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) |
+| 화면 캡처·찍으며 찾은 화면 결함(U-1~U-11)·다시 찍는 법 | [screenshots/README.md](screenshots/README.md) |
 | 흉내·미연결 점검 결과와 일부러 남긴 흉내 | [04-production-readiness.md §7](04-production-readiness.md#7-흉내미연결-전수-점검-2026-09-30) |
 | 노션 문서 지도·동기화 규칙 | [01-notion-sync-protocol.md](01-notion-sync-protocol.md) |
 | 왜 이렇게 정했나 | [adr/](adr/) — 최신 ADR-0008 노드 장애 흡수(nodeTaintsPolicy·판정 시간·Edge 재시도) |
