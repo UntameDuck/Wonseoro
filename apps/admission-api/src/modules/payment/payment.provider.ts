@@ -24,21 +24,49 @@ export interface VerifyResult {
   amount?: number;
 }
 
+/** PG 정산 목록의 한 건. 대조가 우리 기록과 맞춰 본다. */
+export interface SettlementEntry {
+  providerTxId: string;
+  status: PaymentStatus;
+  amount?: number;
+  providerApprovedAt?: string;
+}
+
 /**
  * PG Adapter 포트 — 기술설계서 v1.0 §5.5
  *
  * 플랫폼이 직접 전자금융업자가 되지 않는다.
  * 대학이 계약한 PG 를 Adapter 로 연계한다.
  *
- * 실 PG 연동은 M6 (T-M6-04). 이 인터페이스만 지키면 교체로 끝난다.
+ * 실 PG 연동은 T-M5-06 (PG 사 계약 필요). 이 인터페이스만 지키면 교체로 끝난다.
  */
 export abstract class PaymentProviderPort {
   abstract readonly name: string;
   abstract createIntent(applicationId: string, amount: number): Promise<IntentResult>;
   /** 서버가 PG 에 직접 묻는다. 클라이언트가 보낸 값은 쓰지 않는다. */
   abstract verify(providerTxId: string): Promise<VerifyResult>;
+  /**
+   * 결제 취소. **자동으로 부르지 않는다** — 승인된 결제의 취소는 환불이고, 환불은 사람이 승인한다
+   * (D-7 ④, §B16). 사람이 승인한 환불 처리(T-M5-06)가 이것을 부른다.
+   */
   abstract cancel(providerTxId: string): Promise<{ status: PaymentStatus }>;
-  abstract reconcile(from: Date, to: Date): Promise<Array<{ providerTxId: string; status: PaymentStatus }>>;
+  /**
+   * PG 정산 목록 — 기간 안에 PG 가 알고 있는 거래와 그 상태. 대조(ReconciliationService)가
+   * 우리 기록과 맞춰 본다. 콜백도 화면 확인도 없이 "결제창만 연(CREATED)" 채로 남은 결제가
+   * 실제로는 승인된 경우를 찾는 유일한 길이다 — 재확인 워커는 CREATED 를 묻지 않는다.
+   */
+  abstract reconcile(from: Date, to: Date): Promise<SettlementEntry[]>;
+  /**
+   * 이미 만든 결제창을 다시 연다. 결제를 시작한 원서에서 "결제하기" 를 다시 누르면 새 결제창이
+   * 아니라 이것을 준다 — 결제창이 둘이면 이중 결제가 된다 (§B4).
+   * 기본 구현은 거래번호만 돌려준다. 결제창 주소가 따로 있는 PG 는 덮어쓴다.
+   */
+  resume(providerTxId: string, amount: number, applicationId: string): Promise<IntentResult> {
+    return Promise.resolve({
+      providerTxId,
+      providerPayload: { provider: this.name, providerTxId, amount, applicationId, resumed: true },
+    });
+  }
   /**
    * 콜백 서명 검증. 맞지 않으면 null. 형식은 PG 마다 다르므로 어댑터가 판단한다.
    * `rawBody` 는 받은 바이트 그대로다 — 파싱했다 다시 직렬화하면 서명이 맞지 않는다.
@@ -65,6 +93,11 @@ export class MockPaymentProvider extends PaymentProviderPort {
   private readonly polls = new Map<string, number>();
   /** 지연 모드에서 다음 결제에 줄 지연의 순번. */
   private delayTurn = 0;
+  /**
+   * 이 프로세스가 만든 거래 — 정산 목록(reconcile)을 흉내 내는 데 쓴다. 실제 PG 는 자기 장부에서
+   * 돌려주지만 Mock 은 장부가 없어 Pod 마다 따로 기억한다(흉내의 한계 — 다른 Pod 가 만든 거래는 모른다).
+   */
+  private readonly issued = new Map<string, { amount: number; createdAtMs: number }>();
 
   async createIntent(applicationId: string, amount: number): Promise<IntentResult> {
     if (process.env.MOCK_PG_BEHAVIOUR === 'DOWN') throw pgUnreachable();
@@ -74,6 +107,17 @@ export class MockPaymentProvider extends PaymentProviderPort {
     const providerTxId = delays.length > 0
       ? `MOCK-D${delays[this.delayTurn++ % delays.length]}-${Date.now().toString(36).toUpperCase()}-${random.slice(0, 12)}`
       : `MOCK-${random}`;
+    if (this.issued.size >= 100_000) this.issued.clear();
+    this.issued.set(providerTxId, { amount, createdAtMs: Date.now() });
+    return this.payloadFor(providerTxId, amount, applicationId);
+  }
+
+  /** 같은 거래의 결제창을 다시 연다. Mock 의 결제창 주소는 거래번호로 정해진다. */
+  override async resume(providerTxId: string, amount: number, applicationId: string): Promise<IntentResult> {
+    return this.payloadFor(providerTxId, amount, applicationId);
+  }
+
+  private payloadFor(providerTxId: string, amount: number, applicationId: string): IntentResult {
     return {
       providerTxId,
       // 실제 PG 라면 결제창 URL·파라미터가 들어간다.
@@ -120,9 +164,31 @@ export class MockPaymentProvider extends PaymentProviderPort {
     return { status: 'CANCELLED' };
   }
 
-  async reconcile(): Promise<Array<{ providerTxId: string; status: PaymentStatus }>> {
-    // M3 Reconciliation Center 에서 실제 대조에 쓴다. (T-M3-04)
-    return [];
+  /**
+   * 정산 목록. 조회(verify)와 같은 규칙으로 상태를 정하되 조회 횟수를 세지 않는다 —
+   * 장부를 읽는 것이지 결제를 다시 묻는 것이 아니다. PG 자신도 모르는 거래(UNKNOWN 표식·지연 중)는
+   * 목록에 없다. PG 가 끊겼으면(DOWN) 대조가 이 검사만 건너뛴다.
+   */
+  async reconcile(from: Date, to: Date): Promise<SettlementEntry[]> {
+    if (process.env.MOCK_PG_BEHAVIOUR === 'DOWN') throw pgUnreachable();
+    const out: SettlementEntry[] = [];
+    for (const [providerTxId, tx] of this.issued) {
+      if (tx.createdAtMs < from.getTime() || tx.createdAtMs > to.getTime()) continue;
+      const delayed = parseDelayed(providerTxId);
+      if (delayed) {
+        if (Date.now() < delayed.approvedAtMs + delayed.delayMs) continue;
+        out.push({ providerTxId, status: 'CONFIRMED', amount: tx.amount, providerApprovedAt: new Date(delayed.approvedAtMs).toISOString() });
+        continue;
+      }
+      const behaviour = this.behaviourOf(providerTxId);
+      if (behaviour === 'UNKNOWN' || behaviour === 'DOWN') continue;
+      if (behaviour === 'FAIL') {
+        out.push({ providerTxId, status: 'FAILED', amount: tx.amount });
+        continue;
+      }
+      out.push({ providerTxId, status: 'CONFIRMED', amount: tx.amount, providerApprovedAt: new Date(tx.createdAtMs).toISOString() });
+    }
+    return out;
   }
 
   /**

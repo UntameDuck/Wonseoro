@@ -1,8 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { Db } from '@wonseoro/server-kit';
+import { Db, describeFailure } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
+import { DependencyBreakers } from '../../common/resilience/dependency-breakers';
 import { AuditService } from '../audit/audit.service';
+import { PaymentProviderPort, SettlementEntry } from '../payment/payment.provider';
+import { PaymentService } from '../payment/payment.service';
 
 export type Severity = 'INFO' | 'WARN' | 'HIGH' | 'CRITICAL';
 export type ExceptionState = 'OPEN' | 'AUTO_RESOLVED' | 'MANUAL_REVIEW' | 'RESOLVED';
@@ -30,6 +33,7 @@ const PAYMENT_UNKNOWN_GRACE_MINUTES = 30;
  * Reconciliation Center — 기술설계서 v1.1 §A4·§B18·§C2 (T-M3-04)
  *
  * **Application · Payment · Submission · Central ACK 를 4-way 로 대조한다.**
+ * Payment 는 우리 기록만이 아니라 **PG 정산 목록**과도 맞춘다(9번) — "payment provider reference" (§A11).
  *
  * 왜 필요한가
  * Payment 와 Application 은 별도 Aggregate 다. (§A4)
@@ -54,6 +58,10 @@ export class ReconciliationService {
   constructor(
     private readonly db: Db,
     private readonly audit: AuditService,
+    /** PG 정산 대조(9번)에 쓴다. 없으면(단위 시험) 그 검사만 건너뛴다. */
+    @Optional() private readonly provider?: PaymentProviderPort,
+    @Optional() private readonly payments?: PaymentService,
+    @Optional() private readonly breakers?: DependencyBreakers,
   ) {}
 
   /**
@@ -224,6 +232,112 @@ export class ReconciliationService {
       )),
     );
 
+    // 9. PG 정산과 우리 기록 — 우리가 모르는 승인·PG 가 모르는 확정 (§A4·§B18)
+    findings.push(...(await this.settlementFindings(sinceHours)));
+
+    return findings;
+  }
+
+  /**
+   * PG 정산 대조.
+   *
+   * 재확인 워커는 PENDING·UNKNOWN 만 묻는다. 결제창만 연(CREATED) 결제는 대부분 결제하지 않고
+   * 끝나므로 묻지 않는데, 그중 실제로 결제되고 콜백까지 유실된 건은 **아무도 찾지 못한다** —
+   * 지원자는 돈을 냈고 원서는 접수되지 않은 채 마감이 지난다. PG 장부가 그 건을 알려준다.
+   *
+   *   PG 승인 · 우리 CREATED/PENDING/UNKNOWN → PG 에 다시 묻는다(verify). 재확인 워커·콜백과 같은
+   *     경로라 확정되면 자동 접수까지 간다(D-42). 상태를 지어내지 않는다 — PG 의 답을 반영할 뿐이다.
+   *     그래도 확정되지 않으면 PG_CONFIRMED_NOT_RECORDED (CRITICAL)
+   *   우리 CONFIRMED · PG 승인 아님 → PAYMENT_NOT_SETTLED_AT_PG (CRITICAL). 돈을 안 받고 접수했을 수 있다
+   *   금액이 다르다 → PAYMENT_AMOUNT_MISMATCH_AT_PG (CRITICAL)
+   * PG 에만 있는 거래는 원서를 알 수 없어 예외 큐(원서 단위)에 올리지 못한다 — 로그로 남긴다.
+   * PG 가 끊겼으면 이번 대조에서 이 검사만 건너뛴다. 다른 여덟 가지 대조를 막지 않는다.
+   */
+  private async settlementFindings(sinceHours: number): Promise<Finding[]> {
+    const provider = this.provider;
+    if (!provider || !this.payments) return [];
+    const to = new Date();
+    const from = new Date(to.getTime() - sinceHours * 3_600_000);
+
+    let settled: SettlementEntry[];
+    try {
+      settled = this.breakers
+        ? await this.breakers.paymentGateway.run(() => provider.reconcile(from, to))
+        : await provider.reconcile(from, to);
+    } catch (err) {
+      this.logger.warn(`PG 정산 목록을 받지 못해 정산 대조를 건너뛴다 (${describeFailure(err)})`);
+      return [];
+    }
+    if (settled.length === 0) return [];
+
+    const { rows } = await this.db.query<{
+      id: string;
+      application_id: string;
+      provider_tx_id: string;
+      status: string;
+      amount: string;
+    }>(
+      `SELECT id, application_id, provider_tx_id, status, amount
+         FROM payment
+        WHERE provider = $1 AND provider_tx_id = ANY($2::text[])`,
+      [provider.name, settled.map((e) => e.providerTxId)],
+    );
+    const ours = new Map(rows.map((r) => [r.provider_tx_id, r]));
+
+    const findings: Finding[] = [];
+    let unknownAtUs = 0;
+    for (const entry of settled) {
+      const mine = ours.get(entry.providerTxId);
+      if (!mine) {
+        unknownAtUs += 1;
+        continue;
+      }
+      const facts = {
+        paymentId: mine.id,
+        providerTxId: entry.providerTxId,
+        ourStatus: mine.status,
+        pgStatus: entry.status,
+      };
+
+      if (entry.status === 'CONFIRMED' && ['CREATED', 'PENDING', 'UNKNOWN'].includes(mine.status)) {
+        const after = await this.payments.verify(mine.id).catch(() => null);
+        if (after?.status === 'CONFIRMED') {
+          this.logger.warn(`PG 정산에서 확인한 결제를 반영했다 payment=${mine.id} (was ${mine.status})`);
+          continue;
+        }
+        findings.push({
+          applicationId: mine.application_id,
+          type: 'PG_CONFIRMED_NOT_RECORDED',
+          severity: 'CRITICAL',
+          facts: { ...facts, afterVerify: after?.status ?? 'VERIFY_FAILED' },
+        });
+        continue;
+      }
+      if (mine.status === 'CONFIRMED' && entry.status !== 'CONFIRMED') {
+        findings.push({
+          applicationId: mine.application_id,
+          type: 'PAYMENT_NOT_SETTLED_AT_PG',
+          severity: 'CRITICAL',
+          facts,
+        });
+        continue;
+      }
+      if (
+        mine.status === 'CONFIRMED' &&
+        entry.amount !== undefined &&
+        Number(entry.amount) !== Number(mine.amount)
+      ) {
+        findings.push({
+          applicationId: mine.application_id,
+          type: 'PAYMENT_AMOUNT_MISMATCH_AT_PG',
+          severity: 'CRITICAL',
+          facts: { ...facts, ourAmount: Number(mine.amount), pgAmount: Number(entry.amount) },
+        });
+      }
+    }
+    if (unknownAtUs > 0) {
+      this.logger.warn(`PG 정산에만 있고 우리 기록에 없는 거래 ${unknownAtUs}건 — PG 사와 대조가 필요하다`);
+    }
     return findings;
   }
 
@@ -238,15 +352,16 @@ export class ReconciliationService {
       detectedAt: string;
     }>
   > {
-    const where = state === 'ALL' ? '' : `WHERE state = '${state}'`;
+    // 값을 SQL 문자열에 끼우지 않는다. 컨트롤러가 거르지만, 거르는 곳이 하나 빠지면 그대로 주입이다.
     const { rows } = await this.db.query<Record<string, unknown>>(
       `SELECT id, application_id, exception_type, severity, state, facts, detected_at
          FROM reconciliation_exception
-         ${where}
+        WHERE $1::text = 'ALL' OR state = $1::text
         ORDER BY
           CASE severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'WARN' THEN 2 ELSE 3 END,
           detected_at DESC
         LIMIT 200`,
+      [state],
     );
     return rows.map((r) => ({
       id: String(r.id),

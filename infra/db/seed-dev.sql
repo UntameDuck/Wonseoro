@@ -32,6 +32,13 @@ ON CONFLICT (id) DO NOTHING;
 
 -- 활성 Config. 추가문항 JSON Schema 가 여기에 들어간다.
 -- M3 에서는 2인 승인을 거쳐야 ACTIVE 가 된다. (T-M3-02)
+--
+-- 화면은 이 설정만 보고 그린다 (§A5, D-55)
+--   title          항목 이름
+--   x-profile      공통원서(중앙 Vault)에서 가져오는 항목 — 1단계에 그린다
+--   x-multiline    여러 줄 입력
+--   optionalDocuments / requiredDocuments  올릴 서류. required 는 결제(=접수) 전에 검사를 통과해야 한다
+--   documentLabels 서류 이름
 INSERT INTO config_version (id, cycle_id, version, status, config_json, config_hash,
                             created_by, approved_by_1, approved_by_2, approved_at, activated_at)
 VALUES (
@@ -46,14 +53,16 @@ VALUES (
          "additionalProperties": false,
          "required": ["highSchool", "graduationYear", "selfIntro"],
          "properties": {
-           "highSchool":      { "type": "string",  "minLength": 2, "maxLength": 100 },
-           "graduationYear":  { "type": "integer", "minimum": 1990, "maximum": 2030 },
-           "gpa":             { "type": "number",  "minimum": 0, "maximum": 5 },
-           "selfIntro":       { "type": "string",  "minLength": 10, "maxLength": 1500 },
-           "contactEmail":    { "type": "string",  "format": "email" }
+           "highSchool":      { "type": "string",  "minLength": 2, "maxLength": 100, "title": "출신 고등학교", "x-profile": true },
+           "graduationYear":  { "type": "integer", "minimum": 1990, "maximum": 2030, "title": "졸업(예정) 연도", "x-profile": true },
+           "gpa":             { "type": "number",  "minimum": 0, "maximum": 5, "title": "내신 성적" },
+           "selfIntro":       { "type": "string",  "minLength": 10, "maxLength": 1500, "title": "자기소개", "x-multiline": true },
+           "contactEmail":    { "type": "string",  "format": "email", "title": "이메일", "x-profile": true }
          }
        }
-     }
+     },
+     "optionalDocuments": { "EARLY": ["TRANSCRIPT"] },
+     "documentLabels": { "TRANSCRIPT": "학교생활기록부" }
    }'::jsonb,
   'dev-hash',
   'dev-seed',

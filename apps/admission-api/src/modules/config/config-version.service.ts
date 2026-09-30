@@ -7,6 +7,7 @@ import { CONFIG_FREEZE_HOURS } from '../../config';
 import { ActivationRecorder, ActivationView } from '../activation/activation-recorder';
 import { DeadlineService } from '../deadline/deadline.service';
 import { ConfigDiff, diffConfig } from './config-diff';
+import { lintConfig } from './config-lint';
 import { addApproval, assertActivationTime, assertApproved } from './two-person-rule';
 
 export interface ConfigVersionRow {
@@ -65,6 +66,11 @@ export class ConfigVersionService {
     createdBy: string;
   }): Promise<ConfigVersionRow> {
     assertRetention(input.config);
+    // 적용하면 런타임이 실패할 설정은 초안조차 만들지 않는다 (§A5 Config Linter).
+    const lint = lintConfig(input.config, await this.typeCodes(input.cycleId));
+    if (lint.errors.length > 0) {
+      throw ProblemException.validationFailed(`설정을 적용할 수 없습니다. ${lint.errors.join(' ')}`);
+    }
     const id = randomUUID();
     const configHash = createHash('sha256')
       .update(JSON.stringify(input.config))
@@ -237,7 +243,18 @@ export class ConfigVersionService {
     );
 
     // 활성 설정이 없으면 빈 것과 비교한다. 첫 설정은 전부 추가다.
-    return diffConfig(base[0]?.config_json ?? {}, target.config_json);
+    // 설정 검사 경고를 함께 보인다 — 동작은 하지만 의도와 다를 수 있는 것을 승인자가 보고 판단한다.
+    const lint = lintConfig(target.config_json, await this.typeCodes(target.cycle_id));
+    return { ...diffConfig(base[0]?.config_json ?? {}, target.config_json), warnings: lint.warnings };
+  }
+
+  /** 이 모집의 전형 코드. 설정 검사가 모르는 전형 코드를 찾는 데 쓴다. */
+  private async typeCodes(cycleId: string): Promise<string[]> {
+    const { rows } = await this.db.query<{ code: string }>(
+      `SELECT code FROM admission_type WHERE cycle_id = $1`,
+      [cycleId],
+    );
+    return rows.map((r) => r.code);
   }
 
   /**

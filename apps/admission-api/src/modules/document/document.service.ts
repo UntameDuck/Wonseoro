@@ -4,6 +4,7 @@ import { DocumentStatus } from '@wonseoro/contracts';
 import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { AuditService } from '../audit/audit.service';
+import { FormSchemaService } from '../config/form-schema.service';
 import { FileInspector } from './file-inspector';
 import { ObjectStorage, PresignedUpload } from './object-storage';
 
@@ -50,12 +51,53 @@ export interface CompleteInput {
 export class DocumentService {
   private readonly logger = new Logger(DocumentService.name);
 
+  private readonly forms: FormSchemaService;
+
   constructor(
     private readonly db: Db,
     private readonly storage: ObjectStorage,
     private readonly inspector: FileInspector,
     private readonly audit: AuditService,
-  ) {}
+    forms?: FormSchemaService,
+  ) {
+    this.forms = forms ?? new FormSchemaService(db);
+  }
+
+  /**
+   * 서류를 올리거나 지울 수 있는 원서인가 — 작성 중(DRAFT·READY)일 때만.
+   * 결제를 시작한 원서의 서류를 바꾸면 결제 전 확인을 통과한 내용과 접수되는 내용이 달라진다(D-54).
+   * 이 전형이 받는 서류 종류도 함께 돌려준다.
+   */
+  private async assertDocumentsEditable(
+    applicationId: string,
+    documentType?: string,
+  ): Promise<void> {
+    const { rows } = await this.db.query<{ status: string; cycle_id: string; code: string }>(
+      `SELECT a.status, a.cycle_id, t.code
+         FROM application a JOIN admission_type t ON t.id = a.admission_type_id
+        WHERE a.id = $1`,
+      [applicationId],
+    );
+    const app = rows[0];
+    if (!app) throw ProblemException.notFound('존재하지 않는 원서입니다.');
+    if (app.status === 'FINALIZED') throw ProblemException.alreadyFinalized();
+    if (app.status !== 'DRAFT' && app.status !== 'READY') {
+      throw ProblemException.versionConflict(
+        app.status === 'PAYMENT_PENDING' || app.status === 'PAID'
+          ? '결제를 시작한 원서의 서류는 바꿀 수 없습니다. 결제가 확인되면 올린 서류 그대로 접수됩니다.'
+          : `현재 상태(${app.status})에서는 서류를 바꿀 수 없습니다.`,
+      );
+    }
+    if (!documentType) return;
+    // 전형 설정이 서류를 정해 두었으면 그 종류만 받는다. 정하지 않은 전형(옛 설정)은 막지 않는다 —
+    // 설정 검사(config-lint)가 서류 목록이 없는 전형을 경고한다.
+    const { documents } = await this.forms.load(app.cycle_id, app.code);
+    if (documents.length > 0 && !documents.some((d) => d.documentType === documentType)) {
+      throw ProblemException.validationFailed(
+        `이 전형에서 받지 않는 서류입니다: ${documentType}. 받는 서류: ${documents.map((d) => d.label).join(', ')}`,
+      );
+    }
+  }
 
   /**
    * 업로드 의도 생성. Presigned URL 을 발급한다.
@@ -69,6 +111,7 @@ export class DocumentService {
       declaredMediaType: input.mediaType,
       sizeBytes: input.sizeBytes,
     });
+    await this.assertDocumentsEditable(input.applicationId, input.documentType);
 
     const documentId = randomUUID();
     const ext = input.filename.slice(input.filename.lastIndexOf('.')).toLowerCase();
@@ -158,21 +201,24 @@ export class DocumentService {
   /**
    * AV 검사 결과 반영.
    *
-   * M1 은 Mock 이지만 **상태 전이는 실제로 구현한다.**
-   * 접수 확정이 AVAILABLE 기준이므로 상태가 없으면 M2 Finalize 가 막힌다.
-   * M5 에서 실제 스캐너로 교체한다. (T-M5-08)
+   * 검사는 검사 워커(document-service)가 하고, 상태 전이 규칙은 여기 한 곳에만 있다 (ADR-0004).
+   * 접수 확정이 AVAILABLE 기준이다. **어느 엔진이 어느 버전으로 검사했는지를 남긴다** —
+   * 분쟁·사고 때 "무엇으로 검사했는가" 가 증적이다(Evidence Package). 전에는 워커가 보낸 엔진·버전을
+   * 버리고 모든 기록에 'mock-av' 를 남겼다.
    */
   async applyScanResult(
     documentId: string,
     result: 'CLEAN' | 'MALICIOUS' | 'ERROR',
-    scanner = 'mock-av',
+    scanner = 'unknown',
+    engineVersion: string | null = null,
+    details: Record<string, unknown> = {},
   ): Promise<DocumentStatus> {
     return this.db.tx(async (client) => {
       await client.query(
         `UPDATE document_scan
-            SET result = $2, scanned_at = now()
+            SET result = $2, scanned_at = now(), scanner = $3, engine_version = $4, details = $5
           WHERE document_id = $1 AND result = 'PENDING'`,
-        [documentId, result],
+        [documentId, result, scanner.slice(0, 64), engineVersion?.slice(0, 64) ?? null, JSON.stringify(details)],
       );
 
       const next: DocumentStatus = result === 'CLEAN' ? 'AVAILABLE' : 'REJECTED';
@@ -195,7 +241,7 @@ export class DocumentService {
         actorId: scanner,
         action: 'DOCUMENT_VERIFIED',
         result: result === 'CLEAN' ? 'ACCEPTED' : 'REJECTED',
-        details: { documentId, scanResult: result },
+        details: { documentId, scanResult: result, scanner, engineVersion },
       });
 
       return next;
@@ -214,19 +260,11 @@ export class DocumentService {
     return rows.map((r) => this.toRow(r));
   }
 
-  /** 논리 삭제. 접수 확정 이후에는 지울 수 없다. */
+  /** 논리 삭제. 작성 중인 원서의 서류만 지울 수 있다 — 결제를 시작했거나 접수됐으면 안 된다. */
   async remove(documentId: string, applicantId: string): Promise<void> {
     const doc = await this.load(documentId);
-
-    const { rows } = await this.db.query<{ status: string }>(
-      `SELECT a.status FROM application a
-         JOIN document d ON d.application_id = a.id
-        WHERE d.id = $1`,
-      [documentId],
-    );
-    if (rows[0]?.status === 'FINALIZED') {
-      throw ProblemException.alreadyFinalized();
-    }
+    if (doc.status === 'DELETED') return; // 이미 지웠다. 재시도는 오류가 아니다.
+    await this.assertDocumentsEditable(doc.applicationId);
 
     const objectKey = await this.objectKeyOf(documentId);
     await this.db.tx(async (client) => {
@@ -262,9 +300,10 @@ export class DocumentService {
         [doc.id, hash, size],
       );
       await client.query(
+        // 어느 엔진이 검사할지는 아직 모른다. 결과를 보고할 때 워커가 엔진·버전을 채운다.
         `INSERT INTO document_scan (id, document_id, scanner, result)
-         VALUES ($1,$2,$3,'PENDING')`,
-        [randomUUID(), doc.id, 'mock-av'],
+         VALUES ($1,$2,'pending','PENDING')`,
+        [randomUUID(), doc.id],
       );
       await this.audit.record(client, {
         applicationId: doc.applicationId,

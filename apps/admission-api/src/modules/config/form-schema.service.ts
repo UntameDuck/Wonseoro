@@ -15,16 +15,67 @@ export interface ValidationResult {
   issues: ValidationIssue[];
 }
 
+/** 전형이 받는 서류 한 종류. 설정(config_json)의 requiredDocuments·optionalDocuments·documentLabels 에서 온다. */
+export interface DocumentSpec {
+  documentType: string;
+  /** 화면에 보일 이름. 설정에 없으면 서류 코드를 그대로 쓴다. */
+  label: string;
+  /** 접수(=결제) 전에 검사를 통과해야 하는가. */
+  required: boolean;
+}
+
 export interface FormSchema {
   /** config_version.version — application_field_value.schema_version 에 그대로 저장한다. */
   schemaVersion: string;
   /** 대학별 추가문항 JSON Schema. */
   schema: Record<string, unknown>;
+  /**
+   * 공통원서(중앙 Vault)에서 가져오는 항목. 스키마 속성에 `"x-profile": true` 를 단 것이다.
+   * 원서를 만들 때 Vault 에 이 항목만 요청하고(§10 §3), 화면은 1단계(공통정보)에 그린다.
+   */
+  profileFields: string[];
+  /** 이 전형이 받는 서류. 비어 있으면 서류를 받지 않거나 아직 정하지 않은 전형이다. */
+  documents: DocumentSpec[];
+}
+
+interface ConfigJson {
+  forms?: Record<string, Record<string, unknown>>;
+  requiredDocuments?: Record<string, string[]>;
+  optionalDocuments?: Record<string, string[]>;
+  documentLabels?: Record<string, string>;
 }
 
 interface ConfigRow extends Record<string, unknown> {
   version: string;
-  config_json: { forms?: Record<string, Record<string, unknown>> };
+  config_json: ConfigJson;
+}
+
+/**
+ * `x-profile` 표시가 하나도 없는 옛 설정(표시를 도입하기 전에 승인된 것)을 위한 기본값.
+ * 스키마에 실제로 있는 속성만 남긴다 — 없는 항목을 Vault 에 요청하지 않는다.
+ * 새 설정은 표시를 달고, 설정 검사(config-lint)가 표시 없는 설정에 경고를 준다.
+ */
+export const LEGACY_PROFILE_FIELDS = ['highSchool', 'graduationYear', 'contactEmail'] as const;
+
+/** 스키마에서 공통원서 항목을 고른다. */
+export function profileFieldsOf(schema: Record<string, unknown>): string[] {
+  const properties = (schema.properties ?? {}) as Record<string, Record<string, unknown>>;
+  const marked = Object.entries(properties)
+    .filter(([, prop]) => prop?.['x-profile'] === true)
+    .map(([code]) => code);
+  if (marked.length > 0) return marked;
+  return LEGACY_PROFILE_FIELDS.filter((code) => code in properties);
+}
+
+/** 설정에서 전형의 서류 목록을 만든다. 필수가 먼저, 같은 서류가 둘 다 있으면 필수로 본다. */
+export function documentsOf(config: ConfigJson | undefined, admissionTypeCode: string): DocumentSpec[] {
+  const required = config?.requiredDocuments?.[admissionTypeCode] ?? [];
+  const optional = (config?.optionalDocuments?.[admissionTypeCode] ?? []).filter((t) => !required.includes(t));
+  const label = (t: string) => config?.documentLabels?.[t] ?? t;
+  return [
+    ...required.map((t) => ({ documentType: t, label: label(t), required: true })),
+    ...optional.map((t) => ({ documentType: t, label: label(t), required: false })),
+  ];
 }
 
 /**
@@ -71,14 +122,24 @@ export class FormSchemaService {
     if (!row) {
       // 활성 Config 가 없으면 추가문항 없이 진행한다.
       // 운영에서는 D-1 이전에 Config 활성화가 인수 조건이다. (v1.1 §A14)
-      return { schemaVersion: 'none', schema: { type: 'object', properties: {} } };
+      return {
+        schemaVersion: 'none',
+        schema: { type: 'object', properties: {} },
+        profileFields: [],
+        documents: [],
+      };
     }
 
     const schema = row.config_json?.forms?.[admissionTypeCode] ?? {
       type: 'object',
       properties: {},
     };
-    return { schemaVersion: row.version, schema };
+    return {
+      schemaVersion: row.version,
+      schema,
+      profileFields: profileFieldsOf(schema),
+      documents: documentsOf(row.config_json, admissionTypeCode),
+    };
   }
 
   /**
@@ -95,8 +156,10 @@ export class FormSchemaService {
     const properties = (schema.properties ?? {}) as Record<string, unknown>;
     const known = new Set(Object.keys(properties));
 
-    // 스키마가 비어 있으면(활성 Config 없음) 통과시킨다. M1 개발 편의.
-    if (known.size === 0) return schemaVersion;
+    // 활성 Config 가 아예 없으면 무엇이 맞는지 알 수 없다 — 개발 DB 에서만 생기는 상황이다
+    // (운영은 D-1 전 Config 활성화가 인수 조건, §A14). 활성 Config 가 있는데 이 전형에 추가문항이
+    // 없으면 **어떤 항목도 받지 않는다.** 전에는 비어 있다는 이유로 아무 항목이나 받았다.
+    if (schemaVersion === 'none') return schemaVersion;
 
     const unknown = Object.keys(fields).filter((k) => !known.has(k));
     if (unknown.length > 0) {

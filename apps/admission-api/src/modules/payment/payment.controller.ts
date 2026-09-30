@@ -16,21 +16,27 @@ export class PaymentController {
     private readonly ownership: Ownership,
   ) {}
 
+  /**
+   * 새 결제창은 201, 이미 열린 결제창을 다시 여는 것은 200 이다 (한 원서에 살아 있는 결제는 하나).
+   * 확인 중·확정된 결제가 있으면 409 PAYMENT_IN_PROGRESS — 화면은 결제 상태 확인으로 안내한다.
+   */
   @Post('applications/:applicationId/payment-intents')
   @HttpCode(201)
   @Header('cache-control', CACHE_CONTROL_PII)
   async createIntent(
     @Param('applicationId') applicationId: string,
     @Req() req: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
   ) {
     const { applicantId } = applicantFrom(req);
     await this.ownership.assertApplication(applicationId, applicantId);
 
-    const { payment, providerPayload } = await this.payments.createIntent(
+    const { payment, providerPayload, created } = await this.payments.createIntent(
       applicationId,
       applicantId,
       this.context(req),
     );
+    reply.status(created ? 201 : 200);
     return {
       paymentId: payment.id,
       amount: payment.amount,

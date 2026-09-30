@@ -10,7 +10,7 @@ import { FormSchemaService } from './form-schema.service';
 /**
  * 추가문항 스키마 조회 — 기술설계서 v1.1 §A5
  *
- * ⚠️ canonical OpenAPI 에 없는 엔드포인트다. 계약 추가 대기. (불일치 대장 D-19)
+ * 계약: OpenAPI getApplicationFormSchema (D-19). profileFields·documents 는 v1.4.0 에서 더했다 (D-55).
  *
  * **이 API 가 없으면 §A5 가 UI 에서 깨진다.**
  * 백엔드는 Config 만 바꿔 새 전형을 받을 수 있는데, 화면이 필드를 하드코딩하면
@@ -44,11 +44,18 @@ export class FormSchemaController {
     const found = rows[0];
     if (!found) throw ProblemException.validationFailed('존재하지 않는 원서입니다.');
 
-    const { schemaVersion, schema } = await this.forms.load(found.cycle_id, found.code);
+    const { schemaVersion, schema, profileFields, documents } = await this.forms.load(
+      found.cycle_id,
+      found.code,
+    );
+    // 화면은 이것만 보고 그린다 — 입력 항목(schema), 공통원서에서 온 항목(profileFields),
+    // 올릴 서류(documents). 전형이 늘어도 프론트를 고치지 않는다. (§A5)
     return {
       admissionTypeCode: found.code,
       schemaVersion,
       schema,
+      profileFields,
+      documents,
     };
   }
 }

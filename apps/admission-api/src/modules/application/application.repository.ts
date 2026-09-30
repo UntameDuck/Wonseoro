@@ -4,9 +4,10 @@ import type { PoolClient } from 'pg';
 import { CENTRAL_ID_SALT } from '../../config';
 import { ApplicationStatus } from '@wonseoro/contracts';
 import { Db } from '@wonseoro/server-kit';
+import type { Queryable } from '../../common/db/queryable';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { AuditService } from '../audit/audit.service';
-import { ApplicationStateService } from './application-state.service';
+import { ApplicationStateService, transitionApplication } from './application-state.service';
 import { ProfileVaultClient } from './profile-vault.client';
 
 export interface ApplicationRow {
@@ -27,9 +28,14 @@ export interface CreateApplicationInput {
   applicantId: string;
   admissionTypeId: string;
   departmentId: string;
-  /** 중앙 Vault 조회 키. 없으면 Snapshot 을 건너뛴다. */
+  /**
+   * 요청이 주장하는 중앙 가명 토큰(개발 헤더·게이트웨이). **믿지 않는다** — 등록된 지원자의 토큰과
+   * 다르면 거절한다. Vault 조회에는 등록된 값을 쓴다. 남의 토큰을 보내 남의 공통원서를 끌어올 수 없게.
+   */
   subjectToken?: string;
   universityId?: string;
+  /** 전형 양식이 공통원서에서 가져오겠다고 표시한 항목. 비어 있으면 Vault 에 묻지 않는다. */
+  requestedFields?: string[];
   traceId?: string;
   sourceIp?: string;
 }
@@ -74,13 +80,20 @@ export class ApplicationRepository {
    * 다른 모집단위면 409 다 — 기존 원서를 돌려주면 고른 모집단위로 만들어진 줄 안다.
    */
   async create(input: CreateApplicationInput): Promise<{ row: ApplicationRow; created: boolean }> {
+    // 전형·모집단위가 이 모집 주기의 것이고 지금 모집 중인지 먼저 본다. 외래키는 행이 있는지만 본다 —
+    // 다른 주기의 전형으로 원서를 만들면 전형료·양식·마감이 엉뚱한 주기 것으로 적용된다.
+    await this.assertCatalog(this.db, input.cycleId, input.admissionTypeId, input.departmentId);
+
+    const subjectToken = await this.registeredSubjectToken(input.applicantId, input.subjectToken);
+
     // ⚠️ 중앙 호출은 트랜잭션 **밖**에서 한다. 락 유지 시간이 중앙 지연에 묶이면 안 된다.
     // 실패해도 빈 Snapshot 으로 계속 간다. 중앙이 없다고 접수 기회를 잃으면 안 된다. (D-18)
     const snapshot =
-      input.subjectToken && input.universityId
+      input.universityId && (input.requestedFields?.length ?? 0) > 0
         ? await this.vault.fetchSnapshot({
-            subjectToken: input.subjectToken,
+            subjectToken,
             universityId: input.universityId,
+            requestedFields: input.requestedFields ?? [],
             // 대학 내부 지원자 UUID 를 중앙에 보내지 않는다. (§A12, D-39)
             // Vault 는 "어느 원서에 무엇을 내줬는지" 만 알면 된다 — 대학 쪽에서 되짚을 수 있는
             // opaque 값이면 충분하다. 전에는 cycleId:applicantId 원문이 그대로 갔다.
@@ -165,6 +178,33 @@ export class ApplicationRepository {
     return rows[0] ? this.toRow(rows[0]) : null;
   }
 
+  /**
+   * 등록된 지원자의 중앙 가명 토큰. 요청이 다른 토큰을 주장하면 403 — 신원이 섞인 요청이다.
+   * 등록되지 않은 지원자면 403 (전에는 외래키 오류로 500 이 났다). 지원자 등록은 본인확인(T-M5-02)의 일이다.
+   */
+  private async registeredSubjectToken(applicantId: string, claimed?: string): Promise<string> {
+    const { rows } = await this.db.query<{ subject_token: string }>(
+      `SELECT subject_token FROM applicant WHERE id = $1`,
+      [applicantId],
+    );
+    const registered = rows[0]?.subject_token;
+    if (!registered) throw ProblemException.forbidden('등록되지 않은 지원자입니다. 본인확인을 먼저 해 주십시오.');
+    if (claimed && claimed !== registered) {
+      throw ProblemException.forbidden('지원자 신원 정보가 일치하지 않습니다. 다시 로그인해 주십시오.');
+    }
+    return registered;
+  }
+
+  /** 전형 ID 로 코드(양식 선택 키)를 찾는다. 이 주기의 전형이 아니면 400. */
+  async admissionTypeCode(cycleId: string, admissionTypeId: string): Promise<string> {
+    const { rows } = await this.db.query<{ code: string }>(
+      `SELECT code FROM admission_type WHERE id = $1 AND cycle_id = $2 AND active = true`,
+      [admissionTypeId, cycleId],
+    );
+    if (!rows[0]) throw ProblemException.validationFailed('이 모집에서 선택할 수 없는 전형입니다.');
+    return rows[0].code;
+  }
+
   async fields(applicationId: string): Promise<Record<string, unknown>> {
     const { rows } = await this.db.query<{ field_code: string; value_json: unknown }>(
       `SELECT field_code, value_json FROM application_field_value WHERE application_id = $1`,
@@ -197,15 +237,28 @@ export class ApplicationRepository {
       }
       if (!this.state.isEditable(current.status)) {
         throw ProblemException.versionConflict(
-          `현재 상태(${current.status})에서는 원서를 수정할 수 없습니다.`,
+          current.status === 'PAYMENT_PENDING' || current.status === 'PAID'
+            ? '결제를 시작한 원서는 고칠 수 없습니다. 결제가 확인되면 이 내용 그대로 접수됩니다.'
+            : `현재 상태(${current.status})에서는 원서를 수정할 수 없습니다.`,
+        );
+      }
+      if (input.admissionTypeId || input.departmentId) {
+        await this.assertCatalog(
+          client,
+          current.cycleId,
+          input.admissionTypeId ?? current.admissionTypeId,
+          input.departmentId ?? current.departmentId,
         );
       }
 
       const updated = await client
         .query(
+        // 내용이 바뀌면 다시 검증해야 한다 — 검증을 마친 원서(READY)는 작성 중(DRAFT)으로 돌아간다.
+        // 상태와 내용을 한 UPDATE 로 바꿔 버전은 한 번만 오른다 (ETag).
         `UPDATE application
             SET admission_type_id = COALESCE($3, admission_type_id),
                 department_id     = COALESCE($4, department_id),
+                status            = CASE WHEN status = 'READY' THEN 'DRAFT' ELSE status END,
                 version           = version + 1,
                 last_saved_at     = now(),
                 updated_at        = now()
@@ -269,6 +322,44 @@ export class ApplicationRepository {
       );
       return this.toRow(after.rows[0] as Record<string, unknown>);
     });
+  }
+
+  /**
+   * 최종 검증 결과를 상태에 반영한다. 통과하면 DRAFT → READY, 통과하지 못하면 READY → DRAFT
+   * (저장 뒤 설정이 바뀌어 더는 맞지 않는 원서). 다른 상태는 건드리지 않는다.
+   * 상태가 바뀌었으면 새 행을 돌려준다 — 화면은 새 ETag 로 이어서 저장해야 한다.
+   */
+  async markValidated(applicationId: string, valid: boolean): Promise<ApplicationRow | null> {
+    return this.db.tx(async (client) => {
+      const moved = valid
+        ? await transitionApplication(client, applicationId, ['DRAFT'], 'READY')
+        : await transitionApplication(client, applicationId, ['READY'], 'DRAFT');
+      if (!moved) return null;
+      const { rows } = await client.query<Record<string, unknown>>(
+        `SELECT ${SELECT_COLS} ${FROM_APPLICATION} WHERE a.id = $1`,
+        [applicationId],
+      );
+      return rows[0] ? this.toRow(rows[0]) : null;
+    });
+  }
+
+  /** 전형·모집단위가 이 주기 소속이고 모집 중(active)인가. 아니면 400 — 고를 수 없는 선택지다. */
+  private async assertCatalog(
+    q: Queryable,
+    cycleId: string,
+    admissionTypeId: string,
+    departmentId: string,
+  ): Promise<void> {
+    const { rows } = await q.query<{ type_ok: boolean; dept_ok: boolean }>(
+      `SELECT EXISTS (SELECT 1 FROM admission_type
+                       WHERE id = $2 AND cycle_id = $1 AND active = true) AS type_ok,
+              EXISTS (SELECT 1 FROM department
+                       WHERE id = $3 AND cycle_id = $1 AND active = true) AS dept_ok`,
+      [cycleId, admissionTypeId, departmentId],
+    );
+    const r = rows[0];
+    if (!r?.type_ok) throw ProblemException.validationFailed('이 모집에서 선택할 수 없는 전형입니다.');
+    if (!r.dept_ok) throw ProblemException.validationFailed('이 모집에서 선택할 수 없는 모집단위입니다.');
   }
 
   private async selectOne(

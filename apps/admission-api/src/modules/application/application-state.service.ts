@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { PoolClient } from 'pg';
 import {
   ApplicationStatus,
   APPLICATION_TRANSITIONS,
@@ -8,23 +9,33 @@ import {
 import { ProblemException } from '../../common/problem/problem.exception';
 
 /**
- * 조건부 전이 명세.
+ * 조건부 전이 — 원서 상태를 DB 에 반영하는 길. (v1.1 §B3)
  *
- * DB 반영은 반드시 이 형태의 조건부 UPDATE 로 한다.
  *   UPDATE application
  *      SET status = :to, version = version + 1
- *    WHERE application_id = :id
- *      AND status = :expectedStatus
- *      AND version = :expectedVersion
+ *    WHERE id = :id AND status = ANY(:from)
  *
- * 읽고-검사하고-쓰는 방식은 마감 피크 경합에서 깨진다. (v1.1 §B3)
- * affectedRows 가 0이면 다른 요청이 먼저 바꾼 것이므로 409 로 응답한다.
+ * 읽고-검사하고-쓰는 방식은 마감 피크 경합에서 깨진다. `from` 중 전이 표가 허용하는 상태만 남기고,
+ * 지금 상태가 그중 하나일 때만 옮긴다. 옮긴 행이 없으면 false — 다른 요청이 먼저 바꾼 것이다.
+ * 전이 표에 없는 전이를 부르면 코드 결함이라 바로 던진다(조용히 무시하지 않는다).
  */
-export interface ConditionalTransition {
-  applicationId: string;
-  expectedStatus: ApplicationStatus;
-  expectedVersion: bigint;
-  nextStatus: ApplicationStatus;
+export async function transitionApplication(
+  client: PoolClient,
+  applicationId: string,
+  from: readonly ApplicationStatus[],
+  to: ApplicationStatus,
+): Promise<boolean> {
+  const allowed = from.filter((f) => canTransition(f, to));
+  if (allowed.length === 0) {
+    throw new Error(`전이 표에 없는 원서 상태 전이: ${from.join('|')} -> ${to}`);
+  }
+  const moved = await client.query(
+    `UPDATE application
+        SET status = $3, version = version + 1, updated_at = now()
+      WHERE id = $1 AND status = ANY($2::text[])`,
+    [applicationId, allowed, to],
+  );
+  return (moved.rowCount ?? 0) > 0;
 }
 
 /**
@@ -52,35 +63,10 @@ export class ApplicationStateService {
   }
 
   /**
-   * 조건부 전이 명세를 만든다. 실제 UPDATE 는 저장소 어댑터가 수행한다.
-   * ⚠️ Postgres 어댑터는 DDL 배치(T-M1-01) 후 구현한다.
+   * 업무필드 수정이 허용되는 상태인지.
+   * 결제를 시작하면(PAYMENT_PENDING) 더 고칠 수 없다 — 결제가 곧 제출이라(D-42) 결제 전 확인을
+   * 통과한 내용 그대로 접수돼야 한다. 결제 뒤에 필수 항목을 지우면 돈만 받고 접수가 거절된다.
    */
-  plan(
-    applicationId: string,
-    from: ApplicationStatus,
-    fromVersion: bigint,
-    to: ApplicationStatus,
-  ): ConditionalTransition {
-    this.assertCan(from, to);
-    return {
-      applicationId,
-      expectedStatus: from,
-      expectedVersion: fromVersion,
-      nextStatus: to,
-    };
-  }
-
-  /** 조건부 UPDATE 결과 해석. 0건이면 다른 요청이 먼저 바꾼 것이다. */
-  assertApplied(affectedRows: number, transition: ConditionalTransition): void {
-    if (affectedRows === 0) {
-      throw ProblemException.versionConflict(
-        `원서 상태가 이미 변경되었습니다. 최신 상태를 다시 조회해 주십시오. ` +
-          `(기대: ${transition.expectedStatus} v${transition.expectedVersion})`,
-      );
-    }
-  }
-
-  /** 업무필드 수정이 허용되는 상태인지. */
   isEditable(status: ApplicationStatus): boolean {
     return status === 'DRAFT' || status === 'READY';
   }

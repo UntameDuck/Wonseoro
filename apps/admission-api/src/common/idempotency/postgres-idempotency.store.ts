@@ -28,14 +28,13 @@ export class PostgresIdempotencyStore extends IdempotencyStore {
   }
 
   async acquire(scope: IdempotencyScope, requestHash: string): Promise<IdempotencyRecord | null> {
-    const expiresAt = new Date(Date.now() + TTL_HOURS * 3_600_000);
-
+    // 만료 시각은 DB 시계로 찍는다 — 정리(purgeExpired)도 DB 시계로 비교한다. (§A2)
     const inserted = await this.db.query(
       `INSERT INTO idempotency_record
          (id, application_id, operation, idempotency_key, request_hash, state, expires_at)
-       VALUES ($1,$2,$3,$4,$5,'PROCESSING',$6)
+       VALUES ($1,$2,$3,$4,$5,'PROCESSING', now() + make_interval(hours => $6))
        ON CONFLICT (application_id, operation, idempotency_key) DO NOTHING`,
-      [randomUUID(), scope.applicationId, scope.operation, scope.key, requestHash, expiresAt],
+      [randomUUID(), scope.applicationId, scope.operation, scope.key, requestHash, TTL_HOURS],
     );
 
     // 우리가 방금 선점했다.
@@ -99,9 +98,37 @@ export class PostgresIdempotencyStore extends IdempotencyStore {
     );
   }
 
-  /** 만료 레코드 정리. M3 에서 스케줄러로 옮긴다. */
-  async purgeExpired(): Promise<number> {
-    const res = await this.db.query(`DELETE FROM idempotency_record WHERE expires_at < now()`);
+  /**
+   * 만료 레코드 정리. 예약 작업(IdempotencyPurgeScheduler)이 부른다.
+   * 한 번에 batch 건씩 지운다 — 쌓인 것을 한 문장으로 지우면 잠금과 WAL 이 한꺼번에 몰린다.
+   */
+  async purgeExpired(batch = 5_000): Promise<number> {
+    const res = await this.db.query(
+      `DELETE FROM idempotency_record
+        WHERE id IN (SELECT id FROM idempotency_record WHERE expires_at < now() LIMIT $1)`,
+      [batch],
+    );
     return res.rowCount ?? 0;
   }
+
+  async applicationOf(ref: { paymentId?: string; documentId?: string }): Promise<string | null> {
+    if (ref.paymentId && UUID.test(ref.paymentId)) {
+      const { rows } = await this.db.query<{ application_id: string }>(
+        `SELECT application_id FROM payment WHERE id = $1`,
+        [ref.paymentId],
+      );
+      return rows[0]?.application_id ?? null;
+    }
+    if (ref.documentId && UUID.test(ref.documentId)) {
+      const { rows } = await this.db.query<{ application_id: string }>(
+        `SELECT application_id FROM document WHERE id = $1`,
+        [ref.documentId],
+      );
+      return rows[0]?.application_id ?? null;
+    }
+    return null;
+  }
 }
+
+/** 형식이 틀린 식별자로 DB 에 묻지 않는다(uuid 캐스트 오류가 500 이 된다). */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

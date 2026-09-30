@@ -32,6 +32,11 @@ export const ProblemCode = {
   IDEMPOTENCY_KEY_REUSED: 'IDEMPOTENCY_KEY_REUSED',
   PAYMENT_NOT_CONFIRMED: 'PAYMENT_NOT_CONFIRMED',
   PAYMENT_STATE_UNKNOWN: 'PAYMENT_STATE_UNKNOWN',
+  /**
+   * 이 원서에 이미 진행 중이거나 확정된 결제가 있다. 새 결제창을 열지 않는다 — 결제창이 둘이면
+   * 이중 결제가 된다(§B4). 화면은 결제 상태 확인으로 안내한다.
+   */
+  PAYMENT_IN_PROGRESS: 'PAYMENT_IN_PROGRESS',
   DOCUMENT_NOT_AVAILABLE: 'DOCUMENT_NOT_AVAILABLE',
   ALREADY_FINALIZED: 'ALREADY_FINALIZED',
   /** 한 전형에는 모집단위 하나만 지원한다. (대학입학전형기본사항, D-29) */

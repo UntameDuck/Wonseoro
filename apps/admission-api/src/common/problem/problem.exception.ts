@@ -175,6 +175,19 @@ export class ProblemException extends HttpException {
     });
   }
 
+  /**
+   * 이미 진행 중이거나 확정된 결제가 있다. 새 결제창을 열지 않는다 — 이중 결제가 확인 지연보다
+   * 큰 사고다. (v1.1 §B4)
+   */
+  static paymentInProgress(detail: string): ProblemException {
+    return new ProblemException({
+      code: ProblemCode.PAYMENT_IN_PROGRESS,
+      title: '이미 진행 중인 결제가 있습니다',
+      status: 409,
+      detail,
+    });
+  }
+
   /** 결제 상태를 PG 에서 확인하지 못했다. 재결제를 유도하지 않는다. (v1.1 §B4) */
   static paymentStateUnknown(): ProblemException {
     return new ProblemException({

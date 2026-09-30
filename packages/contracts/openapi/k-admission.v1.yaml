@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: K-Admission University Data Plane API
-  version: 1.3.0
+  version: 1.4.0
   description: >
     Reference contract for a university-local K-Admission data plane.
     The university DB is the source of truth; central sync is not in the applicant critical path.
@@ -13,6 +13,15 @@ info:
 
 
     1.3.0 adds the common `429` response (`RateLimited`, `Retry-After`) to applicant operations (D-51).
+
+
+    1.4.0 connects what the implementation had but the contract did not describe (D-54, D-55, D-56):
+    the application state machine is driven by validate / payment / finalize (READY, PAYMENT_PENDING,
+    PAID are now real states and editing stops at PAYMENT_PENDING); one live payment per application
+    (`200` resumes the open checkout, `409 PAYMENT_IN_PROGRESS` refuses a second payment); the form
+    schema carries `profileFields` and `documents` so the client draws everything from config; the
+    receipt is audited; server clock offset against the DB is reported (§A9); the applicant-facing
+    common profile API on the central host. All additions are optional fields or new paths.
 
 
     Common rules:
@@ -110,6 +119,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdmissionCycle'
+        '404':
+          description: No cycle is open
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         default:
           $ref: '#/components/responses/Problem'
   /api/v1/admission-types:
@@ -392,17 +406,33 @@ paths:
         application. So the intent is refused unless the application could be finalized now —
         valid fields, required documents AVAILABLE, a finalizable state, deadline not passed.
         Telling someone after they paid that a document is missing turns into a refund case.
+        One live payment per application (D-54): if a payment whose checkout was only opened
+        (CREATED) exists, the same checkout is returned with `200` instead of a new one; if a payment
+        is being confirmed (PENDING, UNKNOWN) or is CONFIRMED, `409` with code `PAYMENT_IN_PROGRESS`
+        — two checkouts can become two payments. The application moves to PAYMENT_PENDING and can no
+        longer be edited.
+      x-kadmission-register: D-54
       parameters:
         - $ref: '#/components/parameters/ApplicationId'
         - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '201':
-          description: Payment intent
+          description: Payment intent (new checkout)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentIntent' }
+        '200':
+          description: The already open checkout of this application (no new payment was created)
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PaymentIntent' }
         '409':
-          $ref: '#/components/responses/Problem'
+          description: >
+            PAYMENT_IN_PROGRESS (a payment is being confirmed or is confirmed — do not pay again),
+            or the application cannot be paid for in its current state
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422':
           $ref: '#/components/responses/Problem'
         '429':
@@ -536,6 +566,9 @@ paths:
     get:
       tags: [Submissions]
       operationId: getReceipt
+      description: >
+        Each issue is audited as RECEIPT_ISSUED — proof that the applicant saw the completed receipt.
+        The printable receipt is rendered by the applicant web from this data.
       parameters:
         - in: path
           name: submissionId
@@ -554,6 +587,8 @@ paths:
                   applicationNumber: { type: string }
                   finalizedAt: { type: string, format: date-time }
                   receiptUrl: { type: string, format: uri }
+        '404':
+          $ref: '#/components/responses/Problem'
         '429':
           $ref: '#/components/responses/RateLimited'
   /admin/v1/config/active:
@@ -1130,8 +1165,9 @@ paths:
               required: [result]
               properties:
                 result: { type: string, enum: [CLEAN, MALICIOUS, ERROR] }
-                scanner: { type: string }
-                engineVersion: { type: string }
+                scanner: { type: string, description: Engine name recorded in the evidence (D-56) }
+                engineVersion: { type: string, description: Engine and signature database version }
+                signature: { type: string, maxLength: 200, description: What the engine found (MALICIOUS only) }
       responses:
         '200':
           description: Scan result applied
@@ -1249,7 +1285,8 @@ paths:
       description: >
         Circuit breaker state of this Pod's external dependencies. Not part of readiness —
         if a central or PG outage failed readiness, every Pod would leave traffic and all
-        submissions would stop.
+        submissions would stop. `clock` is this Pod's measured offset against the DB clock (§A9):
+        a Pod whose offset exceeds 1000 ms refuses finalization only (503), not all traffic.
       security: []
       responses:
         '200':
@@ -1265,6 +1302,7 @@ paths:
                   circuits:
                     type: array
                     items: { $ref: '#/components/schemas/CircuitSnapshot' }
+                  clock: { $ref: '#/components/schemas/ClockReading' }
                   time: { type: string, format: date-time }
   /api/v1/dashboard/applications:
     get:
@@ -1437,6 +1475,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         universityId: { type: string }
+        universityName: { type: string, description: Display name — the client shows this, not the id }
         admissionYear: { type: integer }
         name: { type: string }
         opensAt: { type: string, format: date-time }
@@ -1482,6 +1521,11 @@ components:
         departmentId: { type: string, format: uuid }
         status:
           type: string
+          description: >
+            DRAFT → READY (validate passed) → PAYMENT_PENDING (payment intent; no more edits) →
+            PAID (payment confirmed) → FINALIZED (finalize transaction). A save moves READY back to
+            DRAFT; a failed payment moves PAYMENT_PENDING back to READY. FINALIZING exists only inside
+            the finalize transaction and is not stored (D-54). EXPIRED is reserved.
           enum: [DRAFT, READY, PAYMENT_PENDING, PAID, FINALIZING, FINALIZED, CANCELLED, EXPIRED]
         version: { type: integer, minimum: 1 }
         lastSavedAt: { type: [string, 'null'], format: date-time }
@@ -1713,6 +1757,7 @@ components:
                   required: [scanner, result, scannedAt]
                   properties:
                     scanner: { type: string }
+                    engineVersion: { type: [string, 'null'] }
                     result: { type: string }
                     scannedAt: { type: [string, 'null'], format: date-time }
         consents:
@@ -1812,6 +1857,16 @@ components:
         summary: { type: string }
         before: {}
         after: {}
+    ClockReading:
+      type: object
+      description: This Pod's clock against the DB clock — the authority for submission time (§A2, §A9)
+      required: [status, offsetMs, uncertaintyMs, sampledAt, source]
+      properties:
+        status: { type: string, enum: [SYNCED, OFFSET_EXCEEDED, UNMEASURED, STALE] }
+        offsetMs: { type: integer, description: Pod clock minus DB clock }
+        uncertaintyMs: { type: [integer, 'null'], description: Half of the shortest round trip }
+        sampledAt: { type: [string, 'null'], format: date-time }
+        source: { type: string, enum: [db] }
     ConfigDiff:
       type: object
       required: [changes, destructive, digest, identical]
@@ -1824,6 +1879,13 @@ components:
           items: { $ref: '#/components/schemas/ConfigChange' }
         digest: { type: string, description: Send back as acknowledgedDiffDigest when approving }
         identical: { type: boolean, description: An identical config is refused on approval }
+        warnings:
+          type: array
+          description: >
+            Config linter warnings (§A5) — works, but may not be what was meant (unknown admission
+            type code, field without title, legacy profile fields). Not part of the digest. Errors
+            (a schema that does not compile, malformed document lists) refuse the draft instead.
+          items: { type: string }
     DeadlinePolicy:
       type: object
       required: [policyId, version, mode, deadlineAt, status, approvedBy, activatedAt, policyHash,
@@ -1863,7 +1925,29 @@ components:
       properties:
         admissionTypeCode: { type: string }
         schemaVersion: { type: string, description: ACTIVE config version; stored with each field value }
-        schema: { type: object, additionalProperties: true, description: JSON Schema of additional fields }
+        schema:
+          type: object
+          additionalProperties: true
+          description: >
+            JSON Schema of additional fields. Property annotations the client reads: `title` (label),
+            `x-profile: true` (copied from the common profile), `x-multiline` (long text).
+        profileFields:
+          type: array
+          description: Fields copied from the common profile vault (`x-profile`); drawn in step 1 (D-55)
+          items: { type: string }
+        documents:
+          type: array
+          description: >
+            Documents this admission type accepts, from config `requiredDocuments` / `optionalDocuments`
+            / `documentLabels` (D-55). Upload intents for other types are refused when the list is not
+            empty. Required ones must be AVAILABLE before the payment intent.
+          items:
+            type: object
+            required: [documentType, label, required]
+            properties:
+              documentType: { type: string }
+              label: { type: string }
+              required: { type: boolean }
     SelfCheck:
       type: object
       required: [applicationId, serverTime, deadlineAt, deadlinePolicyVersion, application,
@@ -1893,6 +1977,10 @@ components:
           required: [exists, guidance]
           properties:
             exists: { type: boolean }
+            paymentId:
+              type: string
+              format: uuid
+              description: Lets the client re-check this payment instead of creating another one
             status: { type: string }
             amount: { type: number }
             providerApprovedAt: { type: [string, 'null'], format: date-time }

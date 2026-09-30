@@ -7,12 +7,14 @@ interface ScanResultBody {
   result?: 'CLEAN' | 'MALICIOUS' | 'ERROR';
   scanner?: string;
   engineVersion?: string;
+  /** 엔진이 찾은 것(악성코드 이름 등). 파일 내용·개인정보는 담지 않는다. */
+  signature?: string;
 }
 
 /**
  * AV 검사 워커용 내부 API — 기술설계서 v1.0 §5.4, ADR-0004
  *
- * ⚠️ canonical OpenAPI 에 없다. 계약 추가 대기. (불일치 대장 D-20)
+ * 계약: OpenAPI listDocumentsPendingScan · reportDocumentScanResult (D-20).
  *
  * `document-service` 가 QUARANTINED 서류를 가져가 검사하고 결과를 돌려준다.
  * 운영에서는 mTLS 로만 접근하며 외부에 노출하지 않는다. (M5 T-M5-05)
@@ -62,7 +64,9 @@ export class DocumentScanController {
     const status = await this.documents.applyScanResult(
       documentId,
       result,
-      body.scanner ?? 'unknown',
+      typeof body.scanner === 'string' && body.scanner ? body.scanner : 'unknown',
+      typeof body.engineVersion === 'string' && body.engineVersion ? body.engineVersion : null,
+      typeof body.signature === 'string' && body.signature ? { signature: body.signature.slice(0, 200) } : {},
     );
     return { documentId, result, status };
   }

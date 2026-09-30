@@ -58,18 +58,26 @@ export class IdempotencyInterceptor implements NestInterceptor {
     }
 
     const key = this.requireKey(request);
-    const applicationId = this.applicationId(request);
 
-    // 경로에 원서가 없으면 저장소를 쓰지 않는다. 헤더 검증은 그대로 수행했다.
-    if (!applicationId) {
-      return next.handle();
-    }
+    return from(this.applicationId(request)).pipe(
+      switchMap((applicationId) => {
+        // 원서를 알 수 없으면(원서 생성·운영 API) 저장소를 쓰지 않는다. 헤더 검증은 그대로 수행했다.
+        if (!applicationId) return next.handle();
+        return this.guarded(context, next, {
+          applicationId,
+          operation: this.operation(request),
+          key,
+        });
+      }),
+    );
+  }
 
-    const scope: IdempotencyScope = {
-      applicationId,
-      operation: this.operation(request),
-      key,
-    };
+  private guarded(
+    context: ExecutionContext,
+    next: CallHandler,
+    scope: IdempotencyScope,
+  ): Observable<unknown> {
+    const request = context.switchToHttp().getRequest<FastifyRequest>();
     const requestHash = hashRequest(request);
 
     return from(this.store.acquire(scope, requestHash)).pipe(
@@ -141,9 +149,25 @@ export class IdempotencyInterceptor implements NestInterceptor {
     return key;
   }
 
-  private applicationId(request: FastifyRequest): string | undefined {
-    const params = request.params as Record<string, string> | undefined;
-    return params?.applicationId;
+  /**
+   * 요청이 어느 원서의 것인가. 경로에 원서가 있으면 그것, 결제·서류 경로면 그 결제·서류의 원서.
+   * 결제 확인·서류 완료·삭제도 같은 키로 재시도하면 같은 응답을 받아야 한다 — 전에는 원서 ID 가
+   * 경로에 없다는 이유로 기록하지 않아, 재시도가 두 번 실행되거나 다른 오류로 돌아왔다.
+   */
+  private async applicationId(request: FastifyRequest): Promise<string | null> {
+    const params = (request.params as Record<string, string> | undefined) ?? {};
+    if (params.applicationId) return params.applicationId;
+    // 내부 경로(검사 워커의 결과 보고)는 제외한다. 워커는 서류마다 고정 키를 쓰는데, 일시 오류로
+    // 기록이 FAILED 가 되면 같은 키가 영원히 거절돼 서류가 검사 대기에 묶인다. 그 경로는
+    // "QUARANTINED 일 때만" 조건부 전이로 중복을 막는다.
+    if (!request.url.startsWith('/api/')) return null;
+    if (params.paymentId || params.documentId) {
+      return this.store.applicationOf({
+        ...(params.paymentId ? { paymentId: params.paymentId } : {}),
+        ...(params.documentId ? { documentId: params.documentId } : {}),
+      });
+    }
+    return null;
   }
 
   /** 같은 키를 다른 작업에 재사용해도 서로 간섭하지 않게 한다. */

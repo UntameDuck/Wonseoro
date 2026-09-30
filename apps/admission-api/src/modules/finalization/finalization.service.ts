@@ -7,6 +7,7 @@ import { purposeRef } from '@wonseoro/server-kit';
 import { CENTRAL_SUBJECT_KEY, CENTRAL_SUBJECT_KEY_ID } from '../../config';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { trackFinalize } from '../../common/telemetry/business-metrics';
+import { serverClock, serverNow } from '../../common/time/server-clock';
 import { finalizedEventData } from '../../common/central/central-events';
 import { AuditService } from '../audit/audit.service';
 import { DeadlineService } from '../deadline/deadline.service';
@@ -41,6 +42,10 @@ export interface FinalizeInput {
 /**
  * 접수로 갈 수 있는 원서 상태. CANCELLED·EXPIRED 는 안 된다 —
  * 결제가 늦게 확인되는 동안 지원자가 취소했을 수 있다. 그 결제는 환불 대상이지 접수가 아니다.
+ *
+ * 결제가 확인되면 원서는 PAID 다(D-54). DRAFT·READY·PAYMENT_PENDING 은 결제 확인이 원서 상태에
+ * 반영되기 전에 만들어진 원서를 위해 남긴다 — 어느 경우든 finalize 는 CONFIRMED 결제를 먼저 요구한다.
+ * 결제 전 확인(guardIntent)도 같은 규칙을 쓴다.
  */
 const FINALIZABLE_FROM = new Set(['DRAFT', 'READY', 'PAYMENT_PENDING', 'PAID', 'FINALIZING']);
 
@@ -87,7 +92,7 @@ export class FinalizationService implements OnModuleInit {
    */
   onModuleInit(): void {
     this.payments.guardIntent(async (applicationId) => {
-      await this.assertReady(applicationId, new Date());
+      await this.assertReady(applicationId, serverNow());
     });
     this.payments.onConfirmed((payment) => this.autoFinalize(payment));
   }
@@ -122,21 +127,46 @@ export class FinalizationService implements OnModuleInit {
       this.logger.warn(
         `auto-finalize failed for application ${payment.applicationId}: ${problem?.code ?? String(err)}`,
       );
-      await this.db.tx((client) =>
-        this.audit.record(client, {
-          applicationId: payment.applicationId,
-          actorType: 'SYSTEM',
-          actorId: 'auto-finalize',
-          action: 'FINALIZE_REQUESTED',
-          result: 'REJECTED',
-          details: {
-            trigger: 'PAYMENT_CONFIRMED',
-            paymentId: payment.id,
-            code: problem?.code ?? 'INTERNAL',
-          },
-        }),
+      await this.recordRejected(
+        { applicationId: payment.applicationId, trigger: 'PAYMENT_CONFIRMED', paymentId: payment.id },
+        problem?.code ?? 'INTERNAL',
       );
     }
+  }
+
+  /**
+   * 접수 요청이 거절된 사실을 남긴다. 성공(APPLICATION_FINALIZED)만 남기면 "마감 3초 전에 제출을
+   * 눌렀는데 결제 확인이 안 돼 거절됐다" 같은 구제 판정의 근거가 사라진다. (§01 A2 · v1.0 §9)
+   * 기록 자체가 실패해도 원래 오류를 가리지 않는다.
+   */
+  private async recordRejected(
+    src: {
+      applicationId: string;
+      trigger: 'APPLICANT' | 'PAYMENT_CONFIRMED';
+      applicantId?: string;
+      paymentId?: string;
+      traceId?: string;
+      sourceIp?: string;
+    },
+    code: string,
+  ): Promise<void> {
+    const auto = src.trigger === 'PAYMENT_CONFIRMED';
+    await this.db
+      .tx((client) =>
+        this.audit.record(client, {
+          applicationId: src.applicationId,
+          actorType: auto ? 'SYSTEM' : 'APPLICANT',
+          actorId: auto ? 'auto-finalize' : src.applicantId ?? 'unknown',
+          action: 'FINALIZE_REQUESTED',
+          result: 'REJECTED',
+          ...(src.traceId ? { traceId: src.traceId } : {}),
+          ...(src.sourceIp ? { sourceIp: src.sourceIp } : {}),
+          details: { trigger: src.trigger, ...(src.paymentId ? { paymentId: src.paymentId } : {}), code },
+        }),
+      )
+      .catch((error: unknown) => {
+        this.logger.warn(`FINALIZE_REQUESTED 거절 기록 실패 (application=${src.applicationId}): ${String(error)}`);
+      });
   }
 
   /**
@@ -179,7 +209,26 @@ export class FinalizationService implements OnModuleInit {
     // finalize_success_rate · finalize_retry_rate (T-M4-22)
     return trackFinalize(
       input.trigger === 'PAYMENT_CONFIRMED' ? 'payment_confirmed' : 'applicant',
-      () => this.finalizeTracked(input),
+      async () => {
+        try {
+          return await this.finalizeTracked(input);
+        } catch (err) {
+          // 자동 접수의 거절은 autoFinalize 가 결제 ID 와 함께 남긴다. 여기서는 지원자가 누른 것만.
+          if (input.trigger !== 'PAYMENT_CONFIRMED' && err instanceof ProblemException) {
+            await this.recordRejected(
+              {
+                applicationId: input.applicationId,
+                trigger: 'APPLICANT',
+                applicantId: input.applicantId,
+                ...(input.traceId ? { traceId: input.traceId } : {}),
+                ...(input.sourceIp ? { sourceIp: input.sourceIp } : {}),
+              },
+              err.problem.code,
+            );
+          }
+          throw err;
+        }
+      },
     );
   }
 
@@ -211,21 +260,22 @@ export class FinalizationService implements OnModuleInit {
       throw err;
     }
 
-    const commitAt = new Date();
-    const policy = await this.deadline.assertWithinDeadline(app.cycleId, {
-      requestReceivedAt: input.requestedAt,
-      ...(payment.providerApprovedAt
-        ? { paymentApprovedAt: new Date(payment.providerApprovedAt) }
-        : {}),
-      commitAt,
-    });
+    // 이 노드의 시계가 DB 와 허용오차 넘게 어긋나 있으면 접수를 확정하지 않는다 (§A9).
+    // 503 재시도 안내 — Edge 가 다른 Pod 로 다시 보낸다 (D-52).
+    this.deadline.assertFinalizationClock();
+    const policy = await this.deadline.policyFor(app.cycleId);
     const configVersion = await this.activeConfigVersion(app.cycleId);
+    const paymentApprovedAt = payment.providerApprovedAt
+      ? { paymentApprovedAt: new Date(payment.providerApprovedAt) }
+      : {};
 
     // ── 트랜잭션: 여기부터 외부 호출 금지 ──────────────────────────────
     const submission = await this.db.tx(async (client) => {
       // 2. Application 행 잠금 + 상태·버전 재확인
-      const locked = await client.query<{ status: string; version: string }>(
-        `SELECT status, version FROM application WHERE id = $1 FOR UPDATE`,
+      const locked = await client.query<{ status: string; version: string; commit_at: Date }>(
+        // 커밋 시각은 DB 시계다 (§A2 "시각의 권위는 DB 하나"). 잠금을 얻은 뒤의 시각이라
+        // 잠금 대기까지 포함한 실제 확정 시점이다.
+        `SELECT status, version, clock_timestamp() AS commit_at FROM application WHERE id = $1 FOR UPDATE`,
         [input.applicationId],
       );
       const current = locked.rows[0];
@@ -235,6 +285,15 @@ export class FinalizationService implements OnModuleInit {
       if (!FINALIZABLE_FROM.has(current.status)) {
         throw ProblemException.illegalTransition(current.status, 'FINALIZED');
       }
+
+      // 마감 판정 — 정책이 정한 시각(요청 수신·PG 승인·DB 커밋)으로 (§A2)
+      const commitAt = current.commit_at;
+      this.deadline.assertEvaluated(policy, {
+        requestReceivedAt: input.requestedAt,
+        ...paymentApprovedAt,
+        commitAt,
+      });
+      const clock = serverClock.reading();
 
       const applicationNumber = this.issueApplicationNumber(app.admissionYear, app.universityId);
       const submissionId = randomUUID();
@@ -263,7 +322,8 @@ export class FinalizationService implements OnModuleInit {
           commitAt,
           policy.version,
           configVersion,
-          0,
+          // 이 노드 시계 − DB 시계. 시각 분쟁 때 "그 순간 서버 시계가 맞았는가" 의 근거다 (§A9)
+          clock.offsetMs,
           evidenceHash,
         ],
       );
@@ -313,6 +373,8 @@ export class FinalizationService implements OnModuleInit {
           submissionId,
           paymentId: payment.id,
           trigger: input.trigger ?? 'APPLICANT',
+          // §A9 "감사로그에 clock offset 과 time-source 상태 기록"
+          clock: { offsetMs: clock.offsetMs, uncertaintyMs: clock.uncertaintyMs, status: clock.status, source: clock.source },
         },
       });
 
@@ -359,6 +421,29 @@ export class FinalizationService implements OnModuleInit {
       deadlinePolicyVersion: String(r.deadline_policy_version),
       configVersion: String(r.config_version),
     };
+  }
+
+  /** 접수증 발급 — 접수 기록을 돌려주고 RECEIPT_ISSUED 를 남긴다. */
+  async issueReceipt(
+    submissionId: string,
+    applicantId: string,
+    context: { traceId?: string; sourceIp?: string } = {},
+  ): Promise<SubmissionRow | null> {
+    const submission = await this.findBySubmissionId(submissionId);
+    if (!submission) return null;
+    await this.db.tx((client) =>
+      this.audit.record(client, {
+        applicationId: submission.applicationId,
+        actorType: 'APPLICANT',
+        actorId: applicantId,
+        action: 'RECEIPT_ISSUED',
+        result: 'ACCEPTED',
+        ...(context.traceId ? { traceId: context.traceId } : {}),
+        ...(context.sourceIp ? { sourceIp: context.sourceIp } : {}),
+        details: { submissionId: submission.submissionId },
+      }),
+    );
+    return submission;
   }
 
   async findBySubmissionId(submissionId: string): Promise<SubmissionRow | null> {
@@ -457,12 +542,10 @@ export class FinalizationService implements OnModuleInit {
     cycleId: string,
     admissionTypeCode: string,
   ): Promise<void> {
-    const { rows } = await this.db.query<{ config_json: { requiredDocuments?: Record<string, string[]> } }>(
-      `SELECT config_json FROM config_version
-        WHERE cycle_id = $1 AND status = 'ACTIVE' LIMIT 1`,
-      [cycleId],
-    );
-    const required = rows[0]?.config_json?.requiredDocuments?.[admissionTypeCode] ?? [];
+    // 화면·업로드 검사와 같은 출처(FormSchemaService)에서 읽는다 — 서로 다른 목록을 보면
+    // 화면이 안 보여 준 서류를 접수가 요구하게 된다.
+    const { documents } = await this.forms.load(cycleId, admissionTypeCode);
+    const required = documents.filter((d) => d.required).map((d) => d.documentType);
     if (required.length === 0) return;
 
     const docs = await this.db.query<{ document_type: string }>(
@@ -471,11 +554,11 @@ export class FinalizationService implements OnModuleInit {
       [applicationId],
     );
     const available = new Set(docs.rows.map((d) => d.document_type));
-    const missing = required.filter((t) => !available.has(t));
+    const missing = documents.filter((d) => d.required && !available.has(d.documentType));
 
     if (missing.length > 0) {
       throw ProblemException.documentNotAvailable(
-        `검사가 완료된 필수 서류가 없습니다: ${missing.join(', ')}`,
+        `검사가 완료된 필수 서류가 없습니다: ${missing.map((d) => d.label).join(', ')}`,
       );
     }
   }

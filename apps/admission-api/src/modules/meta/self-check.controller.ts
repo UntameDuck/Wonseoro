@@ -16,7 +16,7 @@ interface TimelineEntry {
 /**
  * Support Self-check — 기술설계서 v1.1 §01 C7 · §B11
  *
- * ⚠️ canonical OpenAPI 에 없는 엔드포인트다. 계약 추가 대기 중. (불일치 대장 D-16)
+ * 계약: OpenAPI getApplicationSelfCheck (D-16).
  *
  * **사용자가 "서버가 아는 상태"를 직접 본다.**
  *
@@ -101,6 +101,8 @@ export class SelfCheckController {
         return '결제가 확인되었습니다. 접수 처리 중입니다. 다시 결제하지 마십시오.';
       case 'EXPIRED':
         return '마감되어 접수할 수 없습니다.';
+      case 'CANCELLED':
+        return '취소된 원서입니다. 결제하신 전형료가 있으면 대학이 환불 절차를 안내합니다.';
       default:
         return `현재 상태: ${status}`;
     }
@@ -133,6 +135,8 @@ export class SelfCheckController {
     const status = String(r.status);
     return {
       exists: true,
+      // 화면이 새 결제를 만들지 않고 **이 결제**를 다시 확인할 수 있게 준다 (재결제 방지, §B4)
+      paymentId: String(r.id),
       status,
       amount: Number(r.amount),
       providerApprovedAt: r.provider_approved_at
@@ -246,5 +250,6 @@ const LABELS: Record<string, string> = {
   FINALIZE_REQUESTED: '접수 요청',
   FINALIZE_VALIDATION_PASSED: '접수 검증 통과',
   APPLICATION_FINALIZED: '접수 완료',
+  APPLICATION_CANCELLED: '원서 취소',
   RECEIPT_ISSUED: '접수증 발급',
 };

@@ -5,7 +5,10 @@ import { CircuitOpenError, Db, describeFailure } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { trackPaymentVerify } from '../../common/telemetry/business-metrics';
 import { DependencyBreakers } from '../../common/resilience/dependency-breakers';
+import type { PoolClient } from 'pg';
+import type { Queryable } from '../../common/db/queryable';
 import { AuditService } from '../audit/audit.service';
+import { transitionApplication } from '../application/application-state.service';
 import { PaymentProviderPort, VerifyResult } from './payment.provider';
 
 export interface PaymentRow {
@@ -68,15 +71,25 @@ export class PaymentService {
     this.confirmedListeners.push(listener);
   }
 
+  /** 원서에 살아 있는 결제 — 결론이 나지 않았거나(CREATED·PENDING·UNKNOWN) 확정된(CONFIRMED) 것. */
+  private static readonly LIVE: readonly PaymentStatus[] = ['CREATED', 'PENDING', 'UNKNOWN', 'CONFIRMED'];
+
   /**
    * 전형료 결제 의도 생성.
    * 금액은 클라이언트가 보내지 않는다. 대학 설정(admission_type.fee_amount)이 최종 기준이다. (v1.1 §10 §1)
+   *
+   * **한 원서에 살아 있는 결제는 하나다.** 결제창이 둘 열리면 둘 다 결제될 수 있다 — 이중 결제는
+   * 확인 지연보다 큰 사고다 (§B4). 그래서
+   *   - 결제창만 연(CREATED) 결제가 있으면 새로 만들지 않고 **그 결제창을 다시 연다** (200)
+   *   - 확인 중(PENDING·UNKNOWN)이거나 확정(CONFIRMED)이면 409 PAYMENT_IN_PROGRESS — 다시 결제하지 않게
+   *   - 실패·취소(FAILED·CANCELLED)만 새 결제를 허용한다 (PAYMENT_RETRYABLE)
+   * 결제를 만들면 원서는 PAYMENT_PENDING 이 되고 더 고칠 수 없다 (D-54).
    */
   async createIntent(
     applicationId: string,
     applicantId: string,
     context: { traceId?: string; sourceIp?: string },
-  ): Promise<{ payment: PaymentRow; providerPayload: Record<string, unknown> }> {
+  ): Promise<{ payment: PaymentRow; providerPayload: Record<string, unknown>; created: boolean }> {
     const { rows } = await this.db.query<{ fee_amount: string; status: string }>(
       `SELECT t.fee_amount, a.status
          FROM application a
@@ -89,8 +102,11 @@ export class PaymentService {
     if (found.status === 'FINALIZED') throw ProblemException.alreadyFinalized();
 
     // 결제가 곧 제출이다 (D-42). 확인되는 순간 접수하므로, 접수할 수 없는 원서면 결제창을 열지 않는다.
-    // 돈을 받은 뒤에 "서류가 빠졌습니다" 를 알리면 환불 사건이 된다.
+    // 돈을 받은 뒤에 "서류가 빠졌습니다" 를 알리면 환불 사건이 된다. 결제창을 다시 열 때도 본다 — 그사이 마감이 지났을 수 있다.
     for (const guard of this.intentGuards) await guard(applicationId);
+
+    const live = await this.livePayment(this.db, applicationId);
+    if (live) return this.resumeOrRefuse(live, applicationId);
 
     const amount = Number(found.fee_amount);
     // 결제창을 열기 전 단계라 아직 돈이 움직이지 않았다. 끊겼으면 503 으로
@@ -105,7 +121,16 @@ export class PaymentService {
       });
     const paymentId = randomUUID();
 
-    const payment = await this.db.tx(async (client) => {
+    const outcome = await this.db.tx(async (client): Promise<{ raced: PaymentRow } | { payment: PaymentRow }> => {
+      // 같은 원서의 결제 의도 생성은 한 줄로 선다. 잠금 없이 확인하면 동시에 누른 두 요청이 둘 다 만든다.
+      await client.query(`SELECT 1 FROM application WHERE id = $1 FOR UPDATE`, [applicationId]);
+      const raced = await this.livePayment(client, applicationId);
+      if (raced) {
+        // 잠금을 기다리는 사이 같은 원서의 다른 요청이 결제를 만들었다. 방금 받은 결제창은 쓰지 않는다 —
+        // 결제창을 열기만 했으므로 돈은 움직이지 않았다.
+        return { raced };
+      }
+
       await client.query(
         `INSERT INTO payment
            (id, application_id, provider, provider_tx_id, amount, currency, status)
@@ -123,24 +148,88 @@ export class PaymentService {
         // 금액은 남겨도 되지만 결제수단 상세는 남기지 않는다. (v1.1 §04 Privacy)
         details: { paymentId, amount },
       });
+      await this.startPayment(client, applicationId);
 
       // ⚠️ 여기서 this.load() 를 부르면 안 된다.
       // load() 는 풀에서 **다른 커넥션**을 꺼내므로 아직 커밋되지 않은 이 INSERT 를
       // 볼 수 없다. 트랜잭션 안에서 읽을 때는 반드시 같은 client 를 써야 한다.
-      return {
+      const payment: PaymentRow = {
         id: paymentId,
         applicationId,
         provider: this.provider.name,
         providerTxId: intent.providerTxId,
         amount,
         currency: 'KRW',
-        status: 'CREATED' as PaymentStatus,
+        status: 'CREATED',
         providerApprovedAt: null,
         verifiedAt: null,
       };
+      return { payment };
     });
 
-    return { payment, providerPayload: intent.providerPayload };
+    if ('raced' in outcome) return this.resumeOrRefuse(outcome.raced, applicationId);
+    return { payment: outcome.payment, providerPayload: intent.providerPayload, created: true };
+  }
+
+  /**
+   * 결제를 시작한 원서는 PAYMENT_PENDING 이다 — 결제 전 확인을 통과했으니 작성 완료(READY)를 거친다.
+   * 이미 PAYMENT_PENDING 이면(결제창 재개) 그대로다. 취소·마감된 원서면 결제를 만들지 않는다.
+   */
+  private async startPayment(client: PoolClient, applicationId: string): Promise<void> {
+    await transitionApplication(client, applicationId, ['DRAFT'], 'READY');
+    if (await transitionApplication(client, applicationId, ['READY'], 'PAYMENT_PENDING')) return;
+    const { rows } = await client.query<{ status: string }>(
+      `SELECT status FROM application WHERE id = $1`,
+      [applicationId],
+    );
+    const status = rows[0]?.status ?? 'UNKNOWN';
+    if (status !== 'PAYMENT_PENDING') throw ProblemException.illegalTransition(status, 'PAYMENT_PENDING');
+  }
+
+  /** 가장 최근의 살아 있는 결제. 결제 의도 생성의 잠금 안팎에서 같은 규칙으로 본다. */
+  private async livePayment(q: Queryable, applicationId: string): Promise<PaymentRow | null> {
+    const { rows } = await q.query<Record<string, unknown>>(
+      `SELECT id, application_id, provider, provider_tx_id, amount, currency,
+              status, provider_approved_at, verified_at
+         FROM payment
+        WHERE application_id = $1 AND status = ANY($2::text[])
+        ORDER BY created_at DESC
+        LIMIT 1`,
+      [applicationId, PaymentService.LIVE],
+    );
+    return rows[0] ? this.toRow(rows[0]) : null;
+  }
+
+  /** 결제창만 열린 결제는 다시 열고, 확인 중·확정된 결제면 새 결제를 거절한다. */
+  private async resumeOrRefuse(
+    live: PaymentRow,
+    applicationId: string,
+  ): Promise<{ payment: PaymentRow; providerPayload: Record<string, unknown>; created: boolean }> {
+    if (live.status === 'CONFIRMED') {
+      throw ProblemException.paymentInProgress(
+        '이 원서의 전형료 결제는 이미 확인되었습니다. 다시 결제하지 마시고 접수 결과를 확인해 주십시오.',
+      );
+    }
+    if (live.status !== 'CREATED' || !live.providerTxId) {
+      throw ProblemException.paymentInProgress(
+        '결제를 확인하는 중입니다. 다시 결제하지 마시고 잠시 후 상태를 확인해 주십시오.',
+      );
+    }
+    // 원서 상태가 결제 시작 전(옛 데이터)이면 함께 맞춘다.
+    await this.db.tx(async (client) => {
+      await client.query(`SELECT 1 FROM application WHERE id = $1 FOR UPDATE`, [applicationId]);
+      await this.startPayment(client, applicationId);
+    });
+    const providerTxId = live.providerTxId;
+    const resumed = await this.breakers.paymentGateway
+      .run(() => this.provider.resume(providerTxId, live.amount, applicationId))
+      .catch((err: unknown) => {
+        this.logger.warn(`payment resume unavailable (${describeCause(err)})`);
+        throw ProblemException.retryable(
+          '결제사 연결이 원활하지 않습니다. 잠시 후 다시 시도해 주십시오. 새 결제는 만들지 않았습니다.',
+        );
+      });
+    return { payment: live, providerPayload: resumed.providerPayload, created: false };
   }
 
   /**
@@ -341,6 +430,9 @@ export class PaymentService {
         details: { paymentId: payment.id, status, ...extra },
       });
 
+      // 원서 상태를 결제에 맞춘다 (D-54). 같은 트랜잭션이라 결제와 원서가 어긋난 채 커밋되지 않는다.
+      await this.followApplication(client, payment.applicationId, payment.id, status);
+
       return {
         ...payment,
         status,
@@ -348,6 +440,38 @@ export class PaymentService {
         verifiedAt: new Date().toISOString(),
       };
     });
+  }
+
+  /**
+   * 결제 결론을 원서에 반영한다.
+   *   CONFIRMED        → PAID. 결제를 시작해도 원서가 DRAFT 로 남던 옛 데이터도 차례로 올린다 — 돈은 이미 받았다
+   *   FAILED·CANCELLED → READY (다른 살아 있는 결제가 없을 때). 다시 결제할 수 있다
+   *   그 밖            → 그대로 (아직 모른다)
+   * 취소·마감·접수된 원서는 건드리지 않는다 — 취소 뒤 확정된 결제는 환불 대상이다(대조가 찾는다).
+   */
+  private async followApplication(
+    client: PoolClient,
+    applicationId: string,
+    paymentId: string,
+    status: PaymentStatus,
+  ): Promise<void> {
+    if (status === 'CONFIRMED') {
+      await transitionApplication(client, applicationId, ['DRAFT'], 'READY');
+      await transitionApplication(client, applicationId, ['READY'], 'PAYMENT_PENDING');
+      await transitionApplication(client, applicationId, ['PAYMENT_PENDING'], 'PAID');
+      return;
+    }
+    if (status === 'FAILED' || status === 'CANCELLED') {
+      const { rows } = await client.query(
+        `SELECT 1 FROM payment
+          WHERE application_id = $1 AND id <> $2 AND status = ANY($3::text[])
+          LIMIT 1`,
+        [applicationId, paymentId, PaymentService.LIVE],
+      );
+      if (rows.length === 0) {
+        await transitionApplication(client, applicationId, ['PAYMENT_PENDING'], 'READY');
+      }
+    }
   }
 
   private toRow(r: Record<string, unknown>): PaymentRow {

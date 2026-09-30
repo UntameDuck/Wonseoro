@@ -46,6 +46,14 @@ export abstract class IdempotencyStore {
   ): Promise<void>;
   /** 실패를 기록한다. DDL 은 삭제가 아니라 FAILED 상태를 둔다. (D-11) */
   abstract fail(scope: IdempotencyScope): Promise<void>;
+  /**
+   * 경로에 원서 ID 가 없는 요청(결제 확인·서류 완료·삭제·검사 결과)이 어느 원서의 것인지.
+   * DDL 의 idempotency_record.application_id 가 NOT NULL 이라 원서를 알아야 기록할 수 있다.
+   * 모르면 null — 그 요청은 기록 없이 처리한다(없는 결제·서류는 뒤에서 404 가 된다).
+   */
+  abstract applicationOf(ref: { paymentId?: string; documentId?: string }): Promise<string | null>;
+  /** 만료된 기록을 지운다. 지운 건수. */
+  abstract purgeExpired(batch?: number): Promise<number>;
 }
 
 export function scopeKey(scope: IdempotencyScope): string {
@@ -84,5 +92,17 @@ export class InMemoryIdempotencyStore extends IdempotencyStore {
     const record = this.records.get(scopeKey(scope));
     if (!record) return;
     record.state = 'FAILED';
+  }
+
+  /** 메모리 어댑터는 만료가 없다. */
+  async purgeExpired(): Promise<number> {
+    return 0;
+  }
+
+  /** 시험이 채운다. */
+  readonly owners = new Map<string, string>();
+
+  async applicationOf(ref: { paymentId?: string; documentId?: string }): Promise<string | null> {
+    return this.owners.get(ref.paymentId ?? ref.documentId ?? '') ?? null;
   }
 }

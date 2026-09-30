@@ -100,6 +100,18 @@ export const CENTRAL_GATE = {
 } as const;
 
 /**
+ * 서버 시각 측정. (v1.1 §01 A9)
+ *
+ * 이 노드 시계와 DB 시계의 차이를 intervalMs 마다 probesPerSample 번 재서 왕복이 가장 짧은
+ * 표본을 쓴다. 마지막 성공 측정이 intervalMs × 3 보다 오래되면 STALE 로 본다.
+ */
+export const CLOCK = {
+  autostart: envBool('CLOCK_AUTOSTART', true),
+  intervalMs: envInt('CLOCK_SAMPLE_INTERVAL_MS', 10_000, { min: 1000, max: 300_000 }),
+  probesPerSample: envInt('CLOCK_PROBES_PER_SAMPLE', 3, { min: 1, max: 10 }),
+} as const;
+
+/**
  * 인증 방식.
  *   dev-headers — x-applicant-id / x-admin-id 헤더를 그대로 신뢰한다. **개발 전용**
  *   gateway     — 앞단 인증 게이트웨이가 검증해 넣어준 신원을 쓴다 (T-M5-02)
@@ -172,6 +184,16 @@ export const RECON_SCHEDULE = {
   autostart: envBool('RECON_SCHEDULE_AUTOSTART', true),
   intervalMs: envInt('RECON_SCHEDULE_INTERVAL_MS', 3_600_000, { min: 60_000, max: 86_400_000 }),
   sinceHours: envInt('RECON_SCHEDULE_SINCE_HOURS', 48, { min: 1, max: 720 }),
+} as const;
+
+/**
+ * 만료된 멱등 기록 정리. (D-11)
+ * 기록은 24시간 뒤 만료된다. 지우지 않으면 마감 피크의 모든 변경 요청이 영원히 쌓인다.
+ * Peak Mode 억제 구간에는 돌지 않는다 — 접수 핵심 경로가 아니다.
+ */
+export const IDEMPOTENCY_PURGE = {
+  autostart: envBool('IDEMPOTENCY_PURGE_AUTOSTART', true),
+  intervalMs: envInt('IDEMPOTENCY_PURGE_INTERVAL_MS', 900_000, { min: 60_000, max: 86_400_000 }),
 } as const;
 
 /**

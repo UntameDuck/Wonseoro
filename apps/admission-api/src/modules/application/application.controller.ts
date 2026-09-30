@@ -14,6 +14,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { CACHE_CONTROL_PII, HEADER_IF_MATCH } from '@wonseoro/contracts';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { trackDraftSave } from '../../common/telemetry/business-metrics';
+import { serverNow } from '../../common/time/server-clock';
 import { UNIVERSITY_ID } from '../../config';
 import { applicantFrom } from '../../common/identity/identity';
 import { Ownership } from '../../common/identity/ownership.service';
@@ -60,18 +61,20 @@ export class ApplicationController {
     const admissionTypeId = this.required(body.admissionTypeId, 'admissionTypeId');
     const departmentId = this.required(body.departmentId, 'departmentId');
 
-    // 마감 후에는 새 원서를 만들 수 없다. 서버 시각 기준이다.
-    await this.deadline.assertWithinDeadline(cycleId, {
-      requestReceivedAt: new Date(),
-      commitAt: new Date(),
-    });
+    // 마감 후에는 새 원서를 만들 수 없다. 서버 시각(DB 시계 기준) 이다. (§A2)
+    const now = serverNow();
+    await this.deadline.assertWithinDeadline(cycleId, { requestReceivedAt: now, commitAt: now });
 
     const { applicantId, subjectToken } = applicantFrom(req);
+    // 공통원서에서 가져올 항목은 전형 양식이 정한다(`x-profile`). 코드에 박지 않는다. (§A5 · §10 §3)
+    const typeCode = await this.repo.admissionTypeCode(cycleId, admissionTypeId);
+    const { profileFields } = await this.forms.load(cycleId, typeCode);
     const { row, created } = await this.repo.create({
       cycleId,
       applicantId,
       admissionTypeId,
       departmentId,
+      requestedFields: profileFields,
       ...(subjectToken ? { subjectToken } : {}),
       // 대학 식별자가 없으면 공통원서 Snapshot 조회가 조용히 건너뛰어진다.
       // 그래서 설정값이 아니라 기동 조건으로 둔다. (config.ts)
@@ -132,16 +135,18 @@ export class ApplicationController {
     const current = await this.repo.findById(applicationId);
     if (!current) throw ProblemException.validationFailed('존재하지 않는 원서입니다.');
 
-    await this.deadline.assertWithinDeadline(current.cycleId, {
-      requestReceivedAt: new Date(),
-      commitAt: new Date(),
-    });
+    const now = serverNow();
+    await this.deadline.assertWithinDeadline(current.cycleId, { requestReceivedAt: now, commitAt: now });
 
     // 자동저장은 부분 입력을 허용하되 모르는 필드는 거부한다. (v1.1 §A5)
     // 모르는 필드를 받아두면 최종검증에서 원인을 찾기 어려워진다.
+    // 전형을 바꾸는 저장이면 **바뀔 전형**의 양식으로 본다 — 옛 전형 양식으로 보면 새 전형에 없는 항목이 들어간다.
+    const typeCode = body.admissionTypeId
+      ? await this.repo.admissionTypeCode(current.cycleId, body.admissionTypeId)
+      : current.admissionTypeCode;
     const schemaVersion = await this.forms.assertKnownFields(
       current.cycleId,
-      current.admissionTypeCode,
+      typeCode,
       body.fields ?? {},
     );
 
@@ -169,7 +174,11 @@ export class ApplicationController {
   @Post(':applicationId/validate')
   @HttpCode(200)
   @Header('cache-control', CACHE_CONTROL_PII)
-  async validate(@Param('applicationId') applicationId: string, @Req() req: FastifyRequest) {
+  async validate(
+    @Param('applicationId') applicationId: string,
+    @Req() req: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
     await this.ownership.assertApplication(applicationId, applicantFrom(req).applicantId);
 
     const row = await this.repo.findById(applicationId);
@@ -177,6 +186,11 @@ export class ApplicationController {
 
     const fields = await this.repo.fields(applicationId);
     const result = await this.forms.validate(row.cycleId, row.admissionTypeCode, fields);
+
+    // 통과하면 작성 완료(READY), 저장 뒤 설정이 바뀌어 더는 맞지 않으면 작성 중(DRAFT)으로. (D-54)
+    // 상태가 바뀌면 버전도 오른다 — 화면이 이어서 저장할 수 있게 새 ETag 를 준다.
+    const moved = await this.repo.markValidated(applicationId, result.valid);
+    if (moved) reply.header('etag', etagOf(moved));
 
     const snapshot = await this.deadline.snapshot(row.cycleId);
     return {

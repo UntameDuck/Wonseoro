@@ -78,7 +78,7 @@ export interface EvidencePackage {
     documentType: string;
     status: string;
     sha256: string;
-    scans: Array<{ scanner: string; result: string; scannedAt: string | null }>;
+    scans: Array<{ scanner: string; engineVersion: string | null; result: string; scannedAt: string | null }>;
   }>;
   consents: Array<{ consentCode: string; policyVersion: string; grantedAt: string }>;
   timeline: EvidenceTimelineEntry[];
@@ -347,7 +347,7 @@ export class EvidenceService {
     const out = [];
     for (const r of rows) {
       const scans = await this.db.query<Record<string, unknown>>(
-        `SELECT scanner, result, scanned_at FROM document_scan
+        `SELECT scanner, engine_version, result, scanned_at FROM document_scan
           WHERE document_id = $1 ORDER BY created_at`,
         [String(r.id)],
       );
@@ -358,6 +358,8 @@ export class EvidenceService {
         sha256: String(r.sha256_hex),
         scans: scans.rows.map((s) => ({
           scanner: String(s.scanner),
+          // 어느 엔진 버전으로 검사했는가 — 사후에 "그 시점 서명으로 못 잡은 악성코드" 를 가려낸다
+          engineVersion: s.engine_version ? String(s.engine_version) : null,
           result: String(s.result),
           scannedAt: s.scanned_at ? (s.scanned_at as Date).toISOString() : null,
         })),

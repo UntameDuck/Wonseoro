@@ -7,8 +7,8 @@ import { PaymentRecheckWorker } from './payment-recheck.worker';
 import { PaymentService } from './payment.service';
 
 /**
- * 실 PG 는 M6 에서 이 Provider 만 교체한다. (T-M6-04)
- * 대학마다 계약 PG 가 다르므로 대학별 values 로 고르게 된다.
+ * 실 PG 는 이 Provider 만 교체한다 (T-M5-06 — PG 사 계약이 필요하다).
+ * 대학마다 계약 PG 가 다르므로 대학별 values 로 고르게 된다. 운영에서 Mock 은 기동이 막힌다 (R8).
  */
 @Module({
   imports: [AuditModule],
@@ -18,6 +18,7 @@ import { PaymentService } from './payment.service';
     PaymentRecheckWorker,
     { provide: PaymentProviderPort, useClass: MockPaymentProvider },
   ],
-  exports: [PaymentService],
+  // 대조가 PG 정산 목록을 읽는다 (ReconciliationService 9번)
+  exports: [PaymentService, PaymentProviderPort],
 })
 export class PaymentModule {}

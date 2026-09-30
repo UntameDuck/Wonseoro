@@ -34,17 +34,15 @@ export class ProfileVaultClient {
 
   constructor(private readonly breakers: DependencyBreakers) {}
 
-  /** 대학이 필요로 하는 공통 필드. 전형 Config 로 옮기는 것이 M3 과제다. */
-  private static readonly REQUESTED_FIELDS = [
-    'highSchool',
-    'graduationYear',
-    'contactEmail',
-  ] as const;
-
+  /**
+   * @param requestedFields 전형 양식이 공통원서에서 가져오겠다고 표시한 항목(`x-profile`).
+   *   전에는 세 항목을 코드에 박아 두어, 양식에 없는 항목까지 Vault 에 요청했다(목적 최소화 위반).
+   */
   async fetchSnapshot(args: {
     subjectToken: string;
     universityId: string;
     applicationRef: string;
+    requestedFields: string[];
   }): Promise<ProfileSnapshot> {
     const empty: ProfileSnapshot = {
       fields: {},
@@ -54,7 +52,8 @@ export class ProfileVaultClient {
     };
 
     const url = CENTRAL_SYNC_URL;
-    if (!url) return empty;
+    // 요청할 항목이 없으면 중앙에 묻지 않는다. 묻는 것만으로 "이 사람이 이 대학에 원서를 만들었다" 가 남는다.
+    if (!url || args.requestedFields.length === 0) return empty;
 
     try {
       const res = await this.breakers.centralVault.run(
@@ -65,7 +64,7 @@ export class ProfileVaultClient {
             body: JSON.stringify({
               subjectToken: args.subjectToken,
               universityId: args.universityId,
-              requestedFields: [...ProfileVaultClient.REQUESTED_FIELDS],
+              requestedFields: args.requestedFields,
               applicationRef: args.applicationRef,
             }),
             // 짧게 끊는다. 중앙이 느리다고 원서 생성이 느려지면 안 된다.

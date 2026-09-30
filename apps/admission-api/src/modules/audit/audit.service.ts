@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { AuditAction } from '@wonseoro/contracts';
+import { serverNow } from '../../common/time/server-clock';
 import { AUDIT_IP_SALT } from '../../config';
 
 export interface AuditInput {
@@ -46,7 +47,8 @@ export class AuditService {
    * 드러나지 않았다. 운영자 행위야말로 지워지면 안 되는 기록이다. (D-36)
    */
   async record(client: PoolClient, input: AuditInput): Promise<string> {
-    let occurredAt = new Date();
+    // DB 시계에 맞춘 시각이다. Pod 마다 시계가 달라도 같은 원서의 기록 순서가 뒤집히지 않는다. (§A2)
+    let occurredAt = serverNow();
     let prevHash: string;
     if (input.applicationId) {
       prevHash = await this.lastHash(client, input.applicationId);

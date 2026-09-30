@@ -18,17 +18,22 @@ export class CatalogController {
   @Header('cache-control', 'public, max-age=60')
   async currentCycle() {
     const { rows } = await this.db.query<Record<string, unknown>>(
-      `SELECT id, admission_year, name, opens_at, closes_at, status, university_id
-         FROM admission_cycle
-        WHERE status = 'OPEN'
-        ORDER BY opens_at DESC
+      `SELECT c.id, c.admission_year, c.name, c.opens_at, c.closes_at, c.status, c.university_id,
+              u.name AS university_name
+         FROM admission_cycle c
+         JOIN university u ON u.id = c.university_id
+        WHERE c.status = 'OPEN'
+        ORDER BY c.opens_at DESC
         LIMIT 1`,
     );
     const r = rows[0];
-    if (!r) throw ProblemException.validationFailed('진행 중인 모집이 없습니다.');
+    // 진행 중인 모집이 없는 것은 입력 오류가 아니다 — 계약대로 404.
+    if (!r) throw ProblemException.notFound('진행 중인 모집이 없습니다.');
     return {
       id: String(r.id),
       universityId: String(r.university_id),
+      // 화면에 대학 식별자(UNIV-A)가 아니라 이름을 보인다
+      universityName: String(r.university_name),
       admissionYear: Number(r.admission_year),
       name: String(r.name),
       opensAt: (r.opens_at as Date).toISOString(),

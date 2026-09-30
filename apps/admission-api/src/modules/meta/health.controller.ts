@@ -2,6 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { DependencyBreakers } from '../../common/resilience/dependency-breakers';
+import { serverClock } from '../../common/time/server-clock';
 
 /**
  * K-PaaS/Kubernetes probe. (v1.1 §05 — startup/readiness/liveness 필수)
@@ -42,10 +43,14 @@ export class HealthController {
   @Get('healthz/dependencies')
   dependencies() {
     const circuits = this.breakers.snapshot();
+    // 시각 상태도 같은 이유로 readiness 에 넣지 않는다. 허용오차를 넘은 노드는 Finalize 만
+    // 거절한다 — 작성·저장·조회까지 트래픽에서 빼면 접수 전체가 줄어든다. (§A9)
+    const clock = serverClock.reading();
     return {
       service: 'admission-api',
-      degraded: circuits.some((c) => c.state !== 'CLOSED'),
+      degraded: circuits.some((c) => c.state !== 'CLOSED') || clock.status === 'OFFSET_EXCEEDED',
       circuits,
+      clock,
       time: new Date().toISOString(),
     };
   }

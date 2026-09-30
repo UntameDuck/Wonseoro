@@ -52,28 +52,21 @@ describe('Application 상태머신 (v1.0 §5.6)', () => {
   });
 });
 
-describe('조건부 전이 (v1.1 §B3 — 읽고-검사하고-쓰기 금지)', () => {
-  it('기대 상태와 기대 버전을 함께 담는다', () => {
-    const plan = svc.plan('app-1', 'PAID', 7n, 'FINALIZING');
-    assert.equal(plan.expectedStatus, 'PAID');
-    assert.equal(plan.expectedVersion, 7n);
-    assert.equal(plan.nextStatus, 'FINALIZING');
+describe('Finalize 는 한 트랜잭션이다 (D-54)', () => {
+  it('PAID 에서 FINALIZED 로 바로 간다 — FINALIZING 은 DB 에 남지 않는다', () => {
+    assert.ok(svc.can('PAID', 'FINALIZED'));
   });
 
-  it('허용되지 않은 전이는 계획 단계에서 막는다', () => {
-    assert.throws(() => svc.plan('app-1', 'DRAFT', 1n, 'FINALIZED'));
+  it('그래도 작성 단계에서 접수로 건너뛰지는 못한다', () => {
+    assert.equal(svc.can('DRAFT', 'FINALIZED'), false);
+    assert.equal(svc.can('PAYMENT_PENDING', 'FINALIZED'), false);
   });
 
-  it('UPDATE 가 0건이면 409 로 해석한다 — 다른 요청이 먼저 바꾼 것', () => {
-    const plan = svc.plan('app-1', 'PAID', 7n, 'FINALIZING');
-    assert.throws(
-      () => svc.assertApplied(0, plan),
-      (err: { problem?: { status: number } }) => err.problem?.status === 409,
-    );
+  it('결제가 실패하면 결제 전(READY)으로 돌아간다', () => {
+    assert.ok(svc.can('PAYMENT_PENDING', 'READY'));
   });
 
-  it('UPDATE 가 1건이면 통과한다', () => {
-    const plan = svc.plan('app-1', 'PAID', 7n, 'FINALIZING');
-    assert.doesNotThrow(() => svc.assertApplied(1, plan));
+  it('결제를 시작한 원서는 고칠 수 없다', () => {
+    assert.equal(svc.isEditable('PAYMENT_PENDING'), false);
   });
 });
