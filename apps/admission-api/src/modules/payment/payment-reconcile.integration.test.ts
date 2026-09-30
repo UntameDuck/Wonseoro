@@ -8,6 +8,7 @@ import { Db } from '@wonseoro/server-kit';
 import { IdempotencyInterceptor } from '../../common/idempotency/idempotency.interceptor';
 import type { IdempotencyStore } from '../../common/idempotency/idempotency.store';
 import { ProblemException } from '../../common/problem/problem.exception';
+import { LEADER_LOCK_CLASS } from '../../common/scheduling/leader-lock';
 import { DependencyBreakers } from '../../common/resilience/dependency-breakers';
 import { PG_CALLBACK_SECRET } from '../../config';
 import { AuditService } from '../audit/audit.service';
@@ -124,13 +125,17 @@ function recordingService(): { service: PaymentService; asked: string[] } {
   return { service, asked };
 }
 
-/** 다른 Pod 가 잠금을 쥐고 있는 상황. */
+/** 다른 Pod 가 잠금을 쥐고 있는 상황 — withLeaderLock 과 같은 트랜잭션 잠금·같은 키 (D-54). */
 async function holdLock(name: string): Promise<() => Promise<void>> {
   const client = await db.pool.connect();
-  const { rows } = await client.query<{ ok: boolean }>(`SELECT pg_try_advisory_lock(hashtext($1)) AS ok`, [name]);
+  await client.query('BEGIN');
+  const { rows } = await client.query<{ ok: boolean }>(
+    `SELECT pg_try_advisory_xact_lock($1, hashtext($2)) AS ok`,
+    [LEADER_LOCK_CLASS, name],
+  );
   assert.equal(rows[0]?.ok, true);
   return async () => {
-    await client.query(`SELECT pg_advisory_unlock(hashtext($1))`, [name]);
+    await client.query('COMMIT');
     client.release();
   };
 }

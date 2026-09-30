@@ -830,6 +830,21 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-54. 리더 잠금(세션 advisory lock)이 PgBouncer transaction 풀에서 새어 워커가 주기를 건너뛴다 🔴
+
+| | |
+|---|---|
+| **발견** | 2026-09-30 (T-M4-34 PG 지연 실제 시간 시험) |
+| **충돌** | §B3 은 "한 Pod 만 도는 워커" 와 DB 앞 연결 풀(PgBouncer, T-M4-09, transaction 모드)을 함께 요구한다. `withLeaderLock` 은 **세션** advisory lock(`pg_try_advisory_lock` → 작업 → `pg_advisory_unlock`)을 썼다. transaction 풀에서는 문장마다 다른 서버 연결로 갈 수 있어 잠근 연결과 푸는 연결이 달라진다 — PgBouncer 문서도 transaction 모드에서 세션 advisory lock 을 지원하지 않는다고 적는다. |
+| **실측(축소 환경)** | 결제 재확인 워커(30초 주기)가 06:25:37 이후 06:28:46 까지 한 번도 돌지 않았다. `pg_locks` 에서 PgBouncer 서버 연결(idle, 트랜잭션 밖)이 `payment:recheck` 잠금을 쥔 채 남아 있었다. 그 결과 콜백 없이 폴링만으로 확정되는 결제가 PG 확정 뒤 171.9초(1분 지연)·533.9초(5분 지연) 걸렸다 — 설계 Backoff(30초 × 2^n) 대로면 30~60초·약 150초다. 콜백 경로는 5~10초로 정상. `tests/m4/results/pg-delay-realtime-2026-09-30T06-24-46-019Z.json`(중단한 수정 전 실행) |
+| **영향** | 같은 잠금을 쓰는 **결제 재확인·1시간 자동 대조·멱등 기록 정리가 모두 우연히 그 서버 연결에 닿은 주기에만 돈다.** 세션 잠금은 같은 세션에서 다시 잡히므로 두 Pod 가 그 연결을 번갈아 쓰면 동시에 도는 일도 생긴다("한 Pod 만" 보장 붕괴). 결제 자동 정합화(D-40)·대조 경보가 설계보다 늦어진다. 단일 노드·직접 DB 연결인 CI·통합 시험에서는 드러나지 않았다. |
+| **판정** | **트랜잭션 잠금으로 바꾼다** — 잠금 전용 연결에서 BEGIN → `pg_try_advisory_xact_lock` → 작업(다른 연결) → COMMIT. transaction 풀은 트랜잭션 동안 서버 연결을 바꾸지 않고, 트랜잭션이 끝나면 잠금이 반드시 풀린다. 이 트랜잭션은 행을 잠그지 않고 READ COMMITTED 라 스냅샷도 놓으므로 비용은 연결 하나(전과 같다). 키는 **두 정수 키 `(0x4B41, hashtext(name))`** — 운영에 이미 새어 남은 한 정수 키 세션 잠금이 있어도 새 잠금을 막지 못한다. |
+| **저장소 반영** | ✅ (2026-09-30) `common/scheduling/leader-lock.ts` · 회귀 시험 `leader-lock.integration.test.ts`(작업 성공·실패 뒤 잠금 0, 쥐는 동안 다른 호출 차단) · 결제 재확인 시험의 "다른 Pod 가 쥔 잠금" 흉내를 새 키로 |
+| **노션 반영** | 해당 없음 — 설계 요구(한 Pod 만·연결 풀)를 구현이 함께 지키지 못한 결함 |
+| **상태** | 🟡 저장소 반영 — 수정 이미지로 T-M4-34 재측정 중 |
+
+---
+
 <!--
 신규 항목 템플릿
 

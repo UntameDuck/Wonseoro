@@ -1,0 +1,169 @@
+{
+  "test": "T-M4-34",
+  "scenario": "PG 확정 1·5·15·30분 지연 — 콜백 경로·폴링 경로 (실제 시간)",
+  "environment": "local-kind-univ-a, Mock PG 지연 모드 (축소 환경)",
+  "limitations": [
+    "Mock PG 다. 실 PG 의 조회 응답·콜백 재시도 규칙은 T-M6-04 연동 때 다시 본다.",
+    "결제 8건의 기능·시간 확인이다. 마감 피크의 PG 호출량은 K-PaaS 부하 시험의 몫이다."
+  ],
+  "startedAt": "2026-09-30T06:24:46.019Z",
+  "payments": [
+    {
+      "mode": "callback",
+      "delayS": 60,
+      "paymentId": "15c66025-e64b-48b2-bba8-557f77c03d87",
+      "paidAt": "2026-09-30T06:24:48.397Z",
+      "done": true,
+      "finalizeLagS": 10.3,
+      "pgQueries": 3,
+      "callback": {
+        "at": "2026-09-30T06:25:58.615Z",
+        "status": 200,
+        "outcome": "VERIFIED"
+      }
+    },
+    {
+      "mode": "callback",
+      "delayS": 300,
+      "paymentId": "7d174280-2212-4b04-b752-16eb3fb659fc",
+      "paidAt": "2026-09-30T06:24:49.976Z",
+      "done": true,
+      "finalizeLagS": 5.3,
+      "pgQueries": 4,
+      "callback": {
+        "at": "2026-09-30T06:29:55.082Z",
+        "status": 200,
+        "outcome": "VERIFIED"
+      }
+    },
+    {
+      "mode": "callback",
+      "delayS": 900,
+      "paymentId": "12b375e2-9a42-4804-9c88-596fd9e87a7e",
+      "paidAt": "2026-09-30T06:24:51.656Z",
+      "done": true,
+      "finalizeLagS": 9,
+      "pgQueries": 5,
+      "callback": {
+        "at": "2026-09-30T06:40:00.565Z",
+        "status": 200,
+        "outcome": "VERIFIED"
+      }
+    },
+    {
+      "mode": "callback",
+      "delayS": 1800,
+      "paymentId": "73357c47-28b3-45c6-887a-8e52155d7293",
+      "paidAt": "2026-09-30T06:24:52.946Z",
+      "done": false,
+      "finalizeLagS": null,
+      "pgQueries": null,
+      "callback": null
+    },
+    {
+      "mode": "poll",
+      "delayS": 60,
+      "paymentId": "8082cdcd-51a7-4f13-ad96-13feefd7fb1d",
+      "paidAt": "2026-09-30T06:24:54.717Z",
+      "done": true,
+      "finalizeLagS": 171.9,
+      "pgQueries": 3,
+      "callback": null
+    },
+    {
+      "mode": "poll",
+      "delayS": 300,
+      "paymentId": "872fc433-eaed-4605-896f-f0af8056567f",
+      "paidAt": "2026-09-30T06:24:56.273Z",
+      "done": true,
+      "finalizeLagS": 533.9,
+      "pgQueries": 4,
+      "callback": null
+    },
+    {
+      "mode": "poll",
+      "delayS": 900,
+      "paymentId": "85ce1bbe-32ca-4008-9fc1-212c07a0831c",
+      "paidAt": "2026-09-30T06:24:57.693Z",
+      "done": false,
+      "finalizeLagS": null,
+      "pgQueries": null,
+      "callback": null
+    },
+    {
+      "mode": "poll",
+      "delayS": 1800,
+      "paymentId": "6c7c2dab-d3e0-4690-adfe-6cc2923cc49c",
+      "paidAt": "2026-09-30T06:24:59.075Z",
+      "done": false,
+      "finalizeLagS": null,
+      "pgQueries": null,
+      "callback": null
+    }
+  ],
+  "checks": {
+    "each-delay-has-callback-and-poll": {
+      "pass": true,
+      "delays": {
+        "60": [
+          "callback",
+          "poll"
+        ],
+        "300": [
+          "callback",
+          "poll"
+        ],
+        "900": [
+          "callback",
+          "poll"
+        ],
+        "1800": [
+          "callback",
+          "poll"
+        ]
+      }
+    },
+    "first-verify-is-not-failed": {
+      "pass": true,
+      "first": [
+        {
+          "status": 202,
+          "paymentStatus": "UNKNOWN"
+        },
+        {
+          "status": 202,
+          "paymentStatus": "UNKNOWN"
+        },
+        {
+          "status": 202,
+          "paymentStatus": "UNKNOWN"
+        },
+        {
+          "status": 202,
+          "paymentStatus": "UNKNOWN"
+        },
+        {
+          "status": 202,
+          "paymentStatus": "UNKNOWN"
+        },
+        {
+          "status": 202,
+          "paymentStatus": "UNKNOWN"
+        },
+        {
+          "status": 202,
+          "paymentStatus": "UNKNOWN"
+        },
+        {
+          "status": 202,
+          "paymentStatus": "UNKNOWN"
+        }
+      ]
+    }
+  },
+  "baseline": {
+    "reconciliationExceptions": 28
+  },
+  "aborted": "D-54 확인 후 중단 (2026-09-30T06:41Z) — 리더 잠금(세션 advisory lock)이 PgBouncer transaction 풀에서 서버 연결에 새어 결제 재확인 워커가 주기를 건너뛰었다. 콜백 경로는 정상, 폴링 경로는 지연이 설계(30초×2^n)보다 컸다. 수정 이미지로 다시 돌린 결과가 판정 기준이다",
+  "passed": false
+}

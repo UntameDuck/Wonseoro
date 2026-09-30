@@ -73,7 +73,7 @@
 | 콜백 처리 | `payment_event(payment_id, provider_event_id)` 유니크로 한 번만 → **PG 재조회로 상태 결정** (본문이 FAILED 라 해도 PG 가 CONFIRMED 면 CONFIRMED, 반대도) → **자동 Finalize 없음** |
 | 결제 재확인 워커 | PENDING·UNKNOWN 만 · 결제별 Backoff 30초×2^(n−1) 최대 30분 · 48시간 지나면 대조로 넘김 · PG 회로가 열리면 주기 건너뜀 |
 | 대조 스케줄 | 1시간마다 `reconcile(48h)` |
-| 한 Pod 만 | 워커·스케줄 모두 **세션 advisory lock** (`withLeaderLock`). 트랜잭션 잠금이 아니다 — PG 호출 중 트랜잭션을 열어 두지 않는다 (§B3) |
+| 한 Pod 만 | 워커·스케줄 모두 `withLeaderLock` — ~~세션 advisory lock~~ → **잠금 전용 연결의 트랜잭션 잠금**(2026-09-30, D-54). 세션 잠금은 PgBouncer transaction 풀에서 새어 워커가 주기를 건너뛰었다. PG 호출은 다른 연결로 하므로 잠금 트랜잭션은 행을 잠그지 않는다 (§B3) |
 | 시험 | 13건 (`payment-reconcile.integration.test.ts`) — 서명·다른 PG·재조회·중복·미제출·모르는 거래·상태 필터·Backoff·기한·회로·잠금·실제 PG 로 확인 끝·스케줄 잠금 |
 
 남은 것은 **시간 시험**뿐이다 — 콜백 1~30분 지연을 실제 시계로 (T-M4-34).
