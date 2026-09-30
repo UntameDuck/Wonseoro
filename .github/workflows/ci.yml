@@ -27,6 +27,12 @@ jobs:
       - run: npm run test:m4:observability
       # GitOps가 서명 검증·namespace 한정 권한·대학별 values를 우회하지 않는지 확인한다 (T-M4-05)
       - run: npm run test:m4:gitops
+      # 노션 §05 runtime 첨부가 차트 렌더링 결과와 같은지, 차트가 lint 를 통과하는지 (D-44)
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.3.0
+      - run: helm lint deploy/charts/k-admission -f deploy/charts/k-admission/values-m.yaml --set api.image.digest=sha256:0000000000000000000000000000000000000000000000000000000000000000 --set eventRelay.image.digest=sha256:0000000000000000000000000000000000000000000000000000000000000000 --set documentService.image.digest=sha256:0000000000000000000000000000000000000000000000000000000000000000 --set database.pooler.image.digest=sha256:0000000000000000000000000000000000000000000000000000000000000000 --set documentService.scannerEngine=placeholder
+      - run: node scripts/render-runtime-attachment.mjs --check
       # TODO(M1): OpenAPI lint + breaking-change 검사 (첨부 배치 후)
       # TODO(M1): CloudEvents JSON Schema 검증
 

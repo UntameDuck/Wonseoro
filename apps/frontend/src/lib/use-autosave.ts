@@ -86,6 +86,19 @@ export function useAutosave(args: {
         });
         return;
       }
+      if (err instanceof ApiError && err.httpStatus === 429) {
+        // 요청 한도(D-51). 처리되지 않았으므로 내용·멱등키를 그대로 두고, 서버가 준 시간 뒤에 한 번 다시 보낸다.
+        // 그 전에 입력이 바뀌면 schedule 이 타이머를 새로 건다 — 곧바로 다시 찌르지 않는다.
+        const waitSeconds = err.retryAfterSeconds ?? 30;
+        setState({
+          kind: 'failed',
+          reason: `요청이 많아 ${waitSeconds}초 뒤 자동으로 다시 저장합니다. 작성 내용은 보관되어 있습니다.`,
+          retryable: true,
+        });
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => void flush(), waitSeconds * 1000);
+        return;
+      }
       if (err instanceof ApiError) {
         // 412 = 다른 곳에서 먼저 수정됨. 사용자 입력을 덮어쓰지 않는다.
         const retryable = err.httpStatus === 412 || err.httpStatus >= 500;

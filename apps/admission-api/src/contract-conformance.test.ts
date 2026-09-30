@@ -9,8 +9,11 @@ import {
   IDEMPOTENCY_KEY_MAX_LENGTH,
   IDEMPOTENCY_KEY_MIN_LENGTH,
   PAYMENT_STATUS,
+  ProblemCode,
 } from '@wonseoro/contracts';
+import { isPurposeRef } from '@wonseoro/server-kit';
 import { IDEMPOTENCY_STATE } from './common/idempotency/idempotency.store';
+import { classifyRoute } from './common/throttle/adaptive-throttle';
 
 /**
  * 계약 적합성 테스트 — T-M1-14
@@ -227,6 +230,22 @@ describe('계약 적합성 — OpenAPI (k-admission-openapi.yaml)', () => {
     assert.deepEqual(lacking, []);
   });
 
+  it('요청 한도가 걸리는 지원자 경로는 모두 429 + Retry-After 를 계약에 둔다 (D-51, ADR-0007)', () => {
+    const lacking: string[] = [];
+    const extra: string[] = [];
+    for (const [path, method, op] of openApiOperations()) {
+      if (op.includes('tags: [Central]')) continue; // 중앙 호스트 — admission-api 한도 밖
+      const limited = classifyRoute(method, path) !== null;
+      const has429 = op.includes("'429':\n          $ref: '#/components/responses/RateLimited'");
+      if (limited && !has429) lacking.push(`${method.toUpperCase()} ${path}`);
+      if (!limited && has429) extra.push(`${method.toUpperCase()} ${path}`);
+    }
+    assert.deepEqual(lacking, [], '한도가 걸리는데 계약에 429 가 없다');
+    assert.deepEqual(extra, [], '한도가 걸리지 않는데 계약에 429 가 있다');
+    assert.match(OPENAPI, /RateLimited:[\s\S]*?headers:\s*\n\s*Retry-After:/);
+    assert.ok((Object.values(ProblemCode) as string[]).includes('RATE_LIMITED'));
+  });
+
   it('Finalize 는 재시도 시 200, 신규 시 201 을 반환한다', () => {
     const op = openApiOperations().find(([, , body]) => body.includes('operationId: finalizeApplication'));
     assert.ok(op, 'finalizeApplication 이 없습니다');
@@ -252,6 +271,16 @@ describe('계약 적합성 — CloudEvents (k-admission-cloudevents.schema.json)
     const pattern = new RegExp(data.properties.subjectRef.pattern);
     assert.ok(pattern.test(`k1.${'A'.repeat(43)}`));
     assert.equal(pattern.test('sha256-of-token-without-key'), false);
+  });
+
+  it('subjectRef 키 ID 상한이 생성기와 같고 전체가 중앙 varchar(64) 에 들어간다 (D-47)', () => {
+    const pattern = new RegExp(JSON.parse(EVENTS).$defs.ApplicationFinalizedData.properties.subjectRef.pattern);
+    const longest = `${'k'.repeat(16)}.${'A'.repeat(43)}`;
+    assert.ok(pattern.test(longest) && isPurposeRef(longest));
+    assert.ok(longest.length <= 64);
+    const tooLong = `${'k'.repeat(17)}.${'A'.repeat(43)}`;
+    assert.equal(pattern.test(tooLong), false, '계약이 생성기보다 긴 키 ID 를 허용한다');
+    assert.equal(isPurposeRef(tooLong), false);
   });
 
   it('중앙 전송 payload 에 개인정보 필드가 없다 (v1.0 §17.1)', () => {

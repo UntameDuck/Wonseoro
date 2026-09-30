@@ -75,7 +75,8 @@ async function bootstrap(): Promise<void> {
       // 직접 주장할 수 있는 통로를 열어둘 이유가 없다.
       ...(AUTH_MODE === 'dev-headers' ? ['x-applicant-id', 'x-subject-token'] : []),
     ],
-    exposedHeaders: ['etag'],
+    // retry-after 는 CORS 기본 노출 헤더가 아니다 — 화면이 429 뒤 기다릴 시간을 읽어야 한다 (D-51)
+    exposedHeaders: ['etag', 'retry-after'],
   });
 
   await app.listen({ port: PORT, host: '0.0.0.0' });

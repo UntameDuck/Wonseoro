@@ -26,6 +26,8 @@ export class ApiError extends Error {
   constructor(
     readonly problem: Problem,
     readonly httpStatus: number,
+    /** 429 RATE_LIMITED 일 때 서버가 준 대기 시간(초). 이보다 먼저 다시 보내지 않는다 (D-51). */
+    readonly retryAfterSeconds: number | null = null,
   ) {
     super(problem.detail ?? problem.title);
   }
@@ -96,7 +98,8 @@ export async function call<T>(path: string, opts: CallOptions = {}): Promise<Api
   const parsed: unknown = text ? JSON.parse(text) : null;
 
   if (!res.ok) {
-    throw new ApiError(parsed as Problem, res.status);
+    const retryAfter = Number(res.headers.get('retry-after'));
+    throw new ApiError(parsed as Problem, res.status, Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null);
   }
   return {
     data: parsed as T,
