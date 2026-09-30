@@ -55,6 +55,14 @@ node tests/m4/pgbouncer.mjs
 A 클러스터 노드를 멈춘 동안 B 의 생성→저장→결제→자동 접수와 중앙 "내 원서" 반영을 확인하고, A 를 되살린다.
 결과는 `tests/m4/results/` 에 남는다.
 
+## 장애 시험 (실제 시간·다중 노드)
+
+| 시험 | 명령 | 주의 |
+|---|---|---|
+| 중앙 2시간 단절 (T-M4-35) | `node tests/m4/central-outage-realtime.mjs` (`--minutes=2 --every=30` 로 사전 점검) | 도는 동안 univ-a 재배포·DB 시험 금지 |
+| PG 확정 1~30분 지연 (T-M4-34) | `kubectl --context kind-univ-a -n kadmission-app set env deploy/univ-a-api MOCK_PG_CONFIRM_DELAYS_S=60,300,900,1800` → `node tests/m4/pg-delay-realtime.mjs` → `… MOCK_PG_CONFIRM_DELAYS_S-` | 약 35분. 이미지에 Mock PG 지연 모드가 있어야 한다 |
+| 노드 장애 (T-M4-39) | `kind create cluster --config kind-univ-a-multinode.yaml` (또는 판정 시간을 줄인 `kind-univ-a-multinode-tuned.yaml`) → 배포 → `node tests/m4/node-failure-kind.mjs` → `kind delete cluster --name univ-m` | 메모리 때문에 univ-a·univ-b 노드를 멈춘다. 절차는 HANDOFF §4 |
+
 ## 로컬 값이 운영과 다른 점
 
 `values-local.yaml` — 개발 비밀을 차트가 Secret 으로 만든다(운영은 거부), Mock PG·Mock 검사 엔진·헤더 인증,

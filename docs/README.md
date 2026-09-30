@@ -15,6 +15,8 @@
 | 7 | [05-m3-exit-m4-readiness.md](05-m3-exit-m4-readiness.md) | M3 종료 체크리스트 실제 상태 · 결정 사항 · M4 준비물 · 노션 반영 목록 |
 | 8 | [spec-assets/README.md](spec-assets/README.md) | 노션 첨부 배치 현황 (10종 전부) |
 | 9 | [../deploy/local/README.md](../deploy/local/README.md) | kind 2 클러스터로 대학 Data Plane 띄우기 |
+| 10 | **[06-notion-changeset.md](06-notion-changeset.md)** | 노션에 아직 못 올린 첨부 5종·본문 문구 (승인 대기) |
+| 11 | [07-submission-errata.md](07-submission-errata.md) | 제출 PDF 정정 문구 (D-2·D-3) |
 
 ## 마일스톤 (총 7단계)
 
@@ -36,7 +38,7 @@
 | M1 접수 Core | 14/14 ✅ |
 | M2 결제·Finalize·화면 | 24/24 ✅ |
 | M3 운영 안전장치 | 14/15 ✅ 종료 (2026-09-27) |
-| M4 분산 실증 | 18/28 ◀ 차트·kind·Flux Pull·격리·동시 Finalize·PgBouncer·Object Storage·HPA 커스텀 지표·예약 Peak Mode·계측·로그 마스킹·KPI 대시보드·NAT Adaptive Throttling·Redis 장애 ✅ — 다음: T-M4-35 중앙 2시간 단절 실제 시간 판 |
+| M4 분산 실증 | 18/28 ◀ 차트·kind·Flux Pull·격리·동시 Finalize·PgBouncer·Object Storage·HPA 커스텀 지표·예약 Peak Mode·계측·로그 마스킹·KPI 대시보드·NAT Adaptive Throttling·Redis 장애 ✅ — 진행: T-M4-35 중앙 2시간 단절 실제 시간 판 → T-M4-34 PG 지연 → T-M4-39 재측정 |
 | M5~M6 | 0/50 |
 
 진행 현황과 다음 착수 순서는 **[03-next-steps.md](03-next-steps.md)** 를 본다.

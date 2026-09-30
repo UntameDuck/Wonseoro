@@ -213,21 +213,40 @@ G1 → G2 순서로 구현한다 (사용자 결정). 현재 위치는 ◀ 표시
 | v1.0 본문 | ✅ 2026-09-27 — §4 Backend(D-3) · §5.6 접수 전 취소(D-7) · §6.2 이벤트 예시(D-1·4·15) · §9 감사(D-7·36) · §12 6단계(D-2) · §17.1 접수번호(D-15) |
 | v1.1 §10 트래픽 | ⬜ D-18 (부록에서는 v1.0 으로 분류된다 — "§10 §1" 표기 때문) |
 
-<!-- 자동 생성: 불일치 대장의 "노션 반영 ⬜" 항목 4건에서 4개 수정 지점 -->
+<!-- 자동 생성: 불일치 대장의 "노션 반영 ⬜" 항목 9건에서 9개 수정 지점 -->
+
+### §03 OpenAPI — 1건
+
+- **D-51** §03 첨부 v1.3.0 교체 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md)  
+  <sub>계약에 요청 한도 응답(429)이 없다</sub>
+
+### §06 보안정책 — 1건
+
+- **D-53** §06 NetworkPolicy 첨부의 edge 선택자와 §05 Edge 서술 — [06-notion-changeset.md](06-notion-changeset.md)  
+  <sub>§06 첨부·차트가 Edge 로 가정한 ingress-nginx 가 은퇴했다</sub>
+
+### §04 CloudEvents — 1건
+
+- **D-47** §04 첨부 교체·본문 패턴 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md)  
+  <sub>CloudEvents subjectRef 계약이 DB 길이보다 긴 키 ID를 허용한다</sub>
 
 ### §07 KRDS — 1건
 
-- **D-43** §07 첨부 와이어프레임의 #s4 문구·#s5 흐름을 D-42 에 맞춰 교체 (저장소 사본을 고쳐 올리면 된다)  
+- **D-43** §07 첨부 교체 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md)  
   <sub>KRDS 와이어프레임 결제 화면이 "결제 = 접수"(D-42) 와 반대로 안내한다</sub>
 
 ### 제출 PDF 정정 — 2건
 
-- **D-2** 제출문서 정정 목록
-- **D-3** 개발보고서 "팀 기술 스택" 및 설계 서술 정정
+- **D-2** 정정 문구 준비 완료 — [07-submission-errata.md](07-submission-errata.md). 제출처 반영은 사람
+- **D-3** 정정 문구 준비 완료 — [07-submission-errata.md](07-submission-errata.md). 제출처 반영은 사람
 
-### 기타 — 1건
+### 기타 — 3건
 
-- **D-44** §05 첨부 runtime·values-m 을 M4 차트 확정 뒤 교체  
+- **D-44** §05 첨부 두 개 교체 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md)  
   <sub>§05 Helm 첨부(runtime·values-m)가 현재 구현과 다르다</sub>
+- **D-49** values-m v1.2 가 `scheduledActivation: ""`·`scheduledEnd: ""`·`window: ""` 와 예약 출처 주석을 담았다(D-44 와 같은 파일). 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md)  
+  <sub>첨부 values-m 의 예시 예약 시각이 지나면 자동 대조가 영구히 멈춘다</sub>
+- **D-52** §08 시나리오 10 합격 기준·§05 노드 장애 흡수 절 — [06-notion-changeset.md](06-notion-changeset.md) (노션 쓰기 승인 대기)  
+  <sub>"API 노드 강제 종료 무중단"은 Pod 설정만으로는 지킬 수 없다</sub>
 
-<!-- items=4 edits=4 -->
+<!-- items=9 edits=9 -->

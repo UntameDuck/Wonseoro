@@ -36,7 +36,7 @@
 | **6단계** | 공통정보 → 대학·전형 → 추가정보 → 서류 → 검토·결제 → 최종제출 (→ 완료) |
 | **저장소 반영** | ✅ `apps/frontend/` 디렉터리 구조 + README |
 | **노션 반영** | ✅ v1.0 §12.1·§12.2 6단계 (2026-09-27) |
-| **PDF 반영** | ⬜ 제출문서 정정 목록 |
+| **PDF 반영** | ⬜ 정정 문구 준비 완료 — [07-submission-errata.md](07-submission-errata.md). 제출처 반영은 사람 |
 | **상태** | 🟡 노션 반영 완료 — 제출 PDF 정정 대기 |
 
 ---
@@ -51,7 +51,7 @@
 | **근거** | 설계서가 요구하는 실질은 ① ACID 트랜잭션 ② Outbox ③ 관측성 ④ 장기지원 런타임이며 Node LTS + PostgreSQL이 모두 충족 |
 | **저장소 반영** | ✅ ADR-0001, 전 앱 스캐폴딩 |
 | **노션 반영** | ✅ v1.0 §4 Backend 행 (2026-09-27) |
-| **PDF 반영** | ⬜ 개발보고서 "팀 기술 스택" 및 설계 서술 정정 |
+| **PDF 반영** | ⬜ 정정 문구 준비 완료 — [07-submission-errata.md](07-submission-errata.md). 제출처 반영은 사람 |
 | **상태** | 🟡 노션 반영 완료 — 제출 PDF 정정 대기 |
 
 ---
@@ -680,8 +680,9 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **발견** | 2026-09-27 (첨부 배치 중) |
 | **충돌** | §07 첨부 `k-admission-krds-wireframe.html` 의 검토·결제 화면(#s4)이 "결제 완료만으로는 접수가 끝나지 않습니다. 결제 후 최종제출을 완료해야 합니다" 라고 안내하고, 별도 최종제출 화면(#s5)에 제출 버튼이 있다. D-42 는 결제 확인 시 서버가 접수한다 |
 | **판정** | **D-42 를 따른다.** §07 본문과 실제 화면은 이미 "결제가 확인되면 바로 접수가 완료됩니다" 로 고쳤다. 와이어프레임은 저충실도 참고물이라 코드에 영향은 없다 |
-| **노션 반영** | ⬜ §07 첨부 와이어프레임의 #s4 문구·#s5 흐름을 D-42 에 맞춰 교체 (저장소 사본을 고쳐 올리면 된다) |
-| **상태** | 🟡 판정완료 — 첨부 교체 대기 |
+| **저장소 반영** | ✅ (2026-09-30) `docs/spec-assets/krds-wireframe.html` v1.2 — #s4 "결제가 확인되면 바로 접수가 완료됩니다"·"전형료 결제하고 접수"·결제 전 수정·취소 불가 확인, #s5 는 "결제 확인 중(다시 결제하지 마십시오)" 화면. 문구·단계 이름(6 최종제출 = 접수 결과·수동 재시도)은 실제 화면(`apps/frontend`)과 같다. 8,548바이트 |
+| **노션 반영** | ⬜ §07 첨부 교체 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 저장소 반영 — 노션 첨부 교체 대기 |
 
 ---
 
@@ -693,8 +694,10 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **차이** | ① `SPRING_PROFILES_ACTIVE` — 구현은 NestJS 다(D-3). 운영 모드는 `NODE_ENV=production` ② 컨테이너 포트 8080 — 구현은 `PORT`(기본 3001) ③ 프로브 `/internal/health/startup·ready·live` — 구현은 `/healthz`·`/readyz`(+ `/healthz/dependencies`, D-32). 계약 v1.2.0 이 기준 ④ 대조 CronJob `*/5` · `reconcile --max-batch` — 구현은 앱 안 스케줄러(1시간·advisory lock, D-40). 별도 이미지 명령이 없다 ⑤ 첨부에 event-relay·document-service·frontend Deployment 가 없다(values 에만 있다) ⑥ values 의 `configVersion`·`deadlinePolicyVersion` 을 배포값으로 박는다 — 구현은 DB 의 서명된 활성화 기록이 기준이다(T-M3-15). 배포로 바꾸면 2인 승인을 우회한다 |
 | **⑦ 커넥션 예산 초과 (2026-09-28, 차트 렌더링에서 발견)** | 첨부 values-m 은 접수 API 최대 10 Pod × Pod 당 40 = **400 = 예산 400** 이다. 여기에 Relay(2 × 3)·서류 워커(5)를 더하면 **411 > 400.** 차트가 렌더링에서 막는다 — 마감 피크에 최대로 늘면 DB 가 커넥션을 거절한다. Pod 당 38 또는 예산 411 이상으로 첨부를 고쳐야 한다 |
 | **판정 방향** | M4 Helm 차트는 **첨부의 구조·보안 설정(securityContext·PDB·HPA·topologySpread·NetworkPolicy)은 그대로** 따르고, 위 6가지는 구현을 따른다. ⑥ 은 차트에서 뺀다 — 마감·설정을 배포 값으로 주입하면 D-21·D-35 가 막은 단독 변경 경로가 된다 |
-| **노션 반영** | ⬜ §05 첨부 runtime·values-m 을 M4 차트 확정 뒤 교체 |
-| **상태** | 🟡 판정 방향 — M4 차트에서 확정 |
+| **결정 (2026-09-30)** | ⑦ **Pod 당 38, 예산 400 유지** — 10 × 38 + Relay 6 + 서류 워커 5 = 391 ≤ 400. 예산을 올리려면 대학 DB 의 `max_connections`·메모리를 확인해야 하는데 그 근거가 없다. 38 과 40 의 처리량 차이는 Pod 당 목표 120 RPS 에서 무시할 수준이다. PgBouncer 를 쓰면 DB 가 보는 연결은 풀러 서버 연결(2 × 12 = 24)뿐이고, 앱 쪽 합계는 풀러 클라이언트 수용량 검사로 따로 막힌다 |
+| **저장소 반영** | ✅ (2026-09-30) `values-m.yaml` v1.2(①~⑦·D-49·D-52 반영, 3,813바이트) · `runtime.yaml` v1.2 = **차트 렌더링 결과**(`scripts/render-runtime-attachment.mjs`, 33,814바이트). 손으로 쓴 첫 첨부가 구현과 갈라진 것이 원인이라, 이제 runtime 첨부는 차트에서 만들고 CI 가 `--check` 로 드리프트를 막는다(helm 4.3.0 설치 단계 추가). UNIV-A M 프로필이 처음으로 production 렌더링을 통과한다(서명 digest·실 검사 엔진 자리만 남음) |
+| **노션 반영** | ⬜ §05 첨부 두 개 교체 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 저장소 반영 — 노션 첨부 교체 대기 |
 
 ---
 
@@ -733,9 +736,10 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **발견** | 2026-09-28 (D-46 수정 전 계약 대조) |
 | **충돌** | CloudEvents JSON Schema는 `subjectRef`의 `keyId`를 최대 64자로 허용해 전체 값이 최대 108자가 될 수 있다. 구현의 키 목록은 최대 16자이고 중앙 `application_summary.subject_ref`는 `varchar(64)`라 그런 이벤트를 저장할 수 없다. |
 | **판정 방향** | 실제 생성기·DB에 맞춰 계약의 키 ID 상한을 16자로 좁힌다. 계약 첨부 변경이므로 저장소 JSON Schema와 노션 §04 첨부를 같은 작업에서 교체해야 한다. |
-| **저장소 반영** | ⬜ — 노션 페이지 수정 승인 필요 |
-| **노션 반영** | ⬜ §04 CloudEvents 첨부 교체 필요 |
-| **상태** | 🟡 판정 방향 — 사용자 승인 대기 |
+| **결정 (2026-09-30)** | 좁힌다. 생성기(`parseKeyRing`)와 중앙 DB 가 이미 16자라 기존 이벤트는 모두 그대로 통과한다 — 계약만 실제보다 넓었다 |
+| **저장소 반영** | ✅ (2026-09-30) JSON Schema 패턴 `{1,64}` → `{1,16}`(5,787바이트) · 계약 적합성 시험 "키 ID 상한이 생성기와 같고 전체가 varchar(64) 에 들어간다" |
+| **노션 반영** | ⬜ §04 첨부 교체·본문 패턴 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 저장소 반영 — 노션 첨부 교체 대기 |
 
 ---
 
@@ -764,7 +768,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **위험** | 대조가 조용히 멈추면 결제·접수·중앙 ACK 불일치가 예외 큐에 올라오지 않는다. 피크를 지난 뒤에도 운영자는 알 수 없다. |
 | **판정** | 예약 시각은 배포 기본값이 아니라 대학별 예약에서 온다(ADR-0006). HelmRelease가 마지막에 얹는 `peak-mode.yaml`이 평시에는 `scheduledActivation`을 비우고, 예약 창에서는 억제·종료 시각을 함께 준다. 앱은 `PEAK_MODE_ENDS_AT`이 지나면 억제를 푼다. 첨부 파일은 R5에 따라 고치지 않는다. |
 | **저장소 반영** | ✅ 대학별 `peak-mode.yaml` overlay(평시 비움) · `tests/m4/gitops-manifests.mjs`가 overlay가 마지막 values인지 검사 |
-| **노션 반영** | ⬜ §05 첨부 values-m 교체(D-44) 때 `scheduledActivation`을 비우고 예약은 `peak-schedule.yaml`에서 온다고 적는다 — 사용자 확인 필요(R6) |
+| **노션 반영** | ⬜ values-m v1.2 가 `scheduledActivation: ""`·`scheduledEnd: ""`·`window: ""` 와 예약 출처 주석을 담았다(D-44 와 같은 파일). 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md) |
 | **상태** | 🟡 저장소 반영 — 노션 첨부 교체 대기 |
 
 ---
@@ -791,9 +795,9 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **충돌** | §01 B6·v1.0 §8.4·STRIDE D-02 는 세션·원서 단위 요청 한도를 요구하지만, §03 첨부 OpenAPI(v1.2.0)의 지원자 경로 어디에도 `429` 응답과 `Retry-After` 가 없다. 오류 코드도 `RATE_LIMITED` 가 없다. |
 | **영향** | 계약만 보고 만든 클라이언트는 429 를 알 수 없는 오류로 다룬다. 자동저장 화면이 Retry-After 를 지키지 않고 곧바로 다시 보내면 한도가 풀리지 않는다. |
 | **판정** | 구현은 요구대로 둔다(ADR-0007): `429` + `Retry-After` + problem `code: RATE_LIMITED`. 계약에는 지원자 경로 공통 응답으로 `429`(Problem, `Retry-After` 헤더)를 더한다 — optional 응답 추가라 호환 변경이다(§A16). |
-| **저장소 반영** | 🟡 코드 반영(`ProblemCode.RATE_LIMITED`·`ProblemException.rateLimited`·throttle 훅). OpenAPI yaml 은 아직 — 계약 파일을 바꾸면 같은 작업에서 노션 §03 첨부를 다시 올려야 한다(R5) |
-| **노션 반영** | ⬜ §03 OpenAPI 첨부에 429 응답 추가·교체 — 사용자 확인 필요(R6) |
-| **상태** | 🟡 판정 — 계약·노션 첨부 교체 대기 |
+| **저장소 반영** | ✅ (2026-09-30) OpenAPI **v1.3.0** — 공통 응답 `RateLimited`(Problem + `Retry-After`)를 한도가 걸리는 지원자 오퍼레이션 16개에 추가(78,382바이트). 계약 적합성 시험이 스로틀 분류 함수(`classifyRoute`)와 계약의 429 목록이 한 건도 다르지 않은지 검사한다. 함께 고친 것: CORS 가 `retry-after` 를 노출하지 않아 브라우저가 대기 시간을 읽을 수 없었다 → 노출. 자동저장이 429 를 "재시도 불가 실패" 로 멈췄다 → 내용·멱등키를 보관하고 Retry-After 뒤 한 번 자동 재시도 |
+| **노션 반영** | ⬜ §03 첨부 v1.3.0 교체 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 저장소 반영 — 노션 첨부 교체 대기 |
 
 ---
 
@@ -805,9 +809,24 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **충돌** | §08 시나리오 10 · M4 T-M4-39 는 "API Node 강제 종료 → 무중단" 을 요구한다. 차트는 API·PgBouncer 2개 이상, zone 분산, PDB, `maxUnavailable: 0`, preStop 을 갖췄다. 그러나 노드가 **예고 없이** 죽으면 쿠버네티스가 그 노드를 NotReady 로 판정할 때까지(kind 기본값에서 49초) Service 가 죽은 Pod 로 요청·DB 연결을 계속 보낸다. |
 | **실측(축소 환경)** | 계획 정비(drain)는 무중단 — 요청 879건 실패 0. 강제 정지는 **정지 1.5초 뒤부터 66.6초까지 요청의 약 10%(1,681건 중 160건)가 2초 안에 응답받지 못했고**, 이후 노드가 죽은 채로 스스로 회복했다. 수정 전에는 DB 연결 시간 제한이 없어 141초 내내 72% 가 실패했다(노드 하나의 장애가 전체 장애) — 쿼리 시간 제한·끊긴 연결 폐기로 고쳤다. `tests/m4/results/node-failure-kind-2026-09-29T18-05-05-487Z.json`(전)·`…18-26-14-638Z.json`(후) |
 | **판정** | 앱이 할 수 있는 것은 했다: 매달린 DB 연결을 10초 안에 버리고 503 재시도 안내, 멱등키로 재시도를 안전하게. 남은 구간은 플랫폼 몫이다 — ① Edge/Ingress 가 연결 실패·시간 초과를 다른 Pod 로 재시도(모든 변경 요청에 Idempotency-Key 가 있어 POST/PATCH 재시도도 안전하다), ② K-PaaS 의 노드 장애 판정 시간(`node-monitor-grace-period`)을 대학 SLO 에 맞게 조정, ③ PgBouncer 를 API Pod 옆(sidecar)으로 옮겨 노드 간 DB 경로 의존을 없애는 안을 K-PaaS 부하 시험 때 비교. 또한 차트·첨부가 zone 분산을 `DoNotSchedule` 로 두어 **zone 이 2개면 한 zone 이 죽는 동안 대체 Pod 를 남은 zone 에 둘 수 없다**(maxSkew 1) — 3개 zone 또는 `minDomains` 검토가 필요하다(로컬에서는 기본 toleration 300초라 재배치 전에 노드를 되살려 미관측). |
-| **저장소 반영** | 🟡 DB 풀 시간 제한·끊긴 연결 폐기·503(`server-kit` db, 문제 필터), 다중 노드 시험(`kind-univ-a-multinode.yaml`·`values-multinode.yaml`·`node-failure-kind.mjs`). Ingress 재시도·노드 판정 시간·zone 수는 운영 환경 결정 |
-| **노션 반영** | ⬜ §08 시나리오 10 의 합격 기준에 "노드 장애 판정 전 구간은 Edge 재시도로 흡수" 를, §05 에 zone 수·Ingress 재시도 정책을 적는다 — 사용자 확인 필요(R6) |
-| **상태** | 🟡 판정 — 플랫폼 결정·노션 반영 대기 |
+| **결정 (2026-09-30, ADR-0008)** | ① zone 분산에 **`nodeTaintsPolicy: Honor`** — 장애로 taint 된 노드를 분산 계산에서 빼 zone 2개에서도 대체 Pod 가 살아 있는 zone 에 놓인다(`DoNotSchedule` 유지, 가능하면 zone 3개) ② 노드 판정 시간은 대학 SLO 에 맞춰 줄인다(grace ≥ 상태 보고 주기 × 4) ③ **Edge 가 연결 실패·연결 시간 초과를 다른 엔드포인트로 1회 재시도**하는 것을 플랫폼 필수 요구로 둔다(POST/PATCH 포함 — 멱등키) ④ Edge 는 Gateway API 컨트롤러(D-53) ⑤ PgBouncer sidecar 는 K-PaaS 부하 시험 때 비교 |
+| **저장소 반영** | 🟡 DB 풀 시간 제한·끊긴 연결 폐기·503(`server-kit` db, 문제 필터), 다중 노드 시험(`kind-univ-a-multinode.yaml`·`values-multinode.yaml`·`node-failure-kind.mjs`). ✅ (2026-09-30) 차트 `nodePlacement.nodeTaintsPolicy: Honor`(values·values-m v1.2), 판정 시간 비교용 `kind-univ-a-multinode-tuned.yaml`(grace 16초·상태 보고 4초), 시험에 "죽은 노드 Pod 축출 → 대체 Pod 가 살아 있는 zone 에 Ready" 단계 추가. 재측정 대기 |
+| **노션 반영** | ⬜ §08 시나리오 10 합격 기준·§05 노드 장애 흡수 절 — [06-notion-changeset.md](06-notion-changeset.md) (노션 쓰기 승인 대기) |
+| **상태** | 🟡 결정 — 로컬 재측정·노션 반영 대기 |
+
+---
+
+## D-53. §06 첨부·차트가 Edge 로 가정한 ingress-nginx 가 은퇴했다
+
+| | |
+|---|---|
+| **발견** | 2026-09-30 (D-52 Edge 재시도 정책을 정하다가 확인) |
+| **충돌** | §06 첨부 `network-rbac.yaml` 과 차트 `networkPolicy.ingressFrom` 기본값은 공개 트래픽 입구를 edge 네임스페이스의 `ingress-nginx` 로 둔다. Kubernetes SIG Network 는 ingress-nginx 를 **2026년 3월 은퇴**시켰다 — 이후 버그 수정·보안 패치가 없다(Kubernetes 공식 블로그·SRC 공지). |
+| **영향** | 운영 입구에 보안 패치 없는 컨트롤러를 두게 된다. 설계가 요구하는 Edge 재시도(D-52)·WAF 연동도 이 컨트롤러 기준으로 쓰면 곧 다시 바꿔야 한다. |
+| **판정** | **Edge 는 Gateway API 를 지원하는 유지보수 중인 컨트롤러로 한다**(ADR-0008). 구체 제품은 K-PaaS 가 제공하는 것을 따른다. 차트는 입구 선택자를 values 로 받으므로 코드 변경은 없다 — 대학 values 에서 `networkPolicy.ingressFrom` 을 그 컨트롤러로 바꾼다. |
+| **저장소 반영** | ✅ ADR-0008 · 차트 values 주석. 기본값 선택자는 §06 첨부와 같게 두었다(첨부 교체 전까지 R5) |
+| **노션 반영** | ⬜ §06 NetworkPolicy 첨부의 edge 선택자와 §05 Edge 서술 — [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 판정 — K-PaaS Edge 확정·노션 반영 대기 |
 
 ---
 

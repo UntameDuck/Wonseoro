@@ -12,8 +12,8 @@
 - **제품**: 원서로(K-Admission) — 대학 입학 원서접수를 대학별 Data Plane 으로 분산하는 플랫폼. 2026 GovTech 공모전 출품작
 - **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 18/28 진행 중**. 전체 76/139 태스크. **CI 네 잡 모두 초록**(2026-09-30 복구)
 - **완료한 핵심 증명**: 로컬 kind 2클러스터 축소 환경에서 **대학 간 장애 격리 T-M4-42 통과**. A대 전면 정지 중 B대 접수·중앙 반영, A대 복구 후 접수까지 확인
-- **최근 완료**: T-M4-07 Peak Mode(ADR-0006) · T-M4-20 전 서비스 계측·로그 상관관계 · T-M4-24 로그 마스킹 강제 · **T-M4-21~23 업무 KPI·대시보드 3종** · **D-50 취소 이벤트 계약 위반 수정** · CI 복구 · **T-M4-40 NAT Adaptive Throttling(ADR-0007)** · 과부하 중 API 프로세스가 죽던 결함 수정 · **T-M4-37 Redis 장애 무영향** · T-M4-39 다중 노드 시험(drain 무중단·노드 장애 때 전체가 멈추던 DB 연결 결함 수정, D-52)
-- **바로 다음 할 일**: **T-M4-35 중앙 2시간 단절 실제 시간 판**(백그라운드로 돌리며 병행) → T-M4-34 PG 콜백 1~30분 지연 → [§4](#4-다음-작업--순서와-방법)
+- **최근 완료**: T-M4-07 Peak Mode(ADR-0006) · T-M4-20 전 서비스 계측·로그 상관관계 · T-M4-24 로그 마스킹 강제 · **T-M4-21~23 업무 KPI·대시보드 3종** · **D-50 취소 이벤트 계약 위반 수정** · CI 복구 · **T-M4-40 NAT Adaptive Throttling(ADR-0007)** · 과부하 중 API 프로세스가 죽던 결함 수정 · **T-M4-37 Redis 장애 무영향** · T-M4-39 다중 노드 시험(drain 무중단·노드 장애 때 전체가 멈추던 DB 연결 결함 수정, D-52) · **맡겨진 결정 정리(2026-09-30)** — D-44 ⑦(Pod 당 38)·D-47·D-51(OpenAPI v1.3.0 429)·D-52(ADR-0008)·D-53(ingress-nginx 은퇴) 결정·저장소 반영. §05 runtime 첨부를 차트 렌더링으로 바꿔 CI 가 드리프트를 막는다. **노션 반영은 AI 쓰기가 막혀 [06-notion-changeset.md](06-notion-changeset.md) 로 대기**
+- **바로 다음 할 일**: **T-M4-35 중앙 2시간 단절 실제 시간 판**(2026-09-30 실행 중 — 결과 기록) → **T-M4-34 PG 지연 실제 시간 판**(준비 완료) → **T-M4-39 재측정**(판정 시간 단축·Honor) → [§4](#4-다음-작업--순서와-방법)
 
 ## 2. 반드시 지킬 규칙
 
@@ -23,7 +23,7 @@
 | R2 | 커밋 메시지 형식: `feat: …` / `fix: …` / `docs: …` + 빈 줄 + `- ` 목록. **AI 공동저자(Co-Authored-By) 줄을 넣지 않는다** | `git log` 참고 |
 | R3 | 브랜치: 지금까지 `main` 에 바로 커밋했다 (2인 팀 관행) | |
 | R4 | **노션 기술설계서가 설계의 원본이다.** 설계와 다른 구현을 발견하면 조용히 고치지 말고 먼저 [불일치 대장](02-spec-discrepancy-register.md)에 `D-N` 으로 올린다 | [01-notion-sync-protocol.md](01-notion-sync-protocol.md) |
-| R5 | **노션 첨부(DDL·OpenAPI·CloudEvents·Helm values 등)는 저장소 사본과 바이트가 같아야 한다.** 첨부 원본 파일(`deploy/charts/k-admission/values-m.yaml`, `deploy/platform/policies/*`, `tests/load/k6-admission.js`, `docs/spec-assets/*`)은 **고치지 않는다** — 다르게 해야 하면 대장에 올리고 차트·코드 쪽에서 다루거나, 노션 첨부를 교체한다. **계약 파일(DDL `0001_init.sql`·OpenAPI yaml·CloudEvents json)은 고칠 수 있지만, 고치면 같은 작업에서 노션 첨부도 다시 올린다**(지금까지 그렇게 했다) | [spec-assets/README.md](spec-assets/README.md) |
+| R5 | **노션 첨부(DDL·OpenAPI·CloudEvents·Helm values 등)는 저장소 사본과 바이트가 같아야 한다.** 첨부 원본 파일(`deploy/charts/k-admission/values-m.yaml`, `deploy/platform/policies/*`, `tests/load/k6-admission.js`, `docs/spec-assets/*`)은 **고치지 않는다** — 다르게 해야 하면 대장에 올리고 차트·코드 쪽에서 다루거나, 노션 첨부를 교체한다. **계약 파일(DDL `0001_init.sql`·OpenAPI yaml·CloudEvents json)은 고칠 수 있지만, 고치면 같은 작업에서 노션 첨부도 다시 올린다**(지금까지 그렇게 했다). ⚠️ **2026-09-30 부터 첨부 5종(OpenAPI·CloudEvents·values-m·runtime·와이어프레임)은 저장소가 앞선다** — AI 의 노션 쓰기가 권한 분류기에 막혔다. 올릴 파일·해시는 [06-notion-changeset.md](06-notion-changeset.md). **runtime 첨부는 손으로 고치지 않는다** — 차트·values-m 을 고치고 `node scripts/render-runtime-attachment.mjs` | [spec-assets/README.md](spec-assets/README.md) | [spec-assets/README.md](spec-assets/README.md) |
 | R6 | **노션 페이지 수정은 페이지마다 사용자에게 확인받고 한다** | [05 문서 ③-7](05-m3-exit-m4-readiness.md) |
 | R7 | 수치를 지어내지 않는다. 로컬(kind) 결과는 **"축소 환경"** 으로 명시하고, SLO·부하 수치는 K-PaaS 실측 전까지 "목표값" 이다 | [05 문서 ④](05-m3-exit-m4-readiness.md) |
 | R8 | 흉내 구현(Mock PG·Mock AV·헤더 인증)은 **운영 모드(`NODE_ENV=production`)에서 기동이 막힌다.** 이 안전장치를 풀지 않는다 | [04-production-readiness.md](04-production-readiness.md) |
@@ -41,8 +41,9 @@
 | CI 재현 | CI 통합 잡과 같은 순서를 빈 DB 로: `docker run -d --rm --name ci-pg -e POSTGRES_USER=wonseoro -e POSTGRES_PASSWORD=wonseoro -e POSTGRES_DB=univ_a -p 5499:5432 postgres:16-alpine` → `0001_init`·`0002_db_roles`·`dev-roles`·`verify-constraints`·`seed-dev`·`ci-seed-deadline` 적용 → `DATABASE_URL=…@localhost:5499/univ_a` 로 시험. kind 워크로드 간섭도 없다 |
 | 로컬 관측 스택 | kind A `observability` 네임스페이스: Prometheus(KPI 규칙 포함)·Adapter·Grafana(익명 Viewer). Grafana 는 `kubectl -n observability port-forward svc/grafana 13000:80` |
 | 로컬 DB | compose: `postgres-univ-a` :5432 · `postgres-univ-b` :5442(`--profile multi`) · `postgres-central` :5434 · redis :6379 · minio :9000 |
-| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 263 · server-kit 49 · central-api 20 · event-relay 5 (전체 337, DB 없는 실행 195 pass·142 skip·실패 0). 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함). **DB 통합 시험 전에 kind univ-a 의 API·Relay 를 0 으로 줄인다** — 같은 로컬 `univ_a` DB 를 봐서 시험 행을 먼저 집어 간다(결제 재확인·Relay 시험이 실패하거나 멈춘다). event-relay 시험은 직렬로 돈다 |
-| 검사 | `npm run db:verify`(DB 제약 20종) · `node scripts/check-deps.mjs`(의존성 선언) · `helm lint deploy/charts/k-admission` |
+| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 268 · server-kit 49 · central-api 20 · event-relay 5 (전체 342, DB 없는 실행 200 pass·142 skip·실패 0). 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함). **DB 통합 시험 전에 kind univ-a 의 API·Relay 를 0 으로 줄인다** — 같은 로컬 `univ_a` DB 를 봐서 시험 행을 먼저 집어 간다(결제 재확인·Relay 시험이 실패하거나 멈춘다). event-relay 시험은 직렬로 돈다 |
+| 검사 | `npm run db:verify`(DB 제약 20종) · `node scripts/check-deps.mjs`(의존성 선언) · `helm lint deploy/charts/k-admission` · `node scripts/render-runtime-attachment.mjs --check`(runtime 첨부 = 차트 렌더링) |
+| 노션 쓰기 | AI 의 노션 페이지 수정·첨부 교체는 **권한 분류기가 막는다**(2026-09-30, 외부 시스템 쓰기). 읽기(fetch)는 된다. 노션 변경은 [06-notion-changeset.md](06-notion-changeset.md) 로 준비하고 사람이 적용한다 |
 
 ## 4. 다음 작업 — 순서와 방법
 
@@ -80,9 +81,9 @@ A 클러스터 노드 컨테이너를 멈춘 동안 B 대학의 원서 생성→
 | ID | 방법 |
 |---|---|
 | T-M4-33 | 결제 확인된 원서 하나에 `POST /finalize` 100회 동시 → `submission` 1건 (k6 또는 Node 스크립트) |
-| T-M4-34 | Mock PG 동작 `SLOW`·`UNKNOWN`(거래번호에 포함하거나 `MOCK_PG_BEHAVIOUR`) + `PAYMENT_RECHECK_INTERVAL_MS` 를 줄여 콜백 지연을 시간 압축 → 자동 정합화·이중 확정 0 |
-| T-M4-35 | `docker stop ka-central` 동안 접수 지속 → 재시작 후 Outbox 재전송·event loss 0 (2시간 → 축소, 결과에 명시) |
-| T-M4-39 | `kubectl delete pod` / 노드 재시작 중 요청 → PDB·`maxUnavailable: 0` 으로 무중단 |
+| T-M4-34 | 시간 압축판 `payment-recovery.mjs` ✅. **실제 시간 판**: 이미지 재빌드·`kind load` 뒤 `kubectl --context kind-univ-a -n kadmission-app set env deploy/univ-a-api MOCK_PG_CONFIRM_DELAYS_S=60,300,900,1800` → `node tests/m4/pg-delay-realtime.mjs`(약 35분: 지연마다 콜백 경로·폴링 경로, 늦은 콜백 중복 처리) → `… set env deploy/univ-a-api MOCK_PG_CONFIRM_DELAYS_S-` 로 되돌린다. 콜백 서명은 로컬 개발 기본 비밀 |
+| T-M4-35 | 압축판 `central-outage.mjs` ✅. **실제 시간 판** `node tests/m4/central-outage-realtime.mjs`(기본 120분, `--minutes=2 --every=30` 사전 점검). 중앙을 멈춘 채 5분마다 접수·4건 중 1건 취소, 1분 표본. **그동안 univ-a 를 건드리지 않는다**(재배포·DB 시험 금지). 취소는 접수 전에만 있어 중앙 "내 원서" 가 아니라 중앙 요약 `CANCELLED` 로 확인한다 |
+| T-M4-39 | 단일 노드 ✅. 다중 노드: `kind-univ-a-multinode.yaml`(기본 판정)·`kind-univ-a-multinode-tuned.yaml`(grace 16초) — 절차는 아래 목표 3 끝. 시험이 죽은 노드의 API Pod 를 축출해 대체 Pod 가 살아 있는 zone 에 놓이는지(nodeTaintsPolicy)도 본다 |
 
 ### 목표 3 — 차트에 남은 운영 기능
 
@@ -91,7 +92,7 @@ T-M4-09 PgBouncer는 두 kind 클러스터에 배포했고 직접 DB 우회 차�
 `peak-schedule.yaml` 을 예약 워크플로(`.github/workflows/peak-mode.yml`)가 10분마다 `peak-mode.yaml` overlay 로 계산해
 바뀐 경우만 서명 커밋하고, Flux 가 Pull 해 API 최소 replica 를 올리고 내린다. 앱은 억제~종료 시각에만 자동 대조를 멈춘다.
 로컬 kind 에서 2→3(push 뒤 62초)·원복(33초)을 확인했다 — `tests/m4/results/peak-mode-gitops-2026-09-29T11-43-36-484Z.json`,
-재실행 절차는 `deploy/gitops/local/README.md`. 첨부 values-m 예시 시각이 영구 억제를 만드는 문제는 D-49(노션 첨부 교체 대기). 예약 워크플로는 저장소 변수 `PEAK_MODE_ENABLED=true` 일 때만 러너를 띄운다(opt-in).
+재실행 절차는 `deploy/gitops/local/README.md`. 첨부 values-m 예시 시각이 영구 억제를 만드는 문제는 D-49 — values-m v1.2 에서 비웠고 노션 첨부 교체만 남았다. 예약 워크플로는 저장소 변수 `PEAK_MODE_ENABLED=true` 일 때만 러너를 띄운다(opt-in).
 
 T-M4-20·T-M4-24는 완료했다. 계측은 `packages/server-kit` 에 모였다 — `telemetry-sdk`(SDK 진입점, **index 로 내보내지 않는다**:
 index 를 거치면 `pg` 가 먼저 로드돼 DB span 이 빠진다), `telemetry/http`(HTTP 지표·span), `telemetry/trace`(traceparent 전파·
@@ -123,6 +124,7 @@ T-M4-39 는 🟡 다. 평소 로컬은 노드가 하나라, 시험할 때만 다
 `kind create cluster --config deploy/local/kind-univ-a-multinode.yaml`(univ-m, NodePort 18082) → 이미지 `kind load` →
 `helm upgrade --install univ-a … -f values-s -f values-local -f values-univ-a -f peak-mode-univ-a -f values-multinode` →
 `node tests/m4/node-failure-kind.mjs` → `kind delete cluster --name univ-m`. **메모리 때문에 그동안 univ-a·univ-b 노드를 멈춘다.**
+노드 판정 시간을 줄인 비교는 같은 절차에서 설정 파일만 `kind-univ-a-multinode-tuned.yaml`(controller-manager grace 16초·kubelet 상태 보고 4초)로 바꾼다(ADR-0008). 차트 기본값이 `nodeTaintsPolicy: Honor` 라, 옛 동작(Ignore)과 비교하려면 `--set nodePlacement.nodeTaintsPolicy=Ignore` 로 배포한다.
 시험 클라이언트는 요청마다 새 TCP 연결을 연다 — keep-alive 로 재사용하면 요청이 한 Pod 로만 가서 장애가 안 보인다(처음에 그랬다).
 결과: drain 무중단, 강제 정지는 NotReady 판정(49초)까지 약 1분·10% 끊김 후 자동 회복. 원래는 DB 풀에 쿼리 시간 제한이 없어
 죽은 노드의 PgBouncer 로 열린 연결이 살아남은 Pod 의 요청까지 끝없이 붙잡았다(141초 내내 72% 실패) — `server-kit` Db 에
@@ -154,11 +156,10 @@ Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, s
 `settings-store.json` 의 `EnableDockerAI=false`로 비활성화했다. 이전 공간 부족 때 B kind의 Node 이미지 레이어가
 손상되어 B 클러스터만 재생성했다. 대학 DB는 외부 Docker volume이라 데이터 손실은 없다.
 
-### 목표 4 — 노션 반영 (R6)
+### 목표 4 — 노션 반영 (R6) · 저장소 준비 끝, 노션 쓰기 대기
 
-- §05 첨부 runtime·values-m 교체 — D-44 ①~⑦ (포트·프로브·NODE_ENV·대조 방식·마감버전 제거·**커넥션 예산 초과**)
-- §07 와이어프레임 결제 화면 문구 — D-43
-- §05 첨부 values-m `peakMode.scheduledActivation` 예시 시각 비우기 — D-49 (D-44 교체와 함께)
+페이지별 변경안(첨부 5종의 바이트·SHA-256, 바꿀 문구)은 **[06-notion-changeset.md](06-notion-changeset.md)**. 2026-09-30 에 AI 가 적용하려다 권한 분류기에 막혔다(외부 시스템 쓰기) —
+같은 결과를 다른 도구로 우회하지 않는다. 사람이 적용하거나 사용자가 노션 쓰기를 허용한다. 적용하면 대장 해당 항목을 ✅ 로, spec-assets README 의 ⚠️ 를 ✅ 로 바꾼다.
 
 첨부 교체 방법: 노션 MCP 의 file upload 로 저장소 파일을 **그대로** 올리고(바이트 수 확인) 페이지의 file 블록을 바꾼다.
 노션 첨부를 **내려받는** 것은 MCP 로 안 된다 — 로그인된 브라우저에서 `/api/v3/getSignedFileUrls` (절차: 대장 D-5).
@@ -168,10 +169,11 @@ Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, s
 | 항목 | 상태 |
 |---|---|
 | K-PaaS(또는 클라우드) 시험 환경 | 3,000 CCU·1,000 RPS·6시간 Soak·DB Failover 실측(T-M4-30~32·36·41)에 필요. 없음 |
-| 제출 PDF 정정 (D-2·D-3) | 개발보고서의 "Java/Spring" 표기 → NestJS·TypeScript |
-| values-m 커넥션 수치 (D-44 ⑦) | Pod 당 40 → 38 로 줄일지, 예산 400 → 411 이상으로 올릴지 |
+| 제출 PDF 정정 (D-2·D-3) | 개발보고서의 "Java/Spring" 표기 → NestJS·TypeScript. 정정 문구 준비됨 — [07-submission-errata.md](07-submission-errata.md) |
+| 노션 반영 적용 | [06-notion-changeset.md](06-notion-changeset.md) — AI 쓰기 차단 |
+| K-PaaS 착수 때 정할 것 | 노드 판정 시간(`node-monitor-grace-period`) 조정 가능 여부·zone 수·Gateway API 컨트롤러(ADR-0008, D-53) |
 | Peak Mode 예약 워크플로 켜기 | GitHub environment `peak-mode` + secret `PEAK_MODE_SSH_SIGNING_KEY`, 저장소 변수 `PEAK_MODE_ENABLED=true`, 대학 `wonseoro-git-authors` 에 예약 자동화 공개키 추가 (ADR-0006) |
-| 노션 페이지 수정 승인 | R6 |
+| ~~values-m 커넥션 수치 (D-44 ⑦)~~ | 2026-09-30 AI 결정: Pod 당 38·예산 400 유지 |
 
 ## 6. 전체 남은 규모
 
@@ -184,9 +186,9 @@ AI 가 이 PC 에서 할 수 있는 것 약 36개, 외부 환경 필요 약 15�
 |---|---|
 | 지금 할 일 | [03-next-steps.md](03-next-steps.md) |
 | 단계별 태스크·인수기준 | [milestones/](milestones/) |
-| 설계와 구현이 다른 곳 52건 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) |
+| 설계와 구현이 다른 곳 53건 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) |
 | 노션 문서 지도·동기화 규칙 | [01-notion-sync-protocol.md](01-notion-sync-protocol.md) |
-| 왜 이렇게 정했나 | [adr/](adr/) — 최신 ADR-0007 지원자 단위 Adaptive Throttling |
+| 왜 이렇게 정했나 | [adr/](adr/) — 최신 ADR-0008 노드 장애 흡수(nodeTaintsPolicy·판정 시간·Edge 재시도) |
 | 배포 | `deploy/` — 차트 `charts/k-admission`, 대학별 `universities/`, 로컬 `local/` |
-| API 계약 | `packages/contracts/openapi/k-admission.v1.yaml` (v1.2.0) — 컨트롤러와 다르면 계약 적합성 시험이 깨진다 |
+| API 계약 | `packages/contracts/openapi/k-admission.v1.yaml` (v1.3.0) — 컨트롤러와 다르면 계약 적합성 시험이 깨진다 |
 | DB 스키마 | `infra/db/migrations/0001_init.sql`(= 노션 §02 첨부 v1.2) · `0002_db_roles.sql` |

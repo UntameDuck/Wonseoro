@@ -10,18 +10,18 @@
 > M4는 **검증 단계지 설계 단계가 아니다.** 여기서 구조 결함이 나오면 M1까지 되돌아간다.
 > 그래서 Idempotency·Outbox·단일 Writer·서버시간 마감판정을 M1부터 코드에 박아둔 것이다.
 
-## 진행 현황 (2026-09-29)
+## 진행 현황 (2026-09-30)
 
 | ID | 상태 | 근거 |
 |---|---|---|
-| T-M4-01 Helm 차트 | ✅ | `deploy/charts/k-admission` — values-s/m/l (m 은 §05 첨부 그대로, s·l 은 파생값). `helm lint` 통과 |
+| T-M4-01 Helm 차트 | ✅ | `deploy/charts/k-admission` — values-s/m/l (s·l 은 파생값). **values-m v1.2(2026-09-30)** 를 차트에 맞췄고 runtime 첨부는 차트 렌더링 결과로 만든다(`scripts/render-runtime-attachment.mjs`, CI `--check`·`helm lint`). 노션 §05 첨부 교체는 승인 대기(D-44) |
 | T-M4-02 Runtime 보안 기준 | ✅ | runAsNonRoot(UID 10001)·readOnlyRootFS·seccomp·drop ALL·PDB·startup/readiness/liveness. 이미지를 같은 조건으로 띄워 확인 |
 | T-M4-03 대학별 values | ✅ | `deploy/universities/UNIV-A·B·C` — 같은 차트·같은 이미지, **마감·설정 버전은 values 에 없다**(D-44 ⑥) |
 | T-M4-04 kind 2 클러스터 | ✅ | univ-a·univ-b의 API 2개·Relay·서류 워커 모두 Ready. 서류 워커 수정 이미지 재배포·NetworkPolicy 실효성 확인 |
 | T-M4-05 GitOps Pull | ✅ | Flux 2.9.5가 signed Git HEAD만 Pull하고 namespace 한정 ServiceAccount로 HelmRelease를 수렴한다. unsigned HEAD 거부·last-good 유지·Helm v25 적용·replica drift 1→2 복구 확인. 로컬 축소 결과 `tests/m4/results/gitops-pull-2026-09-29T04-24-15-000Z.json` |
 | T-M4-07 Peak Mode | ✅ | 대학별 `peak-schedule.yaml`(사전 확장·작업 억제·종료)을 예약 워크플로가 `peak-mode.yaml` overlay 로 바꿔 서명 커밋하고 Flux 가 Pull 한다(ADR-0006, D-48). 앱은 억제 시각~종료 시각에만 자동 대조를 멈춘다. 로컬 축소 환경에서 API replica 2→3 전환(push 뒤 62초)·원복(33초)·SourceVerified 유지 확인 `tests/m4/results/peak-mode-gitops-2026-09-29T11-43-36-484Z.json`. GitHub 예약 워크플로 실행과 DB·Redis 사전 확장(클러스터 밖 HA 계층, T-M4-06)은 미검증 |
 | T-M4-08 HPA 커스텀 지표 | ✅ | Prometheus가 API Pod 지표를 수집하고 Adapter가 RPS·p95 지연·처리 중 요청 수를 Custom Metrics API로 제공한다. 임시 HPA에서 세 지표와 `ScalingActive=True/ValidMetricFound` 확인 후 로컬 HPA 원복. 로컬 축소 결과 `tests/m4/results/hpa-custom-metrics-2026-09-29T03-27-10-000Z.json` |
-| T-M4-09 커넥션 예산 | ✅ | PgBouncer 1.26.0 비루트 이미지·Helm Deployment/PDB·앱/DB TLS 경계·서버/클라이언트 예산·직접 DB 우회 차단. 동시 30쿼리 성공, upstream 최대 10/10. 노드 강제 재시작 후 stale PID 자동 제거·A 전체 Ready 복구와 B 정상 유지 확인. 로컬 축소 환경 결과 `tests/m4/results/pgbouncer-2026-09-28T01-26-13-047Z.json`. 첨부 values-m 수치 결정은 D-44 ⑦로 별도 대기 |
+| T-M4-09 커넥션 예산 | ✅ | PgBouncer 1.26.0 비루트 이미지·Helm Deployment/PDB·앱/DB TLS 경계·서버/클라이언트 예산·직접 DB 우회 차단. 동시 30쿼리 성공, upstream 최대 10/10. 노드 강제 재시작 후 stale PID 자동 제거·A 전체 Ready 복구와 B 정상 유지 확인. 로컬 축소 환경 결과 `tests/m4/results/pgbouncer-2026-09-28T01-26-13-047Z.json`. D-44 ⑦ 결정(2026-09-30): Pod 당 38·예산 400 유지 — 최대 391 |
 | T-M4-20 OpenTelemetry | ✅ | 네 서비스(API·Relay·서류 워커·중앙)가 공용 `server-kit` 계측을 쓴다 — Prometheus 지표, OTLP/gRPC Trace, 내부 호출 traceparent 전파(Relay→중앙·워커→API·API→Vault), 한 줄 JSON 로그의 trace_id/span_id. HTTP 라벨·span 속성은 allowlist(메서드·라우트 템플릿·상태 코드, 식별자 형태 값)만 쓴다. smoke(모의 수집기)에서 Trace·로그 상관관계·PII 미노출, Relay 통합 시험에서 이벤트 span→중앙 헤더 전파, kind A 에서 세 워크로드 수집 up=1·구조화 로그 확인 `tests/m4/results/telemetry-kind-2026-09-29T14-05-37-946Z.json`. 로컬에 수집기가 없어 클러스터 안 Trace 전송은 미검증 |
 | T-M4-24 Log Masking 강제 | ✅ | `StructuredLogger` — 본문 객체 미기록, 주민번호·전화·이메일·카드·토큰·접속 비밀번호 마스킹, 운영 스택 없음. 전역 Nest 로거를 기동 전에 교체하고, `scripts/check-logging.mjs` 가 console·stdout 직접 출력과 로거 누락을 CI 에서 막는다 |
 | T-M4-21 Golden Signals 대시보드 | ✅ | `deploy/platform/observability/dashboards/golden-signals.json` — Traffic(서비스별 RPS·Finalize TPS)·Errors(5xx 비율·상태별)·Latency(p95, probe 제외)·Saturation(처리 중 요청·DB 잠금 대기·Outbox 적체). 로컬 Grafana 12.3.1 에서 렌더링 확인 `tests/m4/results/grafana-dashboards-2026-09-29T15-52-02-577Z.json` |
@@ -31,10 +31,10 @@
 | T-M4-37 Redis 장애 | ✅ | 현재 구현은 Redis 를 쓰지 않는다(멱등성=DB, 요청 한도=Pod 메모리). Redis 정지 중·재기동+FLUSHALL 뒤 작성·저장·결제·접수·Self-check 그대로, readiness 유지, 재시작 0 `tests/m4/results/redis-outage-kind-2026-09-29T17-16-19-213Z.json`. 지원자 세션을 Redis 에 두는 인증(M5) 때 다시 시험 |
 | T-M4-42 대학 간 격리 | ✅ | 로컬 kind 2클러스터 축소 환경 통과. A 전면 정지 중 B 접수 2건·중앙 반영, A 복구 후 접수. `tests/m4/results/isolation-2026-09-27T16-42-39-057Z.json` |
 | T-M4-33 동시 Finalize | ✅ | 100회 동시 요청 전부 성공(201×1, 200×99), Submission·Outbox·감사 각 1건. 로컬 축소 환경 |
-| T-M4-34 PG 지연·UNKNOWN | 🟡 | SLOW·UNKNOWN→복구 시 자동 확정·접수, double-confirm 0. 워커 1초·Backoff 시간 압축 — 실제 10초·1~30분 시간 시험 남음 |
-| T-M4-35 중앙 단절 | 🟡 | 8.8초 단절 중 접수 2건·Outbox 보존·복구 후 event loss 0. 운영 인수기준 2시간 시험 남음 |
+| T-M4-34 PG 지연·UNKNOWN | 🟡 | SLOW·UNKNOWN→복구 시 자동 확정·접수, double-confirm 0. 워커 1초·Backoff 시간 압축. **실제 시간 판 준비 완료**(2026-09-30) — Mock PG 지연 모드(`MOCK_PG_CONFIRM_DELAYS_S`, 1·5·15·30분 동안 UNKNOWN 뒤 확정)·`tests/m4/pg-delay-realtime.mjs`(콜백 경로·폴링 경로 각 4건, 늦은 콜백 중복 처리 확인). 중앙 2시간 시험 뒤 실행 |
+| T-M4-35 중앙 단절 | 🟡 | 8.8초 단절 중 접수 2건·Outbox 보존·복구 후 event loss 0. **2시간 실제 시간 판 진행 중**(2026-09-30, `tests/m4/central-outage-realtime.mjs` — 5분마다 접수, 4건 중 1건 취소, 1분마다 운영 모드·Outbox·재시도 횟수 표본). 2분 사전 점검은 통과(자율 운영 모드 전환·DEAD 0·복구 31초 뒤 전량 SENT·재시작 0) |
 | T-M4-38 Object Storage 장애 | ✅ | 로컬 축소 환경에서 MinIO 완전 단절 중 카탈로그 20회 오류 0·원서 생성/자동저장 지속·직접 업로드만 실패. 복구 515ms 뒤 같은 단기 URL 업로드 200·서버 검증 202. `tests/m4/results/object-storage-outage-2026-09-28T06-14-19-725Z.json` |
-| T-M4-39 API 종료 | 🟡 | 단일 노드: Pod 강제 삭제 283건·RollingUpdate 504건 연속 요청 오류 0. **다중 노드(제어 1 + 워커 2, zone 2)**: 계획 정비(drain) 요청 879건 실패 0 — 무중단. 노드 강제 정지는 NotReady 판정(49초)까지 요청 약 10%가 끊겼다가(66초) 노드가 죽은 채로 자동 회복 `tests/m4/results/node-failure-kind-2026-09-29T18-26-14-638Z.json`. 이 시험에서 DB 연결 시간 제한이 없어 **노드 하나의 장애가 살아남은 Pod 까지 멈추던 결함**(141초 내내 72% 실패)을 찾아 고쳤다. 남은 구간은 Edge 재시도·노드 판정 시간·zone 수 등 플랫폼 결정(D-52) |
+| T-M4-39 API 종료 | 🟡 | 단일 노드: Pod 강제 삭제 283건·RollingUpdate 504건 연속 요청 오류 0. **다중 노드(제어 1 + 워커 2, zone 2)**: 계획 정비(drain) 요청 879건 실패 0 — 무중단. 노드 강제 정지는 NotReady 판정(49초)까지 요청 약 10%가 끊겼다가(66초) 노드가 죽은 채로 자동 회복 `tests/m4/results/node-failure-kind-2026-09-29T18-26-14-638Z.json`. 이 시험에서 DB 연결 시간 제한이 없어 **노드 하나의 장애가 살아남은 Pod 까지 멈추던 결함**(141초 내내 72% 실패)을 찾아 고쳤다. 남은 구간은 플랫폼 설정 — **ADR-0008 로 결정**(2026-09-30): zone 분산 `nodeTaintsPolicy: Honor`(차트 기본값 — zone 2개에서 한 zone 이 죽어도 대체 Pod 배치), 노드 판정 시간 단축(비교용 `kind-univ-a-multinode-tuned.yaml`), Edge 연결 실패 1회 재시도(멱등키로 안전), Edge 는 Gateway API 컨트롤러(ingress-nginx 은퇴, D-53). 재측정 대기 |
 | 나머지 | ⬜ | |
 
 **로컬 축소 환경의 한계** — Docker Desktop 8GB 에서 이미지 빌드와 kind 클러스터 2개를 함께 돌리자 엔진이 멈췄다.

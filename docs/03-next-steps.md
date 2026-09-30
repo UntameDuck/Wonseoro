@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-30 (**M4 진행** — 다중 노드 장애 시험(T-M4-39): drain 무중단, 노드 강제 정지 때 전체가 멈추던 DB 연결 결함 수정, 남은 1분 구간은 D-52)
+> 최종 갱신: 2026-09-30 (**M4 진행** — 맡겨진 결정 정리: D-44 ⑦·D-47·D-51·D-52·D-53 결정·저장소 반영, 노션 반영은 승인 대기. 중앙 2시간 단절 실제 시간 시험 진행 중)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -22,11 +22,11 @@
 | M5 신뢰성·보안·접근성 | 0/35 | |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 76/139 태스크** (🟡 부분 완료 별도). **337개 테스트**
-(admission-api 263 · server-kit 49 · central-api 20 · event-relay 5) — DB 없는 실행 기준 195 pass·142 skip·실패 0.
+**총 76/139 태스크** (🟡 부분 완료 별도). **342개 테스트**
+(admission-api 268 · server-kit 49 · central-api 20 · event-relay 5) — DB 없는 실행 기준 200 pass·142 skip·실패 0.
 DB 포함 실행은 admission-api 3 skip(`ADMIN_API_TOKEN` 미설정) 외 전부 pass.
 배포 스크립트 시험 별도: Peak Mode 예약 계산 9건(`npm run test:m4:peak-schedule`), 대시보드·KPI 규칙 일관성(`npm run test:m4:observability`).
-DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`)·로그 우회 금지 검사(`scripts/check-logging.mjs`) CI 포함.
+DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`)·로그 우회 금지 검사(`scripts/check-logging.mjs`)·차트 lint·runtime 첨부 드리프트 검사(`scripts/render-runtime-attachment.mjs --check`) CI 포함.
 
 **CI 복구 (2026-09-30)** — 확인한 범위(`c232294` 이후)에서 통합 잡이 계속 실패하고 있었다. 원인은 CI 가 역할 마이그레이션·개발 시드·활성 마감정책 없이
 빈 DB 에서 시험을 돌린 것, 그리고 타이밍에 따라 갈리던 경합 두 건(마감정책 승인 400/409, 자동 접수와 화면 제출)이다.
@@ -98,10 +98,10 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 | ID | 시험 | 로컬 방식 |
 |---|---|---|
 | T-M4-33 | 같은 원서 Finalize 100회 동시 | ✅ 100건 성공 → Submission·Outbox·감사 각 1건 |
-| T-M4-34 | PG 지연·timeout·콜백 1~30분 지연 | 🟡 SLOW·UNKNOWN 자동 복구는 시간 압축 통과. 실제 시간 시험 남음 |
-| T-M4-35 | 중앙 Sync 차단 | 🟡 8.8초 축소 단절·event loss 0. 2시간 시험 남음 |
+| T-M4-34 | PG 지연·timeout·콜백 1~30분 지연 | 🟡 SLOW·UNKNOWN 자동 복구는 시간 압축 통과. 실제 시간 판 스크립트·Mock PG 지연 모드 준비 완료 — 중앙 시험 뒤 실행 |
+| T-M4-35 | 중앙 Sync 차단 | 🟡 8.8초 축소 단절·event loss 0. **2시간 실제 시간 판 진행 중**(2분 사전 점검 통과) |
 | T-M4-38 | Object Storage 지연·단절 | ✅ MinIO 완전 단절 중 카탈로그 20회 오류 0·원서 생성/자동저장 지속, 직접 업로드만 실패. 복구 후 업로드·서버 검증 정상 (**로컬 축소 환경**) |
-| T-M4-39 | API Pod·노드 강제 종료 | 🟡 Pod 삭제·RollingUpdate 오류 0, 다중 노드 drain 무중단. 노드 강제 정지는 NotReady 판정까지 약 1분·요청 10% 끊김 — 플랫폼 결정 필요(D-52) |
+| T-M4-39 | API Pod·노드 강제 종료 | 🟡 Pod 삭제·RollingUpdate 오류 0, 다중 노드 drain 무중단. 노드 강제 정지는 NotReady 판정까지 약 1분·요청 10% 끊김 → **ADR-0008 로 결정**(nodeTaintsPolicy Honor·판정 시간 단축·Edge 1회 재시도). 로컬 재측정 대기 |
 
 ### 🎯 목표 3 — 차트에 남은 운영 기능 · ✅ 로컬에서 할 수 있는 것 완료 (다음 목표는 아래 「목표 5」)
 
@@ -122,25 +122,41 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 | T-M4-40 | ✅ 지원자 단위 Adaptive Throttling(ADR-0007) — IP 미사용, 지원자×요청 종류 버킷 + 위험점수, 정상 세션 최종제출 불차단, 429+Retry-After, `THROTTLE_MODE`. kind NAT 시나리오 세 번 모두 정상 사용자 429 = 0·봇 78~85% 거절. 과부하 중 멱등 기록 실패로 **API 프로세스가 죽던 결함**을 찾아 고쳤다 — 수정 이미지로 반복해 재시작 0·정상 사용자 429 0 확인. 5xx·지연은 봇 없는 기준 실행에서도 같아 축소 환경 용량 한계다. OpenAPI 429 는 D-51 |
 | T-M4-37 | ✅ Redis 정지·재기동+FLUSHALL 중 접수 흐름 무영향 — 현재 구현이 Redis 를 쓰지 않는다. 세션을 Redis 에 두는 인증(M5) 때 다시 시험 |
 | T-M4-39 | 🟡 다중 노드 kind(`kind-univ-a-multinode.yaml`, 시험 때만 만들고 지운다): drain 무중단. 강제 정지 때 DB 연결 시간 제한이 없어 전체가 멈추던 결함 수정 → 66초·약 10% 끊김 후 자동 회복. Edge 재시도·노드 판정 시간·zone 3개 여부는 D-52 |
-| **다음** | **T-M4-35 중앙 2시간 단절 실제 시간 판** — 백그라운드로 2시간 돌리면서 다른 일을 병행할 수 있다. 그다음 T-M4-34 PG 콜백 1~30분 지연 실제 시간 판 |
+| T-M4-35 | 🔄 **2시간 실제 시간 판 진행 중** (`tests/m4/central-outage-realtime.mjs`) |
+| **다음** | ① T-M4-35 결과 기록 ② 이미지 재빌드(Mock PG 지연 모드·CORS) → **T-M4-34 실제 시간 판** (`kubectl set env deploy/univ-a-api MOCK_PG_CONFIRM_DELAYS_S=60,300,900,1800` → `node tests/m4/pg-delay-realtime.mjs`, 약 35분 → env 제거) ③ **T-M4-39 재측정** — `kind-univ-a-multinode-tuned.yaml` 로 판정 시간 단축·`nodeTaintsPolicy: Honor` 재배치 확인 |
 
-### 🎯 목표 4 — 노션 반영 (D-43 · D-44)
+### 🎯 목표 4 — 노션 반영 · 저장소 쪽은 끝, **노션 쓰기 승인 대기** (2026-09-30)
 
-- §05 첨부 runtime·values-m 교체 — 포트·프로브·NODE_ENV·대조 방식·마감버전 제거, **커넥션 예산 초과(⑦) 수정**
-- §07 와이어프레임 결제 화면 문구 — "결제가 확인되면 바로 접수"(D-42)
-- §05 첨부 values-m 의 `peakMode.scheduledActivation` 예시 시각 비우기 — D-49 (D-44 교체와 함께)
-- §04 CloudEvents 첨부의 `subjectRef` 키 ID 상한 — D-47
-- §03 OpenAPI 첨부에 지원자 경로 공통 `429`(RATE_LIMITED·Retry-After) 추가 — D-51
-- §08 시나리오 10 합격 기준·§05 zone 수·Ingress 재시도 정책 — D-52
+저장소 파일(첨부 5종)과 본문 문구를 모두 준비했다. AI 의 노션 페이지 수정은 권한 분류기가 막았다(외부 시스템 쓰기).
+**[06-notion-changeset.md](06-notion-changeset.md)** 에 올릴 파일(바이트·SHA-256)과 바꿀 문구가 페이지별로 있다 — 사람이 적용하거나 AI 에게 노션 쓰기를 허용한다.
+
+- §03 OpenAPI v1.3.0(429) — D-51 · §04 CloudEvents(keyId ≤16) — D-47
+- §05 values-m v1.2·runtime v1.2(차트 렌더링) — D-44 ①~⑦·D-49, 노드 장애 흡수 절 — D-52
+- §06 Edge 선택자(ingress-nginx 은퇴) — D-53 · §07 와이어프레임 v1.2 — D-43
+- §08 시나리오 13(대학 간 격리)·시나리오 10 합격 기준·로컬 축소 결과 표
+
+### 맡겨진 결정 — 평가·결정 (2026-09-30)
+
+| 항목 | 결정 | 근거 |
+|---|---|---|
+| D-44 ⑦ 커넥션 수치 | **Pod 당 38, 예산 400 유지** (최대 391) | 예산을 올리려면 대학 DB `max_connections` 근거가 필요한데 없다. 38/40 차이는 무시할 수준 |
+| D-47 keyId 상한 | **16자로 좁힌다** | 생성기·중앙 DB 가 이미 16자 — 기존 이벤트 영향 없음 |
+| D-51 계약 429 | **v1.3.0 으로 추가** + CORS·자동저장 보완 | optional 응답 추가는 호환 변경 |
+| D-52 노드 장애 | **ADR-0008** — nodeTaintsPolicy Honor·판정 시간 단축·Edge 1회 재시도 | 앱이 할 수 있는 것은 했고 남은 구간은 플랫폼 |
+| D-53 Edge 컨트롤러 | **Gateway API 컨트롤러** | ingress-nginx 2026-03 은퇴 |
+| 노션 반영(R6) | 반영하기로 결정 → **권한 분류기가 막음** | 변경안을 문서로 준비. 사람 적용 또는 쓰기 허용 필요 |
+| Peak Mode 워크플로 켜기 | **지금은 켜지 않는다** | 서명키를 GitHub secret 에 넣는 일은 AI 가 하지 않는다. 실제 대학 GitOps 저장소가 없어 켜면 이 저장소 main 에 예약 커밋만 쌓인다. Pilot(M6) 때 켠다 |
+| K-PaaS 시험 환경 | **로컬 축소 환경으로 계속** | 계정 생성·비용은 사람 몫. 수치 시험(T-M4-30~32·36·41)만 막혀 있다 |
+| 제출 PDF 정정(D-2·D-3) | **정정 문구 준비** | PDF 원본이 저장소에 없다 → [07-submission-errata.md](07-submission-errata.md) |
 
 ### 사람이 정하거나 해야 하는 것
 
 | 항목 | 왜 |
 |---|---|
 | **K-PaaS(또는 클라우드) 시험 환경** | 3,000 CCU·1,000 RPS·6시간 Soak·DB Failover 실측은 이 PC 로 불가 (T-M4-30~32·36·41) |
-| 제출 PDF 정정 (D-2·D-3) | 개발보고서의 "Java/Spring" 표기 |
+| 제출 PDF 정정 (D-2·D-3) | 개발보고서의 "Java/Spring" 표기 — 정정 문구는 [07-submission-errata.md](07-submission-errata.md) |
+| **노션 반영 적용** | [06-notion-changeset.md](06-notion-changeset.md) 그대로 — AI 는 노션 쓰기가 막혀 있다 |
 | Peak Mode 예약 워크플로 켜기 | GitHub environment `peak-mode`·secret `PEAK_MODE_SSH_SIGNING_KEY` 등록, 저장소 변수 `PEAK_MODE_ENABLED=true`, 대학 `wonseoro-git-authors` 에 공개키 추가 — 저장소·대학 관리자 권한 (ADR-0006). 그 전에는 워크플로가 러너를 띄우지 않는다 |
-| 첨부 values-m 커넥션 수치 (D-44 ⑦) | Pod 당 38 로 줄일지, 예산을 411 이상으로 올릴지 — DB 쪽 사실이라 대학·운영이 정한다 |
 
 ---
 
