@@ -1,11 +1,21 @@
-# K-Admission Helm values - M profile reference
+# K-Admission Helm values - M profile reference (v1.2, 2026-09-30)
+#
+# chart: deploy/charts/k-admission (layered on the chart's values.yaml, then the university's values.yaml)
+# v1.2 changes from the first attachment - spec discrepancy register D-44, D-49, D-52:
+#   - global.configVersion / deadlinePolicyVersion removed. Deadline and config versions come only from the
+#     signed activation record in the university DB (2-person approval). Deploy values must not set them (D-44 6)
+#   - reconciliation runs inside the admission API (hourly, advisory lock), not as a CronJob (D-44 4)
+#   - eventRelay / documentService are part of the profile (D-44 5)
+#   - database.pool.maxPerPod 40 -> 38: 10 API pods x 38 + relay 2 x 3 + document worker 5 = 391 <= 400 (D-44 7)
+#   - peakMode.scheduledActivation is empty. The schedule comes from the university's peak-schedule.yaml and the
+#     generated peak-mode.yaml overlay; a fixed timestamp here would suspend reconciliation forever (D-49, ADR-0006)
+#   - nodePlacement.nodeTaintsPolicy Honor: a failed zone does not block rescheduling into the live zone (D-52)
+#   - runtime: NODE_ENV=production, port 3001, probes /healthz and /readyz (see k-admission-runtime.yaml)
 global:
   universityId: UNIV-A
   environment: production
   imageRegistry: registry.example.kr/k-admission
   imagePullPolicy: IfNotPresent
-  configVersion: cfg-2027-early-22
-  deadlinePolicyVersion: dp-2027-early-v4
 
 frontend:
   image:
@@ -48,13 +58,24 @@ eventRelay:
     maxMs: 30000
     jitter: true
 
+documentService:
+  image:
+    repository: document-service
+    digest: sha256:REPLACE_WITH_SIGNED_DIGEST
+  replicas: 1
+  # production requires a real scanning engine (T-M5-08); mock or empty fails rendering
+  scannerEngine: REPLACE_WITH_SCANNER_ENGINE
+
 reconciliation:
-  schedule: "*/5 * * * *"
+  intervalMs: 3600000
+  sinceHours: 48
   maxBatch: 500
 
 peakMode:
   enabled: false
-  scheduledActivation: "2026-09-11T03:00:00Z"
+  window: ""
+  scheduledActivation: ""
+  scheduledEnd: ""
   apiMinReplicas: 8
   frontendMinReplicas: 4
   suspendNonCriticalJobs: true
@@ -65,7 +86,7 @@ database:
   port: 5432
   sslMode: verify-full
   pool:
-    maxPerPod: 40
+    maxPerPod: 38
     minPerPod: 5
     connectionBudget: 400
 
@@ -108,3 +129,5 @@ networkPolicy:
 nodePlacement:
   topologyKey: topology.kubernetes.io/zone
   spreadMaxSkew: 1
+  whenUnsatisfiable: DoNotSchedule
+  nodeTaintsPolicy: Honor

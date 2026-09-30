@@ -44,7 +44,7 @@ small{color:var(--muted)}
   <strong>K-Admission · A대학교 2027 수시</strong>
   <nav aria-label="와이어프레임 화면 목록">
     <a href="#s1">1 대학·전형</a><a href="#s2">2 추가정보</a><a href="#s3">3 서류</a>
-    <a href="#s4">4 검토·결제</a><a href="#s5">5 최종제출</a><a href="#s6">6 완료</a><a href="#err">장애</a>
+    <a href="#s4">4 검토·결제</a><a href="#s5">5 결제 확인</a><a href="#s6">6 완료</a><a href="#err">장애</a>
   </nav>
 </header>
 <main id="main">
@@ -53,7 +53,7 @@ small{color:var(--muted)}
   <h1>대학·전형 선택</h1>
   <div class="steps" aria-label="6단계 중 2단계">
     <div class="step done">1 공통정보</div><div class="step current" aria-current="step">2 대학·전형</div>
-    <div class="step">3 추가정보</div><div class="step">4 서류</div><div class="step">5 검토·결제</div><div class="step">6 최종제출</div>
+    <div class="step">3 추가정보</div><div class="step">4 서류</div><div class="step">5 검토·결제</div><div class="step">6 접수 확인</div>
   </div>
   <div class="status"><span>마감 2026.09.11 18:00</span><span>서버 기준 남은시간 00:42:18</span><span>저장 완료 17:17:42</span></div>
   <fieldset class="field"><legend class="legend">지원 전형 *</legend><label><input type="radio" name="type" checked> 학생부종합</label><br><label><input type="radio" name="type"> 논술</label></fieldset>
@@ -77,7 +77,7 @@ small{color:var(--muted)}
     <button>파일 선택</button><p>또는 파일을 이 영역에 끌어놓을 수 있습니다.</p>
   </div>
   <div class="summary"><span>sample.pdf · 2.1MB</span><strong>✓ 업로드·검사 완료</strong></div>
-  <div class="alert">악성코드 검사가 완료되지 않은 필수서류가 있으면 최종제출할 수 없습니다.</div>
+  <div class="alert">악성코드 검사가 완료되지 않은 필수서류가 있으면 결제·접수할 수 없습니다.</div>
   <div class="actions"><button>이전</button><button class="primary">저장 후 다음</button></div>
 </section>
 
@@ -87,18 +87,21 @@ small{color:var(--muted)}
   <div class="summary"><span>대학 추가정보</span><strong>완료</strong></div>
   <div class="summary"><span>제출서류</span><strong>완료</strong></div>
   <div class="summary"><span>전형료</span><strong>55,000원</strong></div>
-  <div class="alert">결제 완료만으로는 접수가 끝나지 않습니다. 결제 후 최종제출을 완료해야 합니다.</div>
-  <div class="actions"><button>이전</button><button class="primary">결제하기</button></div>
+  <div class="summary"><span>마감</span><strong>18:00:00</strong></div>
+  <div class="summary"><span>현재 서버시각</span><strong>17:59:21</strong></div>
+  <div class="summary"><span>결제 후 수정·취소</span><strong>불가능합니다</strong></div>
+  <div class="alert"><strong>결제가 확인되면 바로 접수가 완료됩니다.</strong><br>전형료 결제가 확인되는 즉시 원서가 접수되며, 이후에는 원서를 수정하거나 취소할 수 없습니다. 위 내용을 확인한 뒤 결제해 주십시오.</div>
+  <p><label><input type="checkbox"> 결제 후에는 수정·취소가 불가능함을 확인했습니다.</label></p>
+  <div class="actions"><button>이전</button><button class="primary">전형료 결제하고 접수</button></div>
 </section>
 
 <section class="screen" id="s5">
-  <h1>최종제출</h1>
-  <div class="alert"><strong>중요</strong><br>최종제출 이후에는 대학 정책에 따라 수정이 제한됩니다.</div>
-  <div class="summary"><span>마감</span><strong>18:00:00</strong></div>
-  <div class="summary"><span>현재 서버시각</span><strong>17:59:21</strong></div>
-  <div class="summary"><span>결제상태</span><strong>확인 완료</strong></div>
-  <p><label><input type="checkbox"> 최종제출 이후의 수정 제한을 확인했습니다.</label></p>
-  <div class="actions"><button>취소</button><button class="primary">최종제출</button></div>
+  <h1>결제 확인 중</h1>
+  <div class="alert" role="status"><strong>다시 결제하지 마십시오.</strong><br>결제가 확인되면 원서는 자동으로 접수됩니다. 이 화면을 닫아도 됩니다 — 잠시 후 접수상태를 확인해 주십시오.</div>
+  <div class="summary"><span>결제상태</span><strong>확인 중</strong></div>
+  <div class="summary"><span>결제 요청 시각</span><strong>17:59:21</strong></div>
+  <p>마감 전에 결제를 요청했다면 확인이 마감 뒤에 끝나도 대학 마감정책에 따라 판정됩니다.</p>
+  <div class="actions"><button class="primary">접수상태 다시 확인</button></div>
 </section>
 
 <section class="screen complete" id="s6">

@@ -6,7 +6,8 @@
 #   helm install univ-a deploy/charts/k-admission \
 #     -f deploy/charts/k-admission/values-m.yaml -f deploy/universities/UNIV-A/values.yaml
 #
-# 첨부와 다르게 다루는 것 — 불일치 대장 D-44
+# 첫 첨부와 달랐던 것 — 불일치 대장 D-44. v1.2 첨부(values-m·runtime, 2026-09-30)는 이 차트에 맞췄다.
+# runtime 첨부는 이 차트의 렌더링 결과다 (scripts/render-runtime-attachment.mjs, CI 가 드리프트를 막는다)
 #   · global.configVersion / deadlinePolicyVersion 은 **렌더링하지 않는다.** 마감·설정은 DB 의
 #     서명된 활성화 기록(2인 승인)이 기준이다. 배포 값으로 주입하면 단독 변경 경로가 된다
 #   · reconciliation.schedule 은 CronJob 이 아니다 — 대조는 접수 API 안의 스케줄러(advisory lock)가 돈다.
@@ -82,7 +83,6 @@ documentService:
   env: {}
 
 reconciliation:
-  schedule: "*/5 * * * *"          # 첨부 값 — 이 차트는 쓰지 않는다 (D-44 ④)
   maxBatch: 500
   intervalMs: 3600000              # 앱 안 스케줄러 주기
   sinceHours: 48
@@ -221,3 +221,7 @@ nodePlacement:
   spreadMaxSkew: 1
   # 존이 하나인 로컬 클러스터에서는 ScheduleAnyway 로 둔다
   whenUnsatisfiable: DoNotSchedule
+  # 장애로 taint 된 노드(NotReady·unreachable)를 분산 계산에서 뺀다 (D-52). 기본(Ignore)이면 zone 이 2개일 때
+  # 한 zone 이 죽는 동안 대체 Pod 를 남은 zone 에 둘 수 없다 — 죽은 zone 이 0 개로 세어져 maxSkew 를 넘는다.
+  # Kubernetes 1.26+ (NodeInclusionPolicyInPodTopologySpread)
+  nodeTaintsPolicy: Honor

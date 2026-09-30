@@ -1,20 +1,605 @@
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: admission-api
-  namespace: kadmission-app
-automountServiceAccountToken: false
+# K-Admission runtime manifests - M profile, UNIV-A example (v1.2, 2026-09-30)
+#
+# GENERATED - do not edit. Rendered from the Helm chart deploy/charts/k-admission with
+# values.yaml + values-m.yaml by scripts/render-runtime-attachment.mjs (spec discrepancy register D-44).
+# The first attachment was hand-written and drifted from the implementation (Spring profile, port 8080,
+# /internal/health probes, reconcile CronJob, deploy-time deadline/config versions). Change the chart or
+# values-m.yaml, regenerate, and replace this attachment with the same bytes.
+#
+# REPLACE_WITH_SIGNED_DIGEST / REPLACE_WITH_SCANNER_ENGINE are placeholders: production refuses to start
+# without signed image digests (A6) and a real document scanning engine (T-M5-08).
+# Secrets are never rendered here - Vault injects the Secret named by runtimeSecret.name (06).
 ---
-apiVersion: apps/v1
-kind: Deployment
+# Source: k-admission/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
 metadata:
-  name: admission-api
-  namespace: kadmission-app
+  name: univ-a-default-deny
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
 spec:
-  replicas: 3
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: univ-a
+  policyTypes: [Ingress, Egress]
+
+---
+# Source: k-admission/templates/networkpolicy.yaml
+# 공개 트래픽 → 접수 API
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: univ-a-allow-ingress-to-api
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: univ-a
+      network-role: api
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kadmission-zone: edge
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 3001
+    # 서류 검사 워커 → 접수 API 내부 경로 (/internal/v1/documents)
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: univ-a
+              app: document-service
+      ports:
+        - protocol: TCP
+          port: 3001
+
+---
+# Source: k-admission/templates/networkpolicy.yaml
+# Prometheus → 모든 워크로드의 지표 포트 (T-M4-20). 공개 API 포트와 수집 경로를 분리한다.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: univ-a-allow-prometheus-scrape
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app.kubernetes.io/instance, operator: In, values: [univ-a] }
+      - { key: network-role, operator: In, values: [api, relay, worker] }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kadmission-zone: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - protocol: TCP
+          port: 9464
+
+---
+# Source: k-admission/templates/networkpolicy.yaml
+# DNS — 모든 워크로드
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: univ-a-allow-dns
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: univ-a
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+
+---
+# Source: k-admission/templates/networkpolicy.yaml
+# 접수 API · Relay → Redis (클러스터 밖 HA 계층)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: univ-a-allow-cache
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app.kubernetes.io/instance, operator: In, values: [univ-a] }
+      - { key: network-role, operator: In, values: [api, relay] }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kadmission-zone: data
+      ports:
+        - { protocol: TCP, port: 6379 }
+
+---
+# Source: k-admission/templates/networkpolicy.yaml
+# 접수 API · Relay → PgBouncer. DB 직접 경로는 열지 않는다.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: univ-a-allow-app-to-pgbouncer
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: univ-a
+      app: pgbouncer
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - { key: app.kubernetes.io/instance, operator: In, values: [univ-a] }
+              - { key: network-role, operator: In, values: [api, relay] }
+      ports:
+        - { protocol: TCP, port: 6432 }
+
+---
+# Source: k-admission/templates/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: univ-a-allow-app-to-pgbouncer-egress
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app.kubernetes.io/instance, operator: In, values: [univ-a] }
+      - { key: network-role, operator: In, values: [api, relay] }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: univ-a
+              app: pgbouncer
+      ports:
+        - { protocol: TCP, port: 6432 }
+
+---
+# Source: k-admission/templates/networkpolicy.yaml
+# PgBouncer만 외부 DB에 연결한다.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: univ-a-allow-pgbouncer-to-database
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: univ-a
+      app: pgbouncer
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kadmission-zone: data
+      ports:
+        - { protocol: TCP, port: 5432 }
+
+---
+# Source: k-admission/templates/networkpolicy.yaml
+# 접수 API · Relay → 외부(중앙 Sync·PG·Object Storage)는 통제된 출구로만
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: univ-a-allow-controlled-egress
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app.kubernetes.io/instance, operator: In, values: [univ-a] }
+      - { key: network-role, operator: In, values: [api, relay] }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kadmission-zone: egress
+          podSelector:
+            matchLabels:
+              app: egress-gateway
+      ports:
+        - { protocol: TCP, port: 8443 }
+
+---
+# Source: k-admission/templates/networkpolicy.yaml
+# 모든 워크로드 → OpenTelemetry Collector (OTLP/gRPC) — Relay·서류 워커 span 도 같은 trace 로 모인다
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: univ-a-allow-otel-collector
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app.kubernetes.io/instance, operator: In, values: [univ-a] }
+      - { key: network-role, operator: In, values: [api, relay, worker] }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kadmission-zone: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: opentelemetry-collector
+      ports:
+        - { protocol: TCP, port: 4317 }
+
+---
+# Source: k-admission/templates/networkpolicy.yaml
+# 서류 검사 워커 → 접수 API 만
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: univ-a-allow-worker-to-api
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: univ-a
+      app: document-service
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: univ-a
+              network-role: api
+      ports:
+        - { protocol: TCP, port: 3001 }
+
+---
+# Source: k-admission/templates/api.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: univ-a-api
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+spec:
+  minAvailable: 2
   selector:
     matchLabels:
       app: admission-api
+      app.kubernetes.io/instance: univ-a
+
+---
+# Source: k-admission/templates/pgbouncer.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: univ-a-pgbouncer
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: pgbouncer
+      app.kubernetes.io/instance: univ-a
+
+---
+# Source: k-admission/templates/api.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: univ-a-api
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+automountServiceAccountToken: false
+
+---
+# Source: k-admission/templates/pgbouncer.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: univ-a-pgbouncer
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+automountServiceAccountToken: false
+
+---
+# Source: k-admission/templates/workers.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: univ-a-event-relay
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+automountServiceAccountToken: false
+
+---
+# Source: k-admission/templates/workers.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: univ-a-document-service
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+automountServiceAccountToken: false
+
+---
+# Source: k-admission/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: univ-a-platform-viewer
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "services"]
+    verbs: ["get","list","watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get","list","watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get","list","watch"]
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get","list","watch"]
+
+---
+# Source: k-admission/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: univ-a-sre-operator
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "deployments/scale"]
+    verbs: ["get","list","watch","patch","update"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "events"]
+    verbs: ["get","list","watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get","list","watch"]
+
+---
+# Source: k-admission/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: univ-a-release-controller
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get","list","watch","patch","update"]
+  - apiGroups: [""]
+    resources: ["configmaps","services"]
+    verbs: ["get","list","watch","create","patch","update"]
+  - apiGroups: ["policy"]
+    resources: ["poddisruptionbudgets"]
+    verbs: ["get","list","watch","create","patch","update"]
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get","list","watch","create","patch","update"]
+
+---
+# Source: k-admission/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: univ-a-sre-operator
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+subjects:
+  - kind: Group
+    name: kadmission-sre
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: univ-a-sre-operator
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Source: k-admission/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: univ-a-viewer
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+subjects:
+  - kind: Group
+    name: kadmission-auditors
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: univ-a-platform-viewer
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Source: k-admission/templates/api.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: univ-a-api
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+spec:
+  type: ClusterIP
+  selector:
+    app: admission-api
+    app.kubernetes.io/instance: univ-a
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+    - name: metrics
+      port: 9464
+      targetPort: metrics
+
+---
+# Source: k-admission/templates/pgbouncer.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: univ-a-pgbouncer
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+spec:
+  selector:
+    app: pgbouncer
+    app.kubernetes.io/instance: univ-a
+  ports:
+    - name: postgres
+      port: 6432
+      targetPort: postgres
+
+---
+# Source: k-admission/templates/api.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: univ-a-api
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+    app: admission-api
+spec:
+  selector:
+    matchLabels:
+      app: admission-api
+      app.kubernetes.io/instance: univ-a
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -22,21 +607,36 @@ spec:
       maxSurge: 1
   template:
     metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "9464"
       labels:
+        app.kubernetes.io/part-of: k-admission
+        app.kubernetes.io/instance: univ-a
+        app.kubernetes.io/version: "1.2.0"
+        helm.sh/chart: k-admission-0.1.0
+        kadmission.kr/university: "UNIV-A"
         app: admission-api
         network-role: api
     spec:
-      serviceAccountName: admission-api
-      automountServiceAccountToken: false
+      serviceAccountName: univ-a-api
       terminationGracePeriodSeconds: 45
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: topology.kubernetes.io/zone
           whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor
           labelSelector:
             matchLabels:
               app: admission-api
+              app.kubernetes.io/instance: univ-a
+      automountServiceAccountToken: false
       securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
       containers:
@@ -45,30 +645,174 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: 3001
+            - name: metrics
+              containerPort: 9464
           env:
-            - name: SPRING_PROFILES_ACTIVE
-              value: production
-            - name: CONFIG_VERSION
-              valueFrom:
-                configMapKeyRef:
-                  name: admission-runtime
-                  key: configVersion
-            - name: DEADLINE_POLICY_VERSION
-              valueFrom:
-                configMapKeyRef:
-                  name: admission-runtime
-                  key: deadlinePolicyVersion
+            - name: NODE_ENV
+              value: "production"
+            - name: UNIVERSITY_ID
+              value: "UNIV-A"
+            - name: CENTRAL_SYNC_URL
+              value: "https://sync.k-admission.kr"
+            - name: PORT
+              value: "3001"
+            - name: DB_POOL_MAX
+              value: "38"
+            - name: DB_PROXY_HOST
+              value: "univ-a-pgbouncer"
+            - name: DB_PROXY_PORT
+              value: "6432"
+            - name: DB_PROXY_SSLMODE
+              value: "require"
+            - name: RECON_SCHEDULE_INTERVAL_MS
+              value: "3.6e+06"
+            - name: RECON_SCHEDULE_SINCE_HOURS
+              value: "48"
+            - name: PEAK_MODE_ENABLED
+              value: "false"
+            - name: THROTTLE_MODE
+              value: "enforce"
+            - name: PEAK_MODE_SUSPEND_NON_CRITICAL_JOBS
+              value: "true"
+            - name: OTEL_ENABLED
+              value: "true"
+            - name: OTEL_METRICS_PORT
+              value: "9464"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.kadmission-ops.svc:4317"
+            - name: LOG_FORMAT
+              value: json
+            - name: S3_ENDPOINT
+              value: "https://object.example.kr"
+            - name: S3_BUCKET
+              value: "kadmission-univ-a-prod"
+
           envFrom:
             - secretRef:
-                name: admission-runtime-ref
+                name: kadmission-univ-a-runtime
           resources:
-            requests:
-              cpu: "2"
-              memory: 4Gi
             limits:
               cpu: "8"
               memory: 16Gi
+            requests:
+              cpu: "2"
+              memory: 4Gi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          # liveness 는 프로세스만 본다 — DB 장애에 Pod 를 죽이면 Failover 중 전부 재시작한다.
+          # readiness 만 DB 를 본다. 중앙·PG 는 넣지 않는다 (D-32).
+          startupProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            periodSeconds: 5
+            timeoutSeconds: 2
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 2
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 10"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi
+
+---
+# Source: k-admission/templates/pgbouncer.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: univ-a-pgbouncer
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+    app: pgbouncer
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pgbouncer
+      app.kubernetes.io/instance: univ-a
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: k-admission
+        app.kubernetes.io/instance: univ-a
+        app.kubernetes.io/version: "1.2.0"
+        helm.sh/chart: k-admission-0.1.0
+        kadmission.kr/university: "UNIV-A"
+        app: pgbouncer
+        network-role: database-pooler
+    spec:
+      serviceAccountName: univ-a-pgbouncer
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app: pgbouncer
+              app.kubernetes.io/instance: univ-a
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: pgbouncer
+          image: registry.example.kr/k-admission/pgbouncer@sha256:REPLACE_WITH_SIGNED_DIGEST
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: postgres
+              containerPort: 6432
+          env:
+            - { name: PGBOUNCER_PORT, value: "6432" }
+            - { name: PGBOUNCER_POOL_MODE, value: "transaction" }
+            - { name: PGBOUNCER_DEFAULT_POOL_SIZE, value: "10" }
+            - { name: PGBOUNCER_RESERVE_POOL_SIZE, value: "2" }
+            - { name: PGBOUNCER_MAX_CLIENT_CONNECTIONS, value: "500" }
+            - { name: PGBOUNCER_QUERY_WAIT_TIMEOUT_SECONDS, value: "15" }
+            - { name: PGBOUNCER_CLIENT_TLS_SSLMODE, value: "require" }
+            - { name: PGBOUNCER_CLIENT_TLS_CERT_FILE, value: /etc/pgbouncer-tls/tls.crt }
+            - { name: PGBOUNCER_CLIENT_TLS_KEY_FILE, value: /etc/pgbouncer-tls/tls.key }
+            - { name: PGBOUNCER_SERVER_TLS_SSLMODE, value: "verify-full" }
+            - { name: PGBOUNCER_SERVER_TLS_CA_FILE, value: "/etc/pgbouncer-ca/ca.crt" }
+          envFrom:
+            - secretRef:
+                name: kadmission-univ-a-runtime
+          resources:
+            limits:
+              cpu: "1"
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
           securityContext:
             runAsNonRoot: true
             runAsUser: 10001
@@ -78,27 +822,151 @@ spec:
             capabilities:
               drop: ["ALL"]
           startupProbe:
-            httpGet:
-              path: /internal/health/startup
-              port: http
-            periodSeconds: 5
+            tcpSocket: { port: postgres }
+            periodSeconds: 2
             failureThreshold: 30
           readinessProbe:
-            httpGet:
-              path: /internal/health/ready
-              port: http
+            tcpSocket: { port: postgres }
             periodSeconds: 5
-            timeoutSeconds: 2
           livenessProbe:
-            httpGet:
-              path: /internal/health/live
-              port: http
+            tcpSocket: { port: postgres }
             periodSeconds: 10
-            timeoutSeconds: 2
-          lifecycle:
-            preStop:
-              exec:
-                command: ["/bin/sh","-c","sleep 10"]
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: client-tls, mountPath: /etc/pgbouncer-tls, readOnly: true }
+            - { name: database-ca, mountPath: /etc/pgbouncer-ca, readOnly: true }
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+        - name: client-tls
+          secret:
+            secretName: univ-a-pgbouncer-tls
+            defaultMode: 0440
+            items:
+              - { key: tls.crt, path: tls.crt }
+              - { key: tls.key, path: tls.key }
+        - name: database-ca
+          secret:
+            secretName: univ-a-database-ca
+            items: [{ key: ca.crt, path: ca.crt }]
+
+---
+# Source: k-admission/templates/workers.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: univ-a-event-relay
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+    app: event-relay
+spec:
+  # 여러 Pod 가 같은 Outbox 를 집어도 행 잠금(SKIP LOCKED)으로 나눠 가진다.
+  replicas: 2
+  selector:
+    matchLabels:
+      app: event-relay
+      app.kubernetes.io/instance: univ-a
+  template:
+    metadata:
+
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "9464"
+      labels:
+        app.kubernetes.io/part-of: k-admission
+        app.kubernetes.io/instance: univ-a
+        app.kubernetes.io/version: "1.2.0"
+        helm.sh/chart: k-admission-0.1.0
+        kadmission.kr/university: "UNIV-A"
+        app: event-relay
+        network-role: relay
+    spec:
+      serviceAccountName: univ-a-event-relay
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app: event-relay
+              app.kubernetes.io/instance: univ-a
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: relay
+          image: registry.example.kr/k-admission/event-relay@sha256:REPLACE_WITH_SIGNED_DIGEST
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3002
+
+            - name: metrics
+              containerPort: 9464
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: UNIVERSITY_ID
+              value: "UNIV-A"
+            - name: CENTRAL_SYNC_URL
+              value: "https://sync.k-admission.kr"
+            - name: OTEL_ENABLED
+              value: "true"
+            - name: OTEL_METRICS_PORT
+              value: "9464"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.kadmission-ops.svc:4317"
+            - name: LOG_FORMAT
+              value: json
+            - name: PORT
+              value: "3002"
+            - name: RELAY_BATCH_SIZE
+              value: "100"
+            - name: RELAY_INTERVAL_MS
+              value: "2000"
+            - name: DB_PROXY_HOST
+              value: "univ-a-pgbouncer"
+            - name: DB_PROXY_PORT
+              value: "6432"
+            - name: DB_PROXY_SSLMODE
+              value: "require"
+
+          envFrom:
+            - secretRef:
+                name: kadmission-univ-a-runtime
+          resources:
+            limits:
+              cpu: "1"
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 15
           volumeMounts:
             - name: tmp
               mountPath: /tmp
@@ -106,41 +974,130 @@ spec:
         - name: tmp
           emptyDir:
             sizeLimit: 1Gi
+
 ---
-apiVersion: v1
-kind: Service
+# Source: k-admission/templates/workers.yaml
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: admission-api
-  namespace: kadmission-app
+  name: univ-a-document-service
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+    app: document-service
 spec:
-  selector:
-    app: admission-api
-  ports:
-    - name: http
-      port: 80
-      targetPort: http
----
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: admission-api
-  namespace: kadmission-app
-spec:
-  minAvailable: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: admission-api
+      app: document-service
+      app.kubernetes.io/instance: univ-a
+  template:
+    metadata:
+
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "9464"
+      labels:
+        app.kubernetes.io/part-of: k-admission
+        app.kubernetes.io/instance: univ-a
+        app.kubernetes.io/version: "1.2.0"
+        helm.sh/chart: k-admission-0.1.0
+        kadmission.kr/university: "UNIV-A"
+        app: document-service
+        network-role: worker
+    spec:
+      serviceAccountName: univ-a-document-service
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: scanner
+          image: registry.example.kr/k-admission/document-service@sha256:REPLACE_WITH_SIGNED_DIGEST
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3003
+
+            - name: metrics
+              containerPort: 9464
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: UNIVERSITY_ID
+              value: "UNIV-A"
+            - name: CENTRAL_SYNC_URL
+              value: "https://sync.k-admission.kr"
+            - name: OTEL_ENABLED
+              value: "true"
+            - name: OTEL_METRICS_PORT
+              value: "9464"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.kadmission-ops.svc:4317"
+            - name: LOG_FORMAT
+              value: json
+            - name: PORT
+              value: "3003"
+            - name: SCANNER_ENGINE
+              value: "REPLACE_WITH_SCANNER_ENGINE"
+            # 검사 결과는 DB 에 직접 쓰지 않고 접수 API 의 내부 경로로 보고한다 (ADR-0004)
+            - name: ADMISSION_API_URL
+              value: "http://univ-a-api"
+
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 15
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi
+
 ---
+# Source: k-admission/templates/api.yaml
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: admission-api
-  namespace: kadmission-app
+  name: univ-a-api
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: admission-api
+    name: univ-a-api
   minReplicas: 3
   maxReplicas: 10
   behavior:
@@ -170,49 +1127,18 @@ spec:
         target:
           type: AverageValue
           averageValue: "120"
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: admission-runtime
-  namespace: kadmission-app
-data:
-  configVersion: cfg-2027-early-22
-  deadlinePolicyVersion: dp-2027-early-v4
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: reconciliation
-  namespace: kadmission-app
-spec:
-  schedule: "*/5 * * * *"
-  concurrencyPolicy: Forbid
-  jobTemplate:
-    spec:
-      backoffLimit: 2
-      template:
-        metadata:
-          labels:
-            app: reconciliation
-        spec:
-          restartPolicy: Never
-          serviceAccountName: admission-api
-          automountServiceAccountToken: false
-          containers:
-            - name: reconciliation
-              image: registry.example.kr/k-admission/admission-api@sha256:REPLACE_WITH_SIGNED_DIGEST
-              args: ["reconcile","--max-batch=500"]
-              resources:
-                requests:
-                  cpu: "250m"
-                  memory: 512Mi
-                limits:
-                  cpu: "1"
-                  memory: 1Gi
-              securityContext:
-                runAsNonRoot: true
-                readOnlyRootFilesystem: true
-                allowPrivilegeEscalation: false
-                capabilities:
-                  drop: ["ALL"]
+    - type: Pods
+      pods:
+        metric:
+          name: http_request_duration_p95_seconds
+        target:
+          type: AverageValue
+          # Prometheus 단위는 초, Kubernetes quantity의 m은 1/1000이므로 ms와 수치가 같다.
+          averageValue: "500m"
+    - type: Pods
+      pods:
+        metric:
+          name: http_active_requests
+        target:
+          type: AverageValue
+          averageValue: "150"

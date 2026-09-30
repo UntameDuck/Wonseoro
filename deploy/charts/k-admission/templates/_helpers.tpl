@@ -70,6 +70,9 @@ topologySpreadConstraints:
   - maxSkew: {{ $root.Values.nodePlacement.spreadMaxSkew }}
     topologyKey: {{ $root.Values.nodePlacement.topologyKey }}
     whenUnsatisfiable: {{ $root.Values.nodePlacement.whenUnsatisfiable }}
+    {{- with $root.Values.nodePlacement.nodeTaintsPolicy }}
+    nodeTaintsPolicy: {{ . }}
+    {{- end }}
     labelSelector:
       matchLabels:
         app: {{ $app }}
