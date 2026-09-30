@@ -29,6 +29,8 @@ export class Db implements OnApplicationShutdown {
       connectionTimeoutMillis: budget.acquireTimeoutMs,
       // 죽은 상대(노드 장애의 PgBouncer)로 향한 연결이 끝없이 매달리지 않게 (T-M4-39)
       query_timeout: budget.queryTimeoutMs,
+      // 종료 중인 PgBouncer 에서 연결이 저절로 옮겨 가게 한다 (ADR-0008)
+      maxUses: budget.maxUses,
       keepAlive: true,
       keepAliveInitialDelayMillis: 10_000,
       // 모든 세션이 같은 스키마를 보게 한다.

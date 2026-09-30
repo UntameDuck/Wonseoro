@@ -9,7 +9,9 @@
 #   - database.pool.maxPerPod 40 -> 38: 10 API pods x 38 + relay 2 x 3 + document worker 5 = 391 <= 400 (D-44 7)
 #   - peakMode.scheduledActivation is empty. The schedule comes from the university's peak-schedule.yaml and the
 #     generated peak-mode.yaml overlay; a fixed timestamp here would suspend reconciliation forever (D-49, ADR-0006)
-#   - nodePlacement.nodeTaintsPolicy Honor: a failed zone does not block rescheduling into the live zone (D-52)
+#   - nodePlacement.nodeTaintsPolicy Honor: a failed zone does not block rescheduling into the live zone (D-52);
+#     matchLabelKeys pod-template-hash: a rollout spreads the new revision across zones. Re-spread after
+#     planned maintenance with a rollout restart or the descheduler (ADR-0008)
 #   - runtime: NODE_ENV=production, port 3001, probes /healthz and /readyz (see k-admission-runtime.yaml)
 global:
   universityId: UNIV-A
@@ -131,3 +133,4 @@ nodePlacement:
   spreadMaxSkew: 1
   whenUnsatisfiable: DoNotSchedule
   nodeTaintsPolicy: Honor
+  matchLabelKeys: [pod-template-hash]

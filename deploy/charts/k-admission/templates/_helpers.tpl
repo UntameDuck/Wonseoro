@@ -73,6 +73,9 @@ topologySpreadConstraints:
     {{- with $root.Values.nodePlacement.nodeTaintsPolicy }}
     nodeTaintsPolicy: {{ . }}
     {{- end }}
+    {{- with $root.Values.nodePlacement.matchLabelKeys }}
+    matchLabelKeys: {{ toJson . }}
+    {{- end }}
     labelSelector:
       matchLabels:
         app: {{ $app }}

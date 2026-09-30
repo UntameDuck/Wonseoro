@@ -89,4 +89,12 @@ describe('끊긴 연결 판별 (T-M4-39)', () => {
       assert.ok(budget.queryTimeoutMs > 0, service);
     }
   });
+
+  it('모든 서비스 예산이 연결을 사용 횟수로 돌린다 — PgBouncer 정상 종료 안에 옮겨 가게 (ADR-0008)', () => {
+    for (const [service, budget] of Object.entries(DB_POOL_BUDGET)) {
+      assert.ok(Number.isInteger(budget.maxUses) && budget.maxUses > 0 && budget.maxUses <= 200, service);
+      // 한가한 연결은 idle 시한으로 닫혀야 한다 (grace 60초 − preStop 10초 안)
+      assert.ok(budget.idleTimeoutMs > 0 && budget.idleTimeoutMs < 50_000, service);
+    }
+  });
 });

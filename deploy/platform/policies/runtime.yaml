@@ -627,6 +627,7 @@ spec:
           topologyKey: topology.kubernetes.io/zone
           whenUnsatisfiable: DoNotSchedule
           nodeTaintsPolicy: Honor
+          matchLabelKeys: ["pod-template-hash"]
           labelSelector:
             matchLabels:
               app: admission-api
@@ -766,12 +767,13 @@ spec:
         network-role: database-pooler
     spec:
       serviceAccountName: univ-a-pgbouncer
-      terminationGracePeriodSeconds: 30
+      terminationGracePeriodSeconds: 60
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: topology.kubernetes.io/zone
           whenUnsatisfiable: DoNotSchedule
           nodeTaintsPolicy: Honor
+          matchLabelKeys: ["pod-template-hash"]
           labelSelector:
             matchLabels:
               app: pgbouncer
@@ -821,6 +823,14 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+          # 종료 순서 (ADR-0008): ① preStop 동안 엔드포인트에서 빠지기를 기다린다(그 사이 새 연결도 받는다)
+          # ② SIGTERM — PgBouncer 는 새 연결을 받지 않고 기존 클라이언트가 떠나기를 기다린다
+          # ③ 앱 DB 풀이 연결을 사용 횟수(maxUses)·idle 시한으로 돌려 다른 PgBouncer 로 옮겨 간다.
+          # grace 는 preStop + 연결이 도는 시간보다 길어야 SIGKILL 이 쓰던 연결을 끊지 않는다.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 10"]
           startupProbe:
             tcpSocket: { port: postgres }
             periodSeconds: 2
@@ -893,6 +903,7 @@ spec:
           topologyKey: topology.kubernetes.io/zone
           whenUnsatisfiable: DoNotSchedule
           nodeTaintsPolicy: Honor
+          matchLabelKeys: ["pod-template-hash"]
           labelSelector:
             matchLabels:
               app: event-relay

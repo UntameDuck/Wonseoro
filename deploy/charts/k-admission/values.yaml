@@ -141,6 +141,14 @@ database:
       requests: { cpu: "100m", memory: "128Mi" }
       limits: { cpu: "1", memory: "256Mi" }
     podDisruptionBudget: { minAvailable: 1 }
+    # 정상 종료 (ADR-0008): preStop 으로 엔드포인트에서 빠진 뒤 SIGTERM. 앱 DB 풀이 연결을 사용 횟수(50회)·idle 시한(10초)으로
+    # 돌려 클라이언트가 다 떠나기를 기다린다 — grace 는 preStop + 연결이 도는 시간보다 길게. 짧으면 SIGKILL 이 쓰던 연결을 끊는다
+    preStopSleepSeconds: 10
+    terminationGracePeriodSeconds: 60
+    # PgBouncer Service 의 trafficDistribution(PreferSameZone·PreferClose). **기본은 끈다** (ADR-0008).
+    # 켜 보니 노드 장애 때 이득은 작고(첫 시도 실패 6.9% → 5.7%, 실패는 거의 다 죽은 API Pod 로 간 연결),
+    # PgBouncer·API rolling restart 중 사용자 체감 실패가 0 → 10 건으로 늘었다(kind 실측, 클러스터 안 부하).
+    trafficDistribution: ""
 
 redis:
   host: ""
@@ -232,6 +240,10 @@ nodePlacement:
   # 존이 하나인 로컬 클러스터에서는 ScheduleAnyway 로 둔다
   whenUnsatisfiable: DoNotSchedule
   # 장애로 taint 된 노드(NotReady·unreachable)를 분산 계산에서 뺀다 (D-52). 기본(Ignore)이면 zone 이 2개일 때
-  # 한 zone 이 죽는 동안 대체 Pod 를 남은 zone 에 둘 수 없다 — 죽은 zone 이 0 개로 세어져 maxSkew 를 넘는다.
-  # Kubernetes 1.26+ (NodeInclusionPolicyInPodTopologySpread)
+  # 한 zone 이 죽는 동안 대체 Pod·HPA 확장 Pod 를 남은 zone 에 둘 수 없다 — 죽은 zone 이 0 개로 세어져 maxSkew 를 넘는다.
+  # 대가: drain 으로 cordon 된 zone 도 빠지므로 정비 동안 Pod 가 한 zone 에 모이고, uncordon 뒤 저절로 다시 나뉘지 않는다.
+  # 정비 절차에 "uncordon 뒤 rollout restart"(또는 descheduler) 를 둔다 (ADR-0008). Kubernetes 1.26+
   nodeTaintsPolicy: Honor
+  # 분산을 같은 버전(ReplicaSet)의 Pod 끼리만 센다. 없으면 rollout 중 옛 Pod 가 세어져, 교체가 끝난 뒤
+  # 새 Pod 가 한 zone 에 몰릴 수 있다(2 replica 에서 실측). Kubernetes 1.27+
+  matchLabelKeys: [pod-template-hash]

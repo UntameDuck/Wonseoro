@@ -23,6 +23,16 @@ export interface DbPoolBudget {
    * 살아남은 API Pod 의 요청까지 끝없이 기다려 노드 하나의 장애가 전체 장애가 된다(kind 에서 확인).
    */
   queryTimeoutMs: number;
+  /**
+   * 연결 하나를 이만큼 쓰면 돌려받을 때 닫고 새로 연다 (ADR-0008).
+   * PgBouncer 는 종료할 때 기존 클라이언트가 떠나기를 기다린다 — 바쁜 풀은 연결을 영영 놓지 않아, 돌리지 않으면
+   * 정비·재배포 때마다 grace 끝의 SIGKILL 이 쓰던 연결을 끊었다(kind 재분산 시험에서 사용자 체감 실패 2건).
+   * 바쁠 때는 사용 횟수로(연결당 초당 수 회 → 수십 초), 한가할 때는 idleTimeoutMs 로 연결이 돌아
+   * 종료 중인 PgBouncer 의 연결이 저절로 다른 PgBouncer 로 옮겨 간다.
+   * 시간 기준(pg-pool maxLifetimeSeconds)은 쓰지 않는다 — 켜면 풀 대기열이 수명 타이머가 돌 때까지 멈춰
+   * DB 시험 여럿이 3초 획득 시한·30초 시간 초과로 실패했다(2026-09-30).
+   */
+  maxUses: number;
 }
 
 /**
@@ -73,6 +83,7 @@ export const DB_POOL_BUDGET: Record<string, DbPoolBudget> = {
     acquireTimeoutMs: 3_000,
     startupJitterMs: 2_000,
     queryTimeoutMs: 10_000,
+    maxUses: 50,
   },
   'document-service': {
     max: 5,
@@ -80,6 +91,7 @@ export const DB_POOL_BUDGET: Record<string, DbPoolBudget> = {
     acquireTimeoutMs: 3_000,
     startupJitterMs: 2_000,
     queryTimeoutMs: 10_000,
+    maxUses: 50,
   },
   // 중앙은 조회가 많고 쓰기는 이벤트 수신뿐이다.
   'central-api': {
@@ -88,6 +100,7 @@ export const DB_POOL_BUDGET: Record<string, DbPoolBudget> = {
     acquireTimeoutMs: 3_000,
     startupJitterMs: 2_000,
     queryTimeoutMs: 10_000,
+    maxUses: 50,
   },
   // Relay 는 배치 처리라 커넥션이 적어도 된다. 접수 API 의 몫을 뺏지 않는다.
   'event-relay': {
@@ -96,6 +109,7 @@ export const DB_POOL_BUDGET: Record<string, DbPoolBudget> = {
     acquireTimeoutMs: 5_000,
     startupJitterMs: 5_000,
     queryTimeoutMs: 15_000,
+    maxUses: 50,
   },
 };
 

@@ -14,6 +14,10 @@ metadata:
   name: {{ $name }}
   labels: {{- include "ka.labels" . | nindent 4 }}
 spec:
+  {{- with $v.database.pooler.trafficDistribution }}
+  # 선택 사항 — 같은 zone 의 PgBouncer 로 먼저 보낸다. 기본은 끈다 (values 주석·ADR-0008 실측 참고)
+  trafficDistribution: {{ . }}
+  {{- end }}
   selector:
     app: pgbouncer
     app.kubernetes.io/instance: {{ .Release.Name }}
@@ -46,7 +50,7 @@ spec:
         network-role: database-pooler
     spec:
       serviceAccountName: {{ $name }}
-      terminationGracePeriodSeconds: 30
+      terminationGracePeriodSeconds: {{ $v.database.pooler.terminationGracePeriodSeconds }}
       {{- include "ka.spread" (list . "pgbouncer") | nindent 6 }}
       {{- include "ka.podSecurity" . | nindent 6 }}
       containers:
@@ -77,6 +81,14 @@ spec:
                 name: {{ include "ka.runtimeSecret" . }}
           resources: {{- toYaml $v.database.pooler.resources | nindent 12 }}
           {{- include "ka.containerSecurity" . | nindent 10 }}
+          # 종료 순서 (ADR-0008): ① preStop 동안 엔드포인트에서 빠지기를 기다린다(그 사이 새 연결도 받는다)
+          # ② SIGTERM — PgBouncer 는 새 연결을 받지 않고 기존 클라이언트가 떠나기를 기다린다
+          # ③ 앱 DB 풀이 연결을 사용 횟수(maxUses)·idle 시한으로 돌려 다른 PgBouncer 로 옮겨 간다.
+          # grace 는 preStop + 연결이 도는 시간보다 길어야 SIGKILL 이 쓰던 연결을 끊지 않는다.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep {{ $v.database.pooler.preStopSleepSeconds }}"]
           startupProbe:
             tcpSocket: { port: postgres }
             periodSeconds: 2
