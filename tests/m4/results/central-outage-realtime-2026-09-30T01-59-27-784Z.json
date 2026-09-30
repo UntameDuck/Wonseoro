@@ -1,0 +1,2768 @@
+{
+  "test": "T-M4-35",
+  "scenario": "중앙 120분 단절 (실제 시간)",
+  "environment": "local-kind-univ-a + central-container (축소 환경)",
+  "parameters": {
+    "outageMinutes": 120,
+    "submitEverySeconds": 300,
+    "sampleEverySeconds": 60
+  },
+  "limitations": [
+    "원서 수는 몇십 건이다. 단절 중 적체 용량(§B7)이나 복구 직후 폭주 부하는 K-PaaS 시험의 몫이다.",
+    "중앙 프로세스를 멈춘 단절이다(연결 거부). 패킷이 사라지는 네트워크 단절(시간 초과)은 다루지 않는다."
+  ],
+  "startedAt": "2026-09-30T01:59:27.784Z",
+  "flows": [
+    {
+      "kind": "finalize",
+      "at": "2026-09-30T01:59:31.023Z",
+      "subjectToken": "subj-m4-35rt-60b9f2c6",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 108
+        },
+        "save": {
+          "status": 200,
+          "ms": 103
+        },
+        "intent": {
+          "status": 201,
+          "ms": 221
+        },
+        "verify": {
+          "status": 200,
+          "ms": 163
+        },
+        "submission": {
+          "status": 200,
+          "ms": 18
+        }
+      },
+      "applicationId": "a863e1c3-3a89-4d60-b8fc-5480b831bee1",
+      "applicationNumber": "2027-UNIV-A-VEFQ36PJFC",
+      "eventType": "kr.kadmission.application.finalized.v1",
+      "eventId": "79300dda-1d85-4794-ab31-99e430d17334",
+      "ok": true
+    },
+    {
+      "kind": "finalize",
+      "at": "2026-09-30T02:04:31.922Z",
+      "subjectToken": "subj-m4-35rt-c7ce8bf2",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 65
+        },
+        "save": {
+          "status": 200,
+          "ms": 106
+        },
+        "intent": {
+          "status": 201,
+          "ms": 86
+        },
+        "verify": {
+          "status": 200,
+          "ms": 118
+        },
+        "submission": {
+          "status": 200,
+          "ms": 12
+        }
+      },
+      "applicationId": "9641cc15-59b8-4ca0-b2da-c2f50fc0cfda",
+      "applicationNumber": "2027-UNIV-A-8MLPG5VT6U",
+      "eventType": "kr.kadmission.application.finalized.v1",
+      "eventId": "ac5441a9-5abd-4036-9505-8455887264c0",
+      "ok": true
+    },
+    {
+      "kind": "finalize",
+      "at": "2026-09-30T02:09:32.010Z",
+      "subjectToken": "subj-m4-35rt-d026d358",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 80
+        },
+        "save": {
+          "status": 200,
+          "ms": 106
+        },
+        "intent": {
+          "status": 201,
+          "ms": 77
+        },
+        "verify": {
+          "status": 200,
+          "ms": 155
+        },
+        "submission": {
+          "status": 200,
+          "ms": 13
+        }
+      },
+      "applicationId": "da94737d-533c-47a8-a165-96c5cae0ff38",
+      "applicationNumber": "2027-UNIV-A-96SCG2WCNB",
+      "eventType": "kr.kadmission.application.finalized.v1",
+      "eventId": "3081b48c-8f22-4961-badc-d3259c98e4ef",
+      "ok": true
+    },
+    {
+      "kind": "cancel",
+      "at": "2026-09-30T02:14:31.149Z",
+      "subjectToken": "subj-m4-35rt-b3b7cc42",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 83
+        },
+        "save": {
+          "status": 200,
+          "ms": 72
+        },
+        "cancel": {
+          "status": 200,
+          "ms": 97
+        }
+      },
+      "applicationId": "1b1feb71-004e-4d5e-b190-9f60fa85175e",
+      "eventType": "kr.kadmission.application.cancelled.v1",
+      "eventId": "bd4a413d-056d-490a-9483-f6d3b0ba504f",
+      "ok": true
+    },
+    {
+      "kind": "finalize",
+      "at": "2026-09-30T02:19:31.948Z",
+      "subjectToken": "subj-m4-35rt-187f1993",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 86
+        },
+        "save": {
+          "status": 200,
+          "ms": 95
+        },
+        "intent": {
+          "status": 201,
+          "ms": 82
+        },
+        "verify": {
+          "status": 200,
+          "ms": 130
+        },
+        "submission": {
+          "status": 200,
+          "ms": 14
+        }
+      },
+      "applicationId": "9616eb38-2547-417e-a1a5-1cf13a4bf86d",
+      "applicationNumber": "2027-UNIV-A-HWW9TMAL7H",
+      "eventType": "kr.kadmission.application.finalized.v1",
+      "eventId": "ff082e18-a04c-4220-afd3-a6b92a0775e3",
+      "ok": true
+    },
+    {
+      "kind": "finalize",
+      "at": "2026-09-30T02:24:31.303Z",
+      "subjectToken": "subj-m4-35rt-6949aa23",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 65
+        },
+        "save": {
+          "status": 200,
+          "ms": 84
+        },
+        "intent": {
+          "status": 201,
+          "ms": 68
+        },
+        "verify": {
+          "status": 200,
+          "ms": 129
+        },
+        "submission": {
+          "status": 200,
+          "ms": 14
+        }
+      },
+      "applicationId": "45bdb08c-7572-4060-815f-ad8ad77a712c",
+      "applicationNumber": "2027-UNIV-A-XRAKREH8NF",
+      "eventType": "kr.kadmission.application.finalized.v1",
+      "eventId": "e3f9b4ce-7ae3-4a07-81e5-3ead7ff94ec3",
+      "ok": true
+    },
+    {
+      "kind": "finalize",
+      "at": "2026-09-30T02:29:31.635Z",
+      "subjectToken": "subj-m4-35rt-4dd1d670",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 71
+        },
+        "save": {
+          "status": 200,
+          "ms": 79
+        },
+        "intent": {
+          "status": 201,
+          "ms": 74
+        },
+        "verify": {
+          "status": 200,
+          "ms": 103
+        },
+        "submission": {
+          "status": 200,
+          "ms": 15
+        }
+      },
+      "applicationId": "407abfd4-6f55-475c-ad4f-a320e80aa244",
+      "applicationNumber": "2027-UNIV-A-KTCYPSAL8M",
+      "eventType": "kr.kadmission.application.finalized.v1",
+      "eventId": "0e9d86fe-130e-4c04-b8c8-f4ed341a5274",
+      "ok": true
+    },
+    {
+      "kind": "cancel",
+      "at": "2026-09-30T02:34:31.833Z",
+      "subjectToken": "subj-m4-35rt-ce5681e5",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 90
+        },
+        "save": {
+          "status": 200,
+          "ms": 98
+        },
+        "cancel": {
+          "status": 200,
+          "ms": 57
+        }
+      },
+      "applicationId": "201b480c-d6d1-4a5c-8a2a-03d9d2fd095d",
+      "eventType": "kr.kadmission.application.cancelled.v1",
+      "eventId": "59a73ed8-ec61-416f-a8d1-4879204e5691",
+      "ok": true
+    },
+    {
+      "kind": "finalize",
+      "at": "2026-09-30T02:39:32.097Z",
+      "subjectToken": "subj-m4-35rt-04b4be64",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 187
+        },
+        "save": {
+          "status": 200,
+          "ms": 263
+        },
+        "intent": {
+          "status": 201,
+          "ms": 627
+        },
+        "verify": {
+          "status": 200,
+          "ms": 911
+        },
+        "submission": {
+          "status": 200,
+          "ms": 35
+        }
+      },
+      "applicationId": "125ca7ae-e812-4345-ba05-48c5dee80a23",
+      "applicationNumber": "2027-UNIV-A-6NAPEXVF6R",
+      "eventType": "kr.kadmission.application.finalized.v1",
+      "eventId": "7a6336b2-e8d0-4284-a234-5ec7a0fdc53b",
+      "ok": true
+    },
+    {
+      "kind": "finalize",
+      "at": "2026-09-30T02:44:31.473Z",
+      "subjectToken": "subj-m4-35rt-9d7c1641",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 31
+        },
+        "save": {
+          "status": 200,
+          "ms": 40
+        },
+        "intent": {
+          "status": 201,
+          "ms": 34
+        },
+        "verify": {
+          "status": 200,
+          "ms": 79
+        },
+        "submission": {
+          "status": 200,
+          "ms": 7
+        }
+      },
+      "applicationId": "10ebabc0-bf8a-449a-b651-568c391c26b1",
+      "applicationNumber": "2027-UNIV-A-6MGQPEV3Q8",
+      "eventType": "kr.kadmission.application.finalized.v1",
+      "eventId": "f33aa785-a481-4561-836f-1d7ba4838051",
+      "ok": true
+    },
+    {
+      "kind": "finalize",
+      "at": "2026-09-30T02:49:31.979Z",
+      "subjectToken": "subj-m4-35rt-db487645",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 48
+        },
+        "save": {
+          "status": 200,
+          "ms": 129
+        },
+        "intent": {
+          "status": 201,
+          "ms": 54
+        },
+        "verify": {
+          "status": 200,
+          "ms": 121
+        },
+        "submission": {
+          "status": 200,
+          "ms": 9
+        }
+      },
+      "applicationId": "dcb8282a-358f-4686-a395-5cb0c3e9df3f",
+      "applicationNumber": "2027-UNIV-A-F7UPDAQDXT",
+      "eventType": "kr.kadmission.application.finalized.v1",
+      "eventId": "31b56760-4ac7-41de-8929-b3fe83e3041b",
+      "ok": true
+    },
+    {
+      "kind": "cancel",
+      "at": "2026-09-30T02:54:31.309Z",
+      "subjectToken": "subj-m4-35rt-664810ba",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 125
+        },
+        "save": {
+          "status": 200,
+          "ms": 112
+        },
+        "cancel": {
+          "status": 200,
+          "ms": 61
+        }
+      },
+      "applicationId": "967929c4-0200-4dd7-a608-24c2ee28352c",
+      "eventType": "kr.kadmission.application.cancelled.v1",
+      "eventId": "235e1d1f-8218-4dff-8ec6-2c9e3e919626",
+      "ok": true
+    },
+    {
+      "kind": "finalize",
+      "at": "2026-09-30T02:59:31.719Z",
+      "subjectToken": "subj-m4-35rt-d2c5048b",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 86
+        },
+        "save": {
+          "status": 200,
+          "ms": 139
+        },
+        "intent": {
+          "status": 201,
+          "ms": 77
+        },
+        "verify": {
+          "status": 200,
+          "ms": 248
+        },
+        "submission": {
+          "status": 200,
+          "ms": 12
+        }
+      },
+      "applicationId": "0d2ba5b2-2b64-4536-9d76-77b07851cad3",
+      "applicationNumber": "2027-UNIV-A-8CVV6U26S3",
+      "eventType": "kr.kadmission.application.finalized.v1",
+      "eventId": "47bb81ae-cebd-46d3-8a54-533f54de0a53",
+      "ok": true
+    },
+    {
+      "kind": "finalize",
+      "at": "2026-09-30T03:04:31.487Z",
+      "subjectToken": "subj-m4-35rt-9dccaf2a",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 85
+        },
+        "save": {
+          "status": 200,
+          "ms": 106
+        },
+        "intent": {
+          "status": 201,
+          "ms": 170
+        },
+        "verify": {
+          "status": 200,
+          "ms": 166
+        },
+        "submission": {
+          "status": 200,
+          "ms": 11
+        }
+      },
+      "applicationId": "ab790ad1-6dc1-4bc5-a0a3-9a99e0d88b9c",
+      "applicationNumber": "2027-UNIV-A-N42H8KJPGU",
+      "eventType": "kr.kadmission.application.finalized.v1",
+      "eventId": "3a7eb684-a10f-49d7-8c7c-67c8e0c24ac6",
+      "ok": true
+    },
+    {
+      "kind": "finalize",
+      "at": "2026-09-30T03:09:31.981Z",
+      "subjectToken": "subj-m4-35rt-c5f4a1bb",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 59
+        },
+        "save": {
+          "status": 200,
+          "ms": 87
+        },
+        "intent": {
+          "status": 201,
+          "ms": 60
+        },
+        "verify": {
+          "status": 200,
+          "ms": 137
+        },
+        "submission": {
+          "status": 200,
+          "ms": 46
+        }
+      },
+      "applicationId": "39235423-e584-47bf-b165-1802bfab962d",
+      "applicationNumber": "2027-UNIV-A-D7DNU6ZUQK",
+      "eventType": "kr.kadmission.application.finalized.v1",
+      "eventId": "72de7e12-2f7c-42de-b351-54e983310b1f",
+      "ok": true
+    },
+    {
+      "kind": "cancel",
+      "at": "2026-09-30T03:14:32.081Z",
+      "subjectToken": "subj-m4-35rt-7c0457c7",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 105
+        },
+        "save": {
+          "status": 200,
+          "ms": 117
+        },
+        "cancel": {
+          "status": 200,
+          "ms": 152
+        }
+      },
+      "applicationId": "4344d0fc-5bfb-4451-96ff-f9a7456be31b",
+      "eventType": "kr.kadmission.application.cancelled.v1",
+      "eventId": "571a4d0c-c191-4315-9d9e-e19e35148737",
+      "ok": true
+    },
+    {
+      "kind": "finalize",
+      "at": "2026-09-30T03:19:32.522Z",
+      "subjectToken": "subj-m4-35rt-d7e0948a",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 114
+        },
+        "save": {
+          "status": 200,
+          "ms": 198
+        },
+        "intent": {
+          "status": 201,
+          "ms": 231
+        },
+        "verify": {
+          "status": 200,
+          "ms": 204
+        },
+        "submission": {
+          "status": 200,
+          "ms": 12
+        }
+      },
+      "applicationId": "30ec6326-7a7e-4fec-a339-61a496624373",
+      "applicationNumber": "2027-UNIV-A-LYH5AZW93M",
+      "eventType": "kr.kadmission.application.finalized.v1",
+      "eventId": "8bccd6a1-1675-46b4-9839-a6e845a8c9f4",
+      "ok": true
+    },
+    {
+      "kind": "finalize",
+      "at": "2026-09-30T03:24:31.816Z",
+      "subjectToken": "subj-m4-35rt-c2cc80b2",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 42
+        },
+        "save": {
+          "status": 200,
+          "ms": 63
+        },
+        "intent": {
+          "status": 201,
+          "ms": 71
+        },
+        "verify": {
+          "status": 200,
+          "ms": 160
+        },
+        "submission": {
+          "status": 200,
+          "ms": 20
+        }
+      },
+      "applicationId": "21831961-ed27-4063-be22-d3dda43f31e5",
+      "applicationNumber": "2027-UNIV-A-XQPYYV333P",
+      "eventType": "kr.kadmission.application.finalized.v1",
+      "eventId": "cefe2d15-e026-41d6-8f7c-c88b2cdcee0b",
+      "ok": true
+    },
+    {
+      "kind": "finalize",
+      "at": "2026-09-30T03:29:31.535Z",
+      "subjectToken": "subj-m4-35rt-20d706fd",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 161
+        },
+        "save": {
+          "status": 200,
+          "ms": 176
+        },
+        "intent": {
+          "status": 201,
+          "ms": 153
+        },
+        "verify": {
+          "status": 200,
+          "ms": 204
+        },
+        "submission": {
+          "status": 200,
+          "ms": 24
+        }
+      },
+      "applicationId": "f14f4ddc-ecc7-4ef8-aac2-3ac7f485dd5f",
+      "applicationNumber": "2027-UNIV-A-C9BYZKG5HH",
+      "eventType": "kr.kadmission.application.finalized.v1",
+      "eventId": "7a3bfcb7-75af-4473-8a21-ee4568debb4e",
+      "ok": true
+    },
+    {
+      "kind": "cancel",
+      "at": "2026-09-30T03:34:31.320Z",
+      "subjectToken": "subj-m4-35rt-10cd472a",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 89
+        },
+        "save": {
+          "status": 200,
+          "ms": 72
+        },
+        "cancel": {
+          "status": 200,
+          "ms": 37
+        }
+      },
+      "applicationId": "18923efb-f1ad-4009-8ec4-d2f21e6ab087",
+      "eventType": "kr.kadmission.application.cancelled.v1",
+      "eventId": "da84de37-d51b-48f3-a05f-20eb83f58fa0",
+      "ok": true
+    },
+    {
+      "kind": "finalize",
+      "at": "2026-09-30T03:39:31.171Z",
+      "subjectToken": "subj-m4-35rt-3a80a158",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 34
+        },
+        "save": {
+          "status": 200,
+          "ms": 48
+        },
+        "intent": {
+          "status": 201,
+          "ms": 36
+        },
+        "verify": {
+          "status": 200,
+          "ms": 113
+        },
+        "submission": {
+          "status": 200,
+          "ms": 14
+        }
+      },
+      "applicationId": "0226ce5c-067f-41ba-9a86-3dc99c5d7286",
+      "applicationNumber": "2027-UNIV-A-8S9CLSYZWJ",
+      "eventType": "kr.kadmission.application.finalized.v1",
+      "eventId": "26da9b8f-52f5-4891-8990-ab6c59b2e466",
+      "ok": true
+    },
+    {
+      "kind": "finalize",
+      "at": "2026-09-30T03:44:31.183Z",
+      "subjectToken": "subj-m4-35rt-d857addf",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 39
+        },
+        "save": {
+          "status": 200,
+          "ms": 64
+        },
+        "intent": {
+          "status": 201,
+          "ms": 51
+        },
+        "verify": {
+          "status": 200,
+          "ms": 88
+        },
+        "submission": {
+          "status": 200,
+          "ms": 7
+        }
+      },
+      "applicationId": "a7e50f41-1b39-4a6d-8229-3403c41f1f1a",
+      "applicationNumber": "2027-UNIV-A-QF5D9XR6ZM",
+      "eventType": "kr.kadmission.application.finalized.v1",
+      "eventId": "352447c0-c7b9-44b5-865c-9209ffbd5941",
+      "ok": true
+    },
+    {
+      "kind": "finalize",
+      "at": "2026-09-30T03:49:32.011Z",
+      "subjectToken": "subj-m4-35rt-ddd9c1d5",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 152
+        },
+        "save": {
+          "status": 200,
+          "ms": 364
+        },
+        "intent": {
+          "status": 201,
+          "ms": 213
+        },
+        "verify": {
+          "status": 200,
+          "ms": 297
+        },
+        "submission": {
+          "status": 200,
+          "ms": 21
+        }
+      },
+      "applicationId": "2753f06a-2499-45b3-808a-960aeec20af0",
+      "applicationNumber": "2027-UNIV-A-2N44LFC38N",
+      "eventType": "kr.kadmission.application.finalized.v1",
+      "eventId": "ef59171c-7500-4a38-9e99-e8d03a7def6a",
+      "ok": true
+    },
+    {
+      "kind": "cancel",
+      "at": "2026-09-30T03:54:31.255Z",
+      "subjectToken": "subj-m4-35rt-c7f6340e",
+      "steps": {
+        "create": {
+          "status": 201,
+          "ms": 64
+        },
+        "save": {
+          "status": 200,
+          "ms": 72
+        },
+        "cancel": {
+          "status": 200,
+          "ms": 55
+        }
+      },
+      "applicationId": "64059199-45cf-46aa-a39f-3e1f01c84aee",
+      "eventType": "kr.kadmission.application.cancelled.v1",
+      "eventId": "a75b355e-be64-468d-8dc9-26c76b08868e",
+      "ok": true
+    }
+  ],
+  "samples": [
+    {
+      "at": "2026-09-30T01:59:29.307Z",
+      "phase": "before",
+      "apiReady": 200,
+      "mode": "CONNECTED",
+      "pendingEvents": 0,
+      "oldestPendingAgeSeconds": 0,
+      "lagging": false,
+      "testOutbox": {
+        "byStatus": {},
+        "maxAttempt": 0
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:00:30.736Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 1,
+      "oldestPendingAgeSeconds": 54,
+      "lagging": false,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 1
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:01:31.305Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 1,
+      "oldestPendingAgeSeconds": 119,
+      "lagging": false,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 1
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:02:31.059Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 1,
+      "oldestPendingAgeSeconds": 179,
+      "lagging": false,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 1
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:03:30.792Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 1,
+      "oldestPendingAgeSeconds": 234,
+      "lagging": false,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 1
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:04:32.731Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 1,
+      "oldestPendingAgeSeconds": 299,
+      "lagging": false,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 2
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:05:31.022Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 2,
+      "oldestPendingAgeSeconds": 359,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 2
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:06:31.455Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 2,
+      "oldestPendingAgeSeconds": 419,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 2
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:07:30.844Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 2,
+      "oldestPendingAgeSeconds": 474,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 2
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:08:31.232Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 2,
+      "oldestPendingAgeSeconds": 539,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 2
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:09:32.917Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 2,
+      "oldestPendingAgeSeconds": 599,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 3
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:10:31.278Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 3,
+      "oldestPendingAgeSeconds": 659,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 3
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:11:30.659Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 3,
+      "oldestPendingAgeSeconds": 714,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 3
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:12:31.014Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 3,
+      "oldestPendingAgeSeconds": 779,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 3
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:13:31.411Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 3,
+      "oldestPendingAgeSeconds": 839,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 3
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:14:31.860Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 3,
+      "oldestPendingAgeSeconds": 899,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 4
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:15:31.304Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 4,
+      "oldestPendingAgeSeconds": 955,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 4
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:16:30.664Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 4,
+      "oldestPendingAgeSeconds": 1015,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 4
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:17:31.199Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 4,
+      "oldestPendingAgeSeconds": 1076,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 4
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:18:30.787Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 4,
+      "oldestPendingAgeSeconds": 1136,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 4
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:19:32.960Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 4,
+      "oldestPendingAgeSeconds": 1197,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 5
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:20:31.458Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 5,
+      "oldestPendingAgeSeconds": 1257,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 5
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:21:31.052Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 5,
+      "oldestPendingAgeSeconds": 1317,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 5
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:22:30.621Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 5,
+      "oldestPendingAgeSeconds": 1377,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 5
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:23:31.171Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 5,
+      "oldestPendingAgeSeconds": 1437,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 5
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:24:32.259Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 5,
+      "oldestPendingAgeSeconds": 1497,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 6
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:25:30.750Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 6,
+      "oldestPendingAgeSeconds": 1558,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 6
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:26:31.098Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 6,
+      "oldestPendingAgeSeconds": 1618,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 6
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:27:31.419Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 6,
+      "oldestPendingAgeSeconds": 1678,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 6
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:28:30.860Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 6,
+      "oldestPendingAgeSeconds": 1738,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 6
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:29:32.466Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 6,
+      "oldestPendingAgeSeconds": 1798,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 7
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:30:30.901Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 7,
+      "oldestPendingAgeSeconds": 1858,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 7
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:31:31.282Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 7,
+      "oldestPendingAgeSeconds": 1918,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 7
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:32:30.670Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 7,
+      "oldestPendingAgeSeconds": 1978,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 7
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:33:31.069Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 7,
+      "oldestPendingAgeSeconds": 2038,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 7
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:34:32.528Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 7,
+      "oldestPendingAgeSeconds": 2099,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 8
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:35:31.006Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 8,
+      "oldestPendingAgeSeconds": 2159,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 8
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:36:31.376Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 8,
+      "oldestPendingAgeSeconds": 2219,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 8
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:37:31.363Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 8,
+      "oldestPendingAgeSeconds": 2279,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 8
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:38:30.643Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 8,
+      "oldestPendingAgeSeconds": 2334,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 8
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:39:35.235Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 8,
+      "oldestPendingAgeSeconds": 2399,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 9
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:40:30.624Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 9,
+      "oldestPendingAgeSeconds": 2454,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 9
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:41:30.977Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 9,
+      "oldestPendingAgeSeconds": 2514,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 9
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:42:31.147Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 9,
+      "oldestPendingAgeSeconds": 2574,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 9
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:43:31.090Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 9,
+      "oldestPendingAgeSeconds": 2634,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 9
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:44:31.986Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 10,
+      "oldestPendingAgeSeconds": 2700,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 10
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:45:30.963Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 10,
+      "oldestPendingAgeSeconds": 2754,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 10
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:46:30.985Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 10,
+      "oldestPendingAgeSeconds": 2815,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 10
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:47:31.001Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 10,
+      "oldestPendingAgeSeconds": 2875,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 10
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:48:31.098Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 10,
+      "oldestPendingAgeSeconds": 2935,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 10
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:49:32.935Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 10,
+      "oldestPendingAgeSeconds": 3000,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 11
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:50:31.442Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 11,
+      "oldestPendingAgeSeconds": 3055,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 11
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:51:30.970Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 11,
+      "oldestPendingAgeSeconds": 3115,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 11
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:52:31.069Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 11,
+      "oldestPendingAgeSeconds": 3175,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 11
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:53:31.466Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 11,
+      "oldestPendingAgeSeconds": 3235,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 11
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:54:32.066Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 11,
+      "oldestPendingAgeSeconds": 3295,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 12
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:55:31.442Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 12,
+      "oldestPendingAgeSeconds": 3355,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 12
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:56:30.833Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 12,
+      "oldestPendingAgeSeconds": 3415,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 12
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:57:31.260Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 12,
+      "oldestPendingAgeSeconds": 3475,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 12
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:58:30.928Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 12,
+      "oldestPendingAgeSeconds": 3535,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 12
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T02:59:32.815Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 13,
+      "oldestPendingAgeSeconds": 3601,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 13
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:00:31.187Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 13,
+      "oldestPendingAgeSeconds": 3655,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 13
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:01:30.995Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 13,
+      "oldestPendingAgeSeconds": 3715,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 13
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:02:31.287Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 13,
+      "oldestPendingAgeSeconds": 3776,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 13
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:03:30.537Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 13,
+      "oldestPendingAgeSeconds": 3836,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 13
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:04:32.686Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 13,
+      "oldestPendingAgeSeconds": 3896,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 14
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:05:31.061Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 14,
+      "oldestPendingAgeSeconds": 3956,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 14
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:06:31.335Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 14,
+      "oldestPendingAgeSeconds": 4016,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 14
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:07:30.811Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 14,
+      "oldestPendingAgeSeconds": 4076,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 14
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:08:31.214Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 14,
+      "oldestPendingAgeSeconds": 4136,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 14
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:09:32.864Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 14,
+      "oldestPendingAgeSeconds": 4197,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 15
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:10:31.280Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 15,
+      "oldestPendingAgeSeconds": 4257,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 15
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:11:31.478Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 15,
+      "oldestPendingAgeSeconds": 4317,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 15
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:12:30.762Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 15,
+      "oldestPendingAgeSeconds": 4377,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 15
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:13:31.151Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 15,
+      "oldestPendingAgeSeconds": 4437,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 15
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:14:33.203Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 15,
+      "oldestPendingAgeSeconds": 4498,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 16
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:15:30.946Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 16,
+      "oldestPendingAgeSeconds": 4557,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 16
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:16:31.416Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 16,
+      "oldestPendingAgeSeconds": 4617,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 16
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:17:30.667Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 16,
+      "oldestPendingAgeSeconds": 4678,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 16
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:18:31.430Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 16,
+      "oldestPendingAgeSeconds": 4738,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 16
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:19:34.006Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 16,
+      "oldestPendingAgeSeconds": 4799,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 17
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:20:30.834Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 17,
+      "oldestPendingAgeSeconds": 4858,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 17
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:21:30.952Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 17,
+      "oldestPendingAgeSeconds": 4918,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 17
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:22:31.190Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 17,
+      "oldestPendingAgeSeconds": 4978,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 17
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:23:30.939Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 17,
+      "oldestPendingAgeSeconds": 5038,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 17
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:24:32.728Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 17,
+      "oldestPendingAgeSeconds": 5099,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 18
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:25:31.078Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 18,
+      "oldestPendingAgeSeconds": 5159,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 18
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:26:31.400Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 18,
+      "oldestPendingAgeSeconds": 5219,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 18
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:27:30.551Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 18,
+      "oldestPendingAgeSeconds": 5274,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 18
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:28:30.884Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 18,
+      "oldestPendingAgeSeconds": 5334,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 18
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:29:33.075Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 18,
+      "oldestPendingAgeSeconds": 5400,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 19
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:30:31.231Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 19,
+      "oldestPendingAgeSeconds": 5454,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 19
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:31:31.480Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 19,
+      "oldestPendingAgeSeconds": 5519,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 19
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:32:30.909Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 19,
+      "oldestPendingAgeSeconds": 5575,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 19
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:33:31.434Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 19,
+      "oldestPendingAgeSeconds": 5635,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 19
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:34:32.034Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 19,
+      "oldestPendingAgeSeconds": 5696,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 20
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:35:31.373Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 20,
+      "oldestPendingAgeSeconds": 5755,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 20
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:36:30.589Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 20,
+      "oldestPendingAgeSeconds": 5815,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 20
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:37:31.270Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 20,
+      "oldestPendingAgeSeconds": 5875,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 20
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:38:31.101Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 20,
+      "oldestPendingAgeSeconds": 5935,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 20
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:39:31.834Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 20,
+      "oldestPendingAgeSeconds": 5997,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 21
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:40:31.113Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 21,
+      "oldestPendingAgeSeconds": 6056,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 21
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:41:31.486Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 21,
+      "oldestPendingAgeSeconds": 6116,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 21
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:42:30.935Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 21,
+      "oldestPendingAgeSeconds": 6176,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 21
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:43:31.066Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 21,
+      "oldestPendingAgeSeconds": 6236,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 21
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:44:31.928Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 21,
+      "oldestPendingAgeSeconds": 6297,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 22
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:45:31.261Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 22,
+      "oldestPendingAgeSeconds": 6356,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 22
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:46:30.973Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 22,
+      "oldestPendingAgeSeconds": 6417,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 22
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:47:31.302Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 22,
+      "oldestPendingAgeSeconds": 6477,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 22
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:48:31.587Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 22,
+      "oldestPendingAgeSeconds": 6537,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 22
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:49:34.496Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 22,
+      "oldestPendingAgeSeconds": 6598,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 23
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:50:31.337Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 23,
+      "oldestPendingAgeSeconds": 6657,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 23
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:51:31.151Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 23,
+      "oldestPendingAgeSeconds": 6718,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 23
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:52:30.615Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 23,
+      "oldestPendingAgeSeconds": 6778,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 23
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:53:31.281Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 23,
+      "oldestPendingAgeSeconds": 6838,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 23
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:54:31.920Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 23,
+      "oldestPendingAgeSeconds": 6899,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 24
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:55:31.398Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 24,
+      "oldestPendingAgeSeconds": 6958,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 24
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:56:30.861Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 24,
+      "oldestPendingAgeSeconds": 7019,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 24
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:57:31.259Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 24,
+      "oldestPendingAgeSeconds": 7079,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 24
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:58:30.542Z",
+      "phase": "outage",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 24,
+      "oldestPendingAgeSeconds": 7134,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 24
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:59:31.299Z",
+      "phase": "outage-end",
+      "apiReady": 200,
+      "mode": "AUTONOMOUS",
+      "pendingEvents": 24,
+      "oldestPendingAgeSeconds": 7199,
+      "lagging": true,
+      "testOutbox": {
+        "byStatus": {
+          "PENDING": 24
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    },
+    {
+      "at": "2026-09-30T03:59:46.464Z",
+      "phase": "after",
+      "apiReady": 200,
+      "mode": "CONNECTED",
+      "pendingEvents": 0,
+      "oldestPendingAgeSeconds": 0,
+      "lagging": false,
+      "testOutbox": {
+        "byStatus": {
+          "SENT": 24
+        },
+        "maxAttempt": 4
+      },
+      "deadTotal": 6
+    }
+  ],
+  "checks": {
+    "central-is-down": {
+      "pass": true,
+      "detectedMs": 6
+    },
+    "university-submits-throughout-outage": {
+      "pass": true,
+      "flows": 24,
+      "failed": [],
+      "finalized": 18,
+      "cancelled": 6
+    },
+    "autonomous-mode-during-outage": {
+      "pass": true,
+      "modes": [
+        "AUTONOMOUS"
+      ],
+      "maxOldestPendingAgeSeconds": 7199
+    },
+    "no-dead-during-outage": {
+      "pass": true,
+      "deadBefore": 6,
+      "deadAfterOutage": 6,
+      "maxAttemptCount": 4
+    },
+    "api-ready-throughout-outage": {
+      "pass": true,
+      "notReady": []
+    },
+    "outbox-drains-after-restore": {
+      "pass": true,
+      "drainedMs": 10047,
+      "events": 24
+    },
+    "event-loss-is-zero": {
+      "pass": true,
+      "expected": 24,
+      "sent": 24,
+      "received": 24
+    },
+    "central-reflects-all": {
+      "pass": true,
+      "checked": 24,
+      "missing": []
+    },
+    "connected-mode-after-restore": {
+      "pass": true,
+      "reconnectedMs": 17154
+    },
+    "no-pod-restarts": {
+      "pass": true,
+      "before": {
+        "admission-api": 2,
+        "document-service": 1,
+        "event-relay": 1,
+        "pgbouncer": 2
+      },
+      "after": {
+        "admission-api": 2,
+        "document-service": 1,
+        "event-relay": 1,
+        "pgbouncer": 2
+      }
+    },
+    "central-restored": {
+      "pass": true,
+      "restored": true
+    }
+  },
+  "baseline": {
+    "restarts": {
+      "admission-api": 2,
+      "document-service": 1,
+      "event-relay": 1,
+      "pgbouncer": 2
+    },
+    "deadTotal": 6,
+    "reconciliationExceptions": 15
+  },
+  "outageStartedAt": "2026-09-30T01:59:30.498Z",
+  "outageEndedAt": "2026-09-30T03:59:31.983Z",
+  "centralRestoredAt": "2026-09-30T03:59:36.410Z",
+  "reconciliationExceptionsCreated": 13,
+  "finishedAt": "2026-09-30T03:59:54.381Z",
+  "passed": true
+}

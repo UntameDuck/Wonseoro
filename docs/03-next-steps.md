@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-30 (**M4 진행** — 맡겨진 결정 정리: D-44 ⑦·D-47·D-51·D-52·D-53 결정·저장소 반영, 노션 반영은 승인 대기. 중앙 2시간 단절 실제 시간 시험 진행 중)
+> 최종 갱신: 2026-09-30 (**M4 진행** — 맡겨진 결정 정리: D-44 ⑦·D-47·D-51·D-52·D-53 결정·저장소 반영, 노션 반영은 승인 대기. **T-M4-35 중앙 2시간 실제 단절 통과**, T-M4-34 PG 지연 실제 시간 시험 진행 중)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -10,7 +10,7 @@
 
 ## 현재 지점
 
-**M0·M1·M2·M3 완료, M4 진행 중** (18/28). MVP가 화면에서 끝까지 동작하고, 로컬 축소 환경에서 대학 간 장애 격리·동시 Finalize·DB 연결 상한·Object Storage 장애 격리·HPA 커스텀 지표·signed GitOps Pull·예약 Peak Mode 전환·전 서비스 관측성(지표·Trace·구조화 로그)·업무 KPI 대시보드·학교 NAT 뒤 정상 사용자 보호를 증명했다.
+**M0·M1·M2·M3 완료, M4 진행 중** (19/28). MVP가 화면에서 끝까지 동작하고, 로컬 축소 환경에서 대학 간 장애 격리·동시 Finalize·DB 연결 상한·Object Storage 장애 격리·HPA 커스텀 지표·signed GitOps Pull·예약 Peak Mode 전환·전 서비스 관측성(지표·Trace·구조화 로그)·업무 KPI 대시보드·학교 NAT 뒤 정상 사용자 보호·**중앙 2시간 단절 중 접수 지속과 event loss 0** 을 증명했다.
 
 | 단계 | 진행 | 비고 |
 |---|---|---|
@@ -18,11 +18,11 @@
 | M1 접수 Core | **14/14** | ✅ |
 | M2 결제·Finalize·화면 | **24/24** | ✅ Demo Gate 1~5 통과 |
 | M3 운영 안전장치 | **14/15** | ✅ **종료 2026-09-27** — T-M3-03 WORM·T-M3-06 JWKS 는 M5 |
-| **M4 분산 실증** | **18/28** | ◀ 진행 중 — 차트·kind·Flux Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표·Peak Mode·계측·로그 마스킹·KPI 대시보드·NAT Adaptive Throttling·Redis 장애 ✅, PG·중앙·Pod 장애 축소 시험 🟡 |
+| **M4 분산 실증** | **19/28** | ◀ 진행 중 — 차트·kind·Flux Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표·Peak Mode·계측·로그 마스킹·KPI 대시보드·NAT Adaptive Throttling·Redis 장애·중앙 2시간 단절 ✅, PG 지연·노드 장애 🟡 |
 | M5 신뢰성·보안·접근성 | 0/35 | |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 76/139 태스크** (🟡 부분 완료 별도). **342개 테스트**
+**총 77/139 태스크** (🟡 부분 완료 별도). **342개 테스트**
 (admission-api 268 · server-kit 49 · central-api 20 · event-relay 5) — DB 없는 실행 기준 200 pass·142 skip·실패 0.
 DB 포함 실행은 admission-api 3 skip(`ADMIN_API_TOKEN` 미설정) 외 전부 pass.
 배포 스크립트 시험 별도: Peak Mode 예약 계산 9건(`npm run test:m4:peak-schedule`), 대시보드·KPI 규칙 일관성(`npm run test:m4:observability`).
@@ -99,7 +99,7 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 |---|---|---|
 | T-M4-33 | 같은 원서 Finalize 100회 동시 | ✅ 100건 성공 → Submission·Outbox·감사 각 1건 |
 | T-M4-34 | PG 지연·timeout·콜백 1~30분 지연 | 🟡 SLOW·UNKNOWN 자동 복구는 시간 압축 통과. 실제 시간 판 스크립트·Mock PG 지연 모드 준비 완료 — 중앙 시험 뒤 실행 |
-| T-M4-35 | 중앙 Sync 차단 | 🟡 8.8초 축소 단절·event loss 0. **2시간 실제 시간 판 진행 중**(2분 사전 점검 통과) |
+| T-M4-35 | 중앙 Sync 차단 | ✅ 중앙 2시간 실제 단절 통과 — 원서 24건 처리·DEAD 0·event loss 0·복구 10초 뒤 전량 전송·재시작 0 (`central-outage-realtime-2026-09-30T01-59-27-784Z.json`) |
 | T-M4-38 | Object Storage 지연·단절 | ✅ MinIO 완전 단절 중 카탈로그 20회 오류 0·원서 생성/자동저장 지속, 직접 업로드만 실패. 복구 후 업로드·서버 검증 정상 (**로컬 축소 환경**) |
 | T-M4-39 | API Pod·노드 강제 종료 | 🟡 Pod 삭제·RollingUpdate 오류 0, 다중 노드 drain 무중단. 노드 강제 정지는 NotReady 판정까지 약 1분·요청 10% 끊김 → **ADR-0008 로 결정**(nodeTaintsPolicy Honor·판정 시간 단축·Edge 1회 재시도). 로컬 재측정 대기 |
 
@@ -122,8 +122,8 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 | T-M4-40 | ✅ 지원자 단위 Adaptive Throttling(ADR-0007) — IP 미사용, 지원자×요청 종류 버킷 + 위험점수, 정상 세션 최종제출 불차단, 429+Retry-After, `THROTTLE_MODE`. kind NAT 시나리오 세 번 모두 정상 사용자 429 = 0·봇 78~85% 거절. 과부하 중 멱등 기록 실패로 **API 프로세스가 죽던 결함**을 찾아 고쳤다 — 수정 이미지로 반복해 재시작 0·정상 사용자 429 0 확인. 5xx·지연은 봇 없는 기준 실행에서도 같아 축소 환경 용량 한계다. OpenAPI 429 는 D-51 |
 | T-M4-37 | ✅ Redis 정지·재기동+FLUSHALL 중 접수 흐름 무영향 — 현재 구현이 Redis 를 쓰지 않는다. 세션을 Redis 에 두는 인증(M5) 때 다시 시험 |
 | T-M4-39 | 🟡 다중 노드 kind(`kind-univ-a-multinode.yaml`, 시험 때만 만들고 지운다): drain 무중단. 강제 정지 때 DB 연결 시간 제한이 없어 전체가 멈추던 결함 수정 → 66초·약 10% 끊김 후 자동 회복. Edge 재시도·노드 판정 시간·zone 3개 여부는 D-52 |
-| T-M4-35 | 🔄 **2시간 실제 시간 판 진행 중** (`tests/m4/central-outage-realtime.mjs`) |
-| **다음** | ① T-M4-35 결과 기록 ② 이미지 재빌드(Mock PG 지연 모드·CORS) → **T-M4-34 실제 시간 판** (`kubectl set env deploy/univ-a-api MOCK_PG_CONFIRM_DELAYS_S=60,300,900,1800` → `node tests/m4/pg-delay-realtime.mjs`, 약 35분 → env 제거) ③ **T-M4-39 재측정** — `kind-univ-a-multinode-tuned.yaml` 로 판정 시간 단축·`nodeTaintsPolicy: Honor` 재배치 확인 |
+| T-M4-35 | ✅ 중앙 2시간 실제 단절 통과 — 원서 24건 처리·DEAD 0·event loss 0·복구 10초 뒤 전량 전송·재시작 0 (`central-outage-realtime-2026-09-30T01-59-27-784Z.json`). 단절 중 대조가 `CENTRAL_ACK_MISSING` 13건을 올렸다(30분 넘은 미확인 — 설계대로의 신호, 복구 뒤 다음 대조에서 자동 해소 확인 예정) |
+| **다음** | ② 이미지 재빌드(Mock PG 지연 모드·CORS) → **T-M4-34 실제 시간 판** (`kubectl set env deploy/univ-a-api MOCK_PG_CONFIRM_DELAYS_S=60,300,900,1800` → `node tests/m4/pg-delay-realtime.mjs`, 약 35분 → env 제거) ③ **T-M4-39 재측정** — `kind-univ-a-multinode-tuned.yaml` 로 판정 시간 단축·`nodeTaintsPolicy: Honor` 재배치 확인 |
 
 ### 🎯 목표 4 — 노션 반영 · 저장소 쪽은 끝, **노션 쓰기 승인 대기** (2026-09-30)
 

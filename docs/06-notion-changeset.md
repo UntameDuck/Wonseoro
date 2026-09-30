@@ -74,4 +74,14 @@
 
 「로컬 축소 환경 결과」 절을 새로 둔다 — 아래 표. **K-PaaS 실측이 아니다.**
 
-<!-- 결과 표: 시험이 끝나면 채운다 -->
+| 시나리오 | 결과 (로컬 kind 축소 환경) | 결과 파일 |
+|---|---|---|
+| 4. 동일 원서 Finalize 100회 동시 | Submission·Outbox·감사 각 1건 | `finalize-concurrency-2026-09-27T16-48-26-726Z.json` |
+| 6. Central Sync 2시간 차단 | **실제 120분.** 원서 24건(접수 18·취소 6) 모두 처리, API Ready·자율 운영 모드 유지, DEAD 0, 복구 10초 뒤 24건 전량 전송·중앙 수신 24/24(event loss 0), Pod 재시작 0 | `central-outage-realtime-2026-09-30T01-59-27-784Z.json` |
+| 8. Redis 장애 | 접수 흐름 무영향(현재 Redis 미사용) | `redis-outage-kind-2026-09-29T17-16-19-213Z.json` |
+| 9. Object Storage 단절 | 카탈로그·작성·저장 지속, 직접 업로드만 실패, 복구 후 정상 | `object-storage-outage-2026-09-28T06-14-19-725Z.json` |
+| 10. API Node 강제 종료 | drain 무중단(879건 실패 0). 강제 정지는 NotReady 판정(49초)까지 약 10% 끊김 → ADR-0008 | `node-failure-kind-2026-09-29T18-26-14-638Z.json` |
+| 11. 학교 NAT + 봇 | 정상 사용자 429 = 0, 봇 78~85% 거절, 재시작 0 | `nat-bot-kind-2026-09-29T17-13-42-873Z.json` |
+| 13. 대학 간 장애 격리 | A 전면 정지 중 B 접수·중앙 반영, A 복구 후 접수 | `isolation-2026-09-27T16-42-39-057Z.json` |
+
+시나리오 5(PG 지연)·10 재측정 결과는 시험이 끝나면 이 표에 더한다.
