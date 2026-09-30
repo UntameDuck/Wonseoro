@@ -190,7 +190,8 @@ observability:
 
 networkPolicy:
   defaultDeny: true
-  # 공개 트래픽이 들어오는 경로 (§06 첨부: edge 네임스페이스의 ingress-nginx)
+  # 공개 트래픽이 들어오는 경로 (§06 첨부: edge 네임스페이스의 ingress-nginx).
+  # ingress-nginx 는 2026-03 은퇴 — 운영은 Gateway API 컨트롤러의 선택자로 바꾼다 (D-53, ADR-0008)
   ingressFrom:
     - namespaceSelector: { matchLabels: { kadmission-zone: edge } }
       podSelector: { matchLabels: { app.kubernetes.io/name: ingress-nginx } }

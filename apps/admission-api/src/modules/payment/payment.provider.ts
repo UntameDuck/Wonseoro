@@ -63,10 +63,17 @@ export class MockPaymentProvider extends PaymentProviderPort {
   private readonly logger = new Logger(MockPaymentProvider.name);
   /** providerTxId → 조회 횟수. PENDING 후 CONFIRMED 로 넘어가는 구간을 만든다. */
   private readonly polls = new Map<string, number>();
+  /** 지연 모드에서 다음 결제에 줄 지연의 순번. */
+  private delayTurn = 0;
 
   async createIntent(applicationId: string, amount: number): Promise<IntentResult> {
     if (process.env.MOCK_PG_BEHAVIOUR === 'DOWN') throw pgUnreachable();
-    const providerTxId = `MOCK-${randomUUID().replace(/-/g, '').slice(0, 20).toUpperCase()}`;
+    const random = randomUUID().replace(/-/g, '').slice(0, 20).toUpperCase();
+    const delays = confirmDelays();
+    // 지연 모드: 지연(초)과 승인 시각을 거래 ID 에 새긴다. Pod 가 여럿이어도 어느 Pod 가 조회하든 같게 움직인다.
+    const providerTxId = delays.length > 0
+      ? `MOCK-D${delays[this.delayTurn++ % delays.length]}-${Date.now().toString(36).toUpperCase()}-${random.slice(0, 12)}`
+      : `MOCK-${random}`;
     return {
       providerTxId,
       // 실제 PG 라면 결제창 URL·파라미터가 들어간다.
@@ -81,6 +88,12 @@ export class MockPaymentProvider extends PaymentProviderPort {
   }
 
   async verify(providerTxId: string): Promise<VerifyResult> {
+    const delayed = parseDelayed(providerTxId);
+    if (delayed) {
+      // 돈은 결제 시각에 나갔지만 PG 가 그 사실을 늦게 알린다(콜백·조회 모두). 그동안은 "모른다" 다.
+      if (Date.now() < delayed.approvedAtMs + delayed.delayMs) return { status: 'UNKNOWN' };
+      return { status: 'CONFIRMED', providerApprovedAt: new Date(delayed.approvedAtMs).toISOString() };
+    }
     const behaviour = this.behaviourOf(providerTxId);
     if (behaviour === 'DOWN') throw pgUnreachable();
     const count = (this.polls.get(providerTxId) ?? 0) + 1;
@@ -154,6 +167,24 @@ export class MockPaymentProvider extends PaymentProviderPort {
     createHash('sha256').update(providerTxId).digest();
     return 'OK';
   }
+}
+
+/**
+ * 지연 모드 (T-M4-34 실제 시간 판) — `MOCK_PG_CONFIRM_DELAYS_S=60,300,900,1800`.
+ * 결제마다 목록의 지연을 차례로 주고, 그 시간 동안 조회에 UNKNOWN 으로 답한 뒤 CONFIRMED 로 바뀐다.
+ * 승인 시각은 결제 시각이다 — 마감 판정(PAYMENT_APPROVED_BEFORE_DEADLINE)은 늦은 확인과 무관해야 한다.
+ */
+function confirmDelays(): number[] {
+  const spec = process.env.MOCK_PG_CONFIRM_DELAYS_S;
+  if (!spec) return [];
+  return spec.split(',').map((v) => Number(v.trim())).filter((v) => Number.isInteger(v) && v > 0 && v <= 86_400);
+}
+
+export function parseDelayed(providerTxId: string): { delayMs: number; approvedAtMs: number } | null {
+  const m = /^MOCK-D(\d+)-([0-9A-Z]+)-/.exec(providerTxId);
+  if (!m?.[1] || !m[2]) return null;
+  const approvedAtMs = parseInt(m[2], 36);
+  return Number.isFinite(approvedAtMs) ? { delayMs: Number(m[1]) * 1000, approvedAtMs } : null;
 }
 
 /**

@@ -1,0 +1,39 @@
+# 로컬 축소 환경 — 노드 장애 판정 시간을 줄인 다중 노드 클러스터 (T-M4-39, D-52 ②)
+#
+# kind-univ-a-multinode.yaml 과 같고, 노드가 죽었다고 판정하는 시간만 줄였다.
+#   kubelet nodeStatusUpdateFrequency 10s → 4s, kube-controller-manager node-monitor-grace-period 기본(약 50s) → 16s
+# grace 는 상태 보고 주기의 4배 이상으로 둔다 — 짧게 잡으면 잠깐의 네트워크 흔들림에도 노드가 NotReady 가 되어
+# Pod 가 엔드포인트에서 빠진다(오탐). K-PaaS 에서 정할 값의 근거를 얻으려는 비교 시험이다.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: univ-m
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30081
+        hostPort: 18082
+        protocol: TCP
+    kubeadmConfigPatches:
+      - |
+        kind: ClusterConfiguration
+        controllerManager:
+          extraArgs:
+            - name: node-monitor-grace-period
+              value: 16s
+      - |
+        kind: KubeletConfiguration
+        nodeStatusUpdateFrequency: 4s
+  - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone-a
+    kubeadmConfigPatches:
+      - |
+        kind: KubeletConfiguration
+        nodeStatusUpdateFrequency: 4s
+  - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone-b
+    kubeadmConfigPatches:
+      - |
+        kind: KubeletConfiguration
+        nodeStatusUpdateFrequency: 4s

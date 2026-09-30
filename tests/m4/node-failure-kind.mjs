@@ -204,10 +204,36 @@ execFileSync('docker', ['stop', '-t', '0', failNode]);
 const stoppedAt = Date.now();
 mark('노드 강제 정지', { node: failNode });
 let notReadyAt = null;
+let evictedAt = null;
 while (Date.now() - stoppedAt < 150_000) {
   const ready = kubectlAll('get', 'node', failNode, '-o', 'jsonpath={.status.conditions[?(@.type=="Ready")].status}');
   if (!notReadyAt && ready !== 'True') { notReadyAt = Date.now(); mark('노드 NotReady 판정', { afterSeconds: Math.round((notReadyAt - stoppedAt) / 1000) }); }
+  // 쿠버네티스는 NotReady 뒤 기본 300초가 지나야 죽은 노드의 Pod 를 내쫓는다. 그 시점을 당겨 대체 Pod 가
+  // 살아 있는 zone 에 놓이는지 본다 — zone 이 2개이고 DoNotSchedule 이면 nodeTaintsPolicy 에 달렸다 (D-52)
+  if (notReadyAt && !evictedAt && Date.now() - notReadyAt > 10_000) {
+    for (const p of apiPods().filter((x) => x.node === failNode)) {
+      try { kubectl('delete', 'pod', p.name, '--force', '--grace-period=0'); } catch { /* 이미 없다 */ }
+    }
+    evictedAt = Date.now();
+    mark('죽은 노드의 API Pod 축출(당김)', {});
+  }
+  if (evictedAt && !result.replacement) {
+    const live = apiPods().filter((p) => p.ready && p.node !== failNode);
+    if (live.length >= 2) {
+      result.replacement = { scheduled: true, afterSeconds: Math.round((Date.now() - evictedAt) / 1000), api: live };
+      mark('대체 API Pod Ready (살아 있는 zone)', result.replacement);
+    }
+  }
   await sleep(5_000);
+}
+result.nodeTaintsPolicy = JSON.parse(kubectl('get', 'deploy', '-l', 'app=admission-api', '-o', 'json'))
+  .items[0]?.spec.template.spec.topologySpreadConstraints?.[0]?.nodeTaintsPolicy ?? 'Ignore(기본)';
+if (!result.replacement) {
+  const pending = JSON.parse(kubectl('get', 'pods', '-l', 'app=admission-api', '-o', 'json')).items
+    .filter((p) => p.status.phase === 'Pending')
+    .map((p) => ({ name: p.metadata.name, reason: p.status.conditions?.find((c) => c.type === 'PodScheduled')?.message }));
+  result.replacement = { scheduled: false, pending };
+  mark('대체 API Pod 배치 실패', result.replacement);
 }
 setPhase('recovery');
 execFileSync('docker', ['start', failNode]);
@@ -226,6 +252,10 @@ check('평시 실패 0', result.phases.baseline.firstAttemptFailures === 0, resu
 check('계획 정비(drain) 무중단 — 첫 시도부터 실패 0', result.phases.drain.firstAttemptFailures === 0, result.phases.drain);
 check('노드 강제 정지 — 사용자 체감 실패 0 (재시도 3회 안에 성공)', result.phases['hard-failure'].userVisibleFailures === 0, result.phases['hard-failure']);
 check('노드 복구 뒤 실패 0', result.phases.recovery.userVisibleFailures === 0, result.phases.recovery);
+if (result.nodeTaintsPolicy === 'Honor') {
+  // Honor 면 죽은 zone 을 분산 계산에서 빼므로 대체 Pod 가 살아 있는 zone 에 놓여야 한다 (D-52)
+  check('죽은 zone 을 빼고 대체 API Pod 를 배치한다 (nodeTaintsPolicy Honor)', result.replacement.scheduled === true, result.replacement);
+}
 
 result.finishedAt = new Date().toISOString();
 result.pass = Object.values(result.checks).every((c) => c.pass);
