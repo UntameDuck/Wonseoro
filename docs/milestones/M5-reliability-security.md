@@ -35,6 +35,9 @@
 | T-M5-09 | BOLA 방어 | §09 | Cross-user/Cross-university 객체 접근 0 |
 | T-M5-10 | Admin MFA + Step-up | §06 | 민감정보 조회 시 목적·사유 입력 |
 
+> **T-M5-08 착수 (2026-09-30, D-58)** — magic-byte 검사는 M1 부터 있다. AV 는 ClamAV(clamd INSTREAM) 어댑터·서명 URL 다운로드·해시 대조·엔진 버전 기록까지 구현하고
+> 같은 프로토콜의 가짜 clamd 로 시험했다(서류 워커 시험 8개). **남은 것: 실 clamd·서명 DB 로 확인**(이미지 내려받기 필요), Zip Bomb·매크로 문서 판정 확인, clamd 배치.
+
 ### CI 보안 게이트 (권민준) — v1.0 §8.4 10종
 
 | ID | 게이트 | 통과 기준 |

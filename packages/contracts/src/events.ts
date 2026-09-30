@@ -15,7 +15,7 @@
  *   SYNC_HEARTBEAT                                  event-relay 가 주기적으로 (Outbox 를 거치지 않는다)
  *   PAYMENT_CONFIRMED                               **보내지 않는다** — 결제 확정이 곧 접수라(D-42) 접수 이벤트가
  *                                                  같은 사실을 전하고, 결제 금액·수단은 중앙이 알 필요가 없다(§A3 최소 정보)
- * 환불 이벤트는 사람이 승인하는 환불 처리(T-M5-06)를 붙일 때 §04 스키마에 먼저 올린다.
+ * 환불 이벤트는 사람이 승인하는 환불 처리(실 PG 연동 T-M6-04 와 함께)를 붙일 때 §04 스키마에 먼저 올린다.
  */
 export const EVENT_TYPE = {
   APPLICATION_FINALIZED: 'kr.kadmission.application.finalized.v1',

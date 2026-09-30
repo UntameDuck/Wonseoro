@@ -10,7 +10,7 @@
 
 | 노션 문서 | 첨부 이름 | 저장소 파일 | 바이트 | SHA-256 | 근거 |
 |---|---|---|---|---|---|
-| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.3.0) | 78,382 | `cb809ab905679547b429968d8f28df361f6c80bbf77bdec694a87ecaeb8a548d` | D-51 |
+| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.4.0) | 90,088 | `ca2b9fa0151cbf35143776d6ba40767e865c4ffe5780c6f72eef087023049a48` | D-51 · D-55 ~ D-61 |
 | [§04 CloudEvents](https://app.notion.com/p/3df75ab5debe81d68e37fabd3678dcc4) | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | 5,787 | `56719bada4a9439b5908df690508876b616bf5bfc53b7765fbee23b173b6f5db` | D-47 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` (v1.2) | 3,813 | `a6c7bb1bacdb223e82a16ad806a36973a7486ddc146c2cfcc56d1b1edb73dfb5` | D-44 · D-49 · D-52 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` (v1.2, 차트 렌더링) | 33,814 | `9b11f4c90e4faf6e80e85625b02bd7c22bf890f83c0fd6924256949746b35eb3` | D-44 |
@@ -21,6 +21,32 @@
 
 ## 본문 수정
 
+### 기술설계서 v1.0 본문
+
+§5.6 상태머신 (D-55) — 전이 설명에 더한다:
+
+> 누가 옮기는가 — 최종 검증 통과 `DRAFT → READY`, 저장 `READY → DRAFT`, 결제 의도 `READY → PAYMENT_PENDING`(이후 원서·서류 수정 불가),
+> 결제 확정 `PAYMENT_PENDING → PAID`, 결제 실패·취소 `PAYMENT_PENDING → READY`, Finalize 트랜잭션 `PAID → FINALIZED`.
+> **FINALIZING 은 DB 에 남지 않는다** — §02 8단계 Finalize 가 한 트랜잭션이라 커밋 전에만 존재하고, 실패는 롤백(= PAID 유지, "FINALIZING → PAID" 와 같다).
+> 다단계 확정을 붙일 때를 위해 상태는 둔다. `EXPIRED` 는 모집 종료(주기 CLOSED) 처리와 함께 정한다 — 마감 연장(§B17)이 있어 마감 시각에 옮기면 되돌릴 수 없다.
+> **한 원서에 살아 있는 결제는 하나다** — 열린 결제창은 다시 열고, 확인 중·확정 결제가 있으면 새 결제를 거절한다(이중 결제 방지, §B4).
+
+§5 공통원서 (D-57) — 한 문단 더한다:
+
+> 공통원서 **표준 항목**은 플랫폼이 정한다(출신 고등학교·졸업(예정) 연도·이메일·휴대전화). Vault 는 표준 항목만 저장하고, 대학 양식은 속성에
+> `"x-profile": true` 를 단 항목을 공통원서에서 가져온다. 지원자는 중앙 공통원서 화면에서 쓰고 대학별 제공 동의를 준다 — 동의를 빼면 철회 기록이 남고,
+> 이미 만든 원서의 사본은 바뀌지 않는다.
+
+### §01 운영 리스크·설계 결함
+
+- **A5** 「기능」의 Config Linter 에 붙인다: "초안을 만들 때 런타임과 같은 엔진으로 양식 JSON Schema 를 컴파일하고 서류 목록 형식을 본다 — 적용하면 실패할 설정은 초안조차 만들지 않고, 모르는 전형 코드·이름 없는 항목은 승인 화면(Diff)에 경고한다 (D-56)"
+- **A9** 「해결」 아래에 더한다 (D-61):
+
+  > 구현 — 두 독립 시각원(노드의 NTP 동기 시계·DB 서버 시계)을 10초마다 대조한다(왕복이 가장 짧은 표본, 불확실성 = 왕복/2). 접수 커밋 시각은 트랜잭션 안에서 DB 에 묻고,
+  > DB 밖에서 쓰는 시각(요청 수신·화면 표시·감사)은 측정 offset 으로 DB 시계에 맞춘다. 불확실성을 빼고도 1초를 넘은 노드는 **Finalize 만** 503 으로 거절한다 —
+  > 트래픽 전체에서 빼면 작성·저장까지 줄어든다. 접수 기록·감사에 offset·불확실성·상태를 남긴다. DB 서버 자체의 시각 동기 감시는 인프라 요구다.
+- **B4** 끝에 붙인다: "결제창은 원서마다 하나만 열린다 — 다시 누르면 같은 결제창, 확인 중·확정 결제가 있으면 새 결제를 거절한다. 결제창만 열린 채 콜백이 유실된 승인 결제는 PG 정산 목록 대조가 찾아 접수까지 잇는다 (D-55)"
+
 ### §03 OpenAPI 계약
 
 「첨부」 절 끝에 한 줄 더한다:
@@ -28,11 +54,23 @@
 > **2026-09-30 v1.3.0** — 지원자 오퍼레이션 공통 `429`(`RateLimited`: Problem `code: RATE_LIMITED` + `Retry-After` 초)를 더했다.
 > 한도는 IP 가 아니라 인증된 지원자·요청 종류 단위다(ADR-0007). optional 응답 추가라 호환 변경이다(§A16). (D-51)
 
+> **2026-09-30 v1.4.0** — 구현에 있었지만 계약이 설명하지 않던 것을 적었다(D-55 ~ D-61). 결제 의도 `200`(열린 결제창 재사용)·`409 PAYMENT_IN_PROGRESS`,
+> 원서 상태 전이 설명, FormSchema `profileFields`·`documents`, Self-check `payment.paymentId`, 현재 모집 `universityName`, 접수증 발급 감사,
+> 검사 대기 `downloadUrl`·검사 결과 `signature`, `/healthz/dependencies` 의 `clock`, ConfigDiff `warnings`, 현재 설정 본문, 중앙 공통원서 `GET·PUT /api/v1/profile`,
+> 이벤트 수신 규칙(`(source,id)` 중복 제거·미등록 대학 400·심장박동), "내 원서" 대학별 `universityReachable`. 전부 optional 필드·새 경로라 호환 변경이다(§A16).
+
 ### §04 CloudEvents Schema
 
 - `subjectRef` 절의 패턴 `^[A-Za-z0-9_-]{1,64}[.][A-Za-z0-9_-]{43}$` → `^[A-Za-z0-9_-]{1,16}[.][A-Za-z0-9_-]{43}$`,
   뒤에 "— keyId 16자 이내(D-47). 전체 60자 이하라 중앙 `subject_ref varchar(64)` 에 들어간다" 를 붙인다
 - 「첨부」 절에 "**2026-09-30** — keyId 상한을 16자로 좁힌 판으로 교체(D-47). 생성기와 중앙 DB 가 이미 16자라 기존 이벤트는 그대로 통과한다" 를 더한다
+- 「이벤트 타입」 절에 더한다 (D-60 — 스키마 첨부는 그대로):
+
+  > 대학이 보내는 것 — `application.finalized`·`application.cancelled`(Outbox, 원서 원장), `sync.heartbeat`(event-relay 가 기본 60초마다, Outbox 를 거치지 않는다 —
+  > 중앙이 끊기면 건너뛴다). 중앙은 심장박동을 수신 원장·sequence gap 에 넣지 않고 대학의 "지금" 상태(적체·설정 버전·시계 offset·마지막 심장박동)를 덮어쓴다.
+  > 심장박동이 180초 끊긴 대학은 "내 원서" 에서 확인 불가로 표시한다 — 접수 실패가 아니다.
+  > **`payment.confirmed` 는 보내지 않는다** — 결제 확정이 곧 접수(D-42)라 접수 이벤트가 같은 사실을 전하고, 결제 금액·수단은 중앙이 알 필요가 없다(§A3 최소 정보).
+  > `configversion`·`policyversion` 확장 속성은 접수 기록의 값이다(접수 전 취소에는 없다).
 
 ### §05 Kubernetes·Helm·GitOps
 
@@ -50,6 +88,11 @@
 > 손으로 쓰지 않는다: 차트나 values-m 을 고치고 `scripts/render-runtime-attachment.mjs` 로 다시 만든다(CI 가 드리프트를 막는다).
 > v1.2 에서 바뀐 것 — NODE_ENV·포트 3001·프로브 `/healthz`·`/readyz`, 대조는 앱 안 스케줄러, 마감·설정 버전을 배포값에서 제거(2인 승인 우회 차단),
 > Pod 당 커넥션 38(최대 391 ≤ 예산 400), Peak Mode 예약 시각은 비우고 `peak-schedule.yaml` 에서 온다(D-49), `nodeTaintsPolicy: Honor`.
+
+「서류 검사 워커」 설명에 더한다 (D-58 — values-m·runtime 첨부는 그대로. 엔진은 대학 values 에서 켠다):
+
+> 실 검사 엔진은 ClamAV 다(`documentService.scannerEngine: clamav`, `clamav.host`). 워커는 Object Storage 자격증명을 갖지 않고, 접수 API 가 검사 대기 목록에 싣는
+> 파일 하나·몇 분짜리 서명 URL 로 읽어 clamd 로 흘려보낸다. clamav 일 때만 워커 출구(`scannerEgress` — clamd·Object Storage)가 열린다. clamd 배치(사이드카·공용 서비스)는 K-PaaS 착수 때 정한다.
 
 ### §06 NetworkPolicy·RBAC·Vault
 

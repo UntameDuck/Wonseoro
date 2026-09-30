@@ -38,7 +38,7 @@ export interface SettlementEntry {
  * 플랫폼이 직접 전자금융업자가 되지 않는다.
  * 대학이 계약한 PG 를 Adapter 로 연계한다.
  *
- * 실 PG 연동은 T-M5-06 (PG 사 계약 필요). 이 인터페이스만 지키면 교체로 끝난다.
+ * 실 PG 연동은 T-M6-04 (PG 사 계약 필요). 이 인터페이스만 지키면 교체로 끝난다.
  */
 export abstract class PaymentProviderPort {
   abstract readonly name: string;
@@ -47,7 +47,7 @@ export abstract class PaymentProviderPort {
   abstract verify(providerTxId: string): Promise<VerifyResult>;
   /**
    * 결제 취소. **자동으로 부르지 않는다** — 승인된 결제의 취소는 환불이고, 환불은 사람이 승인한다
-   * (D-7 ④, §B16). 사람이 승인한 환불 처리(T-M5-06)가 이것을 부른다.
+   * (D-7 ④, §B16). 사람이 승인한 환불 처리(실 PG 연동 T-M6-04 와 함께)가 이것을 부른다.
    */
   abstract cancel(providerTxId: string): Promise<{ status: PaymentStatus }>;
   /**

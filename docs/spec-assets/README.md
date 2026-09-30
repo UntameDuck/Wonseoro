@@ -7,7 +7,7 @@
 | 노션 문서 | 첨부파일 | 저장소 배치 경로 | 상태 |
 |---|---|---|---|
 | 02. PostgreSQL ERD | `k-admission-postgresql-ddl.txt` | `infra/db/migrations/0001_init.sql` | ✅ **v1.2 교체 (2026-09-27)** — 저장소 → 노션 업로드 (15,880바이트/397줄) |
-| 03. OpenAPI 계약 | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` | ⚠️ **저장소가 앞섬 (2026-09-30)** — v1.3.0(429, D-51) 78,382B. 노션 교체 승인 대기 → [06-notion-changeset](../06-notion-changeset.md) |
+| 03. OpenAPI 계약 | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` | ⚠️ **저장소가 앞섬 (2026-09-30)** — v1.4.0(429 D-51, 흐름 연결 D-55~D-61) 90,088B. 노션 교체 승인 대기 → [06-notion-changeset](../06-notion-changeset.md) |
 | 04. CloudEvents | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | ⚠️ **저장소가 앞섬 (2026-09-30)** — keyId ≤16(D-47) 5,787B. 노션 교체 승인 대기 |
 | 05. Helm 배포 | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` | ⚠️ **저장소가 앞섬 (2026-09-30)** — v1.2(D-44·D-49·D-52) 3,813B. 노션 교체 승인 대기 |
 | 05. Helm 배포 | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` | ⚠️ **저장소가 앞섬 (2026-09-30)** — v1.2 = 차트 렌더링 결과 33,814B. 노션 교체 승인 대기 |
@@ -30,9 +30,12 @@
 
 `apps/admission-api/src/contract-conformance.test.ts` 가 자동으로 대조한다.
 DDL·OpenAPI·CloudEvents의 enum과 제약이 `packages/contracts` 상수와 어긋나면 테스트가 깨진다.
+`scripts/check-contracts.mjs` 는 계약 파일 자체를 본다 — OpenAPI `$ref`·operationId·대장 번호, 직전 커밋 대비 비호환 변경(§A16),
+CloudEvents 스키마 컴파일과 코드의 이벤트 타입 대조. CI contracts 잡이 돌린다.
 
 ```bash
 npm run test -w @wonseoro/admission-api
+npm run check:contracts
 ```
 
 **첨부를 새 버전으로 교체했는데 이 테스트가 깨지면, 코드를 고치기 전에 먼저 불일치 대장에 등록한다.**

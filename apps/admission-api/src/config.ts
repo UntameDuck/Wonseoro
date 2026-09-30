@@ -146,7 +146,7 @@ export const PAYMENT_PROVIDER = envChoice(
   'PAYMENT_PROVIDER',
   ['mock'] as const,
   'mock',
-  '결제 대행사 어댑터. 실 PG 연동은 T-M5-06',
+  '결제 대행사 어댑터. 실 PG Sandbox 연동은 T-M6-04',
 );
 if (PAYMENT_PROVIDER === 'mock') assertNotMockInProduction('결제', 'mock');
 

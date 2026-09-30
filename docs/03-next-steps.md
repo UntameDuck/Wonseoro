@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: 2026-09-30 (**M4 진행** — 맡겨진 결정 정리: D-44 ⑦·D-47·D-51·D-52·D-53 결정·저장소 반영, 노션 반영은 승인 대기. **T-M4-35 중앙 2시간 실제 단절 통과**, T-M4-34 PG 지연 실제 시간 시험 진행 중)
+> 최종 갱신: 2026-09-30 (**M4 진행** — 맡겨진 결정 정리: D-44 ⑦·D-47·D-51·D-52·D-53 결정·저장소 반영, 노션 반영은 승인 대기. **T-M4-35 중앙 2시간 실제 단절 통과**, T-M4-34 PG 지연 실제 시간 시험 진행 중. **미완결 기능 전수 점검 D-55 ~ D-61** — 아래 「흉내·미연결 점검」)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -22,11 +22,11 @@
 | M5 신뢰성·보안·접근성 | 0/35 | |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 77/139 태스크** (🟡 부분 완료 별도). **342개 테스트**
-(admission-api 268 · server-kit 49 · central-api 20 · event-relay 5) — DB 없는 실행 기준 200 pass·142 skip·실패 0.
-DB 포함 실행은 admission-api 3 skip(`ADMIN_API_TOKEN` 미설정) 외 전부 pass.
+**총 77/139 태스크** (🟡 부분 완료 별도). **404개 테스트**
+(admission-api 312 · server-kit 49 · central-api 28 · event-relay 7 · document-service 8, 2026-09-30).
+DB 포함 실행(CI 재현 DB)은 admission-api 3 skip(`ADMIN_API_TOKEN` 미설정) 외 전부 pass.
 배포 스크립트 시험 별도: Peak Mode 예약 계산 9건(`npm run test:m4:peak-schedule`), 대시보드·KPI 규칙 일관성(`npm run test:m4:observability`).
-DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`)·로그 우회 금지 검사(`scripts/check-logging.mjs`)·차트 lint·runtime 첨부 드리프트 검사(`scripts/render-runtime-attachment.mjs --check`) CI 포함.
+DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`)·로그 우회 금지 검사(`scripts/check-logging.mjs`)·차트 lint·runtime 첨부 드리프트 검사(`scripts/render-runtime-attachment.mjs --check`)·**계약 검사(`scripts/check-contracts.mjs`)** CI 포함.
 
 **CI 복구 (2026-09-30)** — 확인한 범위(`c232294` 이후)에서 통합 잡이 계속 실패하고 있었다. 원인은 CI 가 역할 마이그레이션·개발 시드·활성 마감정책 없이
 빈 DB 에서 시험을 돌린 것, 그리고 타이밍에 따라 갈리던 경합 두 건(마감정책 승인 400/409, 자동 접수와 화면 제출)이다.
@@ -40,15 +40,16 @@ CI 와 같은 순서를 로컬 빈 PostgreSQL 컨테이너로 재현하면 CI �
 ### 동작하는 것 — End-to-End
 
 ```
-공통원서 Vault → 동의 필드만 Snapshot → 원서 생성 → 자동저장(ETag·If-Match)
-  → 추가문항 동적 검증 → 서류 업로드·magic-byte 검사 → AV 워커 → 결제
-  → 서버측 재검증 → Finalize(단일 트랜잭션) → 접수번호 → Outbox
-  → event-relay → 중앙 Sync Gateway → 내 원서 Dashboard
+공통원서 화면(중앙 PUT /api/v1/profile·대학별 제공 동의) → 동의 항목만 Snapshot → 원서 생성(DRAFT)
+  → 자동저장(ETag·If-Match) → 추가문항 동적 검증(READY) → 서류(설정의 서류 목록)·magic-byte 검사
+  → AV 워커(clamav | 개발용 mock) → 결제 의도(PAYMENT_PENDING, 원서 잠김, 결제창 하나)
+  → 서버측 재검증·PG 콜백·재확인 워커·PG 정산 대조 → PAID → 자동 Finalize(단일 트랜잭션, DB 커밋 시각)
+  → 접수번호·접수증 → Outbox → event-relay(+ 심장박동) → 중앙 Sync Gateway → 내 원서(대학별 확인 불가 표시)
 ```
 
 화면(Next.js·KRDS)에서 사람이 직접 끝까지 진행할 수 있다.
-전형·모집단위는 화면에 박혀 있지 않고 **카탈로그 API 에서 읽는다** — 대학이 전형을
-하나 늘려도 프론트를 고치지 않는다. (§A5)
+전형·모집단위는 **카탈로그 API**, 입력 항목·항목 이름·공통원서 항목·서류 목록은 **전형 설정(form-schema)** 에서 읽는다 —
+대학이 전형이나 서류를 늘려도 프론트를 고치지 않는다. (§A5, D-56)
 
 ### M3 에서 붙은 운영 안전장치
 
@@ -76,6 +77,23 @@ CI 와 같은 순서를 로컬 빈 PostgreSQL 컨테이너로 재현하면 CI �
 요약하면 인가가 아예 없었고(D-28), 중앙 Dashboard 가 전체를 반환했고(D-27),
 비밀키·소금·대학 식별자에 기본값이 있었다. 지금은 운영에서 기본값 자체를 금지하고,
 빠진 설정을 기동 시점에 한 번에 보여준다.
+
+### 흉내·미연결 전수 점검 (2026-09-30)
+
+"목업으로만 있거나 끝까지 이어지지 않은 코드" 를 저장소 전체에서 찾아 고쳤다. 불일치 대장 **D-55 ~ D-61**,
+정리표·일부러 남긴 흉내(Mock PG·개발 신원 헤더·운영 토큰 등)와 그 이유는 **[04-production-readiness.md §7](04-production-readiness.md#7-흉내미연결-전수-점검-2026-09-30)**.
+
+| 대장 | 요약 |
+|---|---|
+| D-55 | 원서 상태머신을 흐름에 연결 · 한 원서 한 결제(재사용 200·확인 중 409) · PG 정산 대조 · 거절된 접수 요청·접수증 감사 · 멱등 정리 · 형식 오류 식별자 404 |
+| D-56 | 화면이 설정만 보고 그린다(공통원서 항목 `x-profile`·항목 이름 `title`·서류 목록) · Config Linter |
+| D-57 | 공통원서 지원자 API·화면·표준 항목 · 가명 토큰은 등록값 · 중앙 AUTH_MODE·엄격 UTF-8 |
+| D-58 | ClamAV 어댑터 · 서명 URL · 검사 기록에 실제 엔진·버전 (실 clamd 확인 남음) |
+| D-59 | 운영 콘솔 설정 초안 만들기·Diff 경고·보존기간 화면 |
+| D-60 | §04 심장박동 송수신 · 내 원서 대학별 확인 불가 · 이벤트 버전 확장 속성 |
+| D-61 | §A9 시각 — 노드–DB offset 측정, DB 커밋 시각, 초과 노드 Finalize 503 |
+
+kind 에는 아직 올리지 않았다 — 다음 kind 작업(T-M4-34·T-M4-39 재측정) 때 이미지를 다시 만들고 `seed-dev.sql` 을 다시 적용한다.
 
 ---
 
@@ -285,8 +303,9 @@ npm run dev -w @wonseoro/admin-web
 |---|---|---|
 | **인증** | `AUTH_MODE=dev-headers`. 헤더를 믿는다. 운영에서는 기동이 막힌다 | T-M5-02 |
 | **운영자 인증** | `ADMIN_API_TOKEN` 공유 비밀. 누가 했는지 구분 못 한다 | T-M5-10 |
-| **실 PG** | Mock. 운영에서 선택되면 기동이 막힌다 | T-M5-06 |
-| **실 안티바이러스** | Mock. 확장자·크기만 본다 | T-M5-08 |
+| **실 PG** | Mock. 운영에서 선택되면 기동이 막힌다. 정산 대조 경로는 연결됐다(D-55) — 실 어댑터가 `reconcile()` 만 채우면 된다 | T-M6-04 |
+| **실 안티바이러스** | ClamAV 어댑터 구현(D-58). 실 clamd·서명 DB 로는 아직 돌려 보지 않았다 — 가짜 clamd 로 프로토콜만 시험 | T-M5-08 |
+| **원서 마감 처리(EXPIRED)** | 상태는 있지만 옮기지 않는다 — 마감 연장이 있어 마감 시각에 옮기면 되돌릴 수 없다(D-55) | 모집 종료 처리 |
 | **WORM 감사 저장소** | 같은 DB 안에 있다. 체인은 검증되지만 물리 분리는 아니다 | M5 |
 | **K-PaaS 배포** | Helm·Flux Pull 구조와 로컬 실증 완료. 실제 K-PaaS cluster·Registry release는 없음 | M4 |
 | **부하·장애 시험** | 숫자 없음. SLO 는 목표값이지 실측이 아니다 | M4 |

@@ -14,6 +14,7 @@
 - **완료한 핵심 증명**: 로컬 kind 2클러스터 축소 환경에서 **대학 간 장애 격리 T-M4-42 통과**. A대 전면 정지 중 B대 접수·중앙 반영, A대 복구 후 접수까지 확인
 - **최근 완료**: T-M4-07 Peak Mode(ADR-0006) · T-M4-20 전 서비스 계측·로그 상관관계 · T-M4-24 로그 마스킹 강제 · **T-M4-21~23 업무 KPI·대시보드 3종** · **D-50 취소 이벤트 계약 위반 수정** · CI 복구 · **T-M4-40 NAT Adaptive Throttling(ADR-0007)** · 과부하 중 API 프로세스가 죽던 결함 수정 · **T-M4-37 Redis 장애 무영향** · T-M4-39 다중 노드 시험(drain 무중단·노드 장애 때 전체가 멈추던 DB 연결 결함 수정, D-52) · **맡겨진 결정 정리(2026-09-30)** — D-44 ⑦(Pod 당 38)·D-47·D-51(OpenAPI v1.3.0 429)·D-52(ADR-0008)·D-53(ingress-nginx 은퇴) 결정·저장소 반영. §05 runtime 첨부를 차트 렌더링으로 바꿔 CI 가 드리프트를 막는다. **노션 반영은 AI 쓰기가 막혀 [06-notion-changeset.md](06-notion-changeset.md) 로 대기**
 - **T-M4-35 ✅** 중앙 2시간 실제 단절 통과 — 원서 24건 처리·DEAD 0·event loss 0·복구 10초 뒤 전량 전송·재시작 0 (`central-outage-realtime-2026-09-30T01-59-27-784Z.json`)
+- **미완결 기능 전수 점검 ✅ (2026-09-30, D-55 ~ D-61)** — 정의만 있고 흐름에 이어지지 않던 것·흉내뿐이던 것을 모두 잇거나 이유와 함께 남겼다: 원서 상태머신·한 원서 한 결제·PG 정산 대조, §A9 시각(노드–DB offset·DB 커밋 시각), 공통원서 지원자 API·화면, 설정 기반 서류·항목·Config Linter, §04 심장박동, ClamAV 어댑터, 운영 콘솔 초안·보존기간, 계약 검사 스크립트. OpenAPI **v1.4.0**. 정리표는 [04-production-readiness.md §7](04-production-readiness.md#7-흉내미연결-전수-점검-2026-09-30). **kind 에는 아직 이 코드의 이미지를 올리지 않았다** — 다음 kind 작업 때 이미지 재빌드·`seed-dev.sql` 재적용
 - **바로 다음 할 일**: **T-M4-34 PG 지연 실제 시간 판**(2026-09-30 실행 중) → **T-M4-39 재측정**(판정 시간 단축·Honor) → [§4](#4-다음-작업--순서와-방법)
 
 ## 2. 반드시 지킬 규칙
@@ -42,8 +43,10 @@
 | CI 재현 | CI 통합 잡과 같은 순서를 빈 DB 로: `docker run -d --rm --name ci-pg -e POSTGRES_USER=wonseoro -e POSTGRES_PASSWORD=wonseoro -e POSTGRES_DB=univ_a -p 5499:5432 postgres:16-alpine` → `0001_init`·`0002_db_roles`·`dev-roles`·`verify-constraints`·`seed-dev`·`ci-seed-deadline` 적용 → `DATABASE_URL=…@localhost:5499/univ_a` 로 시험. kind 워크로드 간섭도 없다 |
 | 로컬 관측 스택 | kind A `observability` 네임스페이스: Prometheus(KPI 규칙 포함)·Adapter·Grafana(익명 Viewer). Grafana 는 `kubectl -n observability port-forward svc/grafana 13000:80` |
 | 로컬 DB | compose: `postgres-univ-a` :5432 · `postgres-univ-b` :5442(`--profile multi`) · `postgres-central` :5434 · redis :6379 · minio :9000 |
-| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 268 · server-kit 49 · central-api 20 · event-relay 5 (전체 342, DB 없는 실행 200 pass·142 skip·실패 0). 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함). **DB 통합 시험 전에 kind univ-a 의 API·Relay 를 0 으로 줄인다** — 같은 로컬 `univ_a` DB 를 봐서 시험 행을 먼저 집어 간다(결제 재확인·Relay 시험이 실패하거나 멈춘다). event-relay 시험은 직렬로 돈다 |
-| 검사 | `npm run db:verify`(DB 제약 20종) · `node scripts/check-deps.mjs`(의존성 선언) · `helm lint deploy/charts/k-admission` · `node scripts/render-runtime-attachment.mjs --check`(runtime 첨부 = 차트 렌더링) |
+| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 312 · server-kit 49 · central-api 28 · event-relay 7 · document-service 8 (전체 404, CI 재현 DB 에서 실패 0·건너뜀 3, 2026-09-30). `app.module.boot.test` 는 실제 AppModule 로 DI 를 조립한다 — 서비스를 직접 `new` 하는 통합 시험이 못 잡는 "서버가 안 뜨는" 결함용. 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함). **DB 통합 시험 전에 kind univ-a 의 API·Relay 를 0 으로 줄인다** — 같은 로컬 `univ_a` DB 를 봐서 시험 행을 먼저 집어 간다(결제 재확인·Relay 시험이 실패하거나 멈춘다). event-relay 시험은 직렬로 돈다 |
+| 검사 | `npm run db:verify`(DB 제약 20종) · `node scripts/check-deps.mjs`(의존성 선언) · `helm lint deploy/charts/k-admission` · `node scripts/render-runtime-attachment.mjs --check`(runtime 첨부 = 차트 렌더링) · `npm run check:contracts`(OpenAPI `$ref`·operationId·대장 번호·직전 커밋 대비 호환성, CloudEvents 컴파일·이벤트 타입) |
+| 로컬 화면 확인 | kind 와 섞지 않으려면 로컬 프로세스를 CI 재현 DB 에 붙인다 — 중앙 :3100(`DATABASE_URL=…5499/central`)·대학 :3101(`…5499/univ_a`, `CENTRAL_SYNC_URL=http://localhost:3100`, `CORS_ORIGINS=http://localhost:4001`, `OTEL_METRICS_PORT` 를 9464 가 아닌 값으로)·지원자 웹 :4001(`NEXT_PUBLIC_ADMISSION_API`·`NEXT_PUBLIC_CENTRAL_API`). **:3000 은 쓰지 않는다** — kind 시험이 `ka-central` 을 거기 띄운다. 개발 시드 지원자: `44444444-4444-4444-4444-444444444444` / `subj-dev-0001` |
+| 동시 작업 | 같은 폴더에서 다른 AI 세션이 커밋할 수 있다(2026-09-30 실제로 겹쳤다 — D-54 번호 충돌). 대장 번호를 쓰기 전에 대장 끝을 다시 읽고, 커밋 전에 `git log` 를 본다 |
 | 노션 쓰기 | AI 의 노션 페이지 수정·첨부 교체는 **권한 분류기가 막는다**(2026-09-30, 외부 시스템 쓰기). 읽기(fetch)는 된다. 노션 변경은 [06-notion-changeset.md](06-notion-changeset.md) 로 준비하고 사람이 적용한다 |
 
 ## 4. 다음 작업 — 순서와 방법
@@ -172,7 +175,8 @@ Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, s
 | K-PaaS(또는 클라우드) 시험 환경 | 3,000 CCU·1,000 RPS·6시간 Soak·DB Failover 실측(T-M4-30~32·36·41)에 필요. 없음 |
 | 제출 PDF 정정 (D-2·D-3) | 개발보고서의 "Java/Spring" 표기 → NestJS·TypeScript. 정정 문구 준비됨 — [07-submission-errata.md](07-submission-errata.md) |
 | 노션 반영 적용 | [06-notion-changeset.md](06-notion-changeset.md) — AI 쓰기 차단 |
-| K-PaaS 착수 때 정할 것 | 노드 판정 시간(`node-monitor-grace-period`) 조정 가능 여부·zone 수·Gateway API 컨트롤러(ADR-0008, D-53) |
+| K-PaaS 착수 때 정할 것 | 노드 판정 시간(`node-monitor-grace-period`) 조정 가능 여부·zone 수·Gateway API 컨트롤러(ADR-0008, D-53) · clamd 배치(사이드카·공용 서비스)와 서명 DB 갱신 경로(D-58) · DB 서버 시각 동기 감시(D-61) |
+| 실 clamd 로 검사 확인 (D-58) | ClamAV 어댑터는 가짜 clamd 로만 시험했다. `clamav/clamav` 이미지(약 300MB+서명 DB)를 내려받아 `SCANNER_ENGINE=clamav`·`CLAMD_HOST` 로 한 번 돌려 본다 — 내려받기는 사람이 승인한다 |
 | Peak Mode 예약 워크플로 켜기 | GitHub environment `peak-mode` + secret `PEAK_MODE_SSH_SIGNING_KEY`, 저장소 변수 `PEAK_MODE_ENABLED=true`, 대학 `wonseoro-git-authors` 에 예약 자동화 공개키 추가 (ADR-0006) |
 | ~~values-m 커넥션 수치 (D-44 ⑦)~~ | 2026-09-30 AI 결정: Pod 당 38·예산 400 유지 |
 
@@ -187,9 +191,11 @@ AI 가 이 PC 에서 할 수 있는 것 약 36개, 외부 환경 필요 약 15�
 |---|---|
 | 지금 할 일 | [03-next-steps.md](03-next-steps.md) |
 | 단계별 태스크·인수기준 | [milestones/](milestones/) |
-| 설계와 구현이 다른 곳 53건 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) |
+| 설계와 구현이 다른 곳 61건 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) |
+| 흉내·미연결 점검 결과와 일부러 남긴 흉내 | [04-production-readiness.md §7](04-production-readiness.md#7-흉내미연결-전수-점검-2026-09-30) |
 | 노션 문서 지도·동기화 규칙 | [01-notion-sync-protocol.md](01-notion-sync-protocol.md) |
 | 왜 이렇게 정했나 | [adr/](adr/) — 최신 ADR-0008 노드 장애 흡수(nodeTaintsPolicy·판정 시간·Edge 재시도) |
 | 배포 | `deploy/` — 차트 `charts/k-admission`, 대학별 `universities/`, 로컬 `local/` |
-| API 계약 | `packages/contracts/openapi/k-admission.v1.yaml` (v1.3.0) — 컨트롤러와 다르면 계약 적합성 시험이 깨진다 |
+| API 계약 | `packages/contracts/openapi/k-admission.v1.yaml` (v1.4.0) — 컨트롤러와 다르면 계약 적합성 시험이, 계약 파일이 깨지거나 비호환이면 `check:contracts` 가 깨진다 |
+| 공통원서 표준 항목 | `packages/contracts/src/common-profile.ts` — 중앙 Vault 검증·지원자 화면·설정 검사가 같이 쓴다 (D-57) |
 | DB 스키마 | `infra/db/migrations/0001_init.sql`(= 노션 §02 첨부 v1.2) · `0002_db_roles.sql` |
