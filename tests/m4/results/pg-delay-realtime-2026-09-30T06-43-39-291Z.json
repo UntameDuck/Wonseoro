@@ -1,0 +1,530 @@
+{
+  "test": "T-M4-34",
+  "scenario": "PG 확정 1·5·15·30분 지연 — 콜백 경로·폴링 경로 (실제 시간)",
+  "environment": "local-kind-univ-a, Mock PG 지연 모드 (축소 환경)",
+  "limitations": [
+    "Mock PG 다. 실 PG 의 조회 응답·콜백 재시도 규칙은 T-M6-04 연동 때 다시 본다.",
+    "결제 8건의 기능·시간 확인이다. 마감 피크의 PG 호출량은 K-PaaS 부하 시험의 몫이다."
+  ],
+  "startedAt": "2026-09-30T06:43:39.291Z",
+  "payments": [
+    {
+      "applicationId": "6a7061cc-928e-4b5b-a87c-6af125958b1a",
+      "paymentId": "2daf5436-7984-409f-b4d5-56e626290f8f",
+      "providerTxId": "MOCK-D60-MUNQOMJY-D8B658D84D7A",
+      "delayS": 60,
+      "paidAt": "2026-09-30T06:43:41.230Z",
+      "availableAtMs": 1790750681230,
+      "firstVerify": {
+        "status": 202,
+        "paymentStatus": "UNKNOWN"
+      },
+      "mode": "callback",
+      "callbackEventId": "evt-37d2d291-3f1b-46b8-8aaa-8bd09516a1b5",
+      "callback": {
+        "at": "2026-09-30T06:44:47.113Z",
+        "status": 200,
+        "outcome": "VERIFIED"
+      },
+      "done": true,
+      "final": {
+        "status": "CONFIRMED",
+        "verifies": 3,
+        "submissions": 1,
+        "finalizedAt": "2026-09-30T06:44:47.266Z"
+      },
+      "finalizeLagS": 6,
+      "lateCallback": {
+        "status": 200,
+        "outcome": "DUPLICATE"
+      },
+      "afterLate": {
+        "status": "CONFIRMED",
+        "verifies": 3,
+        "submissions": 1,
+        "finalizedAt": "2026-09-30T06:44:47.266Z"
+      }
+    },
+    {
+      "applicationId": "07e75e1e-4db3-4eaa-ab2c-c0d3572cdc90",
+      "paymentId": "7ca49fa3-818e-4435-9337-3acb8fa6c76e",
+      "providerTxId": "MOCK-D300-MUNQONSV-93C77199428C",
+      "delayS": 300,
+      "paidAt": "2026-09-30T06:43:42.847Z",
+      "availableAtMs": 1790750922847,
+      "firstVerify": {
+        "status": 202,
+        "paymentStatus": "UNKNOWN"
+      },
+      "mode": "callback",
+      "callbackEventId": "evt-931c1346-7fdc-427e-9e3b-7c0a96bce578",
+      "callback": {
+        "at": "2026-09-30T06:48:48.138Z",
+        "status": 200,
+        "outcome": "VERIFIED"
+      },
+      "done": true,
+      "final": {
+        "status": "CONFIRMED",
+        "verifies": 5,
+        "submissions": 1,
+        "finalizedAt": "2026-09-30T06:48:48.275Z"
+      },
+      "finalizeLagS": 5.4,
+      "lateCallback": {
+        "status": 200,
+        "outcome": "DUPLICATE"
+      },
+      "afterLate": {
+        "status": "CONFIRMED",
+        "verifies": 5,
+        "submissions": 1,
+        "finalizedAt": "2026-09-30T06:48:48.275Z"
+      }
+    },
+    {
+      "applicationId": "2d230720-48b3-4446-8044-7d828d374ab4",
+      "paymentId": "08ba7cbb-5135-467d-bad8-788c882ede06",
+      "providerTxId": "MOCK-D900-MUNQOP53-53CFDF4855AB",
+      "delayS": 900,
+      "paidAt": "2026-09-30T06:43:44.583Z",
+      "availableAtMs": 1790751524583,
+      "firstVerify": {
+        "status": 202,
+        "paymentStatus": "UNKNOWN"
+      },
+      "mode": "callback",
+      "callbackEventId": "evt-3ba1e35d-d123-4690-be3b-1ea9740ded54",
+      "callback": {
+        "at": "2026-09-30T06:58:52.082Z",
+        "status": 200,
+        "outcome": "VERIFIED"
+      },
+      "done": true,
+      "final": {
+        "status": "CONFIRMED",
+        "verifies": 6,
+        "submissions": 1,
+        "finalizedAt": "2026-09-30T06:58:52.495Z"
+      },
+      "finalizeLagS": 7.9,
+      "lateCallback": {
+        "status": 200,
+        "outcome": "DUPLICATE"
+      },
+      "afterLate": {
+        "status": "CONFIRMED",
+        "verifies": 6,
+        "submissions": 1,
+        "finalizedAt": "2026-09-30T06:58:52.495Z"
+      }
+    },
+    {
+      "applicationId": "9ad6c5ee-fe36-4392-a879-17db19c75807",
+      "paymentId": "539a8147-10cd-43fe-9793-a7fb5583a4a4",
+      "providerTxId": "MOCK-D1800-MUNQOQGQ-F243E466C0A8",
+      "delayS": 1800,
+      "paidAt": "2026-09-30T06:43:46.298Z",
+      "availableAtMs": 1790752426298,
+      "firstVerify": {
+        "status": 202,
+        "paymentStatus": "UNKNOWN"
+      },
+      "mode": "callback",
+      "callbackEventId": "evt-235c76d7-049e-4242-af67-60948daa33b1",
+      "callback": {
+        "at": "2026-09-30T07:13:50.866Z",
+        "status": 200,
+        "outcome": "VERIFIED"
+      },
+      "done": true,
+      "final": {
+        "status": "CONFIRMED",
+        "verifies": 7,
+        "submissions": 1,
+        "finalizedAt": "2026-09-30T07:13:50.987Z"
+      },
+      "finalizeLagS": 4.7,
+      "lateCallback": {
+        "status": 200,
+        "outcome": "DUPLICATE"
+      },
+      "afterLate": {
+        "status": "CONFIRMED",
+        "verifies": 7,
+        "submissions": 1,
+        "finalizedAt": "2026-09-30T07:13:50.987Z"
+      }
+    },
+    {
+      "applicationId": "edb3f005-de36-4cf4-978d-6474ffee63b4",
+      "paymentId": "78457ef8-8fa4-4b1d-973b-d1f34ed33dff",
+      "providerTxId": "MOCK-D60-MUNQORLX-C2E287FEDAD5",
+      "delayS": 60,
+      "paidAt": "2026-09-30T06:43:47.781Z",
+      "availableAtMs": 1790750687781,
+      "firstVerify": {
+        "status": 202,
+        "paymentStatus": "UNKNOWN"
+      },
+      "mode": "poll",
+      "done": true,
+      "final": {
+        "status": "CONFIRMED",
+        "verifies": 3,
+        "submissions": 1,
+        "finalizedAt": "2026-09-30T06:45:37.679Z"
+      },
+      "finalizeLagS": 49.9,
+      "lateCallback": {
+        "status": 200,
+        "outcome": "VERIFIED"
+      },
+      "afterLate": {
+        "status": "CONFIRMED",
+        "verifies": 3,
+        "submissions": 1,
+        "finalizedAt": "2026-09-30T06:45:37.679Z"
+      }
+    },
+    {
+      "applicationId": "0bdec250-6a6a-4b17-8d55-c2f5f25c6fc2",
+      "paymentId": "292e1716-7ef5-48df-ae0b-e8fa4a339fe2",
+      "providerTxId": "MOCK-D300-MUNQOSNX-51519DCFB161",
+      "delayS": 300,
+      "paidAt": "2026-09-30T06:43:49.149Z",
+      "availableAtMs": 1790750929149,
+      "firstVerify": {
+        "status": 202,
+        "paymentStatus": "UNKNOWN"
+      },
+      "mode": "poll",
+      "done": true,
+      "final": {
+        "status": "CONFIRMED",
+        "verifies": 5,
+        "submissions": 1,
+        "finalizedAt": "2026-09-30T06:51:40.425Z"
+      },
+      "finalizeLagS": 171.3,
+      "lateCallback": {
+        "status": 200,
+        "outcome": "VERIFIED"
+      },
+      "afterLate": {
+        "status": "CONFIRMED",
+        "verifies": 5,
+        "submissions": 1,
+        "finalizedAt": "2026-09-30T06:51:40.425Z"
+      }
+    },
+    {
+      "applicationId": "de01aa5b-3303-42e7-8a56-3c57788e99fa",
+      "paymentId": "5796eab1-41cb-444d-ae96-70becf12b587",
+      "providerTxId": "MOCK-D900-MUNQOTQE-802BDE196C70",
+      "delayS": 900,
+      "paidAt": "2026-09-30T06:43:50.534Z",
+      "availableAtMs": 1790751530534,
+      "firstVerify": {
+        "status": 202,
+        "paymentStatus": "UNKNOWN"
+      },
+      "mode": "poll",
+      "done": true,
+      "final": {
+        "status": "CONFIRMED",
+        "verifies": 6,
+        "submissions": 1,
+        "finalizedAt": "2026-09-30T06:59:43.097Z"
+      },
+      "finalizeLagS": 52.6,
+      "lateCallback": {
+        "status": 200,
+        "outcome": "VERIFIED"
+      },
+      "afterLate": {
+        "status": "CONFIRMED",
+        "verifies": 6,
+        "submissions": 1,
+        "finalizedAt": "2026-09-30T06:59:43.097Z"
+      }
+    },
+    {
+      "applicationId": "de80bc09-560e-41c6-a329-d2105a90e090",
+      "paymentId": "1cdf38e4-f10f-481d-b6cc-9da28d9eb84b",
+      "providerTxId": "MOCK-D1800-MUNQOUTX-8F8FBC2F81BC",
+      "delayS": 1800,
+      "paidAt": "2026-09-30T06:43:51.957Z",
+      "availableAtMs": 1790752431957,
+      "firstVerify": {
+        "status": 202,
+        "paymentStatus": "UNKNOWN"
+      },
+      "mode": "poll",
+      "done": true,
+      "final": {
+        "status": "CONFIRMED",
+        "verifies": 7,
+        "submissions": 1,
+        "finalizedAt": "2026-09-30T07:15:50.515Z"
+      },
+      "finalizeLagS": 118.6,
+      "lateCallback": {
+        "status": 200,
+        "outcome": "VERIFIED"
+      },
+      "afterLate": {
+        "status": "CONFIRMED",
+        "verifies": 7,
+        "submissions": 1,
+        "finalizedAt": "2026-09-30T07:15:50.515Z"
+      }
+    }
+  ],
+  "checks": {
+    "each-delay-has-callback-and-poll": {
+      "pass": true,
+      "delays": {
+        "60": [
+          "callback",
+          "poll"
+        ],
+        "300": [
+          "callback",
+          "poll"
+        ],
+        "900": [
+          "callback",
+          "poll"
+        ],
+        "1800": [
+          "callback",
+          "poll"
+        ]
+      }
+    },
+    "first-verify-is-not-failed": {
+      "pass": true,
+      "first": [
+        {
+          "status": 202,
+          "paymentStatus": "UNKNOWN"
+        },
+        {
+          "status": 202,
+          "paymentStatus": "UNKNOWN"
+        },
+        {
+          "status": 202,
+          "paymentStatus": "UNKNOWN"
+        },
+        {
+          "status": 202,
+          "paymentStatus": "UNKNOWN"
+        },
+        {
+          "status": 202,
+          "paymentStatus": "UNKNOWN"
+        },
+        {
+          "status": 202,
+          "paymentStatus": "UNKNOWN"
+        },
+        {
+          "status": 202,
+          "paymentStatus": "UNKNOWN"
+        },
+        {
+          "status": 202,
+          "paymentStatus": "UNKNOWN"
+        }
+      ]
+    },
+    "all-auto-finalized": {
+      "pass": true,
+      "notFinalized": []
+    },
+    "no-failed-no-early-no-double": {
+      "pass": true,
+      "anomalies": []
+    },
+    "callback-path-finalizes-within-15s": {
+      "pass": true,
+      "lagS": [
+        {
+          "delayS": 60,
+          "lagS": 6,
+          "callback": {
+            "at": "2026-09-30T06:44:47.113Z",
+            "status": 200,
+            "outcome": "VERIFIED"
+          }
+        },
+        {
+          "delayS": 300,
+          "lagS": 5.4,
+          "callback": {
+            "at": "2026-09-30T06:48:48.138Z",
+            "status": 200,
+            "outcome": "VERIFIED"
+          }
+        },
+        {
+          "delayS": 900,
+          "lagS": 7.9,
+          "callback": {
+            "at": "2026-09-30T06:58:52.082Z",
+            "status": 200,
+            "outcome": "VERIFIED"
+          }
+        },
+        {
+          "delayS": 1800,
+          "lagS": 4.7,
+          "callback": {
+            "at": "2026-09-30T07:13:50.866Z",
+            "status": 200,
+            "outcome": "VERIFIED"
+          }
+        }
+      ]
+    },
+    "poll-path-finalizes-within-backoff-cap": {
+      "pass": true,
+      "lagS": [
+        {
+          "delayS": 60,
+          "lagS": 49.9,
+          "pgQueries": 3
+        },
+        {
+          "delayS": 300,
+          "lagS": 171.3,
+          "pgQueries": 5
+        },
+        {
+          "delayS": 900,
+          "lagS": 52.6,
+          "pgQueries": 6
+        },
+        {
+          "delayS": 1800,
+          "lagS": 118.6,
+          "pgQueries": 7
+        }
+      ]
+    },
+    "late-callback-is-idempotent": {
+      "pass": true,
+      "late": [
+        {
+          "mode": "callback",
+          "delayS": 60,
+          "status": 200,
+          "outcome": "DUPLICATE",
+          "submissions": 1
+        },
+        {
+          "mode": "callback",
+          "delayS": 300,
+          "status": 200,
+          "outcome": "DUPLICATE",
+          "submissions": 1
+        },
+        {
+          "mode": "callback",
+          "delayS": 900,
+          "status": 200,
+          "outcome": "DUPLICATE",
+          "submissions": 1
+        },
+        {
+          "mode": "callback",
+          "delayS": 1800,
+          "status": 200,
+          "outcome": "DUPLICATE",
+          "submissions": 1
+        },
+        {
+          "mode": "poll",
+          "delayS": 60,
+          "status": 200,
+          "outcome": "VERIFIED",
+          "submissions": 1
+        },
+        {
+          "mode": "poll",
+          "delayS": 300,
+          "status": 200,
+          "outcome": "VERIFIED",
+          "submissions": 1
+        },
+        {
+          "mode": "poll",
+          "delayS": 900,
+          "status": 200,
+          "outcome": "VERIFIED",
+          "submissions": 1
+        },
+        {
+          "mode": "poll",
+          "delayS": 1800,
+          "status": 200,
+          "outcome": "VERIFIED",
+          "submissions": 1
+        }
+      ]
+    },
+    "pg-queries-bounded": {
+      "pass": true,
+      "verifies": [
+        {
+          "mode": "callback",
+          "delayS": 60,
+          "verifies": 3
+        },
+        {
+          "mode": "callback",
+          "delayS": 300,
+          "verifies": 5
+        },
+        {
+          "mode": "callback",
+          "delayS": 900,
+          "verifies": 6
+        },
+        {
+          "mode": "callback",
+          "delayS": 1800,
+          "verifies": 7
+        },
+        {
+          "mode": "poll",
+          "delayS": 60,
+          "verifies": 3
+        },
+        {
+          "mode": "poll",
+          "delayS": 300,
+          "verifies": 5
+        },
+        {
+          "mode": "poll",
+          "delayS": 900,
+          "verifies": 6
+        },
+        {
+          "mode": "poll",
+          "delayS": 1800,
+          "verifies": 7
+        }
+      ]
+    }
+  },
+  "baseline": {
+    "reconciliationExceptions": 28
+  },
+  "reconciliationExceptionsCreated": 0,
+  "finishedAt": "2026-09-30T07:15:58.448Z",
+  "passed": true
+}

@@ -1,0 +1,858 @@
+{
+  "test": "T-M4-39",
+  "scenario": "API 노드 계획 정비(drain)·강제 정지 중 연속 조회·자동저장",
+  "environment": "local-kind-univ-m (제어 1 + 워커 2, zone 2개, 축소 환경)",
+  "limitations": [
+    "kind 노드는 Docker 컨테이너다. 노드 강제 정지는 docker stop 으로 흉내 냈다.",
+    "노드가 NotReady 로 판정되기까지(kube-controller-manager node-monitor-grace-period) Service 가 죽은 Pod 로 요청을 보낸다 — kind 기본값을 그대로 썼다.",
+    "Edge/Ingress 의 재시도·능동 헬스체크는 없다. 요청은 NodePort(kube-proxy) 로 바로 간다."
+  ],
+  "startedAt": "2026-09-30T14:44:17.770Z",
+  "phases": {
+    "baseline": {
+      "failureBySeconds": {
+        "0s": "6/81"
+      },
+      "requests": 375,
+      "firstAttemptFailures": 6,
+      "userVisibleFailures": 0,
+      "rawFailureWindowSeconds": 3.8,
+      "otherErrors": 0,
+      "otherByStatus": {},
+      "firstFailureErrors": {
+        "timeout": 6
+      },
+      "firstFailureFromSeconds": 0.9,
+      "lastFailureFromSeconds": 4.6
+    },
+    "drain": {
+      "failureBySeconds": {},
+      "requests": 797,
+      "firstAttemptFailures": 0,
+      "userVisibleFailures": 0,
+      "rawFailureWindowSeconds": 0,
+      "otherErrors": 0,
+      "otherByStatus": {},
+      "firstFailureErrors": {},
+      "firstFailureFromSeconds": null,
+      "lastFailureFromSeconds": null
+    },
+    "rebalance": {
+      "failureBySeconds": {
+        "0s": "2/97",
+        "5s": "18/37",
+        "10s": "17/70",
+        "15s": "5/35",
+        "20s": "16/46",
+        "35s": "2/98",
+        "40s": "1/89",
+        "45s": "17/73",
+        "50s": "1/56",
+        "100s": "17/57",
+        "105s": "10/28",
+        "130s": "1/100"
+      },
+      "requests": 2939,
+      "firstAttemptFailures": 107,
+      "userVisibleFailures": 10,
+      "rawFailureWindowSeconds": 125.7,
+      "otherErrors": 0,
+      "otherByStatus": {},
+      "firstFailureErrors": {
+        "timeout": 105,
+        "ETIMEDOUT": 2
+      },
+      "firstFailureFromSeconds": 4.9,
+      "lastFailureFromSeconds": 130.6
+    },
+    "hard-failure": {
+      "failureBySeconds": {
+        "0s": "39/74",
+        "5s": "17/46",
+        "10s": "31/59",
+        "15s": "28/58",
+        "20s": "20/65",
+        "30s": "10/95",
+        "35s": "1/100",
+        "90s": "2/100",
+        "95s": "12/94"
+      },
+      "requests": 2813,
+      "firstAttemptFailures": 160,
+      "userVisibleFailures": 33,
+      "rawFailureWindowSeconds": 98.3,
+      "otherErrors": 0,
+      "otherByStatus": {},
+      "firstFailureErrors": {
+        "ETIMEDOUT": 151,
+        "ECONNREFUSED": 8,
+        "ECONNRESET": 1
+      },
+      "firstFailureFromSeconds": 0.6,
+      "lastFailureFromSeconds": 98.9
+    },
+    "recovery": {
+      "failureBySeconds": {},
+      "requests": 435,
+      "firstAttemptFailures": 0,
+      "userVisibleFailures": 0,
+      "rawFailureWindowSeconds": 0,
+      "otherErrors": 0,
+      "otherByStatus": {},
+      "firstFailureErrors": {},
+      "firstFailureFromSeconds": null,
+      "lastFailureFromSeconds": null
+    }
+  },
+  "checks": {
+    "API 가 zone 두 곳에 나뉘어 있다": {
+      "pass": true,
+      "api": [
+        {
+          "name": "univ-a-api-6b758bbd4d-8c52x",
+          "node": "univ-m-worker",
+          "ready": true
+        },
+        {
+          "name": "univ-a-api-6b758bbd4d-qm8fl",
+          "node": "univ-m-worker2",
+          "ready": true
+        }
+      ],
+      "pgbouncer": [
+        "univ-m-worker2",
+        "univ-m-worker"
+      ]
+    },
+    "정비 뒤 API·PgBouncer 가 다시 두 zone 에 나뉜다": {
+      "pass": true,
+      "api": 2,
+      "pgbouncer": 2
+    },
+    "측정 도구의 이벤트 루프가 막히지 않았다 (최대 지연 < 500ms)": {
+      "pass": true,
+      "setup": 73,
+      "baseline": 48,
+      "drain": 151,
+      "rebalance": 359,
+      "hard-failure": 298,
+      "recovery": 45
+    },
+    "평시 실패 0": {
+      "pass": false,
+      "failureBySeconds": {
+        "0s": "6/81"
+      },
+      "requests": 375,
+      "firstAttemptFailures": 6,
+      "userVisibleFailures": 0,
+      "rawFailureWindowSeconds": 3.8,
+      "otherErrors": 0,
+      "otherByStatus": {},
+      "firstFailureErrors": {
+        "timeout": 6
+      },
+      "firstFailureFromSeconds": 0.9,
+      "lastFailureFromSeconds": 4.6
+    },
+    "계획 정비(drain) 무중단 — 첫 시도부터 실패 0": {
+      "pass": true,
+      "failureBySeconds": {},
+      "requests": 797,
+      "firstAttemptFailures": 0,
+      "userVisibleFailures": 0,
+      "rawFailureWindowSeconds": 0,
+      "otherErrors": 0,
+      "otherByStatus": {},
+      "firstFailureErrors": {},
+      "firstFailureFromSeconds": null,
+      "lastFailureFromSeconds": null
+    },
+    "노드 강제 정지 — 사용자 체감 실패 0 (재시도 3회 안에 성공)": {
+      "pass": false,
+      "failureBySeconds": {
+        "0s": "39/74",
+        "5s": "17/46",
+        "10s": "31/59",
+        "15s": "28/58",
+        "20s": "20/65",
+        "30s": "10/95",
+        "35s": "1/100",
+        "90s": "2/100",
+        "95s": "12/94"
+      },
+      "requests": 2813,
+      "firstAttemptFailures": 160,
+      "userVisibleFailures": 33,
+      "rawFailureWindowSeconds": 98.3,
+      "otherErrors": 0,
+      "otherByStatus": {},
+      "firstFailureErrors": {
+        "ETIMEDOUT": 151,
+        "ECONNREFUSED": 8,
+        "ECONNRESET": 1
+      },
+      "firstFailureFromSeconds": 0.6,
+      "lastFailureFromSeconds": 98.9
+    },
+    "노드 복구 뒤 실패 0": {
+      "pass": true,
+      "failureBySeconds": {},
+      "requests": 435,
+      "firstAttemptFailures": 0,
+      "userVisibleFailures": 0,
+      "rawFailureWindowSeconds": 0,
+      "otherErrors": 0,
+      "otherByStatus": {},
+      "firstFailureErrors": {},
+      "firstFailureFromSeconds": null,
+      "lastFailureFromSeconds": null
+    },
+    "재분산(rollout restart) 중 사용자 체감 실패 0": {
+      "pass": false,
+      "failureBySeconds": {
+        "0s": "2/97",
+        "5s": "18/37",
+        "10s": "17/70",
+        "15s": "5/35",
+        "20s": "16/46",
+        "35s": "2/98",
+        "40s": "1/89",
+        "45s": "17/73",
+        "50s": "1/56",
+        "100s": "17/57",
+        "105s": "10/28",
+        "130s": "1/100"
+      },
+      "requests": 2939,
+      "firstAttemptFailures": 107,
+      "userVisibleFailures": 10,
+      "rawFailureWindowSeconds": 125.7,
+      "otherErrors": 0,
+      "otherByStatus": {},
+      "firstFailureErrors": {
+        "timeout": 105,
+        "ETIMEDOUT": 2
+      },
+      "firstFailureFromSeconds": 4.9,
+      "lastFailureFromSeconds": 130.6
+    },
+    "죽은 zone 을 빼고 대체 API Pod 를 배치한다 (nodeTaintsPolicy Honor)": {
+      "pass": true,
+      "scheduled": true,
+      "afterSeconds": 15,
+      "api": [
+        {
+          "name": "univ-a-api-645d7c599b-jhxfs",
+          "node": "univ-m-worker2",
+          "ready": true
+        },
+        {
+          "name": "univ-a-api-645d7c599b-x9pqh",
+          "node": "univ-m-worker2",
+          "ready": true
+        }
+      ]
+    }
+  },
+  "timeline": [
+    {
+      "at": "2026-09-30T14:44:22.417Z",
+      "event": "배치",
+      "api": [
+        {
+          "name": "univ-a-api-6b758bbd4d-8c52x",
+          "node": "univ-m-worker",
+          "ready": true
+        },
+        {
+          "name": "univ-a-api-6b758bbd4d-qm8fl",
+          "node": "univ-m-worker2",
+          "ready": true
+        }
+      ],
+      "pgbouncer": [
+        "univ-m-worker2",
+        "univ-m-worker"
+      ]
+    },
+    {
+      "at": "2026-09-30T14:44:39.844Z",
+      "event": "평시 시작"
+    },
+    {
+      "at": "2026-09-30T14:45:00.636Z",
+      "event": "drain 시작",
+      "node": "univ-m-worker"
+    },
+    {
+      "at": "2026-09-30T14:45:16.660Z",
+      "event": "drain 끝",
+      "api": [
+        {
+          "name": "univ-a-api-6b758bbd4d-47r5n",
+          "node": "univ-m-worker2",
+          "ready": false
+        },
+        {
+          "name": "univ-a-api-6b758bbd4d-qm8fl",
+          "node": "univ-m-worker2",
+          "ready": true
+        }
+      ]
+    },
+    {
+      "at": "2026-09-30T14:45:39.378Z",
+      "event": "uncordon·API 2개 복구",
+      "api": [
+        {
+          "name": "univ-a-api-6b758bbd4d-47r5n",
+          "node": "univ-m-worker2",
+          "ready": true
+        },
+        {
+          "name": "univ-a-api-6b758bbd4d-qm8fl",
+          "node": "univ-m-worker2",
+          "ready": true
+        }
+      ]
+    },
+    {
+      "at": "2026-09-30T14:45:41.965Z",
+      "event": "정비 뒤 배치",
+      "zones": {
+        "api": 1,
+        "pgbouncer": 1
+      },
+      "api": [
+        {
+          "name": "univ-a-api-6b758bbd4d-47r5n",
+          "node": "univ-m-worker2",
+          "ready": true
+        },
+        {
+          "name": "univ-a-api-6b758bbd4d-qm8fl",
+          "node": "univ-m-worker2",
+          "ready": true
+        }
+      ]
+    },
+    {
+      "at": "2026-09-30T14:48:19.921Z",
+      "event": "재분산 뒤 배치",
+      "zones": {
+        "api": 2,
+        "pgbouncer": 2
+      },
+      "api": [
+        {
+          "name": "univ-a-api-645d7c599b-q7kkb",
+          "node": "univ-m-worker",
+          "ready": true
+        },
+        {
+          "name": "univ-a-api-645d7c599b-x9pqh",
+          "node": "univ-m-worker2",
+          "ready": true
+        }
+      ]
+    },
+    {
+      "at": "2026-09-30T14:48:38.561Z",
+      "event": "노드 강제 정지",
+      "node": "univ-m-worker"
+    },
+    {
+      "at": "2026-09-30T14:49:03.379Z",
+      "event": "노드 NotReady 판정",
+      "afterSeconds": 25
+    },
+    {
+      "at": "2026-09-30T14:49:15.811Z",
+      "event": "죽은 노드의 API Pod 축출(당김)"
+    },
+    {
+      "at": "2026-09-30T14:49:30.460Z",
+      "event": "대체 API Pod Ready (살아 있는 zone)",
+      "scheduled": true,
+      "afterSeconds": 15,
+      "api": [
+        {
+          "name": "univ-a-api-645d7c599b-jhxfs",
+          "node": "univ-m-worker2",
+          "ready": true
+        },
+        {
+          "name": "univ-a-api-645d7c599b-x9pqh",
+          "node": "univ-m-worker2",
+          "ready": true
+        }
+      ]
+    },
+    {
+      "at": "2026-09-30T14:51:13.999Z",
+      "event": "노드 재기동",
+      "node": "univ-m-worker"
+    },
+    {
+      "at": "2026-09-30T14:51:15.459Z",
+      "event": "API 2개 복구",
+      "api": [
+        {
+          "name": "univ-a-api-645d7c599b-jhxfs",
+          "node": "univ-m-worker2",
+          "ready": true
+        },
+        {
+          "name": "univ-a-api-645d7c599b-x9pqh",
+          "node": "univ-m-worker2",
+          "ready": true
+        }
+      ]
+    }
+  ],
+  "placement": {
+    "api": [
+      {
+        "name": "univ-a-api-6b758bbd4d-8c52x",
+        "node": "univ-m-worker",
+        "ready": true
+      },
+      {
+        "name": "univ-a-api-6b758bbd4d-qm8fl",
+        "node": "univ-m-worker2",
+        "ready": true
+      }
+    ],
+    "pgbouncer": [
+      "univ-m-worker2",
+      "univ-m-worker"
+    ]
+  },
+  "afterDrain": {
+    "api": 1,
+    "pgbouncer": 1
+  },
+  "afterRebalance": {
+    "api": 2,
+    "pgbouncer": 2
+  },
+  "beforeFailure": {
+    "api": [
+      {
+        "name": "univ-a-api-645d7c599b-q7kkb",
+        "node": "univ-m-worker",
+        "ready": true
+      },
+      {
+        "name": "univ-a-api-645d7c599b-x9pqh",
+        "node": "univ-m-worker2",
+        "ready": true
+      }
+    ],
+    "pgbouncer": [
+      {
+        "name": "univ-a-pgbouncer-7f48c998cb-ccblt",
+        "node": "univ-m-worker",
+        "ready": true
+      },
+      {
+        "name": "univ-a-pgbouncer-7f48c998cb-pvjck",
+        "node": "univ-m-worker2",
+        "ready": true
+      }
+    ]
+  },
+  "survivor": {
+    "name": "univ-a-api-645d7c599b-x9pqh",
+    "ip": "127.0.0.1",
+    "prober": "univ-a-api-645d7c599b-x9pqh"
+  },
+  "dbSamples": [
+    {
+      "afterSeconds": 2,
+      "sessions": [
+        {
+          "state": "idle",
+          "wait": "Client",
+          "n": 6,
+          "oldestXactS": 0
+        }
+      ]
+    },
+    {
+      "afterSeconds": 15,
+      "sessions": [
+        {
+          "state": "idle",
+          "wait": "Client",
+          "n": 6,
+          "oldestXactS": 0
+        }
+      ]
+    },
+    {
+      "afterSeconds": 26,
+      "sessions": [
+        {
+          "state": "idle",
+          "wait": "Client",
+          "n": 5,
+          "oldestXactS": 0
+        },
+        {
+          "state": "idle in transaction",
+          "wait": "Client",
+          "n": 1,
+          "oldestXactS": 0
+        }
+      ]
+    },
+    {
+      "afterSeconds": 39,
+      "sessions": [
+        {
+          "state": "idle",
+          "wait": "Client",
+          "n": 5,
+          "oldestXactS": 0
+        },
+        {
+          "state": "idle in transaction",
+          "wait": "Client",
+          "n": 1,
+          "oldestXactS": 0
+        }
+      ]
+    },
+    {
+      "afterSeconds": 49,
+      "sessions": [
+        {
+          "state": "idle",
+          "wait": "Client",
+          "n": 5,
+          "oldestXactS": 0
+        },
+        {
+          "state": "idle in transaction",
+          "wait": "Client",
+          "n": 1,
+          "oldestXactS": 0
+        }
+      ]
+    },
+    {
+      "afterSeconds": 58,
+      "sessions": [
+        {
+          "state": "idle",
+          "wait": "Client",
+          "n": 8,
+          "oldestXactS": 0
+        }
+      ]
+    },
+    {
+      "afterSeconds": 67,
+      "sessions": [
+        {
+          "state": "idle",
+          "wait": "Client",
+          "n": 8,
+          "oldestXactS": 0
+        }
+      ]
+    },
+    {
+      "afterSeconds": 75,
+      "sessions": [
+        {
+          "state": "idle",
+          "wait": "Client",
+          "n": 8,
+          "oldestXactS": 0
+        }
+      ]
+    },
+    {
+      "afterSeconds": 84,
+      "sessions": [
+        {
+          "state": "idle",
+          "wait": "Client",
+          "n": 7,
+          "oldestXactS": 0
+        },
+        {
+          "state": "idle in transaction",
+          "wait": "Client",
+          "n": 1,
+          "oldestXactS": 0
+        }
+      ]
+    },
+    {
+      "afterSeconds": 92,
+      "sessions": [
+        {
+          "state": "idle",
+          "wait": "Client",
+          "n": 8,
+          "oldestXactS": 0
+        }
+      ]
+    },
+    {
+      "afterSeconds": 101,
+      "sessions": [
+        {
+          "state": "active",
+          "wait": "IO",
+          "n": 1,
+          "oldestXactS": 0
+        },
+        {
+          "state": "idle",
+          "wait": "Client",
+          "n": 4,
+          "oldestXactS": 0
+        },
+        {
+          "state": "idle",
+          "wait": "-",
+          "n": 2,
+          "oldestXactS": 0
+        },
+        {
+          "state": "idle in transaction",
+          "wait": "Client",
+          "n": 1,
+          "oldestXactS": 0
+        }
+      ]
+    },
+    {
+      "afterSeconds": 110,
+      "sessions": [
+        {
+          "state": "active",
+          "wait": "IO",
+          "n": 1,
+          "oldestXactS": 0
+        },
+        {
+          "state": "idle",
+          "wait": "Client",
+          "n": 6,
+          "oldestXactS": 0
+        },
+        {
+          "state": "idle in transaction",
+          "wait": "Client",
+          "n": 1,
+          "oldestXactS": 0
+        }
+      ]
+    },
+    {
+      "afterSeconds": 119,
+      "sessions": [
+        {
+          "state": "idle",
+          "wait": "Client",
+          "n": 8,
+          "oldestXactS": 0
+        }
+      ]
+    },
+    {
+      "afterSeconds": 129,
+      "sessions": [
+        {
+          "state": "idle",
+          "wait": "Client",
+          "n": 7,
+          "oldestXactS": 0
+        },
+        {
+          "state": "idle in transaction",
+          "wait": "Client",
+          "n": 1,
+          "oldestXactS": 0
+        }
+      ]
+    },
+    {
+      "afterSeconds": 139,
+      "sessions": [
+        {
+          "state": "idle",
+          "wait": "Client",
+          "n": 8,
+          "oldestXactS": 0
+        }
+      ]
+    },
+    {
+      "afterSeconds": 147,
+      "sessions": [
+        {
+          "state": "idle",
+          "wait": "Client",
+          "n": 7,
+          "oldestXactS": 0
+        },
+        {
+          "state": "idle in transaction",
+          "wait": "Client",
+          "n": 1,
+          "oldestXactS": 0
+        }
+      ]
+    }
+  ],
+  "survivorProbes": [
+    {
+      "afterSeconds": 8,
+      "probe": "200/591 200/86",
+      "host": "200/375ms",
+      "nodePort": "ERR/000/3.040542",
+      "podNet": "200/0.003043"
+    },
+    {
+      "afterSeconds": 19,
+      "probe": "200/1266 200/98",
+      "host": "200/114ms",
+      "nodePort": "200/0.003715",
+      "podNet": "200/0.036833"
+    },
+    {
+      "afterSeconds": 30,
+      "probe": "200/1332 200/302",
+      "host": "200/89ms",
+      "nodePort": "200/0.006615",
+      "podNet": "200/0.003344"
+    },
+    {
+      "afterSeconds": 42,
+      "probe": "200/738 200/116",
+      "host": "200/104ms",
+      "nodePort": "200/0.053685",
+      "podNet": "200/0.003935"
+    },
+    {
+      "afterSeconds": 51,
+      "probe": "200/443 200/27",
+      "host": "200/115ms",
+      "nodePort": "200/0.002577",
+      "podNet": "200/0.002247"
+    },
+    {
+      "afterSeconds": 61,
+      "probe": "200/330 200/68",
+      "host": "200/69ms",
+      "nodePort": "200/0.008459",
+      "podNet": "200/0.003699"
+    },
+    {
+      "afterSeconds": 69,
+      "probe": "200/256 200/21",
+      "host": "200/74ms",
+      "nodePort": "200/0.002110",
+      "podNet": "200/0.003194"
+    },
+    {
+      "afterSeconds": 77,
+      "probe": "200/215 200/17",
+      "host": "200/28ms",
+      "nodePort": "200/0.002939",
+      "podNet": "200/0.005039"
+    },
+    {
+      "afterSeconds": 86,
+      "probe": "200/490 200/141",
+      "host": "200/81ms",
+      "nodePort": "200/0.003562",
+      "podNet": "200/0.004700"
+    },
+    {
+      "afterSeconds": 95,
+      "probe": "200/496 200/80",
+      "host": "200/66ms",
+      "nodePort": "200/0.028477",
+      "podNet": "200/0.060270"
+    },
+    {
+      "afterSeconds": 103,
+      "probe": "200/420 200/96",
+      "host": "200/90ms",
+      "nodePort": "200/0.003592",
+      "podNet": "200/0.003095"
+    },
+    {
+      "afterSeconds": 112,
+      "probe": "200/422 200/37",
+      "host": "200/106ms",
+      "nodePort": "200/0.003442",
+      "podNet": "200/0.006501"
+    },
+    {
+      "afterSeconds": 121,
+      "probe": "200/423 200/21",
+      "host": "200/122ms",
+      "nodePort": "200/0.006185",
+      "podNet": "200/0.002335"
+    },
+    {
+      "afterSeconds": 133,
+      "probe": "200/565 200/87",
+      "host": "200/99ms",
+      "nodePort": "200/0.010524",
+      "podNet": "200/0.008283"
+    },
+    {
+      "afterSeconds": 141,
+      "probe": "200/389 200/62",
+      "host": "200/100ms",
+      "nodePort": "200/0.004345",
+      "podNet": "200/0.006988"
+    },
+    {
+      "afterSeconds": 149,
+      "probe": "200/235 200/69",
+      "host": "200/34ms",
+      "nodePort": "200/0.003074",
+      "podNet": "200/0.005247"
+    }
+  ],
+  "replacement": {
+    "scheduled": true,
+    "afterSeconds": 15,
+    "api": [
+      {
+        "name": "univ-a-api-645d7c599b-jhxfs",
+        "node": "univ-m-worker2",
+        "ready": true
+      },
+      {
+        "name": "univ-a-api-645d7c599b-x9pqh",
+        "node": "univ-m-worker2",
+        "ready": true
+      }
+    ]
+  },
+  "nodeTaintsPolicy": "Honor",
+  "eventLoopMaxLagMs": {
+    "setup": 73,
+    "baseline": 48,
+    "drain": 151,
+    "rebalance": 359,
+    "hard-failure": 298,
+    "recovery": 45
+  },
+  "nodeNotReadyAfterSeconds": 25,
+  "finishedAt": "2026-09-30T15:09:11.203Z",
+  "pass": false,
+  "note": "비교: 클러스터 안 부하, PgBouncer trafficDistribution PreferSameZone 켬 — 노드 정지 첫 시도 실패 5.7%·체감 33건, rolling restart 체감 실패 10건 → 기본값에서 뺐다"
+}

@@ -9,8 +9,9 @@
 //   ① 평시 → ② API 가 있는 워커 drain(계획 정비) → uncordon → ③ 워커 컨테이너 강제 정지(노드 장애) → 재기동
 // 각 요청은 브라우저 자동저장처럼 같은 Idempotency-Key 로 1초 간격 최대 3번 시도한다.
 //   원시 실패: 첫 시도 실패 / 사용자 체감 실패: 세 번 모두 실패
-import { execFileSync } from 'node:child_process';
-import { request as httpRequest } from 'node:http';
+import { execFile, execFileSync, spawn } from 'node:child_process';
+import { createInterface } from 'node:readline';
+import { promisify } from 'node:util';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
@@ -45,89 +46,40 @@ const mark = (event, detail = {}) => {
   console.log(`· ${event} ${JSON.stringify(detail)}`);
 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const kubectl = (...args) => execFileSync('kubectl', ['--context', CONTEXT, '-n', NS, ...args], { encoding: 'utf8', timeout: 600_000 }).trim();
-const kubectlAll = (...args) => execFileSync('kubectl', ['--context', CONTEXT, ...args], { encoding: 'utf8', timeout: 600_000 }).trim();
+// 부하가 도는 동안 kubectl·docker 를 동기(execFileSync)로 부르면 이 프로세스의 이벤트 루프가 멈춘다.
+// 그 사이 요청 20개의 2초 타이머가 한꺼번에 끝나 "전원 timeout" 으로 잘못 센다 — 2026-09-30 실행에서 실제로 그랬다
+// (서버 쪽에는 오류가 하나도 없었다). 그래서 전부 비동기로 부르고, 이벤트 루프 지연을 따로 잰다.
+const run = promisify(execFile);
+const cmd = async (program, args) => (await run(program, args, { encoding: 'utf8', timeout: 600_000, maxBuffer: 64 * 1024 * 1024 })).stdout.trim();
+const kubectl = (...args) => cmd('kubectl', ['--context', CONTEXT, '-n', NS, ...args]);
+const kubectlAll = (...args) => cmd('kubectl', ['--context', CONTEXT, ...args]);
+const docker = (...args) => cmd('docker', args);
+const kubectlSync = (...args) => execFileSync('kubectl', ['--context', CONTEXT, ...args], { encoding: 'utf8', timeout: 60_000 }).trim();
 const sql = (statement) => execFileSync('docker', ['exec', '-i', 'wonseoro-dev-postgres-univ-a-1', 'psql', '-U', 'wonseoro', '-d', 'univ_a',
   '-qAt', '-v', 'ON_ERROR_STOP=1', '-c', `SET search_path TO kadmission,public; ${statement}`], { encoding: 'utf8' }).trim();
 
-/**
- * 요청마다 새 TCP 연결을 연다(agent: false). keep-alive 로 연결을 재사용하면 kube-proxy 가 연결 단위로만 나눠
- * 모든 요청이 한 Pod 로 몰리고, 다른 노드가 죽어도 트래픽에 닿지 않는다 — 앞선 실행에서 실제로 그랬다.
- */
-function attempt(identity, method, path, headers = {}, body, timeoutMs = 2_000) {
-  const payload = body === undefined ? undefined : JSON.stringify(body);
-  return new Promise((resolve) => {
-    const req = httpRequest(`${API}${path}`, {
-      method, agent: false, timeout: timeoutMs,
-      headers: { 'content-type': 'application/json', ...identity, ...headers, ...(payload ? { 'content-length': Buffer.byteLength(payload) } : {}) },
-    }, (res) => {
-      let text = '';
-      res.setEncoding('utf8');
-      res.on('data', (c) => { text += c; });
-      res.on('end', () => {
-        let json = null;
-        try { json = text ? JSON.parse(text) : null; } catch { /* 본문 없음 */ }
-        resolve({ status: res.statusCode ?? 0, json, etag: res.headers.etag ?? null });
-      });
-    });
-    req.on('timeout', () => req.destroy(new Error('timeout')));
-    req.on('error', (error) => resolve({ status: 0, error: error.message === 'timeout' ? 'timeout' : String(error.code ?? error.message) }));
-    if (payload) req.write(payload);
-    req.end();
-  });
-}
-const transient = (r) => r.status === 0 || r.status === 502 || r.status === 503 || r.status === 504;
-
-/** 같은 요청(같은 멱등키)을 1초 간격 최대 3번 */
-async function withRetry(fn) {
-  let first;
-  for (let i = 0; i < 3; i += 1) {
-    const r = await fn();
-    first ??= r;
-    if (!transient(r)) return { first, final: r, attempts: i + 1 };
-    await sleep(1_000);
-  }
-  return { first, final: { status: 0, error: 'gave-up' }, attempts: 3 };
-}
-
+// 부하(지원자 20명)는 kind Docker 네트워크 안의 컨테이너가 만든다 — tests/m4/helpers/load-users.mjs 머리말 참고.
+// 호스트 → Docker Desktop 포트 전달(localhost:18082)은 노드 컨테이너를 멈출 때 50초 넘게 막혔다. 그 경로로 잰 끊김은
+// 노드 장애가 아니라 로컬 도구의 한계였다(2026-09-30 구간별 측정). 이 스크립트는 kubectl·docker 로 조율만 한다.
+const LOADER_API = 'http://univ-m-control-plane:30081';
 let phase = 'setup';
-const phaseStart = {};
-const setPhase = (name) => { phase = name; phaseStart[name] = Date.now(); };
+const phaseStart = {}; // 부하 생성기 시계 기준 — 단계 변경을 받은 시각 (기록 시각과 같은 시계)
 const records = [];
-let running = true;
-
-async function user(identity) {
-  const id = { 'x-applicant-id': identity.applicantId, 'x-subject-token': identity.subjectToken };
-  // 준비 단계 — 시험 대상이 아니라 넉넉히 기다린다 (첫 요청은 느리다)
-  const created = await attempt(id, 'POST', '/api/v1/applications', { 'idempotency-key': `node-create-${randomUUID()}` },
-    { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT }, 30_000);
-  const appId = created.json?.id;
-  if (!appId) throw new Error(`원서 생성 실패 ${created.status}`);
-  let etag = (await attempt(id, 'GET', `/api/v1/applications/${appId}`, {}, undefined, 30_000)).etag;
-  let n = 0;
-  while (running) {
-    const started = Date.now();
-    const current = phase;
-    let r;
-    const isSave = n % 3 === 2;
-    if (!isSave) {
-      r = await withRetry(() => attempt(id, 'GET', `/api/v1/applications/${appId}`));
-      if (r.final.etag) etag = r.final.etag;
-    } else {
-      const key = `node-save-${randomUUID()}`;
-      r = await withRetry(() => attempt(id, 'PATCH', `/api/v1/applications/${appId}`,
-        { 'idempotency-key': key, 'if-match': etag, 'content-type': 'application/merge-patch+json' },
-        { fields: { highSchool: '노드 장애 시험 고등학교', graduationYear: 2026, selfIntro: `저장 ${n}` } }));
-      if (r.final.etag) etag = r.final.etag;
-      // 재시도가 이미 반영된 저장을 다시 보낸 경우 412 가 날 수 있다 — 최신 ETag 로 맞춘다
-      if (r.final.status === 412) etag = (await attempt(id, 'GET', `/api/v1/applications/${appId}`)).etag ?? etag;
-    }
-    records.push({ phase: current, at: started, kind: isSave ? 'save' : 'read',
-      firstOk: !transient(r.first), finalOk: !transient(r.final), finalStatus: r.final.status, finalCode: r.final.json?.code, attempts: r.attempts,
-      firstError: r.first.error ?? `${r.first.status} ${r.first.json?.code ?? ''}` });
-    n += 1;
-    await sleep(Math.max(0, 1_000 - (Date.now() - started)));
-  }
+let loader = null;
+const setPhase = (name) => { phase = name; loader?.stdin.write(`${name}\n`); };
+function startLoader(identities) {
+  const child = spawn('docker', ['run', '--rm', '-i', '--network', 'kind', '-e', `API=${LOADER_API}`,
+    '-e', `IDENTITIES=${JSON.stringify(identities)}`, '-v', `${process.cwd().replace(/\\/g, '/')}/tests/m4/helpers:/h:ro`,
+    'node:22-alpine', 'node', '/h/load-users.mjs'], { stdio: ['pipe', 'pipe', 'inherit'] });
+  const done = new Promise((resolve) => child.on('exit', resolve));
+  createInterface({ input: child.stdout }).on('line', (line) => {
+    try {
+      const m = JSON.parse(line);
+      if (m.phaseAt) phaseStart[m.phaseAt] = m.at;
+      else if (!m.done) records.push(m);
+    } catch { /* JSON 아닌 줄 */ }
+  });
+  return { stdin: child.stdin, done };
 }
 
 function summarize(name) {
@@ -141,18 +93,30 @@ function summarize(name) {
   const byError = {};
   for (const r of firstFail) byError[r.firstError] = (byError[r.firstError] ?? 0) + 1;
   const t0 = phaseStart[name] ?? rs[0]?.at ?? 0;
-  return { requests: rs.length, firstAttemptFailures: firstFail.length, userVisibleFailures: userFail.length,
+  // 5초 구간별 요청·첫 시도 실패 — 끊김 구간이 무엇에 묶이는지(노드 판정·엔드포인트·DB 연결) 보려고
+  const buckets = {};
+  for (const r of rs) {
+    const k = Math.floor((r.at - t0) / 5000) * 5;
+    buckets[k] ??= [0, 0];
+    buckets[k][0] += 1;
+    if (!r.firstOk) buckets[k][1] += 1;
+  }
+  const failureBySeconds = Object.fromEntries(Object.entries(buckets).filter(([, v]) => v[1] > 0).map(([k, v]) => [`${k}s`, `${v[1]}/${v[0]}`]));
+  return { failureBySeconds, requests: rs.length, firstAttemptFailures: firstFail.length, userVisibleFailures: userFail.length,
     rawFailureWindowSeconds: window, otherErrors: other.length, otherByStatus, firstFailureErrors: byError,
     firstFailureFromSeconds: firstFail.length ? Math.round((firstFail[0].at - t0) / 100) / 10 : null,
     lastFailureFromSeconds: firstFail.length ? Math.round((firstFail.at(-1).at - t0) / 100) / 10 : null };
 }
 
-const apiPods = () => JSON.parse(kubectl('get', 'pods', '-l', 'app=admission-api', '-o', 'json')).items
+// 종료 중인 Pod 는 빼고 센다 — rollout 직후 옛 Pod 가 아직 Ready 로 보여 분산을 잘못 판정한 적이 있다
+const podsOf = async (app) => JSON.parse(await kubectl('get', 'pods', '-l', `app=${app}`, '-o', 'json')).items
+  .filter((p) => !p.metadata.deletionTimestamp)
   .map((p) => ({ name: p.metadata.name, node: p.spec.nodeName, ready: p.status.containerStatuses?.[0]?.ready === true }));
+const apiPods = () => podsOf('admission-api');
 async function waitApiReady(count, timeoutMs = 600_000) {
   const until = Date.now() + timeoutMs;
   while (Date.now() < until) {
-    if (apiPods().filter((p) => p.ready).length >= count) return;
+    if ((await apiPods()).filter((p) => p.ready).length >= count) return;
     await sleep(3_000);
   }
   throw new Error('API Ready 대기 시간 초과');
@@ -166,59 +130,141 @@ const identities = Array.from({ length: USERS }, () => {
 sql(`INSERT INTO applicant (id, subject_token, pii_ciphertext, pii_key_version) VALUES ${
   identities.map((i) => `('${i.applicantId}','${i.subjectToken}','\\x00','v1')`).join(',')}`);
 // 지난 실행이 중간에 멈췄으면 워커가 cordon·정지 상태로 남아 있을 수 있다 — 되돌리고 시작한다
-for (const node of JSON.parse(kubectlAll('get', 'nodes', '-o', 'json')).items.map((n) => n.metadata.name)) {
-  if (node.includes('worker')) { execFileSync('docker', ['start', node]); kubectlAll('uncordon', node); }
+for (const node of JSON.parse(await kubectlAll('get', 'nodes', '-o', 'json')).items.map((n) => n.metadata.name)) {
+  if (node.includes('worker')) { await docker('start', node); await kubectlAll('uncordon', node); }
 }
 process.on('exit', () => {
   for (const node of ['univ-m-worker', 'univ-m-worker2']) {
-    try { execFileSync('docker', ['start', node]); kubectlAll('uncordon', node); } catch { /* 이미 정상 */ }
+    try { execFileSync('docker', ['start', node]); kubectlSync('uncordon', node); } catch { /* 이미 정상 */ }
   }
 });
 await waitApiReady(2);
-result.placement = { api: apiPods(), pgbouncer: JSON.parse(kubectl('get', 'pods', '-l', 'app=pgbouncer', '-o', 'json')).items.map((p) => p.spec.nodeName) };
+result.placement = { api: await apiPods(), pgbouncer: (await podsOf('pgbouncer')).map((p) => p.node) };
 mark('배치', result.placement);
 check('API 가 zone 두 곳에 나뉘어 있다', new Set(result.placement.api.map((p) => p.node)).size === 2, result.placement);
 
-const users = identities.map((i) => user(i));
-await sleep(5_000); // 준비(원서 생성)가 끝나고 평시를 잰다
+// 이벤트 루프 지연 — 이 값이 크면 실패가 서버가 아니라 측정 도구 탓일 수 있다
+const loopLag = {};
+let lastTick = Date.now();
+const lagTimer = setInterval(() => {
+  const now = Date.now();
+  loopLag[phase] = Math.max(loopLag[phase] ?? 0, now - lastTick - 100);
+  lastTick = now;
+}, 100);
+loader = startLoader(identities);
+// 준비(컨테이너 기동·원서 생성)가 끝나 모든 지원자가 한 번씩 요청할 때까지 기다린 뒤 평시를 잰다
+for (let i = 0; i < 60 && records.length < USERS; i++) await sleep(1_000);
+if (records.length < USERS) throw new Error(`부하 생성기가 시작되지 않았다 (기록 ${records.length}건)`);
 setPhase('baseline');
 mark('평시 시작');
 await sleep(20_000);
 
 // ── 계획 정비: drain ─────────────────────────────────────
-const drainNode = apiPods()[0].node;
+const drainNode = (await apiPods())[0].node;
 setPhase('drain');
 mark('drain 시작', { node: drainNode });
-kubectlAll('drain', drainNode, '--ignore-daemonsets', '--delete-emptydir-data', '--timeout=300s');
-mark('drain 끝', { api: apiPods() });
+await kubectlAll('drain', drainNode, '--ignore-daemonsets', '--delete-emptydir-data', '--timeout=300s');
+mark('drain 끝', { api: await apiPods() });
 await sleep(20_000);
-kubectlAll('uncordon', drainNode);
+await kubectlAll('uncordon', drainNode);
 await waitApiReady(2);
-mark('uncordon·API 2개 복구', { api: apiPods() });
+mark('uncordon·API 2개 복구', { api: await apiPods() });
+
+// ── 정비 뒤 재분산 ──────────────────────────────────────
+// 쿠버네티스는 uncordon 뒤 Pod 를 다시 나누지 않는다. nodeTaintsPolicy Honor 면 drain 동안 cordon 된 zone 이
+// 분산 계산에서 빠져 API·PgBouncer 가 한 zone 에 모인다 — 그대로 두면 다음 노드 장애가 전체 장애가 된다
+// (2026-09-30 실측, ADR-0008). 운영 절차: uncordon 뒤 rollout restart(또는 descheduler)로 다시 나눈다.
+const zonesNow = async () => ({
+  api: new Set((await apiPods()).filter((p) => p.ready).map((p) => p.node)).size,
+  pgbouncer: new Set((await podsOf('pgbouncer')).filter((p) => p.ready).map((p) => p.node)).size,
+});
+const settle = async () => { // 옛 Pod 가 다 사라질 때까지
+  for (let i = 0; i < 60; i++) {
+    const terminating = JSON.parse(await kubectl('get', 'pods', '-o', 'json')).items.filter((p) => p.metadata.deletionTimestamp).length;
+    if (terminating === 0) return;
+    await sleep(2_000);
+  }
+};
+result.afterDrain = await zonesNow();
+mark('정비 뒤 배치', { zones: result.afterDrain, api: await apiPods() });
+setPhase('rebalance');
+if (result.afterDrain.api < 2 || result.afterDrain.pgbouncer < 2) {
+  for (const app of ['admission-api', 'pgbouncer']) {
+    const deploy = await kubectl('get', 'deploy', '-l', `app=${app}`, '-o', 'name');
+    await kubectl('rollout', 'restart', deploy);
+    await kubectl('rollout', 'status', deploy, '--timeout=300s');
+  }
+  await settle();
+  await waitApiReady(2);
+}
+result.afterRebalance = await zonesNow();
+mark('재분산 뒤 배치', { zones: result.afterRebalance, api: await apiPods() });
+check('정비 뒤 API·PgBouncer 가 다시 두 zone 에 나뉜다', result.afterRebalance.api === 2 && result.afterRebalance.pgbouncer === 2, result.afterRebalance);
 await sleep(15_000);
 
 // ── 노드 장애: 강제 정지 ────────────────────────────────
-const failNode = apiPods()[0].node;
+result.beforeFailure = { api: await apiPods(), pgbouncer: await podsOf('pgbouncer') };
+const failNode = result.beforeFailure.api[0].node;
 setPhase('hard-failure');
-execFileSync('docker', ['stop', '-t', '0', failNode]);
+await docker('stop', '-t', '0', failNode);
 const stoppedAt = Date.now();
 mark('노드 강제 정지', { node: failNode });
 let notReadyAt = null;
 let evictedAt = null;
+// 살아남는 API Pod — 그 안에서 자기 자신(127.0.0.1)을 찌른다. 네트워크 정책·kube-proxy 를 모두 건너뛴다
+const survivorPod = result.beforeFailure.api.find((p) => p.node !== failNode);
+const survivor = survivorPod ? { name: survivorPod.name, ip: '127.0.0.1', prober: survivorPod.name } : null;
+const survivorIp = survivorPod ? JSON.parse(await kubectl('get', 'pod', survivorPod.name, '-o', 'json')).status.podIP : null;
+// 바깥 경로를 구간별로 잰다: ① 호스트 → Docker Desktop 포트 전달(18082) → NodePort
+// ② 제어 노드 안에서 NodePort(kube-proxy) ③ 제어 노드 → 살아남은 Pod IP(노드 간 Pod 네트워크)
+const curlIn = (url) => docker('exec', 'univ-m-control-plane', 'curl', '-s', '-o', '/dev/null', '-w', '%{http_code}/%{time_total}', '--max-time', '3', url)
+  .catch((e) => `ERR/${String(e.stdout ?? '').trim() || 'timeout'}`);
+const hostProbe = async () => {
+  const s = Date.now();
+  try { const r = await fetch(`${API}/healthz`, { signal: AbortSignal.timeout(3000) }); return `${r.status}/${Date.now() - s}ms`; } catch { return `ERR/${Date.now() - s}ms`; }
+};
+result.survivor = survivor;
 while (Date.now() - stoppedAt < 150_000) {
-  const ready = kubectlAll('get', 'node', failNode, '-o', 'jsonpath={.status.conditions[?(@.type=="Ready")].status}');
+  const ready = await kubectlAll('get', 'node', failNode, '-o', 'jsonpath={.status.conditions[?(@.type=="Ready")].status}');
   if (!notReadyAt && ready !== 'True') { notReadyAt = Date.now(); mark('노드 NotReady 판정', { afterSeconds: Math.round((notReadyAt - stoppedAt) / 1000) }); }
   // 쿠버네티스는 NotReady 뒤 기본 300초가 지나야 죽은 노드의 Pod 를 내쫓는다. 그 시점을 당겨 대체 Pod 가
   // 살아 있는 zone 에 놓이는지 본다 — zone 이 2개이고 DoNotSchedule 이면 nodeTaintsPolicy 에 달렸다 (D-52)
   if (notReadyAt && !evictedAt && Date.now() - notReadyAt > 10_000) {
-    for (const p of apiPods().filter((x) => x.node === failNode)) {
-      try { kubectl('delete', 'pod', p.name, '--force', '--grace-period=0'); } catch { /* 이미 없다 */ }
+    for (const p of (await apiPods()).filter((x) => x.node === failNode)) {
+      try { await kubectl('delete', 'pod', p.name, '--force', '--grace-period=0'); } catch { /* 이미 없다 */ }
     }
     evictedAt = Date.now();
     mark('죽은 노드의 API Pod 축출(당김)', {});
   }
+  // DB 쪽에서 무엇이 매달려 있는가 — 죽은 노드의 PgBouncer 가 남긴 트랜잭션·잠금 대기 (ADR-0008)
+  try {
+    const rows = await docker('exec', '-i', 'wonseoro-dev-postgres-univ-a-1', 'psql', '-U', 'wonseoro', '-d', 'univ_a', '-qAt', '-c',
+      `SELECT coalesce(state,'-') || '|' || coalesce(wait_event_type,'-') || '|' || count(*) || '|' ||
+              coalesce(extract(epoch FROM max(now() - xact_start))::int, 0)
+         FROM pg_stat_activity WHERE datname = 'univ_a' AND pid <> pg_backend_pid() AND backend_type = 'client backend'
+        GROUP BY state, wait_event_type`);
+    (result.dbSamples ??= []).push({ afterSeconds: Math.round((Date.now() - stoppedAt) / 1000),
+      sessions: rows.split('\n').filter(Boolean).map((l) => { const [state, wait, n, oldestXactS] = l.split('|'); return { state, wait, n: Number(n), oldestXactS: Number(oldestXactS) }; }) });
+  } catch { /* 표본 실패는 시험을 멈추지 않는다 */ }
+  // 살아남은 API Pod 를 클러스터 안에서 직접 찌른다 — NodePort·kube-proxy 를 거치지 않는다.
+  // /healthz(DB 없음)가 느리면 Pod 자체가, /readyz(DB 포함)만 느리면 DB 경로가, 둘 다 빠르면 바깥 경로가 문제다.
+  if (survivor) {
+    try {
+      const probe = await kubectl('exec', survivor.prober, '--', 'node', '-e', `
+        const t=async(p)=>{const s=Date.now();try{const r=await fetch('http://${survivor.ip}:3001'+p,{signal:AbortSignal.timeout(3000)});return r.status+'/'+(Date.now()-s)}catch(e){return 'ERR/'+(Date.now()-s)}};
+        Promise.all([t('/healthz'),t('/readyz')]).then(v=>console.log(v.join(' ')))`);
+      const [host, nodePort, podNet] = await Promise.all([
+        hostProbe(),
+        curlIn('http://127.0.0.1:30081/healthz'),
+        survivorIp ? curlIn(`http://${survivorIp}:3001/healthz`) : Promise.resolve('-'),
+      ]);
+      (result.survivorProbes ??= []).push({ afterSeconds: Math.round((Date.now() - stoppedAt) / 1000), probe, host, nodePort, podNet });
+    } catch (error) {
+      (result.survivorProbes ??= []).push({ afterSeconds: Math.round((Date.now() - stoppedAt) / 1000), probe: `exec 실패 ${String(error.message).slice(0, 80)}` });
+    }
+  }
   if (evictedAt && !result.replacement) {
-    const live = apiPods().filter((p) => p.ready && p.node !== failNode);
+    const live = (await apiPods()).filter((p) => p.ready && p.node !== failNode);
     if (live.length >= 2) {
       result.replacement = { scheduled: true, afterSeconds: Math.round((Date.now() - evictedAt) / 1000), api: live };
       mark('대체 API Pod Ready (살아 있는 zone)', result.replacement);
@@ -226,32 +272,36 @@ while (Date.now() - stoppedAt < 150_000) {
   }
   await sleep(5_000);
 }
-result.nodeTaintsPolicy = JSON.parse(kubectl('get', 'deploy', '-l', 'app=admission-api', '-o', 'json'))
+result.nodeTaintsPolicy = JSON.parse(await kubectl('get', 'deploy', '-l', 'app=admission-api', '-o', 'json'))
   .items[0]?.spec.template.spec.topologySpreadConstraints?.[0]?.nodeTaintsPolicy ?? 'Ignore(기본)';
 if (!result.replacement) {
-  const pending = JSON.parse(kubectl('get', 'pods', '-l', 'app=admission-api', '-o', 'json')).items
+  const pending = JSON.parse(await kubectl('get', 'pods', '-l', 'app=admission-api', '-o', 'json')).items
     .filter((p) => p.status.phase === 'Pending')
     .map((p) => ({ name: p.metadata.name, reason: p.status.conditions?.find((c) => c.type === 'PodScheduled')?.message }));
   result.replacement = { scheduled: false, pending };
   mark('대체 API Pod 배치 실패', result.replacement);
 }
 setPhase('recovery');
-execFileSync('docker', ['start', failNode]);
+await docker('start', failNode);
 mark('노드 재기동', { node: failNode });
 await waitApiReady(2);
-mark('API 2개 복구', { api: apiPods() });
+mark('API 2개 복구', { api: await apiPods() });
 await sleep(20_000);
-running = false;
-await Promise.all(users);
+loader.stdin.write('stop\n');
+await loader.done;
+clearInterval(lagTimer);
+result.eventLoopMaxLagMs = loopLag;
 
-for (const name of ['baseline', 'drain', 'hard-failure', 'recovery']) result.phases[name] = summarize(name);
+for (const name of ['baseline', 'drain', 'rebalance', 'hard-failure', 'recovery']) result.phases[name] = summarize(name);
 result.nodeNotReadyAfterSeconds = notReadyAt ? Math.round((notReadyAt - stoppedAt) / 1000) : null;
 console.log(JSON.stringify(result.phases));
 
+check('측정 도구의 이벤트 루프가 막히지 않았다 (최대 지연 < 500ms)', Object.values(loopLag).every((v) => v < 500), loopLag);
 check('평시 실패 0', result.phases.baseline.firstAttemptFailures === 0, result.phases.baseline);
 check('계획 정비(drain) 무중단 — 첫 시도부터 실패 0', result.phases.drain.firstAttemptFailures === 0, result.phases.drain);
 check('노드 강제 정지 — 사용자 체감 실패 0 (재시도 3회 안에 성공)', result.phases['hard-failure'].userVisibleFailures === 0, result.phases['hard-failure']);
 check('노드 복구 뒤 실패 0', result.phases.recovery.userVisibleFailures === 0, result.phases.recovery);
+check('재분산(rollout restart) 중 사용자 체감 실패 0', result.phases.rebalance.userVisibleFailures === 0, result.phases.rebalance);
 if (result.nodeTaintsPolicy === 'Honor') {
   // Honor 면 죽은 zone 을 분산 계산에서 빼므로 대체 Pod 가 살아 있는 zone 에 놓여야 한다 (D-52)
   check('죽은 zone 을 빼고 대체 API Pod 를 배치한다 (nodeTaintsPolicy Honor)', result.replacement.scheduled === true, result.replacement);
