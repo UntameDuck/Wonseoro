@@ -51,7 +51,7 @@
 | T-M5-26 | 7. Unit/Integration Security Test ✅ 2026-10-02 | 통과 |
 | T-M5-27 | 8. DAST/Staging Scan ✅ 2026-10-02 | High 0 |
 | T-M5-28 | 9. Image Signing ✅ 2026-10-02 | 전 이미지 서명 |
-| T-M5-29 | 10. Admission Controller | **미서명 이미지 배포 거부 실증** |
+| T-M5-29 | 10. Admission Controller 🟡 2026-10-02 | **미서명 이미지 배포 거부 실증** |
 
 > **T-M5-20·22 완료 (2026-10-02)** — `.github/workflows/security.yml`에 Gitleaks 8.30.1 Git 전체 이력 검사와 운영 의존성 SCA를 추가했다.
 > 로컬에서 126개 커밋을 검사해 실제 비밀 0건을 확인했다. 시험 결과의 `subjectToken`과 단위 시험 키가 이름 때문에 잡힌 39건은
@@ -83,6 +83,10 @@
 > GHCR에 발행하고 태그가 아닌 registry digest를 Cosign 3.0.6 GitHub OIDC 신원으로 서명한다. 같은 잡이 정확한
 > `security.yml@<git ref>` 신원과 GitHub OIDC 발급자를 검증하고 이미지별 reference·검증 JSON을 90일 보관한다.
 > 실제 5종 발행·서명·검증이 모두 통과했다(Actions run 36903506905).
+
+> **T-M5-29 착수 (2026-10-02)** — 운영 `ClusterImagePolicy`는 `security.yml@refs/tags/*`의 GitHub OIDC
+> 신원만 강제한다. Security 후속 잡은 임시 kind·Sigstore Policy Controller에서 서명 digest의 server dry-run
+> admission 허용과 별도 미서명 digest 거부를 모두 확인한다. 실제 원격 실행 전이라 🟡이다.
 
 ### 접근성 (권민준) — v1.0 §12.4 / §07
 

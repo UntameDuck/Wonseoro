@@ -33,7 +33,8 @@
 - **T-M5-26 ✅ (2026-10-02)** — 실 PostgreSQL의 대학·중앙 DB를 사용해 권한·감사 체인·결제 콜백·입력 방어·재전송·개인정보 최소화 등 선별 보안 시험 123개를 별도 게이트로 실행한다. 로컬·원격 123개 통과·건너뜀 0이다(Actions run 36898652054). DB 미연결로 통합시험이 skip되어도 게이트가 실패한다
 - **T-M5-27 ✅ (2026-10-02)** — ZAP 2.17.0 고정 digest로 OpenAPI 81개 URL을 실제 대학 API·PostgreSQL에 active scan했다. 첫 실행에서 잘못된 `cycleId`·`limit`가 DB까지 내려가 500이 되는 문제, `/meta/time` 무인자 500, `nosniff` 누락을 찾아 고쳤다. 같은 조건 재실행은 로컬·원격 모두 **WARN 0·High 0·PASS 118**이다(Actions run 36902632192·36902632233). 로컬 보고서는 `E:\DockerData\tools\zap-2.17.0\reports`에 있다
 - **T-M5-28 ✅ (2026-10-02)** — 릴리스/수동 실행이 운영 이미지 5종을 GHCR에 발행하고 registry digest를 Cosign 3.0.6 GitHub OIDC 신원으로 키리스 서명한다. 같은 잡이 정확한 워크플로 신원과 OIDC 발급자로 즉시 검증하고 이미지별 증적을 90일 보관한다. 실제 5종 모두 통과했다(Actions run 36903506905). 로컬 증적은 `E:\DockerData\tools\cosign-3.0.6\run-36903506905`
-- **바로 다음 할 일**: **T-M5-29 Admission Controller** → 인증(로컬 OIDC — 세션 만료·위험 차단 해제도 함께, ADR-0009) → 보안 통제 → …
+- **T-M5-29 착수 (2026-10-02, 🟡)** — 운영 `ClusterImagePolicy`는 GHCR 원서로 이미지에 대해 이 저장소 `security.yml@refs/tags/*`의 GitHub OIDC 서명만 강제한다. 후속 잡은 임시 kind·Policy Controller를 띄워 서명된 admission-api digest 허용과 별도 미서명 scratch digest 거부를 server dry-run으로 실증한다. 실제 원격 실행 전이다
+- **바로 다음 할 일**: T-M5-29 원격 실행 확인 → 인증(로컬 OIDC — 세션 만료·위험 차단 해제도 함께, ADR-0009) → 보안 통제 → …
 
 ## 2. 반드시 지킬 규칙
 

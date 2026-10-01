@@ -15,7 +15,7 @@
 | T-M5-26 Security Test | ✅ | 로컬·원격 실 PostgreSQL 선별 시험 123개 통과·건너뜀 0 |
 | T-M5-27 DAST | ✅ | 로컬·원격 ZAP OpenAPI active scan WARN 0·High 0·PASS 118 |
 | T-M5-28 Image Signing | ✅ | GHCR 운영 이미지 5종 digest 키리스 서명·신원 검증 |
-| T-M5-29 Admission Controller | ⬜ | 다음 작업 |
+| T-M5-29 Admission Controller | 🟡 | 강제 정책·signed allow/unsigned deny 실증 잡 구현, 원격 실행 전 |
 
 ## 2. T-M5-24 이미지 검사
 
@@ -109,6 +109,20 @@ DB 앞 쿼리 형식 차단, 현재 열린 모집 선택, 전 응답 `nosniff`�
 
 로컬 사본은 `E:\DockerData\tools\cosign-3.0.6\run-36903506905`에 있다.
 
-## 7. 다음 순서
+## 7. T-M5-29 Admission Controller
 
-1. T-M5-29: 정책 엔진에서 미서명 이미지는 거부하고 서명 이미지만 허용하는 실증
+`deploy/platform/policies/image-signature-policy.yaml`은 Sigstore Policy Controller의 강제 모드로 GHCR의
+원서로 이미지를 검증한다. 단순히 “유효한 Sigstore 서명”이면 되는 것이 아니라, GitHub OIDC 발급자가 발급했고
+이 저장소의 `security.yml`이 **릴리스 태그**에서 만든 서명만 허용한다. 수동 main 검증 서명은 운영 정책에서
+의도적으로 거부된다. 적용할 namespace는 `policy.sigstore.dev/include=true` 라벨로 명시적으로 opt-in 한다.
+
+Security 수동/릴리스 실행의 후속 잡은 kind 0.33.0·Kubernetes 1.34.11과 공식 Policy Controller chart
+0.10.8(app 0.13.1)을 임시로 설치한다. 현재 실행 신원을 정확히 허용하는 실증용 정책 아래에서 같은 실행이 서명한
+admission-api digest는 server dry-run admission을 통과해야 하고, 별도 scratch digest는 서명하지 않은 채 반드시
+거부되어야 한다. private GHCR 자격증명은 테스트 namespace의 일회성 `imagePullSecret`에만 넣는다.
+정책·실증 잡 구현 후 실제 원격 실행 전이라 🟡이다.
+
+## 8. 다음 순서
+
+1. T-M5-29 수동 원격 실행으로 서명 허용·미서명 거부 증적 확보
+2. 로컬 OIDC 인증·RBAC·MFA 단계 진행

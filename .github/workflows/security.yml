@@ -43,7 +43,7 @@ jobs:
       - name: SAST 판정기 단위 시험
         run: npm run test:security:sast-gate && npm run test:security:dast-gate
       - name: 이미지 서명 워크플로 불변조건 검사
-        run: npm run check:security:signing
+        run: npm run check:security:signing && npm run check:security:admission
       - name: 운영 의존성 Critical 취약점 차단
         run: npm run check:security:deps
 
@@ -405,5 +405,127 @@ jobs:
         with:
           name: signed-image-${{ matrix.image }}
           path: signing-results/
+          if-no-files-found: error
+          retention-days: 90
+
+  admission-policy:
+    name: admission · signed allow · unsigned deny
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    needs: [signed-images]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Helm 4.3.0 설치
+        uses: azure/setup-helm@bf6a7d304bc2fdb57e0331155b7ebf2c504acf0a # v4
+        with:
+          version: v4.3.0
+      - name: kind 0.33.0 설치·클러스터 생성
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error \
+            https://github.com/kubernetes-sigs/kind/releases/download/v0.33.0/kind-linux-amd64 \
+            --output "$RUNNER_TEMP/kind"
+          echo "aee6151561422756b764a4ae28e7f44cda5af5a9eead3cc9985112b1de8d8e0d  $RUNNER_TEMP/kind" | sha256sum --check
+          chmod +x "$RUNNER_TEMP/kind"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/kind" create cluster \
+            --name signature-policy \
+            --image kindest/node:v1.34.11@sha256:44e222ee2132dab25ff87301682f89eb82c7880ea3a1bf543bfe9708fd08d67d
+      - name: Sigstore Policy Controller 0.13.1 설치
+        shell: bash
+        run: |
+          set -euo pipefail
+          helm repo add sigstore https://sigstore.github.io/helm-charts
+          helm repo update sigstore
+          helm upgrade --install policy-controller sigstore/policy-controller \
+            --version 0.10.8 \
+            --namespace cosign-system \
+            --create-namespace \
+            --wait --timeout 5m
+      - name: 서명·미서명 실증 이미지 준비
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          owner="$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+          if [[ "$GITHUB_EVENT_NAME" == release ]]; then
+            tag="$(printf '%s' "$GITHUB_REF_NAME" | sed -E 's/[^A-Za-z0-9_.-]+/-/g')"
+          else
+            tag="sha-${GITHUB_SHA:0:12}"
+          fi
+
+          signed_image="ghcr.io/$owner/wonseoro-admission-api:$tag"
+          docker pull "$signed_image"
+          signed_reference="$(docker inspect --format='{{index .RepoDigests 0}}' "$signed_image")"
+
+          unsigned_image="ghcr.io/$owner/wonseoro-admission-proof:unsigned-$tag"
+          docker build \
+            --file tests/security/unsigned-control.Dockerfile \
+            --build-arg "PROOF_ID=$GITHUB_RUN_ID" \
+            --tag "$unsigned_image" \
+            .
+          docker push "$unsigned_image"
+          unsigned_reference="$(docker inspect --format='{{index .RepoDigests 0}}' "$unsigned_image")"
+
+          echo "SIGNED_REFERENCE=$signed_reference" >> "$GITHUB_ENV"
+          echo "UNSIGNED_REFERENCE=$unsigned_reference" >> "$GITHUB_ENV"
+          echo "IMAGE_GLOB=ghcr.io/$owner/wonseoro-**" >> "$GITHUB_ENV"
+          echo "SIGNER_SUBJECT=https://github.com/$GITHUB_REPOSITORY/.github/workflows/security.yml@$GITHUB_REF" >> "$GITHUB_ENV"
+      - name: 강제 정책·private registry 자격증명 적용
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          kubectl create namespace signature-policy-test
+          kubectl label namespace signature-policy-test policy.sigstore.dev/include=true
+          kubectl --namespace signature-policy-test create secret docker-registry ghcr-read \
+            --docker-server ghcr.io \
+            --docker-username "$GITHUB_ACTOR" \
+            --docker-password "$GHCR_TOKEN"
+          envsubst < tests/security/image-signature-policy.template.yaml | kubectl apply -f -
+          sleep 5
+          kubectl get clusterimagepolicy wonseoro-signature-proof -o yaml
+      - name: 서명 허용·미서명 거부 실증
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p admission-results
+          overrides='{"spec":{"imagePullSecrets":[{"name":"ghcr-read"}]}}'
+
+          kubectl --namespace signature-policy-test run signed-proof \
+            --image "$SIGNED_REFERENCE" \
+            --restart Never \
+            --overrides "$overrides" \
+            --dry-run server -o yaml > admission-results/signed-admitted.yaml
+
+          set +e
+          rejection="$(kubectl --namespace signature-policy-test run unsigned-proof \
+            --image "$UNSIGNED_REFERENCE" \
+            --restart Never \
+            --overrides "$overrides" \
+            --dry-run server -o yaml 2>&1)"
+          status=$?
+          set -e
+          if [[ $status -eq 0 ]]; then
+            echo "미서명 이미지가 admission을 통과했습니다." >&2
+            exit 1
+          fi
+          printf '%s\n' "$rejection" | tee admission-results/unsigned-rejected.txt
+          grep -Eiq 'denied|failed policy|signature|no matching' admission-results/unsigned-rejected.txt
+          printf 'signed=%s\nunsigned=%s\n' "$SIGNED_REFERENCE" "$UNSIGNED_REFERENCE" > admission-results/references.txt
+      - name: Admission 실증 증적 보관
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: admission-signature-proof
+          path: admission-results/
           if-no-files-found: error
           retention-days: 90

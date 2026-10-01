@@ -1,0 +1,14 @@
+apiVersion: policy.sigstore.dev/v1beta1
+kind: ClusterImagePolicy
+metadata:
+  name: wonseoro-release-signatures
+spec:
+  mode: enforce
+  images:
+    - glob: "ghcr.io/untameduck/wonseoro-**"
+  authorities:
+    - name: wonseoro-github-release
+      keyless:
+        identities:
+          - issuer: https://token.actions.githubusercontent.com
+            subjectRegExp: '^https://github\.com/UntameDuck/Wonseoro/\.github/workflows/security\.yml@refs/tags/[^/]+$'
