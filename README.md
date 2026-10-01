@@ -14,7 +14,7 @@
   <a href="#architecture"><strong>Architecture</strong></a> ·
   <a href="#reliability--security"><strong>Reliability &amp; Security</strong></a> ·
   <a href="#roadmap"><strong>Roadmap</strong></a> ·
-  <a href="./docs/screenshots/"><strong>UI 화면</strong></a>
+  <a href="./docs/screenshots/"><strong>UI/UX</strong></a>
 </p>
 
 <p align="center">
