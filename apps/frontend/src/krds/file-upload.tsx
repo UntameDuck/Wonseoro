@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { ApiError, NetworkError, api, newIdempotencyKey } from '../lib/api';
-import { Alert, Button, Icon, LiveRegion } from '@wonseoro/krds';
+import { Alert, Button, Icon, LiveRegion, formatTime } from '@wonseoro/krds';
 import { UPLOAD_FORMATS, problemText, uploadLimitText } from '@wonseoro/contracts';
 
 export interface UploadedDocument {
@@ -109,6 +109,12 @@ export function FileUpload({
     } catch (err) {
       if (err instanceof NetworkError) {
         setPhase({ kind: 'failed', reason: '서버에 연결할 수 없습니다.' });
+        return;
+      }
+      if (err instanceof ApiError && err.httpStatus === 429) {
+        // 요청 한도 — 언제 다시 고를 수 있는지 시각으로 (T-M5-46)
+        const at = formatTime(new Date(Date.now() + (err.retryAfterSeconds ?? 30) * 1000).toISOString());
+        setPhase({ kind: 'failed', reason: `요청이 많아 잠시 멈췄습니다. ${at}부터 파일을 다시 선택할 수 있습니다.` });
         return;
       }
       if (err instanceof ApiError) {

@@ -7,7 +7,7 @@ import { ApiError, NetworkError, api } from '../lib/api';
 import { loadSession, saveSession } from '../lib/session';
 import { useOperatingMode } from '../lib/use-operating-mode';
 import { IdentitySection } from '../krds/identity';
-import { OperatingModeBanner, SlowNotice } from '../krds/status';
+import { OperatingModeBanner, RateLimitNotice, SlowNotice } from '../krds/status';
 import { problemText } from '@wonseoro/contracts';
 
 /**
@@ -65,6 +65,9 @@ export default function Home() {
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** 요청 한도 — 이 시각까지 "원서 작성 시작" 을 쉰다 (T-M5-46) */
+  const [rateLimit, setRateLimit] = useState<{ until: number; traceId?: string; over: boolean } | null>(null);
+  const endRateLimit = useCallback(() => setRateLimit((r) => (r ? { ...r, over: true } : r)), []);
 
   const loadCatalog = useCallback(async () => {
     setLoading(true);
@@ -103,6 +106,7 @@ export default function Home() {
     if (!cycle || !typeId || !departmentId) return;
     setBusy(true);
     setError(null);
+    setRateLimit(null);
     try {
       const { data } = await api.createApplication(
         { cycleId: cycle.id, admissionTypeId: typeId, departmentId },
@@ -113,6 +117,8 @@ export default function Home() {
     } catch (err) {
       if (err instanceof NetworkError) {
         setError('대학 접수 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
+      } else if (err instanceof ApiError && err.httpStatus === 429) {
+        setRateLimit({ until: Date.now() + (err.retryAfterSeconds ?? 30) * 1000, traceId: err.problem.traceId, over: false });
       } else if (err instanceof ApiError) {
         setError(problemText(err.problem).detail);
       } else {
@@ -201,9 +207,10 @@ export default function Home() {
           )}
 
           <SlowNotice busy={busy} />
+          {rateLimit && <RateLimitNotice until={rateLimit.until} traceId={rateLimit.traceId} onDone={endRateLimit} />}
           <Button
             onClick={() => void start()}
-            disabled={busy || applicantId.length < 8 || !subjectToken || !typeId || !departmentId}
+            disabled={busy || (rateLimit !== null && !rateLimit.over) || applicantId.length < 8 || !subjectToken || !typeId || !departmentId}
           >
             {busy ? '원서를 준비하는 중…' : '원서 작성 시작'}
           </Button>

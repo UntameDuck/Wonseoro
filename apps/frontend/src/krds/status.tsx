@@ -318,6 +318,42 @@ export function FailureNotice({
 /* ────────────────────────────────────────────────────────────────────── */
 
 /**
+ * 요청 한도에 걸렸을 때 — CAPTCHA 대신 접근 가능한 길 (T-M5-46, ADR-0009)
+ *
+ * 퍼즐(그림·소리·끌기)로 사람임을 증명하게 하지 않는다. 한도는 계정마다 걸리고 시간이 지나면 풀린다 —
+ * 그 시각을 글로 알리고, 그때 버튼이 다시 열리며 "이제 다시 시도할 수 있습니다" 를 알린다. 화면을 장애 안내로 바꾸지
+ * 않는다(작성 중인 내용과 단계가 그대로). 문의할 때 쓸 요청번호도 함께. 포커스를 받는다 — 누른 버튼이 잠시 비활성이 된다.
+ */
+export function RateLimitNotice({ until, traceId, onDone }: { until: number; traceId?: string | undefined; onDone: () => void }) {
+  const [done, setDone] = useState(Date.now() >= until);
+  useEffect(() => {
+    setDone(Date.now() >= until);
+    const t = setTimeout(() => {
+      setDone(true);
+      onDone();
+    }, Math.max(0, until - Date.now()));
+    return () => clearTimeout(t);
+  }, [until, onDone]);
+  return (
+    <Alert
+      tone={done ? 'info' : 'warning'}
+      title={done ? '이제 다시 시도할 수 있습니다' : '요청이 많아 잠시 멈췄습니다'}
+      focusKey={until}
+    >
+      {done
+        ? '방금 누르신 버튼을 다시 눌러 주십시오. 작성하신 내용은 보관되어 있습니다.'
+        : `${formatTime(new Date(until).toISOString())}부터 다시 누를 수 있습니다. 작성하신 내용은 보관되어 있습니다. 그때 이 안내가 바뀝니다.`}
+      {traceId && (
+        <>
+          {' '}
+          계속 같은 안내가 나오면 요청번호로 문의해 주십시오: <span style={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{traceId}</span>
+        </>
+      )}
+    </Alert>
+  );
+}
+
+/**
  * 오래 걸리는 요청 안내 — 와이어프레임 "요청 처리 시간이 길어지고 있습니다" (T-M5-55, U-59).
  * 결제·접수를 누르고 아무 말 없이 기다리게 하면 같은 버튼을 다시 누른다. 서버는 같은 요청을 한 번만
  * 처리하지만(멱등 키), 지원자는 그것을 모른다. 10초가 넘으면 기다려도 된다는 것과 요청번호를 보인다.

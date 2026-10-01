@@ -37,7 +37,8 @@ export const PROBLEM_TEXT: Record<ProblemCodeValue, ProblemText> = {
   FORBIDDEN: { title: '이 요청을 처리할 수 없습니다', detail: '본인확인 정보가 맞지 않습니다. 접수 홈에서 다시 본인확인을 해 주십시오.' },
   INTERNAL: { title: '처리 중 문제가 생겼습니다', detail: '잠시 후 다시 시도해 주십시오. 계속되면 요청번호와 함께 문의해 주십시오.' },
   NOT_FOUND: { title: '찾을 수 없습니다', detail: '주소를 다시 확인해 주십시오.' },
-  RATE_LIMITED: { title: '요청이 많아 잠시 기다려야 합니다', detail: '잠시 후 자동으로 다시 시도합니다. 작성하신 내용은 보관되어 있습니다.' },
+  // 버튼 동작은 저절로 다시 보내지 않는다 — "자동으로 다시 시도" 라고 하면 사실이 아니다. 자동저장은 따로 말한다 (T-M5-46)
+  RATE_LIMITED: { title: '요청이 많아 잠시 기다려야 합니다', detail: '잠시 기다린 뒤 다시 시도해 주십시오. 작성하신 내용은 보관되어 있습니다.' },
 };
 
 /**

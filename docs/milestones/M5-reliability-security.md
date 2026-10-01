@@ -25,7 +25,7 @@
 | ID | 태스크 | 근거 노션 | 인수기준 |
 |---|---|---|---|
 | T-M5-01 | Network Default Deny | §06 | 허용경로 6종만, 대학 간 route 금지 |
-| T-M5-02 | RBAC 6역할 적용 | §06 | platform-viewer / sre-operator / admission-admin / security-auditor / release-controller / break-glass |
+| T-M5-02 | RBAC 6역할 적용 | §06 | platform-viewer / sre-operator / admission-admin / security-auditor / release-controller / break-glass. 지원자 본인확인을 붙일 때 **위험점수 차단을 본인확인 다시 하기(step-up)로 해제**하는 길과 세션 만료·연장을 인증 세션으로 옮긴다(ADR-0009, T-M5-45 `lib/session.ts`) |
 | T-M5-03 | Break-glass 계정 | §06, §01 A7 | 평시 disable, 짧은 TTL, 사용 즉시 경보 |
 | T-M5-04 | Vault/KMS 대학별 path 분리 | §06 | DB dynamic credential, mTLS 인증서 short TTL |
 | T-M5-05 | Service mTLS | v1.0 §7.1 | 내부 통신 평문 금지, Zero Trust |

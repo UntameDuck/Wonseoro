@@ -6,7 +6,7 @@ import { PROBLEM_TEXT, problemText } from '@wonseoro/contracts';
 import { SchemaForm, type JsonSchema } from '../../../krds/schema-form';
 import { DocumentStatusList, FileUpload } from '../../../krds/file-upload';
 import { Breadcrumb, STEPS, StepIndicator, type StepNo } from '../../../krds/navigation';
-import { DeadlineBanner, FailureNotice, OperatingModeBanner, SaveStatus, SlowNotice } from '../../../krds/status';
+import { DeadlineBanner, FailureNotice, OperatingModeBanner, RateLimitNotice, SaveStatus, SlowNotice } from '../../../krds/status';
 import {
   ApiError,
   NetworkError,
@@ -55,6 +55,11 @@ export default function ApplyPage({
   );
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [busy, setBusy] = useState(false);
+  /** 요청 한도에 걸려 이 시각까지 버튼을 쉰다 (T-M5-46) */
+  const [rateLimit, setRateLimit] = useState<{ until: number; traceId?: string; over: boolean } | null>(null);
+  const rateLimited = rateLimit !== null && !rateLimit.over;
+  // 시각이 지나면 버튼을 연다. 안내는 "이제 다시 시도할 수 있습니다" 로 남긴다
+  const endRateLimit = useCallback(() => setRateLimit((r) => (r ? { ...r, over: true } : r)), []);
   /** 서버가 준 추가문항 스키마. 화면은 이걸 보고 필드를 그린다. (v1.1 §A5) */
   const [schema, setSchema] = useState<JsonSchema | null>(null);
   /** 공통원서에서 온 항목(1단계)과 이 전형이 받는 서류(4단계). 둘 다 대학 설정에서 온다. (D-56) */
@@ -260,6 +265,8 @@ export default function ApplyPage({
     setStep(next);
     setIssues((prev) => prev.filter((i) => fieldOf(i.path)));
     setNotice(null);
+    // 이미 풀린 한도 안내는 단계와 함께 지운다. 아직 기다리는 중이면 남긴다
+    setRateLimit((r) => (r && r.over ? null : r));
     focusAfterRender(focusId);
   }
 
@@ -383,6 +390,11 @@ export default function ApplyPage({
       });
       return;
     }
+    if (err instanceof ApiError && err.httpStatus === 429) {
+      // 요청 한도 — 화면을 장애 안내로 바꾸지 않는다. 언제 다시 누를 수 있는지 알리고 그때 버튼을 연다 (T-M5-46)
+      setRateLimit({ until: Date.now() + (err.retryAfterSeconds ?? 30) * 1000, traceId: err.problem.traceId, over: false });
+      return;
+    }
     if (err instanceof ApiError) {
       // 서버 문구를 그대로 보이지 않는다 — 오류 code 의 문구(PROBLEM_TEXT). 업무 오류만 서버 설명을 덧붙인다 (U-26)
       const t = problemText(err.problem);
@@ -469,6 +481,9 @@ export default function ApplyPage({
       <StepIndicator current={step} completed={completedSteps} />
       <ErrorSummary key={validationRun} issues={issues} onSelect={selectIssue} />
       <SlowNotice busy={busy} />
+      {rateLimit && (
+        <RateLimitNotice until={rateLimit.until} traceId={rateLimit.traceId} onDone={endRateLimit} />
+      )}
       {notice && <Alert tone={notice.tone} title={notice.title} focusKey={notice}>{notice.body}</Alert>}
 
       {step === 1 && (
@@ -581,7 +596,7 @@ export default function ApplyPage({
               검사 상태 새로고침
             </Button>
             {editable ? (
-              <Button onClick={() => void runValidate()} disabled={busy}>
+              <Button onClick={() => void runValidate()} disabled={busy || rateLimited}>
                 {busy ? '검증 중…' : '검토 단계로'}
               </Button>
             ) : (
@@ -656,7 +671,7 @@ export default function ApplyPage({
             </Button>
             <Button
               onClick={() => void pay()}
-              disabled={busy || (deadline.passed && !paymentStarted) || (!paymentStarted && !payment && !payConfirmed)}
+              disabled={busy || rateLimited || (deadline.passed && !paymentStarted) || (!paymentStarted && !payment && !payConfirmed)}
             >
               {busy
                 ? '결제·접수 처리 중…'
@@ -761,7 +776,7 @@ export default function ApplyPage({
                 >
                   그만두기
                 </Button>
-                <Button onClick={() => void cancel()} disabled={busy || cancelReason.trim().length < 2}>
+                <Button onClick={() => void cancel()} disabled={busy || rateLimited || cancelReason.trim().length < 2}>
                   {busy ? '취소 처리 중…' : '취소 확정'}
                 </Button>
               </div>
