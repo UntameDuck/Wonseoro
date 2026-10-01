@@ -47,19 +47,17 @@ export class AuditService {
    * 드러나지 않았다. 운영자 행위야말로 지워지면 안 되는 기록이다. (D-36)
    */
   async record(client: PoolClient, input: AuditInput): Promise<string> {
-    // DB 시계에 맞춘 시각이다. Pod 마다 시계가 달라도 같은 원서의 기록 순서가 뒤집히지 않는다. (§A2)
+    // 체인의 끝을 잠그고 읽는다. 원서 체인과 시스템 체인 모두 — 잠그지 않으면 두 기록이 같은 끝을 보고
+    // 각자 이어붙여 체인이 갈라진다. (D-62: 원서 체인에는 잠금이 없었다)
+    const last = input.applicationId
+      ? await this.lockApplicationChain(client, input.applicationId)
+      : await this.lockSystemChain(client);
+    const prevHash = last.hash;
+    // DB 시계에 맞춘 시각이다(§A2). 다만 offset 은 측정마다 바뀌어(D-61) 이어 쓰는 기록의 시각이
+    // 거꾸로 갈 수 있다. 직전 기록보다 반드시 뒤에 둔다 — 증적의 시간 순서가 기록 순서와 같아야 읽힌다.
     let occurredAt = serverNow();
-    let prevHash: string;
-    if (input.applicationId) {
-      prevHash = await this.lastHash(client, input.applicationId);
-    } else {
-      const last = await this.lockSystemChain(client);
-      prevHash = last.hash;
-      // 체인은 시각 순으로 검증한다. 같은 밀리초나 역순 시각이 나오면 순서가 뒤섞여
-      // 멀쩡한 체인이 깨진 것으로 보인다. 직전 이벤트보다 반드시 뒤에 둔다.
-      if (last.at && occurredAt.getTime() <= last.at.getTime()) {
-        occurredAt = new Date(last.at.getTime() + 1);
-      }
+    if (last.at && occurredAt.getTime() <= last.at.getTime()) {
+      occurredAt = new Date(last.at.getTime() + 1);
     }
 
     const eventId = randomUUID();
@@ -106,7 +104,7 @@ export class AuditService {
 
   /**
    * 체인 무결성 검증. Evidence Package 생성 시 함께 돌린다. (M3 T-M3-07)
-   * 한 건이라도 끊기면 그 지점을 반환한다.
+   * 한 건이라도 끊기면 그 지점을 반환한다. 순서는 시각이 아니라 앞 해시 연결로 따라간다(`walk`).
    */
   async verifyChain(
     client: PoolClient,
@@ -152,12 +150,64 @@ export class AuditService {
     return this.walk(rows);
   }
 
+  /**
+   * 원서 체인의 끝을 잠그고 읽는다. 같은 원서의 기록은 이 잠금에서 줄을 선다.
+   *
+   * 새 advisory 잠금이 아니라 **원서 행 잠금**이다 — 원서를 바꾸는 흐름(저장·결제 의도·접수)은 이미 이
+   * 행을 먼저 잠그므로 잠금 순서가 새로 생기지 않는다(교착 방지). `FOR NO KEY UPDATE` 라 다른 표의 행이
+   * 이 원서를 참조하며 들어오는 것(외래키 KEY SHARE)은 막지 않는다.
+   * READ COMMITTED 에서 잠금을 기다린 뒤의 다음 문장은 앞 트랜잭션이 커밋한 기록을 본다.
+   */
+  private async lockApplicationChain(
+    client: PoolClient,
+    applicationId: string,
+  ): Promise<{ hash: string; at: Date | null }> {
+    await client.query(`SELECT 1 FROM application WHERE id = $1 FOR NO KEY UPDATE`, [applicationId]);
+    return this.chainTail(client, applicationId);
+  }
+
+  /**
+   * 체인의 끝 — 아무도 앞 해시로 가리키지 않는 기록이다. 시각으로 고르지 않는다: 고치기 전 코드가
+   * 시각이 뒤집힌 채 남긴 기록에서 "가장 늦은 시각" 은 끝이 아닐 수 있다(D-62).
+   * 시각은 체인 전체에서 가장 늦은 것을 돌려준다 — 새 기록은 그보다 뒤에 둔다.
+   */
+  private async chainTail(client: PoolClient, applicationId: string): Promise<{ hash: string; at: Date | null }> {
+    const { rows } = await client.query<{ event_hash: string | null; latest: Date | null }>(
+      `SELECT (SELECT a.event_hash FROM audit_event a
+                WHERE a.application_id = $1
+                  AND NOT EXISTS (SELECT 1 FROM audit_event b
+                                   WHERE b.application_id = $1 AND b.prev_hash = a.event_hash)
+                ORDER BY a.occurred_at DESC, a.id DESC
+                LIMIT 1) AS event_hash,
+              (SELECT max(occurred_at) FROM audit_event WHERE application_id = $1) AS latest`,
+      [applicationId],
+    );
+    return { hash: rows[0]?.event_hash ?? GENESIS_HASH, at: rows[0]?.latest ?? null };
+  }
+
+  /**
+   * 앞 해시 연결을 GENESIS 부터 따라가며 각 기록의 해시를 다시 계산한다.
+   *
+   * 시각 순서를 믿지 않는다(D-62) — 시각이 뒤집혀 쌓인 기록도 연결과 해시가 맞으면 변조가 아니다.
+   * 끊김으로 보는 것: 해시 불일치(고침), 같은 앞 해시에 둘이 붙음(갈라짐 — 늦은 쪽을 지목),
+   * 연결로 닿지 못한 기록(중간 기록이 지워짐 — 닿지 못한 것 중 가장 이른 기록을 지목).
+   */
   private walk(rows: ChainRow[]): { valid: boolean; brokenAt?: string; checked: number } {
-    let expectedPrev = GENESIS_HASH;
+    const children = new Map<string, ChainRow[]>();
     for (const row of rows) {
-      if (row.prev_hash !== expectedPrev) {
-        return { valid: false, brokenAt: row.id, checked: rows.length };
+      const list = children.get(row.prev_hash);
+      if (list) list.push(row);
+      else children.set(row.prev_hash, [row]);
+    }
+    const visited = new Set<string>();
+    let expectedPrev = GENESIS_HASH;
+    for (;;) {
+      const next = children.get(expectedPrev);
+      if (!next) break;
+      if (next.length > 1) {
+        return { valid: false, brokenAt: next[1]!.id, checked: rows.length };
       }
+      const row = next[0]!;
       const recomputed = this.chainHash(row.prev_hash, {
         eventId: row.id,
         occurredAt: row.occurred_at.toISOString(),
@@ -169,24 +219,16 @@ export class AuditService {
         configVersion: row.config_version,
         policyVersion: row.policy_version,
       });
-      if (recomputed !== row.event_hash) {
+      if (recomputed !== row.event_hash || visited.has(row.id)) {
         return { valid: false, brokenAt: row.id, checked: rows.length };
       }
+      visited.add(row.id);
       expectedPrev = row.event_hash;
     }
+    // rows 는 시각순이라 닿지 못한 것 중 첫 번째가 가장 이른 기록이다
+    const unreachable = rows.find((r) => !visited.has(r.id));
+    if (unreachable) return { valid: false, brokenAt: unreachable.id, checked: rows.length };
     return { valid: true, checked: rows.length };
-  }
-
-  private async lastHash(client: PoolClient, applicationId?: string): Promise<string> {
-    if (!applicationId) return GENESIS_HASH;
-    const { rows } = await client.query<{ event_hash: string }>(
-      `SELECT event_hash FROM audit_event
-        WHERE application_id = $1
-        ORDER BY occurred_at DESC, id DESC
-        LIMIT 1`,
-      [applicationId],
-    );
-    return rows[0]?.event_hash ?? GENESIS_HASH;
   }
 
   private chainHash(prevHash: string, fields: Record<string, unknown>): string {
