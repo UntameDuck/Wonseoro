@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -37,5 +39,71 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
+      - name: SAST 판정기 단위 시험
+        run: npm run test:security:sast-gate
       - name: 운영 의존성 Critical 취약점 차단
         run: npm run check:security:deps
+
+  sast:
+    name: CodeQL SAST · Critical 0
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: CodeQL 초기화
+        uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+      - name: CodeQL 분석과 결과 업로드
+        id: codeql
+        uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          category: /language:javascript-typescript
+          output: codeql-results
+          upload: always
+      - name: SAST Critical 취약점 차단
+        run: npm run check:security:sast -- "${{ steps.codeql.outputs.sarif-output }}"
+
+  sbom:
+    name: SPDX SBOM
+    if: github.event_name != 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: SPDX JSON SBOM 생성·보관
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          file: ./package-lock.json
+          format: spdx-json
+          output-file: wonseoro.spdx.json
+          artifact-name: wonseoro-sbom.spdx.json
+          upload-artifact: true
+          upload-release-assets: false
+      - name: SBOM 형식·내용 검증
+        run: npm run check:security:sbom -- wonseoro.spdx.json
+
+  release-sbom:
+    name: 릴리스 SPDX SBOM 첨부
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: SPDX JSON SBOM 생성·릴리스 첨부
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          file: ./package-lock.json
+          format: spdx-json
+          output-file: wonseoro-${{ github.event.release.tag_name }}.spdx.json
+          artifact-name: wonseoro-sbom.spdx.json
+          upload-artifact: true
+          upload-release-assets: true
+      - name: SBOM 형식·내용 검증
+        run: npm run check:security:sbom -- "wonseoro-${{ github.event.release.tag_name }}.spdx.json"
