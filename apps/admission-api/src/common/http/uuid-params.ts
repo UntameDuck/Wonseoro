@@ -5,14 +5,20 @@ import { requestTraceId } from '../problem/problem.filter';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** 경로 변수 중 식별자(…Id)인데 UUID 형식이 아닌 것. 없으면 null. */
-export function malformedIdParam(params: unknown): string | null {
-  if (!params || typeof params !== 'object') return null;
-  for (const [name, value] of Object.entries(params as Record<string, unknown>)) {
+/** 객체의 식별자(…Id) 중 UUID 형식이 아닌 것. 없으면 null. */
+function malformedId(values: unknown): string | null {
+  if (!values || typeof values !== 'object') return null;
+  for (const [name, value] of Object.entries(values as Record<string, unknown>)) {
     if (name.endsWith('Id') && typeof value === 'string' && !UUID.test(value)) return name;
   }
   return null;
 }
+
+/** 경로 변수 중 식별자(…Id)인데 UUID 형식이 아닌 것. 없으면 null. */
+export const malformedIdParam = malformedId;
+
+/** 쿼리 중 식별자(…Id)인데 UUID 형식이 아닌 것. 없으면 null. */
+export const malformedIdQuery = malformedId;
 
 /**
  * 경로의 식별자(applicationId·paymentId·documentId·submissionId·configId·policyId·exceptionId…)는
@@ -24,17 +30,32 @@ export function malformedIdParam(params: unknown): string | null {
  */
 export function installUuidParamGuard(fastify: FastifyInstance): void {
   fastify.addHook('preValidation', async (request, reply) => {
-    const bad = malformedIdParam(request.params);
-    if (!bad) return;
-    const problem = {
-      ...ProblemException.notFound('존재하지 않는 자원입니다.').problem,
-      instance: request.url,
-      traceId: requestTraceId(request),
-    };
-    return reply
-      .status(404)
-      .header('content-type', `${MEDIA_PROBLEM}; charset=utf-8`)
-      .header('cache-control', CACHE_CONTROL_PII)
-      .send(problem);
+    const badParam = malformedIdParam(request.params);
+    if (badParam) {
+      const problem = {
+        ...ProblemException.notFound('존재하지 않는 자원입니다.').problem,
+        instance: request.url,
+        traceId: requestTraceId(request),
+      };
+      return reply
+        .status(404)
+        .header('content-type', `${MEDIA_PROBLEM}; charset=utf-8`)
+        .header('cache-control', CACHE_CONTROL_PII)
+        .send(problem);
+    }
+
+    const badQuery = malformedIdQuery(request.query);
+    if (badQuery) {
+      const problem = {
+        ...ProblemException.validationFailed('식별자 형식이 올바르지 않습니다.').problem,
+        instance: request.url,
+        traceId: requestTraceId(request),
+      };
+      return reply
+        .status(400)
+        .header('content-type', `${MEDIA_PROBLEM}; charset=utf-8`)
+        .header('cache-control', CACHE_CONTROL_PII)
+        .send(problem);
+    }
   });
 }

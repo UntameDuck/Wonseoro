@@ -12,6 +12,18 @@ interface ScanResultBody {
   signature?: string;
 }
 
+export function parseScanLimit(value?: string): number {
+  if (value === undefined) return 50;
+  if (!/^\d+$/.test(value)) {
+    throw ProblemException.validationFailed('조회할 서류 수는 1 이상 200 이하의 정수여야 합니다.');
+  }
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
+    throw ProblemException.validationFailed('조회할 서류 수는 1 이상 200 이하의 정수여야 합니다.');
+  }
+  return Math.min(parsed, 200);
+}
+
 /**
  * AV 검사 워커용 내부 API — 기술설계서 v1.0 §5.4, ADR-0004
  *
@@ -32,7 +44,7 @@ export class DocumentScanController {
   @Get('pending-scan')
   @Header('cache-control', 'no-store')
   async pending(@Query('limit') limit?: string) {
-    const max = Math.min(Number(limit ?? 50), 200);
+    const max = parseScanLimit(limit);
     const { rows } = await this.db.query<Record<string, unknown>>(
       `SELECT d.id, d.object_key, d.media_type, d.size_bytes, d.sha256_hex
          FROM document d

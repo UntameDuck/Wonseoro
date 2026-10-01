@@ -13,7 +13,7 @@
 | T-M5-24 Container Image Scan | ✅ | 로컬·원격 5개 이미지 Critical 0 |
 | T-M5-25 IaC/K8s Manifest Scan | ✅ | 로컬·원격 Helm·Kubernetes·Dockerfile 19개 High/Critical 0 |
 | T-M5-26 Security Test | ✅ | 로컬·원격 실 PostgreSQL 선별 시험 123개 통과·건너뜀 0 |
-| T-M5-27 DAST | ⬜ | 다음 작업 |
+| T-M5-27 DAST | 🟡 | 로컬 ZAP OpenAPI active scan WARN 0·High 0·PASS 118, 원격 CI 확인 전 |
 | T-M5-28 Image Signing | ⬜ | 다음 작업 |
 | T-M5-29 Admission Controller | ⬜ | 다음 작업 |
 
@@ -69,8 +69,25 @@ Endpoints 직접 권한은 없고 `tests/m4/gitops-manifests.mjs`가 권한 범�
 같은 명령을 실행한다. DB가 없어서 통합시험이 `skip`되면 성공으로 보지 않고 게이트를 실패시킨다.
 원격 Security 잡도 123개·건너뜀 0으로 통과했다(Actions run 36898652054).
 
-## 5. 다음 순서
+## 5. T-M5-27 OpenAPI DAST
 
-1. T-M5-27: 로컬 staging API를 기동해 DAST High 0 강제
+ZAP 2.17.0 이미지(`sha256:781a…81ef`)를 고정해 실제 대학 API와 PostgreSQL을 띄운 뒤 canonical OpenAPI의
+81개 URL을 active scan한다. `scripts/check-zap-report.mjs`는 JSON 보고서에 실제 site가 있는지 먼저 확인하고
+위험도 High가 하나라도 있으면 실패한다. HTML·JSON 보고서는 원격 CI 산출물로 14일 보관한다.
+
+첫 로컬 실행은 High 0이었지만 다음 Low 경고를 통해 입력 경계 결함을 찾았다.
+
+- UUID인 `cycleId`·`admissionCycleId`와 정수 `limit`의 공격 문자열이 DB까지 내려가 500을 만들었다
+- 계약상 쿼리 없이 부를 수 있는 `/api/v1/meta/time`이 내부 문자열 `default`를 UUID로 조회해 500을 냈다
+- 일부 API 응답에 `X-Content-Type-Options: nosniff`가 없었다
+
+DB 앞 쿼리 형식 차단, 현재 열린 모집 선택, 전 응답 `nosniff`를 적용한 뒤 같은 조건으로 재실행했다.
+최종 결과는 **WARN 0·High 0·PASS 118**이며 보고서는
+`E:\DockerData\tools\zap-2.17.0\reports\zap-report.{json,html}`에 있다. JSON에는 공격 요청에 대한 4xx와
+캐시 정책을 설명하는 Informational 3종만 남았다.
+
+## 6. 다음 순서
+
+1. 원격 CI에서 T-M5-27 통과 확인 후 완료 수 반영
 2. T-M5-28: 키 없는 OIDC 서명으로 모든 릴리스 이미지 서명·검증
 3. T-M5-29: 정책 엔진에서 미서명 이미지는 거부하고 서명 이미지만 허용하는 실증

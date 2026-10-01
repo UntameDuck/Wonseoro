@@ -162,7 +162,7 @@ T-M5-40~46 ✅·47 🟡 — **[09-accessibility.md](09-accessibility.md)**. 설�
 
 0. ~~**D-62 증적 감사 체인**~~ — ✅ 2026-10-01 수정(재현 시험 3개)
 1. ~~**화면 제품화 T-M5-50~56**~~ ✅ + ~~접근성 T-M5-40~46~~ ✅·47 🟡 — **둘 다 끝(2026-10-01)**. 접근성 시험은 `tests/a11y/`, 결과·결정은 [09](09-accessibility.md). 47 의 실물 Firefox·Safari 는 C(사람)
-2. **보안 파이프라인 T-M5-20~29 진행 중** — ~~T-M5-20~26 Gitleaks·CodeQL·운영 의존성 SCA·SPDX SBOM·이미지·IaC 검사·실 DB 보안 시험~~ ✅ 로컬·원격 통과(Actions run 36898652054). 5개 이미지 Critical 0, 설정 파일 19개 High/Critical 0, 보안 시험 123개·건너뜀 0([11](11-security-pipeline.md)). 다음은 **T-M5-27~29 DAST·서명·Admission Controller**(운영 서명키만 사람)
+2. **보안 파이프라인 T-M5-20~29 진행 중** — ~~T-M5-20~26 Gitleaks·CodeQL·운영 의존성 SCA·SPDX SBOM·이미지·IaC 검사·실 DB 보안 시험~~ ✅ 로컬·원격 통과(Actions run 36898652054). **T-M5-27 DAST 🟡** — ZAP 2.17.0 OpenAPI active scan 로컬 WARN 0·High 0·118개 규칙 통과, 원격 확인 전([11](11-security-pipeline.md)). 다음은 서명·Admission Controller(운영 서명키만 사람)
 3. 인증 — 로컬 OIDC 발급자(개발용 컨테이너)로 `AUTH_MODE=gateway`·RBAC 6역할·관리자 MFA·JWKS 캐시(T-M5-02·10, T-M3-06)
 4. 보안 통제 T-M5-01·03~09 — 필드 암호화·SSRF 출구 허용 목록·실 clamd·Vault 경로 분리·mTLS
 5. T-M4-10 Outbox 파티션·보관 — DDL 변경이라 노션 §02 첨부 교체가 따른다

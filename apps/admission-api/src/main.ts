@@ -57,6 +57,11 @@ async function bootstrap(): Promise<void> {
   installAdaptiveThrottle(fastify);
   // 형식이 틀린 식별자는 DB 에 가기 전에 404 — 전에는 uuid 변환 오류로 500 이었다
   installUuidParamGuard(fastify);
+  // API 응답을 브라우저가 다른 형식으로 추측하지 않게 한다. 파일·오류 응답에도 동일하게 적용한다.
+  fastify.addHook('onSend', async (_request, reply, payload) => {
+    reply.header('x-content-type-options', 'nosniff');
+    return payload;
+  });
 
   // 모든 오류를 problem+json 으로 통일한다.
   app.useGlobalFilters(new ProblemFilter());

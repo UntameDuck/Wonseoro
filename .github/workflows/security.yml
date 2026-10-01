@@ -40,7 +40,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - name: SAST 판정기 단위 시험
-        run: npm run test:security:sast-gate
+        run: npm run test:security:sast-gate && npm run test:security:dast-gate
       - name: 운영 의존성 Critical 취약점 차단
         run: npm run check:security:deps
 
@@ -190,6 +190,96 @@ jobs:
           psql "$CENTRAL_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/central/0003_summary_names.sql
       - name: 선별 보안 시험 통과·건너뜀 0 강제
         run: npm run test:security
+
+  dast:
+    name: ZAP DAST · High 0
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wonseoro
+          POSTGRES_PASSWORD: wonseoro
+          POSTGRES_DB: univ_a
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wonseoro -d univ_a"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      ADMIN_DATABASE_URL: postgresql://wonseoro:wonseoro@localhost:5432/univ_a
+      DATABASE_URL: postgresql://kadmission_app:kadmission_app_dev@localhost:5432/univ_a
+      DATABASE_ADMIN_URL: postgresql://wonseoro:wonseoro@localhost:5432/univ_a
+      UNIVERSITY_ID: UNIV-A
+      PORT: 3001
+      CENTRAL_GATE_AUTOSTART: 'false'
+      CLOCK_AUTOSTART: 'false'
+      PAYMENT_RECHECK_AUTOSTART: 'false'
+      RECON_SCHEDULE_AUTOSTART: 'false'
+      IDEMPOTENCY_PURGE_AUTOSTART: 'false'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: DAST DB 준비
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0001_init.sql
+          psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0002_db_roles.sql
+          psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/dev-roles.sql
+          psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/seed-dev.sql
+          psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/ci-seed-deadline.sql
+      - name: 원서 API 빌드·기동
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build -w @wonseoro/contracts -w @wonseoro/server-kit -w @wonseoro/admission-api
+          nohup npm run start -w @wonseoro/admission-api > "$RUNNER_TEMP/admission-api.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/admission-api.pid"
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3001/readyz >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/admission-api.log"
+          exit 1
+      - name: ZAP 2.17.0 OpenAPI active scan
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dast-results
+          chmod 777 dast-results
+          docker run --rm --network host \
+            --volume "$GITHUB_WORKSPACE:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy@sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef \
+            zap-api-scan.py \
+            -t /zap/wrk/packages/contracts/openapi/k-admission.v1.yaml \
+            -f openapi \
+            -O http://127.0.0.1:3001 \
+            -J dast-results/zap-report.json \
+            -r dast-results/zap-report.html \
+            -I -T 5 -s
+      - name: DAST High 취약점 차단
+        run: npm run check:security:dast -- dast-results/zap-report.json
+      - name: DAST 보고서 보관
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: zap-dast-report
+          path: dast-results/
+          if-no-files-found: error
+          retention-days: 14
+      - name: API 로그 출력
+        if: always()
+        shell: bash
+        run: |
+          test -f "$RUNNER_TEMP/admission-api.log" && tail -n 200 "$RUNNER_TEMP/admission-api.log" || true
+          test -f "$RUNNER_TEMP/admission-api.pid" && kill "$(cat "$RUNNER_TEMP/admission-api.pid")" || true
 
   sbom:
     name: SPDX SBOM
