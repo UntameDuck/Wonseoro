@@ -14,7 +14,7 @@
 | T-M5-25 IaC/K8s Manifest Scan | ✅ | 로컬·원격 Helm·Kubernetes·Dockerfile 19개 High/Critical 0 |
 | T-M5-26 Security Test | ✅ | 로컬·원격 실 PostgreSQL 선별 시험 123개 통과·건너뜀 0 |
 | T-M5-27 DAST | ✅ | 로컬·원격 ZAP OpenAPI active scan WARN 0·High 0·PASS 118 |
-| T-M5-28 Image Signing | 🟡 | 5개 이미지 digest 키리스 서명·검증 워크플로 구현, 실제 실행 전 |
+| T-M5-28 Image Signing | ✅ | GHCR 운영 이미지 5종 digest 키리스 서명·신원 검증 |
 | T-M5-29 Admission Controller | ⬜ | 다음 작업 |
 
 ## 2. T-M5-24 이미지 검사
@@ -95,9 +95,20 @@ DB 앞 쿼리 형식 차단, 현재 열린 모집 선택, 전 응답 `nosniff`�
 `https://token.actions.githubusercontent.com`와 정확한 `security.yml@<git ref>` 신원을 다시 검증한다.
 이미지별 reference와 검증 JSON은 90일 산출물로 남는다. Sigstore Policy Controller의 일반 이미지 서명 검증과
 호환되도록 legacy OCI 서명 형식을 명시했다. 워크플로 불변조건 검사는 5종 누락, tag 서명, 느슨한 신원,
-이동 가능한 Action 참조가 생기면 실패한다. 실제 수동 원격 실행 전이라 🟡이다.
+이동 가능한 Action 참조가 생기면 실패한다.
+
+수동 Security run `36903506905`에서 전체 보안 게이트 뒤 실제 발행·서명·검증이 모두 통과했다.
+
+| 이미지 | 검증된 digest |
+|---|---|
+| admission-api | `sha256:f805239520699f2fcdd2462b350ee2aa7b94d340acd93b49ccce04b605bcdb92` |
+| event-relay | `sha256:648eac918201786c2ccf3f467c54695e994d76a197dad1c1cd47d65d7f2e9436` |
+| document-service | `sha256:7f92080af222668e5e5aa794f2c68a89e992ecfa6e2ac26577ac7fefc2538826` |
+| central-api | `sha256:74b5b988911fc12ef12dd564107c1abbad23915d31d8fa633119ecacb26e746e` |
+| pgbouncer | `sha256:622859c86231a75163bdd3ea78faa8ea1d9753a80068eae7de07d2c8b4d2e829` |
+
+로컬 사본은 `E:\DockerData\tools\cosign-3.0.6\run-36903506905`에 있다.
 
 ## 7. 다음 순서
 
-1. T-M5-28 수동 원격 실행으로 5개 이미지 서명·검증 증적 확보
-2. T-M5-29: 정책 엔진에서 미서명 이미지는 거부하고 서명 이미지만 허용하는 실증
+1. T-M5-29: 정책 엔진에서 미서명 이미지는 거부하고 서명 이미지만 허용하는 실증

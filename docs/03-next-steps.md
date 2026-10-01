@@ -19,10 +19,10 @@
 | M2 결제·Finalize·화면 | **24/24** | ✅ Demo Gate 1~5 통과 |
 | M3 운영 안전장치 | **13/15** (+🟡 2) | ✅ **종료 2026-09-27** — 🟡 T-M3-03 WORM·T-M3-06 JWKS 는 M5 |
 | **M4 분산 실증** | **20/28** | ◀ 진행 중 — 차트·kind·Flux Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표·Peak Mode·계측·로그 마스킹·KPI 대시보드·NAT Adaptive Throttling·Redis 장애·중앙 2시간 단절·PG 지연 ✅, 노드 장애 🟡 |
-| M5 신뢰성·보안·접근성 | **22/42** | ◀ **보안 파이프라인 T-M5-20~27 ✅(2026-10-02)** — Git 전체 이력 비밀 0·CodeQL Critical 0·운영 의존성 Critical 0·SPDX SBOM·이미지 5종 Critical 0·IaC 19개 High/Critical 0·실 DB 보안 시험 123개 건너뜀 0·ZAP DAST High 0 원격 CI 통과 · **접근성 T-M5-40~46 ✅·47 🟡(2026-10-01)** — 키보드 완주·전 화면 포커스·스크린리더 재료·200%·320px·세션 만료 경고·CAPTCHA 대체 경로, Chrome·Edge·휴대전화 흉내([09](09-accessibility.md)) · 화면 제품화 T-M5-50~56 추가 · **T-M5-53 개발 입력 가두기 ✅ · T-M5-50 설계 설명·문서 번호 걷어내기 ✅ · T-M5-51 내부 코드 대신 사람 말(계약 1.5.0) ✅ · T-M5-52 오류·검증 문구 ✅ · T-M5-54 표기 통일 ✅ · T-M5-55 상태·기본 화면 ✅ · T-M5-56 흐름·와이어프레임·27장 다시 찍기 ✅ — 화면 제품화 끝** (2026-10-01) |
+| M5 신뢰성·보안·접근성 | **23/42** | ◀ **보안 파이프라인 T-M5-20~28 ✅(2026-10-02)** — Git 전체 이력 비밀 0·CodeQL Critical 0·운영 의존성 Critical 0·SPDX SBOM·이미지 5종 Critical 0·IaC 19개 High/Critical 0·실 DB 보안 시험 123개 건너뜀 0·ZAP DAST High 0·운영 이미지 5종 OIDC 키리스 서명 원격 통과 · **접근성 T-M5-40~46 ✅·47 🟡(2026-10-01)** — 키보드 완주·전 화면 포커스·스크린리더 재료·200%·320px·세션 만료 경고·CAPTCHA 대체 경로, Chrome·Edge·휴대전화 흉내([09](09-accessibility.md)) · 화면 제품화 T-M5-50~56 추가 · **T-M5-53 개발 입력 가두기 ✅ · T-M5-50 설계 설명·문서 번호 걷어내기 ✅ · T-M5-51 내부 코드 대신 사람 말(계약 1.5.0) ✅ · T-M5-52 오류·검증 문구 ✅ · T-M5-54 표기 통일 ✅ · T-M5-55 상태·기본 화면 ✅ · T-M5-56 흐름·와이어프레임·27장 다시 찍기 ✅ — 화면 제품화 끝** (2026-10-01) |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 100/146 태스크** (✅ 만 센다. 🟡 4 — T-M3-03·T-M3-06·T-M4-39·T-M5-47). **429개 테스트**
+**총 101/146 태스크** (✅ 만 센다. 🟡 4 — T-M3-03·T-M3-06·T-M4-39·T-M5-47). **429개 테스트**
 (admission-api 323 · server-kit 51 · central-api 29 · event-relay 7 · document-service 8 · krds 5, 2026-10-01). DB 포함(CI 재현 DB) 실패 0.
 DB 포함 실행(CI 재현 DB)은 admission-api 3 skip(`ADMIN_API_TOKEN` 미설정) 외 전부 pass.
 배포 스크립트 시험 별도: Peak Mode 예약 계산 9건(`npm run test:m4:peak-schedule`), 대시보드·KPI 규칙 일관성(`npm run test:m4:observability`).
@@ -136,7 +136,7 @@ T-M5-40~46 ✅·47 🟡 — **[09-accessibility.md](09-accessibility.md)**. 설�
 
 ## 완성까지 남은 단계 (2026-10-01 전수 점검)
 
-**146개 중 100개 완료, 46개 남음**(2026-10-02 보안 파이프라인 T-M5-20~27 완료. 🟡 부분 완료 4개 — T-M3-03·T-M3-06·T-M4-39·T-M5-47 — 는 남은 쪽에 센다).
+**146개 중 101개 완료, 45개 남음**(2026-10-02 보안 파이프라인 T-M5-20~28 완료. 🟡 부분 완료 4개 — T-M3-03·T-M3-06·T-M4-39·T-M5-47 — 는 남은 쪽에 센다).
 코드에 TODO·FIXME 는 없다. 남은 일은 태스크 표와 아래 목록에 전부 있다. 흉내 구현(헤더 인증·관리자 공유 토큰·Mock PG·Mock 검사 엔진)은
 운영 모드에서 기동이 막혀 있다 — 그 넷을 실물로 바꾸는 것이 "제품" 과 "시연" 의 차이다.
 
@@ -162,7 +162,7 @@ T-M5-40~46 ✅·47 🟡 — **[09-accessibility.md](09-accessibility.md)**. 설�
 
 0. ~~**D-62 증적 감사 체인**~~ — ✅ 2026-10-01 수정(재현 시험 3개)
 1. ~~**화면 제품화 T-M5-50~56**~~ ✅ + ~~접근성 T-M5-40~46~~ ✅·47 🟡 — **둘 다 끝(2026-10-01)**. 접근성 시험은 `tests/a11y/`, 결과·결정은 [09](09-accessibility.md). 47 의 실물 Firefox·Safari 는 C(사람)
-2. **보안 파이프라인 T-M5-20~29 진행 중** — ~~T-M5-20~27 Gitleaks·CodeQL·운영 의존성 SCA·SPDX SBOM·이미지·IaC 검사·실 DB 보안 시험·ZAP DAST~~ ✅ 로컬·원격 통과(Actions run 36902632192). DAST WARN 0·High 0·118개 규칙 통과. **T-M5-28 🟡** — 5개 이미지를 digest로 GHCR 발행·GitHub OIDC 키리스 서명·동일 신원 검증하는 릴리스/수동 워크플로 구현, 실제 원격 실행 전([11](11-security-pipeline.md)). 다음은 실행 확인과 T-M5-29 Admission Controller
+2. **보안 파이프라인 T-M5-20~29 진행 중** — ~~T-M5-20~28 Gitleaks·CodeQL·운영 의존성 SCA·SPDX SBOM·이미지·IaC 검사·실 DB 보안 시험·ZAP DAST·운영 이미지 5종 키리스 서명~~ ✅ 로컬·원격 통과(Actions run 36903506905). 다음은 **T-M5-29 Admission Controller 미서명 거부 실증**([11](11-security-pipeline.md))
 3. 인증 — 로컬 OIDC 발급자(개발용 컨테이너)로 `AUTH_MODE=gateway`·RBAC 6역할·관리자 MFA·JWKS 캐시(T-M5-02·10, T-M3-06)
 4. 보안 통제 T-M5-01·03~09 — 필드 암호화·SSRF 출구 허용 목록·실 clamd·Vault 경로 분리·mTLS
 5. T-M4-10 Outbox 파티션·보관 — DDL 변경이라 노션 §02 첨부 교체가 따른다
