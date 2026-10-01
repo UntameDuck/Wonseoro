@@ -160,7 +160,7 @@ dev-folder/                        ← git repo root (UntameDuck/Wonseoro)
 | **M2** | 결제·Finalize·화면 | **화면에서 접수번호를 받는다** | Demo Gate 1~5 | [M2](milestones/M2-payment-finalize-mvp.md) · 24개 |
 | **M3** | 운영 안전장치 | 장애가 나도 판정이 가능하게 만든다 | v1.1 §01 E 인수기준 | [M3](milestones/M3-operational-safeguards.md) · 15개 |
 | **M4** | 분산 실증 | 장애 격리를 **숫자로** 증명한다 | 3,000 CCU / event loss 0 | [M4](milestones/M4-federated-proof.md) · 25개 |
-| **M5** | 신뢰성·보안·접근성 | 대학에 넣을 수 있는 수준으로 만든다 | 보안 게이트 10종 / 키보드 완주 | [M5](milestones/M5-reliability-security.md) · 33개 |
+| **M5** | 신뢰성·보안·접근성 | 대학에 넣을 수 있는 수준으로 만든다 | 보안 게이트 10종 / 키보드 완주 | [M5](milestones/M5-reliability-security.md) · 42개 |
 | **M6** | Pilot 준비 | 대학 1곳과 Shadow Test | 실 전형·실 PG·런북 완비 | [M6](milestones/M6-pilot-readiness.md) · 15개 |
 
 **M2가 이번 사이클의 1차 목표**다(= 동작 데모). M3~M6은 "완전한 개발 완료"까지의 로드맵이며, M4 이후는 대회 심사보다 Pilot 계약이 트리거다.
