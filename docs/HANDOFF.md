@@ -10,7 +10,7 @@
 ## 1. 30초 요약
 
 - **제품**: 원서로(K-Admission) — 대학 입학 원서접수를 대학별 Data Plane 으로 분산하는 플랫폼. 2026 GovTech 공모전 출품작
-- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 20/28 진행 중**. 전체 84/146 태스크(✅ 만 셈, 2026-10-01 화면 제품화 7개 추가). **CI 네 잡 모두 초록**(2026-09-30 복구)
+- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 20/28 진행 중**. 전체 85/146 태스크(✅ 만 셈, 2026-10-01 화면 제품화 7개 추가). **CI 네 잡 모두 초록**(2026-09-30 복구)
 - **완료한 핵심 증명**: 로컬 kind 2클러스터 축소 환경에서 **대학 간 장애 격리 T-M4-42 통과**. A대 전면 정지 중 B대 접수·중앙 반영, A대 복구 후 접수까지 확인
 - **최근 완료**: T-M4-07 Peak Mode(ADR-0006) · T-M4-20 전 서비스 계측·로그 상관관계 · T-M4-24 로그 마스킹 강제 · **T-M4-21~23 업무 KPI·대시보드 3종** · **D-50 취소 이벤트 계약 위반 수정** · CI 복구 · **T-M4-40 NAT Adaptive Throttling(ADR-0007)** · 과부하 중 API 프로세스가 죽던 결함 수정 · **T-M4-37 Redis 장애 무영향** · T-M4-39 다중 노드 시험(drain 무중단·노드 장애 때 전체가 멈추던 DB 연결 결함 수정, D-52) · **맡겨진 결정 정리(2026-09-30)** — D-44 ⑦(Pod 당 38)·D-47·D-51(OpenAPI v1.3.0 429)·D-52(ADR-0008)·D-53(ingress-nginx 은퇴) 결정·저장소 반영. §05 runtime 첨부를 차트 렌더링으로 바꿔 CI 가 드리프트를 막는다. **노션 반영은 AI 쓰기가 막혀 [06-notion-changeset.md](06-notion-changeset.md) 로 대기**
 - **T-M4-35 ✅** 중앙 2시간 실제 단절 통과 — 원서 24건 처리·DEAD 0·event loss 0·복구 10초 뒤 전량 전송·재시작 0 (`central-outage-realtime-2026-09-30T01-59-27-784Z.json`)
@@ -26,7 +26,8 @@
 - **T-M5-52 ✅ (2026-10-01)** 검증 오류는 서버가 항목 이름으로 만든 한국어 문장, 오류 요약 항목을 누르면 그 칸으로 간다(칸 옆에도 같은 오류, 고치면 바로 지움). 화면은 서버 오류 문구 대신 오류 code 의 문구(`packages/contracts/src/problem-text.ts`)를 보인다. 문구 검사가 서버 오류 문장(ProblemException 인자·title·detail)의 코드 식별자·헤더 이름·상태 코드도 막는다
 - **T-M5-54 ✅ (2026-10-01)** 날짜·시각 표기를 KRDS 한 곳(`packages/krds/src/format.ts`, 와이어프레임 "2026.12.31 18:00", 언제나 한국 시간)으로 모았다. 마감 배너에 날짜, 모집 제목 학년도 중복 제거, 콘솔 마감 입력은 한국 시간 고정. 이모지·기호 아이콘 23곳을 SVG(`icon.tsx`)로 — 문구 검사가 기호를 막는다. 표기 시험은 CI 에서 다른 시간대로 돈다
 - **T-M5-55 ✅ (2026-10-01)** 장애 안내가 마지막 저장·서버 상태·요청번호를 언제나 채운다 — **요청번호는 화면이 `traceparent` 로 만들어 보낸다**(서버 traceId·로그와 같은 번호, 연결이 끊겨도 남는다). 10초 넘는 요청 안내, 내 원서 본인확인 전·연결 실패·그 밖의 오류 구분, 콘솔 불러오는 중/없음 구분, 화면마다 제목, 한국어 404·오류 화면·앱 아이콘, 접수증 인쇄 스타일
-- **바로 다음 할 일**: 로컬에서 할 수 있는 M4 시험은 끝났다 — **[03-next-steps「완성까지 남은 단계」](03-next-steps.md#완성까지-남은-단계-2026-10-01-전수-점검)** 의 A 목록(AI 가 이 PC 에서 끝낼 42개)을 권장 순서대로: **화면 제품화 T-M5-56**(흐름 결함·와이어프레임 정합 — 결제 전 확인 체크·결제 요청 시각·서류 제한 표기·머리글 대학 이름·접수증 항목·enum 선택 목록 등, 끝나면 27장 다시 찍기)·접근성 → 보안 파이프라인 → 인증(로컬 OIDC) → …
+- **T-M5-56 ✅ — 화면 제품화 끝 (2026-10-01)** 단계 표시 ✓ 는 검증된 단계에만, 결제 전 확인 체크·결제 요청 시각, 접수증 전형·모집단위·상태(**계약 1.6.0**), 서류 형식·크기 안내(서버와 같은 출처)·검사 결과 자동 갱신, 선택 목록 항목, 머리글·경로에 대학·모집 이름. **화면 27장을 다시 찍었다 — 렌더링 문구 검사(`capture.mjs --check-copy`) 모두 통과**. 캡처 준비 중 **D-63**(빌린 DB 연결이 끊기면 프로세스가 죽음)을 찾아 고쳤다 — DB 재시작·장애 전환에 서비스가 같이 죽지 않는다
+- **바로 다음 할 일**: 로컬에서 할 수 있는 M4 시험은 끝났다 — **[03-next-steps「완성까지 남은 단계」](03-next-steps.md#완성까지-남은-단계-2026-10-01-전수-점검)** 의 A 목록(AI 가 이 PC 에서 끝낼 41개)을 권장 순서대로: **접근성 T-M5-40~47**(키보드 완주·포커스·스크린리더·200% 확대·320px·세션 만료 경고·CAPTCHA 대체·브라우저 호환 — 화면 제품화가 끝나 같은 화면 위에서 한다) → 보안 파이프라인 → 보안 파이프라인 → 인증(로컬 OIDC) → …
 
 ## 2. 반드시 지킬 규칙
 
@@ -55,7 +56,7 @@
 | 로컬 관측 스택 | kind A `observability` 네임스페이스: Prometheus(KPI 규칙 포함)·Adapter·Grafana(익명 Viewer). Grafana 는 `kubectl -n observability port-forward svc/grafana 13000:80` |
 | 중앙 DB 마이그레이션 | `infra/db/central/0001_init.sql`·`0002_vault.sql`·**`0003_summary_names.sql`**(2026-10-01) — `npm run db:migrate:central` 이 셋 다 적용한다 |
 | 로컬 DB | compose: `postgres-univ-a` :5432 · `postgres-univ-b` :5442(`--profile multi`) · `postgres-central` :5434 · redis :6379 · minio :9000 |
-| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 323 · server-kit 50 · central-api 29 · event-relay 7 · document-service 8 · krds 5 (전체 422, CI 재현 DB 에서 실패 0·건너뜀 3, 2026-10-01). `app.module.boot.test` 는 실제 AppModule 로 DI 를 조립한다 — 서비스를 직접 `new` 하는 통합 시험이 못 잡는 "서버가 안 뜨는" 결함용. 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함). **DB 통합 시험 전에 kind univ-a 의 API·Relay 를 0 으로 줄인다** — 같은 로컬 `univ_a` DB 를 봐서 시험 행을 먼저 집어 간다(결제 재확인·Relay 시험이 실패하거나 멈춘다). event-relay 시험은 직렬로 돈다 |
+| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 323 · server-kit 51 · central-api 29 · event-relay 7 · document-service 8 · krds 5 (전체 423, CI 재현 DB 에서 실패 0·건너뜀 3, 2026-10-01). `app.module.boot.test` 는 실제 AppModule 로 DI 를 조립한다 — 서비스를 직접 `new` 하는 통합 시험이 못 잡는 "서버가 안 뜨는" 결함용. 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함). **DB 통합 시험 전에 kind univ-a 의 API·Relay 를 0 으로 줄인다** — 같은 로컬 `univ_a` DB 를 봐서 시험 행을 먼저 집어 간다(결제 재확인·Relay 시험이 실패하거나 멈춘다). event-relay 시험은 직렬로 돈다 |
 | 검사 | `npm run db:verify`(DB 제약 20종) · `node scripts/check-deps.mjs`(의존성 선언) · `helm lint deploy/charts/k-admission` · `node scripts/render-runtime-attachment.mjs --check`(runtime 첨부 = 차트 렌더링) · `npm run check:ui-copy`(화면 문구에 설계 번호·개발 안내·구조 설명 금지, T-M5-50) · `npm run check:contracts`(OpenAPI `$ref`·operationId·대장 번호·직전 커밋 대비 호환성, CloudEvents 컴파일·이벤트 타입) |
 | 로컬 화면 확인 | kind 와 섞지 않으려면 로컬 프로세스를 CI 재현 DB 에 붙인다 — 중앙 :3100(`DATABASE_URL=…5499/central`)·대학 :3101(`…5499/univ_a`, `CENTRAL_SYNC_URL=http://localhost:3100`, `CORS_ORIGINS=http://localhost:4001`, `OTEL_METRICS_PORT` 를 9464 가 아닌 값으로)·지원자 웹 :4001(`NEXT_PUBLIC_ADMISSION_API`·`NEXT_PUBLIC_CENTRAL_API`). **:3000 은 쓰지 않는다** — kind 시험이 `ka-central` 을 거기 띄운다. 개발 시드 지원자: `44444444-4444-4444-4444-444444444444` / `subj-dev-0001` |
 | 동시 작업 | 같은 폴더에서 다른 AI 세션이 커밋할 수 있다(2026-09-30 실제로 겹쳤다 — D-54 번호 충돌). 대장 번호를 쓰기 전에 대장 끝을 다시 읽고, 커밋 전에 `git log` 를 본다 |
@@ -197,7 +198,7 @@ Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, s
 
 ## 6. 전체 남은 규모
 
-146개 중 84개 완료, **62개 남음** (2026-10-01 전수 점검 + 화면 제품화 7개 추가). **A. AI 가 이 PC 에서 끝낼 수 있는 것 42개 · B. 외부 환경(K-PaaS·HA DB·PG 계약) 12개 · C. 사람·기관 8개.**
+146개 중 85개 완료, **61개 남음** (2026-10-01 전수 점검 + 화면 제품화 7개 추가). **A. AI 가 이 PC 에서 끝낼 수 있는 것 41개 · B. 외부 환경(K-PaaS·HA DB·PG 계약) 12개 · C. 사람·기관 8개.**
 목록과 권장 순서는 [03-next-steps.md 「완성까지 남은 단계」](03-next-steps.md#완성까지-남은-단계-2026-10-01-전수-점검).
 
 ## 7. 어디에 무엇이 있나
@@ -206,14 +207,14 @@ Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, s
 |---|---|
 | 지금 할 일 | [03-next-steps.md](03-next-steps.md) |
 | 단계별 태스크·인수기준 | [milestones/](milestones/) |
-| 설계와 구현이 다른 곳 62건 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) |
+| 설계와 구현이 다른 곳 63건 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) |
 | 화면 캡처·다시 찍는 법 | [screenshots/README.md](screenshots/README.md) |
 | 화면 제품화 — 화면 결함·개발 흔적 전수 목록(U-1~U-59)·결정·문구 검사 | [08-ui-production-readiness.md](08-ui-production-readiness.md) |
 | 흉내·미연결 점검 결과와 일부러 남긴 흉내 | [04-production-readiness.md §7](04-production-readiness.md#7-흉내미연결-전수-점검-2026-09-30) |
 | 노션 문서 지도·동기화 규칙 | [01-notion-sync-protocol.md](01-notion-sync-protocol.md) |
 | 왜 이렇게 정했나 | [adr/](adr/) — 최신 ADR-0008 노드 장애 흡수(nodeTaintsPolicy·판정 시간·Edge 재시도) |
 | 배포 | `deploy/` — 차트 `charts/k-admission`, 대학별 `universities/`, 로컬 `local/` |
-| API 계약 | `packages/contracts/openapi/k-admission.v1.yaml` (v1.5.0) — 컨트롤러와 다르면 계약 적합성 시험이, 계약 파일이 깨지거나 비호환이면 `check:contracts` 가 깨진다 |
+| API 계약 | `packages/contracts/openapi/k-admission.v1.yaml` (v1.6.0) — 컨트롤러와 다르면 계약 적합성 시험이, 계약 파일이 깨지거나 비호환이면 `check:contracts` 가 깨진다 |
 | 사람 말 사전(상태·행위·예외 등 화면 이름) | `packages/contracts/src/labels.ts` — 화면은 내부 코드를 그대로 보이지 않는다 (T-M5-51) |
 | 날짜·시각 표기·아이콘 | `packages/krds/src/format.ts`(언제나 한국 시간)·`icon.tsx`(SVG) — 화면은 `toLocaleString`·이모지를 직접 쓰지 않는다 (T-M5-54) |
 | 오류 문구표(오류 code → 화면 제목·설명) | `packages/contracts/src/problem-text.ts` — 화면은 서버 오류 문구를 그대로 보이지 않는다. 조사 함수 `josa.ts` (T-M5-52) |

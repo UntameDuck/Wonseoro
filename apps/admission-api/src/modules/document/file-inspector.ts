@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { UPLOAD_FORMATS } from '@wonseoro/contracts';
 import { ProblemException } from '../../common/problem/problem.exception';
 
 /**
@@ -21,30 +22,23 @@ export interface AllowedType {
 
 const MB = 1024 * 1024;
 
+/** 형식별 파일 시그니처(magic-byte). 서버에만 있다. */
+const SIGNATURES: Record<string, readonly (readonly number[])[]> = {
+  'application/pdf': [[0x25, 0x50, 0x44, 0x46]], // %PDF
+  'image/jpeg': [[0xff, 0xd8, 0xff]],
+  'image/png': [[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]],
+};
+
 /**
  * 허용 목록 방식이다. 차단 목록으로 하면 새 위험 포맷이 나올 때마다 뚫린다.
  * 대학이 다른 포맷을 요구하면 Config 로 넓히는 것이 아니라 여기를 검토해야 한다.
+ * 형식·확장자·크기 상한은 계약 패키지(UPLOAD_FORMATS)에서 온다 — 화면 안내와 같은 값이다 (T-M5-56).
  */
-export const ALLOWED_TYPES: readonly AllowedType[] = [
-  {
-    mediaType: 'application/pdf',
-    extensions: ['.pdf'],
-    signatures: [[0x25, 0x50, 0x44, 0x46]], // %PDF
-    maxBytes: 10 * MB,
-  },
-  {
-    mediaType: 'image/jpeg',
-    extensions: ['.jpg', '.jpeg'],
-    signatures: [[0xff, 0xd8, 0xff]],
-    maxBytes: 5 * MB,
-  },
-  {
-    mediaType: 'image/png',
-    extensions: ['.png'],
-    signatures: [[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]],
-    maxBytes: 5 * MB,
-  },
-];
+export const ALLOWED_TYPES: readonly AllowedType[] = UPLOAD_FORMATS.map((f) => {
+  const signatures = SIGNATURES[f.mediaType];
+  if (!signatures) throw new Error(`서명 검사가 없는 서류 형식: ${f.mediaType}`);
+  return { mediaType: f.mediaType, extensions: f.extensions, signatures, maxBytes: f.maxBytes };
+});
 
 /**
  * 명시적으로 거부하는 시그니처.

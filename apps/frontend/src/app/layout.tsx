@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import '@wonseoro/krds/tokens.css';
+import { CycleBadge } from '../krds/cycle-badge';
 
 /**
  * 화면마다 제목이 다르다 — "검토·결제 — 원서 작성 | 원서로". 탭·스크린리더·방문 기록이 화면을 구별한다
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               }}
             >
               원서로
+              <CycleBadge />
             </a>
             <nav aria-label="주요 메뉴" style={{ display: 'flex', gap: 'var(--krds-space-4)' }}>
               <a href="/profile" style={{ color: 'var(--krds-primary)' }}>

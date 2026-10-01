@@ -213,24 +213,32 @@ export interface SelectOption {
  * 힌트는 label 과 controls 사이에 둔다. (KRDS 입력 패턴)
  */
 export function Select({
+  id: fixedId,
   label,
   value,
   options,
   onChange,
   hint,
+  error,
   required,
   disabled,
 }: {
+  /** 오류 요약이 이 칸으로 데려갈 때 쓰는 고정 id */
+  id?: string;
   label: string;
   value: string;
   options: readonly SelectOption[];
   onChange: (v: string) => void;
   hint?: string;
+  /** 칸 옆 오류 — 오류 요약과 동시에 (Field 와 같다) */
+  error?: string;
   required?: boolean;
   disabled?: boolean;
 }) {
-  const id = useId();
+  const generatedId = useId();
+  const id = fixedId ?? generatedId;
   const hintId = `${id}-hint`;
+  const errorId = `${id}-error`;
 
   return (
     <div style={{ marginBottom: 'var(--krds-space-5)' }}>
@@ -269,7 +277,8 @@ export function Select({
         value={value}
         required={required}
         disabled={disabled}
-        aria-describedby={hint ? hintId : undefined}
+        aria-describedby={[hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined}
+        aria-invalid={error ? true : undefined}
         onChange={(e) => onChange(e.target.value)}
         style={{
           width: '100%',
@@ -289,6 +298,12 @@ export function Select({
           </option>
         ))}
       </select>
+      {error && (
+        <p id={errorId} style={{ margin: 'var(--krds-space-2) 0 0', color: 'var(--krds-danger)', fontSize: 'var(--krds-text-sm)', fontWeight: 700 }}>
+          <Icon name="cross" />
+          {error}
+        </p>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: K-Admission University Data Plane API
-  version: 1.5.0
+  version: 1.6.0
   description: >
     Reference contract for a university-local K-Admission data plane.
     The university DB is the source of truth; central sync is not in the applicant critical path.
@@ -29,6 +29,11 @@ info:
     1.5.0 adds display names so screens never show internal codes (T-M5-51): the dashboard summary
     carries `admissionTypeName` and `departmentName` (sent by the university in
     `application.finalized`), and common-profile consents carry `universityName`. Optional, additive.
+
+
+    1.6.0 completes the receipt and the payment-pending screen (T-M5-56): the receipt carries
+    `admissionTypeName`, `departmentName` and `status` (the T-M2-11 receipt items), and the self-check
+    payment carries `requestedAt`. Additive.
 
 
     Common rules:
@@ -593,6 +598,9 @@ paths:
                   submissionId: { type: string, format: uuid }
                   applicationNumber: { type: string }
                   finalizedAt: { type: string, format: date-time }
+                  admissionTypeName: { type: string, description: Display name (1.6.0) }
+                  departmentName: { type: string, description: Display name (1.6.0) }
+                  status: { type: string, const: FINALIZED, description: Receipts exist only for finalized submissions (1.6.0) }
                   receiptUrl: { type: string, format: uri }
         '404':
           $ref: '#/components/responses/Problem'
@@ -2123,6 +2131,10 @@ components:
               description: Lets the client re-check this payment instead of creating another one
             status: { type: string }
             amount: { type: number }
+            requestedAt:
+              type: string
+              format: date-time
+              description: When the payment was requested (1.6.0) — shown while confirmation is pending
             providerApprovedAt: { type: [string, 'null'], format: date-time }
             verifiedAt: { type: [string, 'null'], format: date-time }
             guidance: { type: string, description: Never prompts a second payment while uncertain }

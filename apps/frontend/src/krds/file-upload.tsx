@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { ApiError, NetworkError, api, newIdempotencyKey } from '../lib/api';
 import { Alert, Button, Icon } from '@wonseoro/krds';
-import { problemText } from '@wonseoro/contracts';
+import { UPLOAD_FORMATS, problemText, uploadLimitText } from '@wonseoro/contracts';
 
 export interface UploadedDocument {
   documentType: string;
@@ -35,12 +35,15 @@ export function FileUpload({
   applicantId,
   documentType,
   label,
+  scan,
   onUploaded,
 }: {
   applicationId: string;
   applicantId: string;
   documentType: string;
   label: string;
+  /** 서버가 아는 이 서류의 최근 검사 상태 — 업로드 칸 문구가 아래 목록과 어긋나지 않게 (U-5) */
+  scan?: string | undefined;
   onUploaded: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -131,14 +134,14 @@ export function FileUpload({
           color: 'var(--krds-fg-muted)',
         }}
       >
-        PDF · JPG · PNG 만 올릴 수 있습니다. 올린 뒤 악성코드 검사를 거칩니다.
+        {uploadLimitText()}. 올린 뒤 악성코드 검사를 거칩니다.
       </p>
 
       {/* 파일 선택 버튼을 항상 제공한다. Drag&Drop 만 주지 않는다. (§07) */}
       <input
         ref={inputRef}
         type="file"
-        accept=".pdf,.jpg,.jpeg,.png"
+        accept={UPLOAD_FORMATS.flatMap((f) => f.extensions).join(',')}
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (f) void upload(f);
@@ -152,15 +155,19 @@ export function FileUpload({
       </Button>
 
       <div style={{ marginTop: 'var(--krds-space-3)' }}>
-        <PhaseText phase={phase} filename={filename} />
+        <PhaseText phase={phase} filename={filename} scan={scan} />
       </div>
     </div>
   );
 }
 
 /** 진행 상태를 **텍스트로** 말한다. 진행바만 두지 않는다. */
-function PhaseText({ phase, filename }: { phase: Phase; filename: string | null }) {
+function PhaseText({ phase, filename, scan }: { phase: Phase; filename: string | null; scan?: string | undefined }) {
   const name = filename ? `${filename} — ` : '';
+  // 올린 뒤에는 서버의 검사 결과를 따른다 — 검사가 끝났는데 "검사 중" 으로 남지 않게 (U-5)
+  if (phase.kind === 'done' && scan === 'REJECTED') {
+    phase = { kind: 'failed', reason: '검사를 통과하지 못했습니다. 다른 파일을 올려 주십시오.' };
+  }
 
   if (phase.kind === 'idle') {
     return (
@@ -189,7 +196,9 @@ function PhaseText({ phase, filename }: { phase: Phase; filename: string | null 
         ? '업로드 중…'
         : phase.kind === 'verifying'
           ? '파일을 확인하는 중…'
-          : '업로드 완료 — 악성코드 검사 중입니다';
+          : scan === 'AVAILABLE'
+            ? '업로드·검사 완료'
+            : '업로드 완료 — 악성코드 검사 중입니다';
 
   return (
     <p
@@ -197,11 +206,11 @@ function PhaseText({ phase, filename }: { phase: Phase; filename: string | null 
       style={{
         margin: 0,
         fontSize: 'var(--krds-text-sm)',
-        color: phase.kind === 'done' ? 'var(--krds-success)' : 'var(--krds-fg-muted)',
-        fontWeight: phase.kind === 'done' ? 700 : 400,
+        color: phase.kind === 'done' && scan === 'AVAILABLE' ? 'var(--krds-success)' : 'var(--krds-fg-muted)',
+        fontWeight: phase.kind === 'done' && scan === 'AVAILABLE' ? 700 : 400,
       }}
     >
-      <Icon name={phase.kind === 'done' ? 'check' : 'sync'} />
+      <Icon name={phase.kind === 'done' && scan === 'AVAILABLE' ? 'check' : 'sync'} />
       {name}
       {text}
     </p>

@@ -1,6 +1,7 @@
 // 화면 캡처 — 설치 없이 이 PC 의 Chrome 을 헤드리스로 띄워 DevTools 프로토콜(CDP)로 조작한다.
 //
-// 사용: node scripts/screenshots/capture.mjs <단계> [출력 폴더=docs/screenshots]
+// 사용: node scripts/screenshots/capture.mjs <단계> [출력 폴더=docs/screenshots] [--check-copy]
+//   --check-copy  찍는 화면마다 보이는 글을 검사한다 — 설계 번호·내부 코드·UUID·ISO 시각·영문 검증 문구 (T-M5-56)
 //   단계: applicant | central-down | admission-down | seed-recon | admin
 //   순서·서버 준비는 docs/screenshots/README.md 「다시 찍기」.
 //
@@ -15,8 +16,10 @@ import path from 'node:path';
 // 단계 사이에 이어 쓰는 상태(원서 ID)·Chrome 프로필·실패 화면은 저장소 밖에 둔다.
 const WORK = path.join(os.tmpdir(), 'wonseoro-shots');
 mkdirSync(WORK, { recursive: true });
-const PHASE = process.argv[2];
-const OUT = path.resolve(process.argv[3] ?? 'docs/screenshots');
+const ARGS = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const CHECK_COPY = process.argv.includes('--check-copy');
+const PHASE = ARGS[0];
+const OUT = path.resolve(ARGS[1] ?? 'docs/screenshots');
 const WEB = 'http://localhost:4001';
 const ADMIN = 'http://localhost:4101';
 const CDP_PORT = 9333;
@@ -182,6 +185,33 @@ async function shot(name, caption) {
   await writeFile(file, Buffer.from(r.data, 'base64'));
   shots.push({ name, caption, height });
   console.log(`✔ ${name} (${W}×${height}) — ${caption}`);
+  if (CHECK_COPY) await checkCopy(name);
+}
+
+/**
+ * 렌더링 문구 검사 (docs/08 「회귀 방지」). 소스 검사(scripts/check-ui-copy.mjs)가 못 보는 것 — 서버가 보낸 문구와
+ * 데이터 — 까지 화면에 실제로 보이는 글(innerText, 입력칸 값은 빠진다)로 본다.
+ * 지원자 화면은 엄격하게, 콘솔은 담당자가 쓰는 식별자(원서 ID·설정 버전·해시)를 허용한다.
+ */
+const COPY_RULES = [
+  { re: /§|\bD-\d+\b|\bT-M\d|기술설계서/, why: '설계 문서 번호' },
+  { re: /\bv1\.[01]\b/, why: '설계 문서 판 번호' },
+  { re: /\b[A-Z]{2,}(_[A-Z]+)+\b/, why: '내부 상태 코드' },
+  { re: /\d{4}-\d{2}-\d{2}T\d{2}:/, why: 'ISO 시각 원문' },
+  { re: /\b(must|should|property|required)\b/i, why: '영문 검증 문구' },
+  { re: /[✓✕⚠ℹ⟳○]/, why: '기호 아이콘' },
+  { re: /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i, why: 'UUID', applicantOnly: true },
+  { re: /\bcfg-|subj-dev|\b2027-early/, why: '내부 버전·개발 값', applicantOnly: true },
+];
+const copyProblems = [];
+async function checkCopy(name) {
+  const text = await evaluate(`document.body.innerText`);
+  const applicant = !name.startsWith('admin/');
+  for (const rule of COPY_RULES) {
+    if (rule.applicantOnly && !applicant) continue;
+    const m = rule.re.exec(text);
+    if (m) copyProblems.push(`${name}  [${rule.why}]  …${text.slice(Math.max(0, m.index - 20), m.index + 40).replace(/\s+/g, ' ')}…`);
+  }
 }
 
 await send('Page.enable');
@@ -268,7 +298,7 @@ async function applicant() {
   await click('다음 단계');
   await waitText('4. 서류');
   await setFile(pdf);
-  await waitText('업로드 완료', 40_000);
+  await waitFor(`/업로드 완료|업로드·검사 완료/.test(document.body.innerText)`, '업로드', 40_000);
   // 검사 워커가 끝낼 때까지 화면의 "검사 상태 새로고침" 을 누른다.
   for (let i = 0; i < 20 && !(await evaluate(hasText('검사 완료'))); i++) {
     await sleep(1500);
@@ -281,18 +311,19 @@ async function applicant() {
   await click('검토 단계로');
   await waitText('결제가 확인되면 바로 접수가 완료됩니다', 30_000); // 5단계에만 있는 문구 — 단계 표시기에는 늘 '5. 검토·결제' 가 있다
   await sleep(800);
-  await shot('applicant/09-apply-step5-review', '원서 5단계 검토·결제 — 결제가 곧 접수라는 경고');
+  await shot('applicant/09-apply-step5-review', '원서 5단계 검토·결제 — 결제가 곧 접수라는 경고·결제 전 확인 체크');
 
+  await check('결제 후에는 원서를 수정하거나 취소할 수 없다는 것을 확인했습니다.');
   await click('전형료 결제하고 접수');
   await waitText('접수가 완료되었습니다', 60_000);
   await sleep(1500);
-  await shot('applicant/10-apply-complete', '접수 완료 — 접수번호·접수 시각·적용 마감정책');
+  await shot('applicant/10-apply-complete', '접수 완료 — 접수번호·접수 시각');
 
   state.submissionHref = await evaluate(`[...document.querySelectorAll('a')].find((a) => a.textContent.trim() === '접수증 보기·인쇄')?.getAttribute('href')`);
   saveState();
   await goto(`${WEB}${state.submissionHref}`, '접수번호');
   await sleep(800);
-  await shot('applicant/11-receipt', '접수증 — 인쇄용');
+  await shot('applicant/11-receipt', '접수증 — 전형·모집단위·상태, 인쇄 때 메뉴·버튼은 빠진다');
 
   await sleep(4000); // Relay 가 중앙에 보낼 시간
   await goto(`${WEB}/dashboard`);
@@ -380,7 +411,7 @@ async function operator(id) {
 async function admin() {
   await goto(`${ADMIN}/`, '입학처 콘솔');
   await waitText('2027 수시', 60_000);
-  await shot('admin/20-console-home', '입학처 콘솔 첫 화면 — 하는 일·하지 않는 일');
+  await shot('admin/20-console-home', '입학처 콘솔 첫 화면 — 지금 처리할 일(승인 대기·미해결 불일치·지금 마감)');
 
   await goto(`${ADMIN}/deadline`, '마감 · 연장');
   await waitText('정책 2027-early-v1', 60_000);
@@ -467,6 +498,7 @@ async function seedRecon() {
   await waitText('4. 서류');
   await click('검토 단계로');
   await waitText('결제가 확인되면 바로 접수가 완료됩니다', 30_000); // 5단계에만 있는 문구 — 단계 표시기에는 늘 '5. 검토·결제' 가 있다
+  await check('결제 후에는 원서를 수정하거나 취소할 수 없다는 것을 확인했습니다.');
   await click('전형료 결제하고 접수');
   await waitText('접수가 완료되었습니다', 60_000);
   console.log('✔ 두 번째 지원자 접수', state.reconApplicationId);
@@ -479,6 +511,15 @@ try {
   else if (PHASE === 'admin') await admin();
   else if (PHASE === 'seed-recon') await seedRecon();
   else throw new Error(`알 수 없는 단계: ${PHASE}`);
+  if (CHECK_COPY) {
+    if (copyProblems.length) {
+      console.error(`✘ 렌더링 문구 검사 — ${copyProblems.length}건`);
+      for (const x of copyProblems) console.error(`  ${x}`);
+      process.exitCode = 1;
+    } else {
+      console.log(`✔ 렌더링 문구 검사 — 화면 ${shots.length}장 이상 없음`);
+    }
+  }
 } catch (err) {
   console.error('✘', err.message);
   const r = await send('Page.captureScreenshot', { format: 'png' }).catch(() => null);

@@ -24,7 +24,17 @@ export type StepNo = (typeof STEPS)[number]['no'];
  * Step Indicator.
  * 현재 위치를 **색만으로** 표시하지 않는다. 숫자와 "현재 단계" 텍스트를 함께 준다.
  */
-export function StepIndicator({ current }: { current: StepNo }) {
+export function StepIndicator({
+  current,
+  completed = [],
+}: {
+  current: StepNo;
+  /**
+   * 완료로 확인된 단계 — ✓ 를 붙인다. 지나갔을 뿐 확인되지 않은 단계는 번호를 그대로 둔다 (T-M5-56, U-3).
+   * 전에는 지나간 단계에 모두 ✓ 를 붙여, 입력이 빠진 1단계도 끝난 것처럼 보였다.
+   */
+  completed?: readonly number[];
+}) {
   return (
     <nav aria-label="원서접수 진행 단계" style={{ marginBottom: 'var(--krds-space-5)' }}>
       <ol
@@ -38,7 +48,7 @@ export function StepIndicator({ current }: { current: StepNo }) {
         }}
       >
         {STEPS.map((s) => {
-          const state = s.no < current ? 'done' : s.no === current ? 'current' : 'todo';
+          const state = s.no === current ? 'current' : completed.includes(s.no) ? 'done' : 'todo';
           return (
             <li
               key={s.no}

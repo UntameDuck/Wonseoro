@@ -448,6 +448,12 @@ export class FinalizationService implements OnModuleInit {
     return submission;
   }
 
+  /** 접수증에 적을 전형·모집단위 이름 (T-M2-11 인수기준 "제출시각·전형·모집단위·상태", T-M5-56) */
+  async receiptNames(applicationId: string): Promise<{ admissionTypeName: string; departmentName: string }> {
+    const app = await this.loadApplication(applicationId);
+    return { admissionTypeName: app.admissionTypeName, departmentName: app.departmentName };
+  }
+
   async findBySubmissionId(submissionId: string): Promise<SubmissionRow | null> {
     const { rows } = await this.db.query<{ application_id: string }>(
       `SELECT application_id FROM submission WHERE id = $1`,

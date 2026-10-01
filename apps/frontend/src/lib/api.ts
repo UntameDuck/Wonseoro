@@ -177,7 +177,7 @@ export interface SelfCheck {
     finalizedAt: string;
   } | null;
   /** paymentId 가 있으면 새 결제를 만들지 않고 이 결제를 다시 확인한다 (재결제 방지). */
-  payment: { exists: boolean; paymentId?: string; status?: string; amount?: number; guidance: string };
+  payment: { exists: boolean; paymentId?: string; status?: string; amount?: number; requestedAt?: string; guidance: string };
   documents: Array<{ documentType: string; status: string; guidance: string }>;
   centralSync: { pending: number; sent: number; guidance: string };
   timeline: Array<{ at: string; what: string; result: string }>;
@@ -290,7 +290,15 @@ export const api = {
 
   /** 접수증. 발급할 때마다 서버가 기록한다(RECEIPT_ISSUED). */
   receipt: (submissionId: string, applicantId: string) =>
-    call<{ submissionId: string; applicationNumber: string; finalizedAt: string }>(
+    call<{
+      submissionId: string;
+      applicationNumber: string;
+      finalizedAt: string;
+      /** 접수증 항목 (계약 1.6.0) — 옛 서버는 없다 */
+      admissionTypeName?: string;
+      departmentName?: string;
+      status?: 'FINALIZED';
+    }>(
       `/api/v1/submissions/${submissionId}/receipt`,
       { applicantId },
     ),

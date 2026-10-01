@@ -124,7 +124,7 @@ export class SelfCheckController {
 
   private async latestPayment(applicationId: string) {
     const { rows } = await this.db.query<Record<string, unknown>>(
-      `SELECT id, status, amount, provider_approved_at, verified_at
+      `SELECT id, status, amount, provider_approved_at, verified_at, created_at
          FROM payment WHERE application_id = $1
         ORDER BY created_at DESC LIMIT 1`,
       [applicationId],
@@ -139,6 +139,8 @@ export class SelfCheckController {
       paymentId: String(r.id),
       status,
       amount: Number(r.amount),
+      // 결제를 요청한 시각 — 확인이 마감 뒤에 끝나도 이 시각이 판정 자료다. 화면이 확인 중에 보인다 (계약 1.6.0, U-56)
+      requestedAt: (r.created_at as Date).toISOString(),
       providerApprovedAt: r.provider_approved_at
         ? (r.provider_approved_at as Date).toISOString()
         : null,

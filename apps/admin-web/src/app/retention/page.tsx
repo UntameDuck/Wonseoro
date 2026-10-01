@@ -143,5 +143,7 @@ const th = {
   textAlign: 'left',
   padding: 'var(--krds-space-2)',
   borderBottom: '2px solid var(--krds-border)',
+  // 좁은 열의 머리글이 한 글자씩 줄바꿈되지 않게 ("설/정") (U-11)
+  whiteSpace: 'nowrap',
 } as const;
 const td = { padding: 'var(--krds-space-2)', borderBottom: '1px solid var(--krds-border)', verticalAlign: 'top' } as const;

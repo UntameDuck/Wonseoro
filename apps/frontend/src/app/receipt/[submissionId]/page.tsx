@@ -5,7 +5,7 @@ import { Alert, Button, Card, DescriptionList, cycleTitle } from '@wonseoro/krds
 import { ApiError, NetworkError, api } from '../../../lib/api';
 import { loadSession } from '../../../lib/session';
 import { formatKst } from '../../../lib/use-deadline';
-import { problemText } from '@wonseoro/contracts';
+import { APPLICATION_STATUS_LABEL, labelOf, problemText } from '@wonseoro/contracts';
 
 /**
  * 접수증 — 인쇄용 (계약 getReceipt)
@@ -18,7 +18,13 @@ import { problemText } from '@wonseoro/contracts';
 export default function ReceiptPage({ params }: { params: Promise<{ submissionId: string }> }) {
   const { submissionId } = use(params);
   const applicantId = typeof window !== 'undefined' ? (loadSession()?.applicantId ?? '') : '';
-  const [receipt, setReceipt] = useState<{ applicationNumber: string; finalizedAt: string } | null>(null);
+  const [receipt, setReceipt] = useState<{
+    applicationNumber: string;
+    finalizedAt: string;
+    admissionTypeName?: string;
+    departmentName?: string;
+    status?: string;
+  } | null>(null);
   const [university, setUniversity] = useState<string | null>(null);
   const [universityName, setUniversityName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +70,10 @@ export default function ReceiptPage({ params }: { params: Promise<{ submissionId
             </strong>,
           ],
           ['접수 시각', formatKst(receipt.finalizedAt)],
+          // T-M2-11 인수기준 — 제출시각·전형·모집단위·상태 (T-M5-56, U-6)
+          ['전형', receipt.admissionTypeName ?? '-'],
+          ['모집단위', receipt.departmentName ?? '-'],
+          ['상태', labelOf(APPLICATION_STATUS_LABEL, receipt.status ?? 'FINALIZED')],
         ]}
       />
       <p style={{ fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)' }}>

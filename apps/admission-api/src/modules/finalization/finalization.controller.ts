@@ -71,10 +71,15 @@ export class FinalizationController {
     if (!submission) {
       throw ProblemException.notFound('존재하지 않는 접수입니다.');
     }
+    const names = await this.finalization.receiptNames(submission.applicationId);
     return {
       submissionId: submission.submissionId,
       applicationNumber: submission.applicationNumber,
       finalizedAt: submission.finalizedAt,
+      // 접수증 항목 — 전형·모집단위·상태 (계약 1.6.0)
+      admissionTypeName: names.admissionTypeName,
+      departmentName: names.departmentName,
+      status: 'FINALIZED' as const,
     };
   }
 

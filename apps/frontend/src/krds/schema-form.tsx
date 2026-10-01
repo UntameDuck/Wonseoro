@@ -1,6 +1,6 @@
 'use client';
 
-import { DescriptionList, Field } from '@wonseoro/krds';
+import { DescriptionList, Field, Select } from '@wonseoro/krds';
 
 /**
  * JSON Schema 기반 동적 폼 — 기술설계서 v1.1 §A5
@@ -37,6 +37,8 @@ export interface JsonSchemaProperty {
   maximum?: number;
   format?: string;
   enum?: string[];
+  /** 선택지마다 보일 이름. 없으면 값을 그대로 쓴다 */
+  'x-enumTitles'?: string[];
   'x-multiline'?: boolean;
 }
 
@@ -85,7 +87,7 @@ export function SchemaForm({
   if (readOnly) {
     return (
       <DescriptionList
-        items={codes.map((code) => [labelOf(code), values[code] ? values[code]! : '입력하지 않음'])}
+        items={codes.map((code) => [labelOf(code), values[code] ? choiceLabel(schema.properties![code]!, values[code]!) : '입력하지 않음'])}
       />
     );
   }
@@ -95,6 +97,26 @@ export function SchemaForm({
       {codes.map((code) => {
         const p = schema.properties![code]!;
         const isNumber = p.type === 'integer' || p.type === 'number';
+
+        // 선택지가 정해진 항목은 선택 목록으로 — 전에는 자유 입력칸이라 정해진 값 밖을 써도 저장 뒤에야 거절됐다 (U-30)
+        if (p.enum && p.enum.length > 0) {
+          return (
+            <Select
+              key={code}
+              id={`field-${code}`}
+              label={labelOf(code)}
+              value={values[code] ?? ''}
+              onChange={(v) => onChange(code, v)}
+              options={[
+                { value: '', label: '선택하십시오' },
+                ...p.enum.map((v) => ({ value: v, label: choiceLabel(p, v) })),
+              ]}
+              {...(p.description ? { hint: p.description } : {})}
+              {...(errors?.[code] ? { error: errors[code] } : {})}
+              required={required.has(code)}
+            />
+          );
+        }
 
         return (
           <Field
@@ -114,6 +136,12 @@ export function SchemaForm({
       })}
     </>
   );
+}
+
+/** 선택지 값의 이름 — x-enumTitles 가 있으면 그것, 없으면 값 그대로 */
+function choiceLabel(p: JsonSchemaProperty, value: string): string {
+  const i = p.enum?.indexOf(value) ?? -1;
+  return i >= 0 ? (p['x-enumTitles']?.[i] ?? value) : value;
 }
 
 /**
