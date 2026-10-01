@@ -42,9 +42,9 @@
 
 | ID | 게이트 | 통과 기준 |
 |---|---|---|
-| T-M5-20 | 1. Secret Scan | plaintext secret commit 0 |
+| T-M5-20 | 1. Secret Scan 🟡 2026-10-02 | plaintext secret commit 0 |
 | T-M5-21 | 2. SAST | Critical 0 |
-| T-M5-22 | 3. Dependency/SCA + CVE | Critical 0 |
+| T-M5-22 | 3. Dependency/SCA + CVE 🟡 2026-10-02 | Critical 0 |
 | T-M5-23 | 4. SBOM 생성 | 릴리스마다 첨부 |
 | T-M5-24 | 5. Container Image Scan | Critical 0 |
 | T-M5-25 | 6. IaC/K8s Manifest Scan | 정책 위반 0 |
@@ -52,6 +52,12 @@
 | T-M5-27 | 8. DAST/Staging Scan | High 0 |
 | T-M5-28 | 9. Image Signing | 전 이미지 서명 |
 | T-M5-29 | 10. Admission Controller | **미서명 이미지 배포 거부 실증** |
+
+> **T-M5-20·22 착수 (2026-10-02)** — `.github/workflows/security.yml`에 Gitleaks 8.30.1 Git 전체 이력 검사와 운영 의존성 SCA를 추가했다.
+> 로컬에서 126개 커밋을 검사해 실제 비밀 0건을 확인했다. 시험 결과의 `subjectToken`과 단위 시험 키가 이름 때문에 잡힌 39건은
+> `.gitleaks.toml`에서 시험 값 형식만 좁게 제외했다. NestJS 10→11과 관련 패키지 갱신으로 운영 의존성은
+> **Critical 1→0, High 2, Moderate 2**다. `scripts/check-security-deps.mjs`가 Critical 0을 강제한다.
+> 아직 새 워크플로의 원격 실행을 확인하지 않았으므로 두 태스크는 🟡이며, 남은 High는 Fastify 5.11.3·PostCSS 8.4.31이다.
 
 ### 접근성 (권민준) — v1.0 §12.4 / §07
 

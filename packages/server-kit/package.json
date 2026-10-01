@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@wonseoro/contracts": "*",
-    "@nestjs/common": "^10.4.0",
+    "@nestjs/common": "^11.2.7",
     "pg": "^8.23.0",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/exporter-prometheus": "^0.222.0",

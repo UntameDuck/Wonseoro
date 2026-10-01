@@ -1,0 +1,14 @@
+[extend]
+useDefault = true
+
+# 이 값들은 로컬 축소 환경 시험이 매번 새로 만드는 비인증 식별자다.
+# 변수 이름에 token/secret이 들어가 기본 generic-api-key 규칙이 탐지하므로 값 형식만 좁게 제외한다.
+[[allowlists]]
+description = "로컬 시험용 subjectToken과 암호화 단위 시험 키"
+regexTarget = "secret"
+regexes = [
+  '''^subj-(?:kbd|touch)-[0-9]+$''',
+  '''^subj-m4-35rt-[a-f0-9]+$''',
+  '''^subj-[a-f0-9]+$''',
+  '''^dashboard-secret-1$''',
+]

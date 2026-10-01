@@ -26,7 +26,7 @@
 (admission-api 323 · server-kit 51 · central-api 29 · event-relay 7 · document-service 8 · krds 5, 2026-10-01). DB 포함(CI 재현 DB) 실패 0.
 DB 포함 실행(CI 재현 DB)은 admission-api 3 skip(`ADMIN_API_TOKEN` 미설정) 외 전부 pass.
 배포 스크립트 시험 별도: Peak Mode 예약 계산 9건(`npm run test:m4:peak-schedule`), 대시보드·KPI 규칙 일관성(`npm run test:m4:observability`).
-DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`)·로그 우회 금지 검사(`scripts/check-logging.mjs`)·차트 lint·runtime 첨부 드리프트 검사(`scripts/render-runtime-attachment.mjs --check`)·**계약 검사(`scripts/check-contracts.mjs`)**·**화면 문구 검사(`scripts/check-ui-copy.mjs`, T-M5-50)** CI 포함.
+DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`)·로그 우회 금지 검사(`scripts/check-logging.mjs`)·차트 lint·runtime 첨부 드리프트 검사(`scripts/render-runtime-attachment.mjs --check`)·**계약 검사(`scripts/check-contracts.mjs`)**·**화면 문구 검사(`scripts/check-ui-copy.mjs`, T-M5-50)** CI 포함. **보안 워크플로 착수**: Git 전체 이력 Gitleaks와 운영 의존성 Critical 0 검사를 추가했고 로컬 통과(2026-10-02), 원격 실행 확인 전이라 T-M5-20·22는 🟡.
 
 **CI 복구 (2026-09-30)** — 확인한 범위(`c232294` 이후)에서 통합 잡이 계속 실패하고 있었다. 원인은 CI 가 역할 마이그레이션·개발 시드·활성 마감정책 없이
 빈 DB 에서 시험을 돌린 것, 그리고 타이밍에 따라 갈리던 경합 두 건(마감정책 승인 400/409, 자동 접수와 화면 제출)이다.
@@ -162,7 +162,7 @@ T-M5-40~46 ✅·47 🟡 — **[09-accessibility.md](09-accessibility.md)**. 설�
 
 0. ~~**D-62 증적 감사 체인**~~ — ✅ 2026-10-01 수정(재현 시험 3개)
 1. ~~**화면 제품화 T-M5-50~56**~~ ✅ + ~~접근성 T-M5-40~46~~ ✅·47 🟡 — **둘 다 끝(2026-10-01)**. 접근성 시험은 `tests/a11y/`, 결과·결정은 [09](09-accessibility.md). 47 의 실물 Firefox·Safari 는 C(사람)
-2. 보안 파이프라인 T-M5-20~29 — CI 에 스캔·SBOM·서명을 붙인다(운영 서명키만 사람)
+2. **보안 파이프라인 T-M5-20~29 진행 중** — T-M5-20·22는 Gitleaks·운영 의존성 SCA를 추가해 로컬 통과(원격 CI 확인 전 🟡). 다음은 원격 게이트 확인 → T-M5-21 SAST → T-M5-23~25 SBOM·이미지·IaC 검사 → 보안 시험·DAST·서명·Admission Controller(운영 서명키만 사람)
 3. 인증 — 로컬 OIDC 발급자(개발용 컨테이너)로 `AUTH_MODE=gateway`·RBAC 6역할·관리자 MFA·JWKS 캐시(T-M5-02·10, T-M3-06)
 4. 보안 통제 T-M5-01·03~09 — 필드 암호화·SSRF 출구 허용 목록·실 clamd·Vault 경로 분리·mTLS
 5. T-M4-10 Outbox 파티션·보관 — DDL 변경이라 노션 §02 첨부 교체가 따른다
