@@ -964,6 +964,21 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-63. 빌려 쓰는 DB 연결이 끊기면 프로세스가 통째로 죽었다 — 처리되지 않은 pg 'error' 🔴
+
+| | |
+|---|---|
+| **발견** | 2026-10-01 (화면 제품화 T-M5-56 의 캡처 준비 중 — 캡처 DB 를 다시 만들자 event-relay 가 `Connection terminated unexpectedly` 로 종료) |
+| **충돌** | §B3·§A10 은 DB 재시작·장애 전환(T-M4-36 부하 중 Failover)에도 서비스가 스스로 회복하기를 요구한다. 그러나 pg 풀은 **쉬고 있는** 연결에만 오류 처리기를 붙인다. `Db.tx()`·리더 잠금(`withLeaderLock`)이 연결을 빌려 쓰는 동안 DB 가 그 연결을 끊으면 연결이 내는 `'error'` 이벤트를 받을 곳이 없어 Node 가 처리되지 않은 오류로 **프로세스를 끝냈다** — 트랜잭션 하나의 실패가 Pod 재시작이 된다 |
+| **영향** | DB 장애 전환·재시작·관리자 종료 순간 트랜잭션 중이던 모든 서비스(대학 API·중계기·서류 워커)가 함께 죽을 수 있다. 접수 처리 중인 요청은 어차피 실패하지만, 다른 요청까지 끊기고 재기동 동안 접수가 멈춘다. 단일 노드·순차 시험에서는 드러나지 않았다 |
+| **판정** | `Db.checkout()` — 연결을 빌릴 때 `'error'` 처리기를 붙이고 반납할 때 뗀다. `tx()` 와 리더 잠금이 이것을 쓴다. 끊긴 연결로 하던 일은 다음 쿼리에서 실패하고 반납 때 버려진다(`release(err)`), 풀은 새 연결로 계속 일한다 |
+| **재현 시험** | `packages/server-kit/src/db.integration.test.ts` — 트랜잭션 중 다른 세션이 `pg_terminate_backend` 로 그 연결을 끊는다. **고치기 전: uncaughtException("terminating connection due to administrator command")**, 고친 뒤: 트랜잭션만 실패·uncaughtException 0·풀 정상 |
+| **저장소 반영** | ✅ (2026-10-01) `server-kit/src/db.module.ts`·`admission-api/src/common/scheduling/leader-lock.ts`. 다섯 서비스 시험 실패 0. **실제 확인**: 캡처 서버 넷(중앙·대학·서류 워커·중계기)이 떠 있는 채 캡처 DB 를 지우고 다시 만들어도 넷 모두 살아 `/healthz` 200 |
+| **노션 반영** | 해당 없음 — 설계 요구(스스로 회복)를 구현이 못 지킨 결함 |
+| **상태** | 🟢 CLOSED — 재현 시험 → 수정 → 통과·실제 확인 (2026-10-01). K-PaaS 의 부하 중 DB Failover(T-M4-36)에서 다시 본다 |
+
+---
+
 <!--
 신규 항목 템플릿
 

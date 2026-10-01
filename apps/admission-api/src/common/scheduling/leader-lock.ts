@@ -26,7 +26,8 @@ export async function withLeaderLock<T>(
   name: string,
   fn: () => Promise<T>,
 ): Promise<T | null> {
-  const client = await db.pool.connect();
+  // 잠금을 쥔 연결이 끊겨도 프로세스가 죽지 않게 — 트랜잭션 잠금은 연결과 함께 풀린다 (D-63)
+  const client = await db.checkout();
   let broken: Error | undefined;
   let open = false;
   try {

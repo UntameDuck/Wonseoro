@@ -49,6 +49,26 @@ export class Db implements OnApplicationShutdown {
     if (ms > 0) await new Promise((r) => setTimeout(r, ms));
   }
 
+  /**
+   * 연결을 빌린다. 빌려 쓰는 동안 DB 가 연결을 끊어도(재시작·장애 전환·관리자 종료) 프로세스가 죽지 않게
+   * 오류 처리기를 붙이고, 반납할 때 뗀다 (D-63).
+   *
+   * pg 풀은 쉬고 있는 연결에만 처리기를 붙인다. 빌린 연결의 'error' 이벤트를 받을 곳이 없으면 Node 가
+   * 처리되지 않은 오류로 프로세스를 끝낸다 — DB 를 다시 만들 때 event-relay 가 이렇게 죽었다.
+   * 그 연결로 하던 일은 다음 쿼리에서 실패하고, 반납 때 버려진다(`release(err)`).
+   */
+  async checkout(): Promise<PoolClient> {
+    const client = await this.pool.connect();
+    const onError = (err: Error) => this.logger.error(`checked-out client error: ${err.name}`);
+    client.on('error', onError);
+    const release = client.release.bind(client);
+    client.release = ((err?: Error | boolean) => {
+      client.off('error', onError);
+      return release(err);
+    }) as typeof client.release;
+    return client;
+  }
+
   query<T extends Record<string, unknown>>(sql: string, params: unknown[] = []) {
     return this.pool.query<T>(sql, params);
   }
@@ -61,7 +81,7 @@ export class Db implements OnApplicationShutdown {
    * 락 유지 시간이 외부 지연에 묶이면 마감 피크에 전체가 멈춘다.
    */
   async tx<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
-    const client = await this.pool.connect();
+    const client = await this.checkout();
     try {
       await client.query('BEGIN');
       const result = await fn(client);
