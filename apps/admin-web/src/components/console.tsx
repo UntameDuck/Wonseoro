@@ -13,7 +13,7 @@ import {
   clearOperator,
   currentCycle,
   describe,
-  getOperator,
+  getSession,
   kst,
   setOperator,
   type Cycle,
@@ -34,12 +34,13 @@ export function useConsole(): ConsoleState {
 /**
  * 담당자 · 모집 틀.
  *
- * **담당자 입력은 개발 전용이다.** 여기 적은 이름이 그대로 승인·적용 기록에 남는다.
+ * **담당자 입력은 개발 서버에서만 그린다(T-M5-53).** 여기 적은 이름이 그대로 승인·적용 기록에 남는다.
  * 증명된 신원이 아니라는 것을 화면에서 숨기지 않는다 — 숨기면 이 기록을 신원 증명으로
- * 믿게 된다. 관리자 SSO(T-M5-10)가 이 자리를 대신한다.
+ * 믿게 된다. 개발 서버가 아니면 입력칸 대신 관리자 로그인 자리를 둔다. 관리자 SSO(T-M5-10)가 이 자리를 맡는다.
  */
 export function ConsoleProvider({ children }: { children: ReactNode }) {
   const [operator, setOp] = useState<string | null>(null);
+  const [devOperator, setDevOperator] = useState(false);
   const [cycle, setCycle] = useState<Cycle | null>(null);
   const [draft, setDraft] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +49,9 @@ export function ConsoleProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void (async () => {
       try {
-        setOp(await getOperator());
+        const session = await getSession();
+        setOp(session.operator);
+        setDevOperator(session.devOperator);
       } catch (err) {
         setError(describe(err));
       }
@@ -106,6 +109,12 @@ export function ConsoleProvider({ children }: { children: ReactNode }) {
               담당자 바꾸기
             </Button>
           </div>
+        ) : !devOperator ? (
+          ready && (
+            <div style={{ display: 'flex', gap: 'var(--krds-space-2)', alignItems: 'center' }}>
+              <Button disabled>관리자 로그인</Button>
+            </div>
+          )
         ) : (
           <form
             onSubmit={(e) => {
@@ -130,10 +139,16 @@ export function ConsoleProvider({ children }: { children: ReactNode }) {
         )}
       </section>
       {error && <Alert tone="danger" title={error} />}
-      {ready && !operator && (
+      {ready && !operator && devOperator && (
         <Alert tone="info" title="담당자를 지정해야 승인·적용할 수 있습니다">
           조회는 담당자 없이도 됩니다. 승인·적용·해소는 누가 했는지 기록에 남아야 하므로
           담당자가 필요합니다.
+        </Alert>
+      )}
+      {ready && !operator && !devOperator && (
+        <Alert tone="info" title="관리자 로그인이 필요합니다">
+          승인·적용·해소는 누가 했는지 기록에 남아야 하므로 로그인한 담당자만 할 수 있습니다. 관리자 로그인을
+          준비하고 있습니다.
         </Alert>
       )}
       {children}

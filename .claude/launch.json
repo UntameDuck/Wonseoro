@@ -72,6 +72,12 @@
       "port": 4001
     },
     {
+      "name": "shots-web-prod",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/next/dist/bin/next", "start", "apps/frontend", "-p", "4001"],
+      "port": 4001
+    },
+    {
       "name": "shots-admin",
       "runtimeExecutable": "node",
       "runtimeArgs": ["--env-file=scripts/screenshots/env/admin.env", "node_modules/next/dist/bin/next", "dev", "apps/admin-web", "-p", "4101"],

@@ -1,21 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { OPERATOR_COOKIE, currentOperator, productionBlocker } from '../../../lib/server';
+import { DEV_OPERATOR, OPERATOR_COOKIE, currentOperator, productionBlocker } from '../../../lib/server';
 
 /**
  * 담당자 지정 — **개발 전용.** 관리자 SSO(T-M5-10) 가 이 자리를 대신한다.
  *
  * 입력한 이름이 그대로 `x-admin-id` 가 되어 승인·적용 기록에 남는다. 증명된 신원이 아니다.
- * 그래서 운영에서는 거절한다(productionBlocker).
+ * 그래서 운영에서는 거절하고(productionBlocker), 개발 서버가 아니면 아예 받지 않는다(T-M5-53).
  *
  * SameSite=Strict — 다른 사이트에서 시작한 요청에는 이 쿠키가 실리지 않는다.
  */
 export async function GET() {
-  return NextResponse.json({ operator: await currentOperator(), devOnly: true });
+  // devOperator 가 거짓이면 화면은 입력칸 대신 관리자 로그인 자리를 보인다.
+  return NextResponse.json({ operator: await currentOperator(), devOperator: DEV_OPERATOR });
 }
 
 export async function POST(req: NextRequest) {
   const blocked = productionBlocker();
   if (blocked) return NextResponse.json({ detail: blocked }, { status: 503 });
+  if (!DEV_OPERATOR) {
+    return NextResponse.json({ detail: '담당자 지정은 개발 서버에서만 쓸 수 있습니다. 관리자 로그인으로 들어와 주십시오.' }, { status: 403 });
+  }
   if (req.headers.get('x-requested-with') !== 'wonseoro-admin') {
     return NextResponse.json({ detail: '콘솔 화면에서 보낸 요청이 아닙니다.' }, { status: 403 });
   }

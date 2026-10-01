@@ -70,9 +70,10 @@ export function adminPost<T>(path: string, body: unknown, key: string): Promise<
   });
 }
 
-export async function getOperator(): Promise<string | null> {
-  const r = await request<{ operator: string | null }>('/api/session');
-  return r.operator;
+/** 지금 담당자와, 개발용 담당자 지정이 켜져 있는지. 꺼져 있으면 담당자는 관리자 로그인(T-M5-10)으로만 정해진다. */
+export async function getSession(): Promise<{ operator: string | null; devOperator: boolean }> {
+  const r = await request<{ operator: string | null; devOperator?: boolean }>('/api/session');
+  return { operator: r.operator, devOperator: r.devOperator === true };
 }
 
 export async function setOperator(operator: string): Promise<string> {

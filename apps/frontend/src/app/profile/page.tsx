@@ -129,8 +129,8 @@ export default function ProfilePage() {
   if (subjectToken === null) return <p role="status">불러오는 중…</p>;
   if (!subjectToken) {
     return (
-      <Card title="본인 확인이 필요합니다">
-        <p style={{ marginTop: 0 }}>접수 홈에서 지원자 식별자와 공통원서 가명 토큰을 먼저 입력해 주십시오.</p>
+      <Card title="본인확인이 필요합니다">
+        <p style={{ marginTop: 0 }}>공통원서를 작성하려면 접수 홈에서 먼저 본인확인을 해 주십시오.</p>
         <a href="/" style={{ color: 'var(--krds-primary)' }}>
           접수 홈으로
         </a>

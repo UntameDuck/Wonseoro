@@ -2,10 +2,11 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, Field, Select } from '@wonseoro/krds';
+import { Alert, Button, Card, Select } from '@wonseoro/krds';
 import { ApiError, NetworkError, api } from '../lib/api';
 import { loadSession, saveSession } from '../lib/session';
 import { useOperatingMode } from '../lib/use-operating-mode';
+import { IdentitySection } from '../krds/identity';
 import { OperatingModeBanner } from '../krds/status';
 
 /**
@@ -179,38 +180,24 @@ export default function Home() {
             </p>
           )}
 
-          <h2 style={{ fontSize: 'var(--krds-text-lg)' }}>본인 확인</h2>
-          <p
-            style={{ marginTop: 0, color: 'var(--krds-fg-muted)', fontSize: 'var(--krds-text-sm)' }}
-          >
-            개발 단계에서는 지원자 식별자와 공통원서 가명 토큰을 직접 입력합니다. 실제 서비스에서는
-            본인확인 절차로 대체됩니다. 개발 시드 지원자는 식별자{' '}
-            <code>44444444-4444-4444-4444-444444444444</code>, 토큰 <code>subj-dev-0001</code> 입니다.
-          </p>
-          <Field
-            label="지원자 식별자"
-            value={applicantId}
-            onChange={setApplicantId}
-            hint="대학 DB 에 등록된 지원자 UUID 를 입력하십시오."
-            required
+          <IdentitySection
+            applicantId={applicantId}
+            subjectToken={subjectToken}
+            onApplicantId={setApplicantId}
+            onSubjectToken={setSubjectToken}
           />
-          <Field
-            label="공통원서 가명 토큰"
-            value={subjectToken}
-            onChange={setSubjectToken}
-            hint="대학에 등록된 값과 같아야 합니다. 공통원서와 내 원서 조회가 이 토큰을 씁니다."
-            required
-          />
-          <p style={{ margin: '0 0 var(--krds-space-4)', fontSize: 'var(--krds-text-sm)' }}>
-            <a
-              href="/profile"
-              onClick={() => saveSession({ applicantId, subjectToken })}
-              style={{ color: 'var(--krds-primary)' }}
-            >
-              공통원서 작성·제공 동의
-            </a>{' '}
-            — 한 번 써 두면 원서를 만들 때 동의한 항목이 채워집니다.
-          </p>
+          {applicantId && subjectToken && (
+            <p style={{ margin: '0 0 var(--krds-space-4)', fontSize: 'var(--krds-text-sm)' }}>
+              <a
+                href="/profile"
+                onClick={() => saveSession({ applicantId, subjectToken })}
+                style={{ color: 'var(--krds-primary)' }}
+              >
+                공통원서 작성·제공 동의
+              </a>{' '}
+              — 한 번 써 두면 원서를 만들 때 동의한 항목이 채워집니다.
+            </p>
+          )}
 
           {error && (
             <Alert tone="danger" title="원서를 시작할 수 없습니다">

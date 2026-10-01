@@ -155,7 +155,7 @@ Dashboard 신원 없음 400
 |---|---|---|---|
 | Mock PG (`PAYMENT_PROVIDER=mock`) | 기동 거부 (R8) | 실 PG 는 대학별 PG 사 계약·가맹점 키가 있어야 한다 | T-M6-04 |
 | 개발 신원 헤더 (`AUTH_MODE=dev-headers`, 대학·중앙) | 기동 거부 | 본인확인·OIDC 제공자가 필요하다. 지원자 등록(가명 토큰 발급)도 그 흐름의 일 | T-M5-02 |
-| 운영 API 공유 비밀 (`ADMIN_API_TOKEN`)·콘솔 담당자 입력칸 | 콘솔은 운영에서 거절 | 관리자 SSO·MFA 가 필요하다 | T-M5-10 |
+| 운영 API 공유 비밀 (`ADMIN_API_TOKEN`)·콘솔 담당자 입력칸 | 콘솔은 운영에서 거절. 담당자 입력칸은 개발 서버에서만 그리고, 운영 빌드에 켜면 빌드가 멈춘다(T-M5-53) | 관리자 SSO·MFA 가 필요하다 | T-M5-10 |
 | Mock 검사 엔진 (`SCANNER_ENGINE=mock`) | 기동 거부 | 개발에서 clamd 없이 화면 흐름을 보려고 둔다. 실엔진은 `clamav` | — (clamav 로 대체) |
 | `payment.confirmed` 이벤트 | — | 보내지 않기로 판정(D-60). 스키마에는 남는다 | 노션 §04 반영 |
 | `PaymentProviderPort.cancel()` | — | 자동으로 부르지 않는다 — 승인된 결제 취소는 환불이고 사람이 승인한다(D-7 ④) | 실 PG(T-M6-04)와 함께 환불 처리 |
