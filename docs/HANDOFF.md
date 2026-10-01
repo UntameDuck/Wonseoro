@@ -10,7 +10,7 @@
 ## 1. 30초 요약
 
 - **제품**: 원서로(K-Admission) — 대학 입학 원서접수를 대학별 Data Plane 으로 분산하는 플랫폼. 2026 GovTech 공모전 출품작
-- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 20/28 진행 중**. 전체 **99/146** 태스크(✅ 만 셈, 2026-10-02 보안 파이프라인 7개 완료). **CI 네 잡과 Security 열 잡 모두 초록**(Actions run 36898651960·36898652054)
+- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 20/28 진행 중**. 전체 **100/146** 태스크(✅ 만 셈, 2026-10-02 보안 파이프라인 8개 완료). **CI 네 잡과 Security 열한 잡 모두 초록**(Actions run 36902632233·36902632192)
 - **완료한 핵심 증명**: 로컬 kind 2클러스터 축소 환경에서 **대학 간 장애 격리 T-M4-42 통과**. A대 전면 정지 중 B대 접수·중앙 반영, A대 복구 후 접수까지 확인
 - **최근 완료**: T-M4-07 Peak Mode(ADR-0006) · T-M4-20 전 서비스 계측·로그 상관관계 · T-M4-24 로그 마스킹 강제 · **T-M4-21~23 업무 KPI·대시보드 3종** · **D-50 취소 이벤트 계약 위반 수정** · CI 복구 · **T-M4-40 NAT Adaptive Throttling(ADR-0007)** · 과부하 중 API 프로세스가 죽던 결함 수정 · **T-M4-37 Redis 장애 무영향** · T-M4-39 다중 노드 시험(drain 무중단·노드 장애 때 전체가 멈추던 DB 연결 결함 수정, D-52) · **맡겨진 결정 정리(2026-09-30)** — D-44 ⑦(Pod 당 38)·D-47·D-51(OpenAPI v1.3.0 429)·D-52(ADR-0008)·D-53(ingress-nginx 은퇴) 결정·저장소 반영. §05 runtime 첨부를 차트 렌더링으로 바꿔 CI 가 드리프트를 막는다. **노션 반영은 AI 쓰기가 막혀 [06-notion-changeset.md](06-notion-changeset.md) 로 대기**
 - **T-M4-35 ✅** 중앙 2시간 실제 단절 통과 — 원서 24건 처리·DEAD 0·event loss 0·복구 10초 뒤 전량 전송·재시작 0 (`central-outage-realtime-2026-09-30T01-59-27-784Z.json`)
@@ -31,8 +31,8 @@
 - **보안 파이프라인 T-M5-20~23 ✅ (2026-10-02)** — `.github/workflows/security.yml`의 세 병렬 잡이 원격에서 통과했다(Actions run 36887597976). Gitleaks 8.30.1 전체 이력 실제 비밀 0건, CodeQL `security-extended` Critical 0, 운영 의존성 Critical 0·High 2·Moderate 2, SPDX 2.3 SBOM 패키지 266개·관계 1,054개. NestJS 10→11로 기존 Critical을 없앴다. 시험 값 오탐 39건은 `.gitleaks.toml`에서 값 형식만 좁게 제외했다. SBOM은 일반 CI 산출물과 `release.published` 릴리스 자산을 모두 만든다
 - **T-M5-24·25 ✅ (2026-10-02)** — Trivy 0.75.0으로 서비스 4종·PgBouncer 실제 이미지 Critical 0, Helm·Kubernetes·Dockerfile 설정 파일 19개 High/Critical 0을 로컬과 원격 matrix에서 확인했다(Actions run 36890582638). `KSV-0056`은 namespace 한정 release-controller의 서명된 Helm 동기화에 필요한 권한만 파일 네 곳·2027-01-31 만료로 허용했다. 세부는 [11-security-pipeline.md](11-security-pipeline.md)
 - **T-M5-26 ✅ (2026-10-02)** — 실 PostgreSQL의 대학·중앙 DB를 사용해 권한·감사 체인·결제 콜백·입력 방어·재전송·개인정보 최소화 등 선별 보안 시험 123개를 별도 게이트로 실행한다. 로컬·원격 123개 통과·건너뜀 0이다(Actions run 36898652054). DB 미연결로 통합시험이 skip되어도 게이트가 실패한다
-- **T-M5-27 착수 (2026-10-02, 🟡)** — ZAP 2.17.0 고정 digest로 OpenAPI 81개 URL을 실제 대학 API·PostgreSQL에 active scan했다. 첫 실행에서 잘못된 `cycleId`·`limit`가 DB까지 내려가 500이 되는 문제, `/meta/time` 무인자 500, `nosniff` 누락을 찾아 고쳤다. 같은 조건 재실행은 **WARN 0·High 0·PASS 118**, 보고서는 `E:\DockerData\tools\zap-2.17.0\reports`에 있다. 원격 확인 전이다
-- **바로 다음 할 일**: T-M5-27 원격 통과 확인 → **T-M5-28·29**(이미지 서명·Admission Controller) → 인증(로컬 OIDC — 세션 만료·위험 차단 해제도 함께, ADR-0009) → 보안 통제 → …
+- **T-M5-27 ✅ (2026-10-02)** — ZAP 2.17.0 고정 digest로 OpenAPI 81개 URL을 실제 대학 API·PostgreSQL에 active scan했다. 첫 실행에서 잘못된 `cycleId`·`limit`가 DB까지 내려가 500이 되는 문제, `/meta/time` 무인자 500, `nosniff` 누락을 찾아 고쳤다. 같은 조건 재실행은 로컬·원격 모두 **WARN 0·High 0·PASS 118**이다(Actions run 36902632192·36902632233). 로컬 보고서는 `E:\DockerData\tools\zap-2.17.0\reports`에 있다
+- **바로 다음 할 일**: **T-M5-28·29**(이미지 서명·Admission Controller) → 인증(로컬 OIDC — 세션 만료·위험 차단 해제도 함께, ADR-0009) → 보안 통제 → …
 
 ## 2. 반드시 지킬 규칙
 
@@ -61,7 +61,7 @@
 | 로컬 관측 스택 | kind A `observability` 네임스페이스: Prometheus(KPI 규칙 포함)·Adapter·Grafana(익명 Viewer). Grafana 는 `kubectl -n observability port-forward svc/grafana 13000:80` |
 | 중앙 DB 마이그레이션 | `infra/db/central/0001_init.sql`·`0002_vault.sql`·**`0003_summary_names.sql`**(2026-10-01) — `npm run db:migrate:central` 이 셋 다 적용한다 |
 | 로컬 DB | compose: `postgres-univ-a` :5432 · `postgres-univ-b` :5442(`--profile multi`) · `postgres-central` :5434 · redis :6379 · minio :9000 |
-| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 323 · server-kit 51 · central-api 29 · event-relay 7 · document-service 8 · krds 5 (전체 423, CI 재현 DB 에서 실패 0·건너뜀 3, 2026-10-01). `app.module.boot.test` 는 실제 AppModule 로 DI 를 조립한다 — 서비스를 직접 `new` 하는 통합 시험이 못 잡는 "서버가 안 뜨는" 결함용. 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함). **DB 통합 시험 전에 kind univ-a 의 API·Relay 를 0 으로 줄인다** — 같은 로컬 `univ_a` DB 를 봐서 시험 행을 먼저 집어 간다(결제 재확인·Relay 시험이 실패하거나 멈춘다). event-relay 시험은 직렬로 돈다 |
+| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 329 · server-kit 51 · central-api 29 · event-relay 7 · document-service 8 · krds 5 (전체 429, CI 재현 DB 에서 실패 0·건너뜀 3, 2026-10-02). `app.module.boot.test` 는 실제 AppModule 로 DI 를 조립한다 — 서비스를 직접 `new` 하는 통합 시험이 못 잡는 "서버가 안 뜨는" 결함용. 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함). **DB 통합 시험 전에 kind univ-a 의 API·Relay 를 0 으로 줄인다** — 같은 로컬 `univ_a` DB 를 봐서 시험 행을 먼저 집어 간다(결제 재확인·Relay 시험이 실패하거나 멈춘다). event-relay 시험은 직렬로 돈다 |
 | 접근성 시험 | `npm run test:a11y:keyboard`(키보드 완주 — `--width=640`·`320`·`--text-zoom=2`·`--input=touch`·`--browser=edge`) · `test:a11y:focus -- applicant|admin`(전 화면 포커스·스크린리더 재료·가로 스크롤·대상 크기) · `test:a11y:deadline` · `test:a11y:session` · `test:a11y:rate-limit`. 화면 캡처와 같은 전용 DB·포트·서버(`shots-*`)를 쓴다 — 미리보기 서버 5개 한도 때문에 지원자 시험은 서류 워커, 콘솔 시험은 `shots-admin` 을 띄운다. 결과 `tests/a11y/results/`. **CI 에는 아직 없다**(서버 다섯이 필요) |
 | 검사 | `npm run db:verify`(DB 제약 20종) · `node scripts/check-deps.mjs`(의존성 선언) · `helm lint deploy/charts/k-admission` · `node scripts/render-runtime-attachment.mjs --check`(runtime 첨부 = 차트 렌더링) · `npm run check:ui-copy`(화면 문구에 설계 번호·개발 안내·구조 설명 금지, T-M5-50) · `npm run check:contracts`(OpenAPI `$ref`·operationId·대장 번호·직전 커밋 대비 호환성, CloudEvents 컴파일·이벤트 타입) |
 | 로컬 화면 확인 | kind 와 섞지 않으려면 로컬 프로세스를 CI 재현 DB 에 붙인다 — 중앙 :3100(`DATABASE_URL=…5499/central`)·대학 :3101(`…5499/univ_a`, `CENTRAL_SYNC_URL=http://localhost:3100`, `CORS_ORIGINS=http://localhost:4001`, `OTEL_METRICS_PORT` 를 9464 가 아닌 값으로)·지원자 웹 :4001(`NEXT_PUBLIC_ADMISSION_API`·`NEXT_PUBLIC_CENTRAL_API`). **:3000 은 쓰지 않는다** — kind 시험이 `ka-central` 을 거기 띄운다. 개발 시드 지원자: `44444444-4444-4444-4444-444444444444` / `subj-dev-0001` |
@@ -206,7 +206,7 @@ Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, s
 
 ## 6. 전체 남은 규모
 
-146개 중 99개 완료, **47개 남음** (2026-10-02 보안 파이프라인 T-M5-20~26 완료). **A. AI 가 이 PC 에서 끝낼 수 있는 것 26개 · B. 외부 환경(K-PaaS·HA DB·PG 계약) 12개 · C. 사람·기관 9개**(T-M5-47 나머지 실물 브라우저 포함).
+146개 중 100개 완료, **46개 남음** (2026-10-02 보안 파이프라인 T-M5-20~27 완료). **A. AI 가 이 PC 에서 끝낼 수 있는 것 25개 · B. 외부 환경(K-PaaS·HA DB·PG 계약) 12개 · C. 사람·기관 9개**(T-M5-47 나머지 실물 브라우저 포함).
 목록과 권장 순서는 [03-next-steps.md 「완성까지 남은 단계」](03-next-steps.md#완성까지-남은-단계-2026-10-01-전수-점검).
 
 ## 7. 어디에 무엇이 있나

@@ -49,7 +49,7 @@
 | T-M5-24 | 5. Container Image Scan ✅ 2026-10-02 | Critical 0 |
 | T-M5-25 | 6. IaC/K8s Manifest Scan ✅ 2026-10-02 | 정책 위반 0 |
 | T-M5-26 | 7. Unit/Integration Security Test ✅ 2026-10-02 | 통과 |
-| T-M5-27 | 8. DAST/Staging Scan 🟡 2026-10-02 | High 0 |
+| T-M5-27 | 8. DAST/Staging Scan ✅ 2026-10-02 | High 0 |
 | T-M5-28 | 9. Image Signing | 전 이미지 서명 |
 | T-M5-29 | 10. Admission Controller | **미서명 이미지 배포 거부 실증** |
 
@@ -74,10 +74,10 @@
 > 실 PostgreSQL 대학·중앙 DB에서 로컬 **123개 통과·건너뜀 0**이다. TAP 요약을 검사하므로 DB 미연결로 통합시험이
 > 건너뛰어지는 경우도 실패한다. 원격 Security와 일반 CI도 통과했다(Actions run 36898652054·36898651960).
 
-> **T-M5-27 착수 (2026-10-02)** — ZAP 2.17.0 OpenAPI active scan으로 로컬 실제 API·PostgreSQL의 81개 URL을
+> **T-M5-27 완료 (2026-10-02)** — ZAP 2.17.0 OpenAPI active scan으로 로컬 실제 API·PostgreSQL의 81개 URL을
 > 검사했다. 첫 스캔이 찾은 잘못된 UUID·정수 쿼리의 500, `/meta/time` 무인자 500, `nosniff` 누락을 고쳤다.
-> 같은 조건 재실행은 **WARN 0·High 0·PASS 118**이다. JSON 보고서의 실제 site와 High 수를 별도 판정하며
-> HTML·JSON 보고서를 CI 산출물로 14일 보관한다. 원격 CI 확인 전이라 🟡이다.
+> 같은 조건 재실행은 로컬·원격 모두 **WARN 0·High 0·PASS 118**이다. JSON 보고서의 실제 site와 High 수를 별도 판정하며
+> HTML·JSON 보고서를 CI 산출물로 14일 보관한다(Actions run 36902632192·36902632233).
 
 ### 접근성 (권민준) — v1.0 §12.4 / §07
 

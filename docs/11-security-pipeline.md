@@ -13,7 +13,7 @@
 | T-M5-24 Container Image Scan | ✅ | 로컬·원격 5개 이미지 Critical 0 |
 | T-M5-25 IaC/K8s Manifest Scan | ✅ | 로컬·원격 Helm·Kubernetes·Dockerfile 19개 High/Critical 0 |
 | T-M5-26 Security Test | ✅ | 로컬·원격 실 PostgreSQL 선별 시험 123개 통과·건너뜀 0 |
-| T-M5-27 DAST | 🟡 | 로컬 ZAP OpenAPI active scan WARN 0·High 0·PASS 118, 원격 CI 확인 전 |
+| T-M5-27 DAST | ✅ | 로컬·원격 ZAP OpenAPI active scan WARN 0·High 0·PASS 118 |
 | T-M5-28 Image Signing | ⬜ | 다음 작업 |
 | T-M5-29 Admission Controller | ⬜ | 다음 작업 |
 
@@ -82,12 +82,12 @@ ZAP 2.17.0 이미지(`sha256:781a…81ef`)를 고정해 실제 대학 API와 Pos
 - 일부 API 응답에 `X-Content-Type-Options: nosniff`가 없었다
 
 DB 앞 쿼리 형식 차단, 현재 열린 모집 선택, 전 응답 `nosniff`를 적용한 뒤 같은 조건으로 재실행했다.
-최종 결과는 **WARN 0·High 0·PASS 118**이며 보고서는
+최종 결과는 로컬·원격 모두 **WARN 0·High 0·PASS 118**이며 원격 Security와 일반 CI도 통과했다
+(Actions run 36902632192·36902632233). 로컬 보고서는
 `E:\DockerData\tools\zap-2.17.0\reports\zap-report.{json,html}`에 있다. JSON에는 공격 요청에 대한 4xx와
 캐시 정책을 설명하는 Informational 3종만 남았다.
 
 ## 6. 다음 순서
 
-1. 원격 CI에서 T-M5-27 통과 확인 후 완료 수 반영
-2. T-M5-28: 키 없는 OIDC 서명으로 모든 릴리스 이미지 서명·검증
-3. T-M5-29: 정책 엔진에서 미서명 이미지는 거부하고 서명 이미지만 허용하는 실증
+1. T-M5-28: 키 없는 OIDC 서명으로 모든 릴리스 이미지 서명·검증
+2. T-M5-29: 정책 엔진에서 미서명 이미지는 거부하고 서명 이미지만 허용하는 실증
