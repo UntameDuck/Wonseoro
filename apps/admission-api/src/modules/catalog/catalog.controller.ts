@@ -45,7 +45,7 @@ export class CatalogController {
   @Get('admission-types')
   @Header('cache-control', 'public, max-age=60')
   async admissionTypes(@Query('cycleId') cycleId?: string) {
-    if (!cycleId) throw ProblemException.validationFailed('cycleId 가 필요합니다.');
+    if (!cycleId) throw ProblemException.validationFailed('모집을 지정해 주십시오.');
     const { rows } = await this.db.query<Record<string, unknown>>(
       `SELECT id, code, name, fee_amount
          FROM admission_type
@@ -65,7 +65,7 @@ export class CatalogController {
   @Get('departments')
   @Header('cache-control', 'public, max-age=60')
   async departments(@Query('cycleId') cycleId?: string) {
-    if (!cycleId) throw ProblemException.validationFailed('cycleId 가 필요합니다.');
+    if (!cycleId) throw ProblemException.validationFailed('모집을 지정해 주십시오.');
     const { rows } = await this.db.query<Record<string, unknown>>(
       `SELECT id, code, name, quota
          FROM department

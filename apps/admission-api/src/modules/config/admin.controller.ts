@@ -54,7 +54,7 @@ export class AdminController {
   @Get('config/active')
   @Header('cache-control', 'no-store')
   async activeConfig(@Query('cycleId') cycleId?: string) {
-    if (!cycleId) throw ProblemException.validationFailed('cycleId 가 필요합니다.');
+    if (!cycleId) throw ProblemException.validationFailed('모집을 지정해 주십시오.');
     const active = await this.configs.active(cycleId);
     if (!active) throw ProblemException.notFound('활성화된 설정이 없습니다.');
     return { ...active, config: await this.configs.contentOf(active.id) };
@@ -64,7 +64,7 @@ export class AdminController {
   @Get('config/versions')
   @Header('cache-control', 'no-store')
   async listConfigs(@Query('cycleId') cycleId?: string) {
-    if (!cycleId) throw ProblemException.validationFailed('cycleId 가 필요합니다.');
+    if (!cycleId) throw ProblemException.validationFailed('모집을 지정해 주십시오.');
     return { versions: await this.configs.list(cycleId) };
   }
 
@@ -223,7 +223,7 @@ export class AdminController {
   @Get('deadline-policies')
   @Header('cache-control', 'no-store')
   async policyHistory(@Query('cycleId') cycleId?: string) {
-    if (!cycleId) throw ProblemException.validationFailed('cycleId 가 필요합니다.');
+    if (!cycleId) throw ProblemException.validationFailed('모집을 지정해 주십시오.');
     return { policies: await this.policies.history(cycleId) };
   }
 
@@ -234,7 +234,7 @@ export class AdminController {
   @Get('activations')
   @Header('cache-control', 'no-store')
   async activationHistory(@Query('cycleId') cycleId?: string) {
-    if (!cycleId) throw ProblemException.validationFailed('cycleId 가 필요합니다.');
+    if (!cycleId) throw ProblemException.validationFailed('모집을 지정해 주십시오.');
     const [records, systemChain] = await Promise.all([
       this.activations.list(cycleId),
       this.activations.verifySystemChain(),

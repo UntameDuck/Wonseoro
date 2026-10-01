@@ -5,6 +5,7 @@ import { Alert, Button, Card, DescriptionList } from '@wonseoro/krds';
 import { ApiError, NetworkError, api } from '../../../lib/api';
 import { loadSession } from '../../../lib/session';
 import { formatKst } from '../../../lib/use-deadline';
+import { problemText } from '@wonseoro/contracts';
 
 /**
  * 접수증 — 인쇄용 (계약 getReceipt)
@@ -32,7 +33,7 @@ export default function ReceiptPage({ params }: { params: Promise<{ submissionId
           err instanceof NetworkError
             ? '대학 접수 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주십시오.'
             : err instanceof ApiError
-              ? (err.problem.detail ?? err.problem.title)
+              ? problemText(err.problem).detail
               : '접수증을 불러오지 못했습니다.',
         );
       }

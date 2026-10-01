@@ -229,12 +229,12 @@ export class ApplicationController {
     const raw = req.headers[HEADER_IF_MATCH];
     if (typeof raw !== 'string' || raw.trim() === '') {
       throw ProblemException.validationFailed(
-        'If-Match 헤더가 필요합니다. 조회 응답의 ETag 를 그대로 보내십시오.',
+        '저장 기준 정보가 없습니다. 원서를 다시 불러온 뒤 저장해 주십시오.',
       );
     }
     const parsed = raw.replace(/^W\//, '').replace(/"/g, '').trim();
     if (!/^\d+$/.test(parsed)) {
-      throw ProblemException.validationFailed('If-Match 형식이 올바르지 않습니다.');
+      throw ProblemException.validationFailed('저장 기준 정보가 올바르지 않습니다. 원서를 다시 불러온 뒤 저장해 주십시오.');
     }
     return BigInt(parsed);
   }

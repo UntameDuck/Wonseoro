@@ -1,7 +1,8 @@
 'use client';
 
 import { use, useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, DescriptionList, ErrorSummary, Field } from '@wonseoro/krds';
+import { Alert, Button, Card, DescriptionList, ErrorSummary, Field, fieldOf } from '@wonseoro/krds';
+import { PROBLEM_TEXT, problemText } from '@wonseoro/contracts';
 import { SchemaForm, type JsonSchema } from '../../../krds/schema-form';
 import { DocumentStatusList, FileUpload } from '../../../krds/file-upload';
 import { Breadcrumb, STEPS, StepIndicator, type StepNo } from '../../../krds/navigation';
@@ -42,7 +43,12 @@ export default function ApplyPage({
   const [etag, setEtag] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [issues, setIssues] = useState<Array<{ path: string; message: string }>>([]);
-  const [failure, setFailure] = useState<{ title: string; traceId?: string } | null>(null);
+  const [failure, setFailure] = useState<{ title: string; detail?: string; traceId?: string } | null>(null);
+  /**
+   * 오류가 아닌 안내 — 결제 진행 중·환불 안내. 전에는 오류 요약("입력을 확인해 주십시오")에 넣어
+   * 빨간 오류처럼 보였다 (T-M5-52, U-25).
+   */
+  const [notice, setNotice] = useState<{ tone: 'info' | 'warning'; title: string; body?: string } | null>(null);
   const [selfCheck, setSelfCheck] = useState<SelfCheck | null>(null);
   const [payment, setPayment] = useState<{ id: string; amount: number; status: string } | null>(
     null,
@@ -171,6 +177,10 @@ export default function ApplyPage({
    */
   const commonCodes = Object.keys(schema?.properties ?? {}).filter((c) => profileFields.includes(c));
   const extraCodes = Object.keys(schema?.properties ?? {}).filter((c) => !profileFields.includes(c));
+  /** 칸 옆에 붙일 오류 — 오류 요약과 같은 문장이다. */
+  const fieldErrors = Object.fromEntries(
+    issues.filter((i) => fieldOf(i.path)).map((i) => [fieldOf(i.path), i.message]),
+  );
   const documentLabel = (type: string) => documents.find((d) => d.documentType === type)?.label ?? type;
 
   /** 서류 검사 상태를 다시 읽는다. self-check 가 상태와 안내문구를 함께 준다. */
@@ -190,9 +200,29 @@ export default function ApplyPage({
     await reload();
   }, [applicationId, applicantId, reload]);
 
+  /**
+   * 단계를 옮긴다. 칸에 매이지 않은 오류와 안내는 그 단계의 것이라 지운다. 칸 오류는 고칠 때까지 남는다 —
+   * 오류 요약의 링크가 그 칸으로 데려간다 (T-M5-52, U-2).
+   */
+  function goTo(next: StepNo) {
+    setStep(next);
+    setIssues((prev) => prev.filter((i) => fieldOf(i.path)));
+    setNotice(null);
+  }
+
+  /** 오류 요약에서 누른 칸으로 간다 — 공통원서 항목은 1단계, 나머지는 3단계에 있다. */
+  function selectIssue(path: string) {
+    const code = fieldOf(path);
+    goTo(commonCodes.includes(code) ? 1 : 3);
+    // 단계를 그린 뒤에 포커스한다
+    setTimeout(() => document.getElementById(`field-${code}`)?.focus(), 50);
+  }
+
   function update(code: string, value: string) {
     const next = { ...fields, [code]: value };
     setFields(next);
+    // 고친 칸의 오류는 다음 검증을 기다리지 않고 지운다 (U-2)
+    setIssues((prev) => prev.filter((i) => fieldOf(i.path) !== code));
     // 숫자 필드는 서버 스키마가 integer 를 요구한다.
     autosave.schedule(coerce(next, schema));
   }
@@ -250,7 +280,8 @@ export default function ApplyPage({
       if (err instanceof ApiError && err.problem.code === 'PAYMENT_IN_PROGRESS') {
         // 이미 확인 중이거나 확인된 결제가 있다. 다시 결제하지 않게 그 결제를 보여 준다.
         await restorePayment();
-        setIssues([{ path: '', message: err.problem.detail ?? err.problem.title }]);
+        const t = problemText(err.problem);
+        setNotice({ tone: 'warning', title: t.title, body: t.detail });
       } else {
         handle(err);
       }
@@ -268,7 +299,11 @@ export default function ApplyPage({
       setIssues([]);
       await reload();
       if (data.refundRequired) {
-        setIssues([{ path: '', message: '확인된 전형료가 있어 대학이 환불 절차를 안내합니다.' }]);
+        setNotice({
+          tone: 'info',
+          title: '확인된 전형료는 대학이 환불 절차를 안내합니다',
+          body: '자동으로 환불되지 않습니다. 입학처의 안내를 확인해 주십시오.',
+        });
       }
     } catch (err) {
       handle(err);
@@ -294,19 +329,21 @@ export default function ApplyPage({
 
   function handle(err: unknown) {
     if (err instanceof NetworkError) {
-      setFailure({ title: '서버에 연결할 수 없습니다' });
+      setFailure({ title: '서버에 연결할 수 없습니다', detail: '인터넷 연결을 확인한 뒤 현재 상태를 다시 확인해 주십시오.' });
       return;
     }
     if (err instanceof ApiError) {
-      // 422 는 업무 검증 실패. 오류 요약으로 보여준다.
+      // 서버 문구를 그대로 보이지 않는다 — 오류 code 의 문구(PROBLEM_TEXT). 업무 오류만 서버 설명을 덧붙인다 (U-26)
+      const t = problemText(err.problem);
+      // 422·400 은 업무 검증 실패. 오류 요약으로 보여준다.
       if (err.httpStatus === 422 || err.httpStatus === 400) {
-        setIssues([{ path: '', message: err.problem.detail ?? err.problem.title }]);
+        setIssues([{ path: '', message: t.detail }]);
         return;
       }
-      setFailure({ title: err.problem.title, traceId: err.problem.traceId });
+      setFailure({ title: t.title, detail: t.detail, traceId: err.problem.traceId });
       return;
     }
-    setFailure({ title: '알 수 없는 오류가 발생했습니다' });
+    setFailure({ title: PROBLEM_TEXT.INTERNAL.title, detail: PROBLEM_TEXT.INTERNAL.detail });
   }
 
   if (failure) {
@@ -317,6 +354,7 @@ export default function ApplyPage({
         lastSavedAt={app?.lastSavedAt ?? null}
         onRecheck={() => void recheck()}
       >
+        {failure.detail && <p style={{ margin: '0 0 var(--krds-space-3)' }}>{failure.detail}</p>}
         {selfCheck && (
           <Alert tone="info" title="서버가 확인한 현재 상태">
             {selfCheck.application.summary}
@@ -329,7 +367,7 @@ export default function ApplyPage({
   if (app?.status === 'CANCELLED') {
     return (
       <Card title="취소된 원서입니다">
-        <ErrorSummary issues={issues} />
+        {notice && <Alert tone={notice.tone} title={notice.title}>{notice.body}</Alert>}
         <p style={{ marginTop: 0 }}>
           이 원서는 접수 전에 취소되었습니다. 같은 전형에 다시 지원하려면 접수 홈에서 새 원서를 만드십시오.
         </p>
@@ -361,7 +399,8 @@ export default function ApplyPage({
       </div>
 
       <StepIndicator current={step} />
-      <ErrorSummary issues={issues} />
+      <ErrorSummary issues={issues} onSelect={selectIssue} />
+      {notice && <Alert tone={notice.tone} title={notice.title}>{notice.body}</Alert>}
 
       {step === 1 && (
         <Card title="1. 공통정보">
@@ -373,6 +412,7 @@ export default function ApplyPage({
             values={fields}
             onChange={update}
             only={commonCodes}
+            errors={fieldErrors}
             readOnly={!editable}
           />
           {commonCodes.length === 0 && (
@@ -383,7 +423,7 @@ export default function ApplyPage({
               </a>
             </p>
           )}
-          <Button onClick={() => setStep(2)}>다음 단계</Button>
+          <Button onClick={() => goTo(2)}>다음 단계</Button>
         </Card>
       )}
 
@@ -404,10 +444,10 @@ export default function ApplyPage({
             추가로 입력해야 하는 항목도 전형마다 다릅니다.
           </Alert>
           <div style={{ display: 'flex', gap: 'var(--krds-space-3)' }}>
-            <Button variant="secondary" onClick={() => setStep(1)}>
+            <Button variant="secondary" onClick={() => goTo(1)}>
               이전
             </Button>
-            <Button onClick={() => setStep(3)}>다음 단계</Button>
+            <Button onClick={() => goTo(3)}>다음 단계</Button>
           </div>
         </Card>
       )}
@@ -422,13 +462,14 @@ export default function ApplyPage({
             values={fields}
             onChange={update}
             only={extraCodes}
+            errors={fieldErrors}
             readOnly={!editable}
           />
           <div style={{ display: 'flex', gap: 'var(--krds-space-3)' }}>
-            <Button variant="secondary" onClick={() => setStep(2)}>
+            <Button variant="secondary" onClick={() => goTo(2)}>
               이전
             </Button>
-            <Button onClick={() => setStep(4)}>다음 단계</Button>
+            <Button onClick={() => goTo(4)}>다음 단계</Button>
           </div>
         </Card>
       )}
@@ -463,7 +504,7 @@ export default function ApplyPage({
           <div
             style={{ display: 'flex', gap: 'var(--krds-space-3)', marginTop: 'var(--krds-space-4)' }}
           >
-            <Button variant="secondary" onClick={() => setStep(3)}>
+            <Button variant="secondary" onClick={() => goTo(3)}>
               이전
             </Button>
             <Button variant="secondary" onClick={() => void refreshDocuments()}>
@@ -474,7 +515,7 @@ export default function ApplyPage({
                 {busy ? '검증 중…' : '검토 단계로'}
               </Button>
             ) : (
-              <Button onClick={() => setStep(5)}>검토 단계로</Button>
+              <Button onClick={() => goTo(5)}>검토 단계로</Button>
             )}
           </div>
         </Card>
@@ -524,7 +565,7 @@ export default function ApplyPage({
           <div
             style={{ display: 'flex', gap: 'var(--krds-space-3)', marginTop: 'var(--krds-space-4)' }}
           >
-            <Button variant="secondary" onClick={() => setStep(4)}>
+            <Button variant="secondary" onClick={() => goTo(4)}>
               이전
             </Button>
             <Button onClick={() => void pay()} disabled={busy || (deadline.passed && !paymentStarted)}>
@@ -590,7 +631,7 @@ export default function ApplyPage({
                 제출 후에는 원서를 수정할 수 없습니다. 위 내용을 확인해 주십시오.
               </Alert>
               <div style={{ display: 'flex', gap: 'var(--krds-space-3)' }}>
-                <Button variant="secondary" onClick={() => setStep(5)}>
+                <Button variant="secondary" onClick={() => goTo(5)}>
                   이전
                 </Button>
                 <Button onClick={() => void finalize()} disabled={busy || deadline.passed}>

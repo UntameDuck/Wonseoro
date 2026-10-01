@@ -43,6 +43,6 @@ export function strictJsonParser(
   try {
     done(null, JSON.parse(text));
   } catch {
-    done(ProblemException.validationFailed('요청 본문이 올바른 JSON 이 아닙니다.'));
+    done(ProblemException.validationFailed('요청 내용을 읽을 수 없습니다. 화면을 새로고침한 뒤 다시 시도해 주십시오.'));
   }
 }

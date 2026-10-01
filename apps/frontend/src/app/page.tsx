@@ -8,6 +8,7 @@ import { loadSession, saveSession } from '../lib/session';
 import { useOperatingMode } from '../lib/use-operating-mode';
 import { IdentitySection } from '../krds/identity';
 import { OperatingModeBanner } from '../krds/status';
+import { problemText } from '@wonseoro/contracts';
 
 /**
  * 접수 홈 — 기술설계서 v1.0 §12.1 "① 접수 홈"
@@ -84,7 +85,7 @@ export default function Home() {
         err instanceof NetworkError
           ? '대학 접수 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주십시오.'
           : err instanceof ApiError
-            ? (err.problem.detail ?? err.problem.title)
+            ? problemText(err.problem).detail
             : '모집 정보를 불러오지 못했습니다.',
       );
     } finally {
@@ -113,7 +114,7 @@ export default function Home() {
       if (err instanceof NetworkError) {
         setError('대학 접수 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
       } else if (err instanceof ApiError) {
-        setError(err.problem.detail ?? err.problem.title);
+        setError(problemText(err.problem).detail);
       } else {
         setError('알 수 없는 오류가 발생했습니다.');
       }

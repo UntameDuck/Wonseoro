@@ -97,7 +97,7 @@ export class DeadlinePolicyRepository extends DeadlinePolicyPort {
   }): Promise<{ policyId: string; policyHash: string }> {
     const deadline = new Date(input.deadlineAt);
     if (Number.isNaN(deadline.getTime())) {
-      throw ProblemException.validationFailed('deadlineAt 이 올바른 시각이 아닙니다.');
+      throw ProblemException.validationFailed('마감시각이 올바른 시각이 아닙니다.');
     }
     const policyId = randomUUID();
     const snapshot = {
@@ -175,7 +175,7 @@ export class DeadlinePolicyRepository extends DeadlinePolicyPort {
     }
     const newDeadline = new Date(input.deadlineAt);
     if (Number.isNaN(newDeadline.getTime())) {
-      throw ProblemException.validationFailed('deadlineAt 이 올바른 시각이 아닙니다.');
+      throw ProblemException.validationFailed('마감시각이 올바른 시각이 아닙니다.');
     }
     if (newDeadline.getTime() <= base.deadlineAt.getTime()) {
       throw ProblemException.validationFailed(
@@ -473,7 +473,7 @@ export class DeadlinePolicyRepository extends DeadlinePolicyPort {
     const raw = process.env.DEADLINE_AT || new Date(Date.now() + 86_400_000).toISOString();
     if (Number.isNaN(Date.parse(raw))) {
       throw ProblemException.retryable(
-        `개발용 마감 정책의 DEADLINE_AT 이 올바른 시각이 아닙니다: ${raw}`,
+        '적용된 마감 정책이 없어 마감을 판정할 수 없습니다.',
       );
     }
     const deadlineAt = new Date(raw).toISOString();

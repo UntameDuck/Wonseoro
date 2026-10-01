@@ -69,6 +69,8 @@ export function Button({
 /* ────────────────────────────────────────────────────────────────────── */
 
 export interface FieldProps {
+  /** 오류 요약이 이 칸으로 데려갈 때 쓰는 고정 id. 없으면 자동으로 만든다. */
+  id?: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
@@ -82,6 +84,7 @@ export interface FieldProps {
 }
 
 export function Field({
+  id: fixedId,
   label,
   value,
   onChange,
@@ -92,7 +95,8 @@ export function Field({
   maxLength,
   multiline,
 }: FieldProps) {
-  const id = useId();
+  const generatedId = useId();
+  const id = fixedId ?? generatedId;
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
   const describedBy = [hint ? hintId : null, error ? errorId : null]
@@ -288,10 +292,21 @@ export function Select({
   );
 }
 
+/** 검증 경로(`/highSchool`)의 첫 항목 코드. 칸 id 는 `field-<코드>` 다. 경로가 없으면 칸에 매이지 않은 오류다. */
+export function fieldOf(path: string): string {
+  return path.replace(/^\//, '').split('/')[0] ?? '';
+}
+
 export function ErrorSummary({
   issues,
+  onSelect,
 }: {
   issues: Array<{ path: string; message: string }>;
+  /**
+   * 항목을 누르면 그 칸으로 간다. 칸이 다른 단계에 있으면 화면이 단계를 옮긴 뒤 포커스한다.
+   * 문장은 서버가 항목 이름으로 시작해 만든다 — 항목 코드를 앞에 붙이지 않는다. (T-M5-52, U-1)
+   */
+  onSelect?: (path: string) => void;
 }) {
   if (issues.length === 0) return null;
   return (
@@ -317,11 +332,28 @@ export function ErrorSummary({
         입력을 확인해 주십시오 ({issues.length}건)
       </h2>
       <ul style={{ margin: 0, paddingLeft: '1.2em' }}>
-        {issues.map((i) => (
-          <li key={`${i.path}-${i.message}`} style={{ fontSize: 'var(--krds-text-sm)' }}>
-            <strong>{i.path.replace(/^\//, '') || '입력값'}</strong> — {i.message}
-          </li>
-        ))}
+        {issues.map((i) => {
+          const field = fieldOf(i.path);
+          return (
+            <li key={`${i.path}-${i.message}`} style={{ fontSize: 'var(--krds-text-sm)' }}>
+              {field ? (
+                <a
+                  href={`#field-${field}`}
+                  onClick={(e) => {
+                    if (!onSelect) return;
+                    e.preventDefault();
+                    onSelect(i.path);
+                  }}
+                  style={{ color: 'var(--krds-danger)', fontWeight: 700 }}
+                >
+                  {i.message}
+                </a>
+              ) : (
+                i.message
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

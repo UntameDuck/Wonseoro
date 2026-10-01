@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { ApiError, NetworkError, api, newIdempotencyKey } from '../lib/api';
 import { Alert, Button } from '@wonseoro/krds';
+import { problemText } from '@wonseoro/contracts';
 
 export interface UploadedDocument {
   documentType: string;
@@ -73,7 +74,16 @@ export function FileUpload({
         body: file,
       });
       if (!put.ok) {
-        setPhase({ kind: 'failed', reason: `업로드에 실패했습니다 (${put.status})` });
+        // 저장소가 거절한 이유를 지원자 말로 — 상태 번호를 보이지 않는다 (T-M5-52, U-28)
+        setPhase({
+          kind: 'failed',
+          reason:
+            put.status === 403
+              ? '올릴 수 있는 시간이 지났습니다. 파일을 다시 선택해 주십시오.'
+              : put.status === 413
+                ? '파일이 너무 큽니다. 더 작은 파일을 올려 주십시오.'
+                : '파일을 올리지 못했습니다. 잠시 후 다시 선택해 주십시오.',
+        });
         return;
       }
 
@@ -97,7 +107,7 @@ export function FileUpload({
         return;
       }
       if (err instanceof ApiError) {
-        setPhase({ kind: 'failed', reason: err.problem.detail ?? err.problem.title });
+        setPhase({ kind: 'failed', reason: problemText(err.problem).detail });
         return;
       }
       setPhase({ kind: 'failed', reason: '업로드에 실패했습니다.' });

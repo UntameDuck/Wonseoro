@@ -1,5 +1,7 @@
 'use client';
 
+import { problemText } from '@wonseoro/contracts';
+
 /**
  * 콘솔 화면의 호출 계층. 화면은 fetch 를 직접 부르지 않는다.
  *
@@ -117,8 +119,14 @@ export function kst(iso: string | null | undefined): string {
 /** 오류를 운영자가 읽을 한 줄로. 추적번호가 있으면 함께 — 문의할 때 그대로 전달한다. */
 export function describe(err: unknown): string {
   if (err instanceof ApiError) {
-    const base = err.problem.detail ?? err.problem.title ?? `요청 실패 (${err.problem.status})`;
-    return err.problem.traceId ? `${base} (추적번호 ${err.problem.traceId})` : base;
+    // 운영 API 의 업무 오류 설명은 담당자에게 쓰인 말이다(서버 문구 검사). 프로토콜·내부 오류는 정해 둔 문구로 —
+    // 상태 번호("요청 실패 (500)")를 보이지 않는다 (T-M5-52)
+    const code = err.problem.code;
+    const protocol = PROTOCOL_CODES.includes(code) || !err.problem.detail;
+    const base = protocol ? problemText(err.problem).detail : err.problem.detail!;
+    return err.problem.traceId ? `${base} (요청번호 ${err.problem.traceId})` : base;
   }
   return '알 수 없는 오류가 발생했습니다.';
 }
+
+const PROTOCOL_CODES: readonly string[] = ['IDEMPOTENCY_KEY_REQUIRED', 'IDEMPOTENCY_KEY_INVALID', 'IDEMPOTENCY_KEY_REUSED', 'INTERNAL', 'ERROR'];

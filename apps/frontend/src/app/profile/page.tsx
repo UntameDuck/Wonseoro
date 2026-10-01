@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { COMMON_PROFILE_FIELDS, commonProfileProblem } from '@wonseoro/contracts';
+import { COMMON_PROFILE_FIELDS, commonProfileProblem, problemText } from '@wonseoro/contracts';
 import { Alert, Button, Card, DescriptionList, ErrorSummary, Field } from '@wonseoro/krds';
 import { Breadcrumb } from '../../krds/navigation';
 import { ApiError, NetworkError, api, type CommonProfile } from '../../lib/api';
@@ -55,7 +55,7 @@ export default function ProfilePage() {
           err instanceof NetworkError
             ? '공통원서 서버에 연결할 수 없습니다. 원서는 공통원서 없이 직접 입력해 작성할 수 있습니다.'
             : err instanceof ApiError
-              ? (err.problem.detail ?? err.problem.title)
+              ? problemText(err.problem).detail
               : '공통원서를 불러오지 못했습니다.',
       });
     }
@@ -118,7 +118,7 @@ export default function ProfilePage() {
           err instanceof NetworkError
             ? '공통원서 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주십시오.'
             : err instanceof ApiError
-              ? (err.problem.detail ?? err.problem.title)
+              ? problemText(err.problem).detail
               : '저장하지 못했습니다.',
       });
     } finally {

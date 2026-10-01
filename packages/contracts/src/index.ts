@@ -8,3 +8,5 @@ export * from './deadline-policy';
 export * from './retention';
 export * from './common-profile';
 export * from './labels';
+export * from './problem-text';
+export * from './josa';

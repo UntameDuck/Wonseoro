@@ -99,6 +99,7 @@ export function SchemaForm({
         return (
           <Field
             key={code}
+            id={`field-${code}`}
             label={labelOf(code)}
             value={values[code] ?? ''}
             onChange={(v) => onChange(code, v)}

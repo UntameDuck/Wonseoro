@@ -52,7 +52,7 @@ export class DocumentController {
     const filename = this.required(body.filename, 'filename');
     const mediaType = this.required(body.mediaType, 'mediaType');
     if (typeof body.sizeBytes !== 'number') {
-      throw ProblemException.validationFailed('sizeBytes 가 필요합니다.');
+      throw ProblemException.validationFailed('파일 크기 정보가 없습니다. 파일을 다시 선택해 주십시오.');
     }
 
     const { applicantId } = applicantFrom(req);
@@ -79,10 +79,10 @@ export class DocumentController {
   ) {
     const sha256 = this.required(body.sha256, 'sha256');
     if (!/^[a-fA-F0-9]{64}$/.test(sha256)) {
-      throw ProblemException.validationFailed('sha256 형식이 올바르지 않습니다.');
+      throw ProblemException.validationFailed('파일 확인 정보가 올바르지 않습니다. 파일을 다시 올려 주십시오.');
     }
     if (typeof body.sizeBytes !== 'number') {
-      throw ProblemException.validationFailed('sizeBytes 가 필요합니다.');
+      throw ProblemException.validationFailed('파일 크기 정보가 없습니다. 파일을 다시 선택해 주십시오.');
     }
 
     // 업로드 완료 보고도 소유자만 할 수 있다. 남의 서류 상태를 바꿀 수 있으면

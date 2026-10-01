@@ -29,7 +29,7 @@ export class RetentionController {
   @Get('plan')
   @Header('cache-control', 'no-store')
   async plan(@Query('cycleId') cycleId?: string) {
-    if (!cycleId) throw ProblemException.validationFailed('cycleId 가 필요합니다.');
+    if (!cycleId) throw ProblemException.validationFailed('모집을 지정해 주십시오.');
     return this.retention.plan(cycleId);
   }
 }

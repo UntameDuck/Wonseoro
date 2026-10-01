@@ -1,5 +1,5 @@
 import { HttpException } from '@nestjs/common';
-import { ProblemCode, ProblemCodeValue, ProblemDetails, problemType } from '@wonseoro/contracts';
+import { ProblemCode, ProblemCodeValue, ProblemDetails, problemType, APPLICATION_STATUS_LABEL, labelOf } from '@wonseoro/contracts';
 
 type ProblemInit = Omit<ProblemDetails, 'type' | 'code' | 'traceId'> & {
   code: ProblemCodeValue;
@@ -86,9 +86,10 @@ export class ProblemException extends HttpException {
   static illegalTransition(from: string, to: string): ProblemException {
     return new ProblemException({
       code: ProblemCode.ILLEGAL_TRANSITION,
-      title: '허용되지 않은 상태 전이입니다',
+      title: '지금 원서 상태에서는 할 수 없는 요청입니다',
       status: 409,
-      detail: `${from} → ${to} 전이는 허용되지 않습니다.`,
+      // 상태 코드를 문장에 쓰지 않는다 — 화면에 덧붙는 일은 없지만(PROBLEM_TEXT) API 문서·로그를 읽는 사람도 같은 말을 본다
+      detail: `${labelOf(APPLICATION_STATUS_LABEL, from)} 상태에서는 ${labelOf(APPLICATION_STATUS_LABEL, to)} 상태로 바꿀 수 없습니다.`,
     });
   }
 

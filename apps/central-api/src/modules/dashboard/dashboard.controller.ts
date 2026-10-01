@@ -37,7 +37,7 @@ export class DashboardController {
           status: 400,
           code: 'APPLICANT_TOKEN_IN_URL',
           traceId: '',
-          detail: '지원자 식별자는 URL 이 아니라 x-subject-token 헤더로 보내야 합니다.',
+          detail: '지원자 정보를 주소에 담아 보낼 수 없습니다. 화면을 새로고침한 뒤 다시 시도해 주십시오.',
         },
         400,
       );

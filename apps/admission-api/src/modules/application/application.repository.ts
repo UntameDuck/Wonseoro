@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { CENTRAL_ID_SALT } from '../../config';
-import { ApplicationStatus } from '@wonseoro/contracts';
+import { ApplicationStatus, APPLICATION_STATUS_LABEL, labelOf } from '@wonseoro/contracts';
 import { Db } from '@wonseoro/server-kit';
 import type { Queryable } from '../../common/db/queryable';
 import { ProblemException } from '../../common/problem/problem.exception';
@@ -239,7 +239,7 @@ export class ApplicationRepository {
         throw ProblemException.versionConflict(
           current.status === 'PAYMENT_PENDING' || current.status === 'PAID'
             ? '결제를 시작한 원서는 고칠 수 없습니다. 결제가 확인되면 이 내용 그대로 접수됩니다.'
-            : `현재 상태(${current.status})에서는 원서를 수정할 수 없습니다.`,
+            : `${labelOf(APPLICATION_STATUS_LABEL, current.status)} 상태인 원서는 수정할 수 없습니다.`,
         );
       }
       if (input.admissionTypeId || input.departmentId) {

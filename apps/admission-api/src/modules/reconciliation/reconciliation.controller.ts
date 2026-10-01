@@ -60,7 +60,7 @@ export class ReconciliationController {
     const sinceHours = body?.sinceHours ?? DEFAULT_SINCE_HOURS;
     if (!Number.isInteger(sinceHours) || sinceHours < 1 || sinceHours > MAX_SINCE_HOURS) {
       throw ProblemException.validationFailed(
-        `sinceHours 는 1 이상 ${MAX_SINCE_HOURS} 이하의 정수여야 합니다.`,
+        `대조 기간은 1시간 이상 ${MAX_SINCE_HOURS}시간 이하로 정해 주십시오.`,
       );
     }
     return this.reconciliation.reconcile(sinceHours);

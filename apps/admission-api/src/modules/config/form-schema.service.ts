@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import Ajv, { ErrorObject, ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
 import { Db } from '@wonseoro/server-kit';
+import { josa } from '@wonseoro/contracts';
 import { ProblemException } from '../../common/problem/problem.exception';
 
 export interface ValidationIssue {
@@ -182,9 +183,8 @@ export class FormSchemaService {
       fields,
     );
     if (!result.valid) {
-      throw ProblemException.validationFailed(
-        result.issues.map((i) => `${i.path} ${i.message}`).join('; '),
-      );
+      // 문장은 항목 이름으로 시작한다(toIssue). 경로를 앞에 붙이지 않는다 — 저장 실패 안내에 그대로 보인다.
+      throw ProblemException.validationFailed(result.issues.map((i) => i.message).join(' '));
     }
 
     return schemaVersion;
@@ -223,7 +223,7 @@ export class FormSchemaService {
 
     return {
       valid: false,
-      issues: (fn.errors ?? []).map((e) => this.toIssue(e)),
+      issues: (fn.errors ?? []).map((e) => toIssue(e, schema)),
     };
   }
 
@@ -249,14 +249,71 @@ export class FormSchemaService {
     }
   }
 
-  private toIssue(e: ErrorObject): ValidationIssue {
-    const path = e.instancePath || `/${String(e.params?.['missingProperty'] ?? '')}`;
-    return {
-      code: (e.keyword ?? 'invalid').toUpperCase(),
-      path,
-      message: e.message ?? '값이 올바르지 않습니다',
-    };
+}
+
+/**
+ * 검증기 오류를 지원자가 읽을 문장으로. (T-M5-52, U-1)
+ *
+ * 전에는 Ajv 의 영문 원문과 항목 코드가 그대로 나갔다 — `highSchool — must have required property 'highSchool'`.
+ * 항목 이름은 양식의 `title` 에서 온다(설정 검사가 title 없는 항목을 거절한다, U-29).
+ * 응답 모양(path·code·message)은 그대로다 — path 는 화면이 그 칸을 찾는 데 쓴다.
+ */
+export function toIssue(e: ErrorObject, schema: Record<string, unknown>): ValidationIssue {
+  const missing = e.keyword === 'required' ? String(e.params?.['missingProperty'] ?? '') : '';
+  const path = e.instancePath || (missing ? `/${missing}` : '');
+  const field = path.split('/')[1] ?? '';
+  const prop = ((schema.properties ?? {}) as Record<string, Record<string, unknown>>)[field] ?? {};
+  const name = typeof prop.title === 'string' && prop.title.trim() ? prop.title : '이 항목';
+  const p = e.params as Record<string, unknown>;
+  const formatHint = typeof prop.description === 'string' && prop.description ? ` (${prop.description})` : '';
+
+  let message: string;
+  switch (e.keyword) {
+    case 'required':
+      message = `${josa(name, '을/를')} 입력해 주십시오.`;
+      break;
+    case 'maxLength':
+      message = `${josa(name, '은/는')} ${p.limit}자 이하로 입력해 주십시오.`;
+      break;
+    case 'minLength':
+      message = `${josa(name, '은/는')} ${p.limit}자 이상 입력해 주십시오.`;
+      break;
+    case 'maximum':
+    case 'exclusiveMaximum':
+      message = `${josa(name, '은/는')} ${p.limit} ${e.keyword === 'maximum' ? '이하' : '미만'}로 입력해 주십시오.`;
+      break;
+    case 'minimum':
+    case 'exclusiveMinimum':
+      message = `${josa(name, '은/는')} ${p.limit} ${e.keyword === 'minimum' ? '이상' : '초과'}로 입력해 주십시오.`;
+      break;
+    case 'type':
+      message =
+        p.type === 'integer'
+          ? `${name}에는 정수를 입력해 주십시오.`
+          : p.type === 'number'
+            ? `${name}에는 숫자를 입력해 주십시오.`
+            : `${name} 값의 형식이 올바르지 않습니다.`;
+      break;
+    case 'format':
+      message =
+        p.format === 'email'
+          ? `${name} 형식이 올바르지 않습니다. 예: name@example.com`
+          : `${name} 형식이 올바르지 않습니다.${formatHint}`;
+      break;
+    case 'pattern':
+      // 정규식은 보이지 않는다. 형식 안내는 양식의 description 이 사람 말로 갖는다.
+      message = `${name} 형식이 올바르지 않습니다.${formatHint}`;
+      break;
+    case 'enum':
+      message = `${josa(name, '은/는')} 주어진 선택지 가운데에서 골라 주십시오.`;
+      break;
+    case 'additionalProperties':
+      message = '이 전형 양식에 없는 항목이 들어 있습니다. 화면을 새로고침한 뒤 다시 저장해 주십시오.';
+      break;
+    default:
+      message = `${name} 값이 올바르지 않습니다.`;
   }
+  return { code: (e.keyword ?? 'invalid').toUpperCase(), path, message };
 }
 
 /** 작성 도중에는 충족될 수 없는 제약을 걷어낸다. 최종검증에서는 그대로 본다. */

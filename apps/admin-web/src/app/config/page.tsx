@@ -176,7 +176,7 @@ function DraftCreator({
     try {
       config = JSON.parse(text);
     } catch (err) {
-      setMessage({ tone: 'danger', text: `JSON 형식이 올바르지 않습니다 — ${(err as Error).message}` });
+      setMessage({ tone: 'danger', text: jsonProblem(text, err as Error) });
       return;
     }
     setBusy(true);
@@ -398,6 +398,26 @@ function VersionReview({
       {version.status === 'ACTIVE' && <ActivationBadge text="적용 중인 설정입니다." />}
     </Card>
   );
+}
+
+/**
+ * 설정 내용 오류를 줄·칸으로. 엔진 영문 원문("Unexpected token } in JSON at position 120")을 보이지 않는다 (T-M5-52, U-41).
+ * 엔진마다 위치를 다르게 말한다 — position N 이나 (line L column C) 를 찾고, 없으면 위치 없이 말한다.
+ */
+function jsonProblem(source: string, err: Error): string {
+  const hint = '쉼표·따옴표·괄호가 빠지거나 남지 않았는지 확인해 주십시오.';
+  const lc = /line (\d+) column (\d+)/.exec(err.message);
+  const pos = /position (\d+)/.exec(err.message);
+  let line: number | null = lc ? Number(lc[1]) : null;
+  let col: number | null = lc ? Number(lc[2]) : null;
+  if (line === null && pos) {
+    const before = source.slice(0, Number(pos[1]));
+    line = before.split('\n').length;
+    col = before.length - before.lastIndexOf('\n');
+  }
+  return line !== null
+    ? `설정 내용 ${line}번째 줄 ${col}번째 칸에서 형식이 깨졌습니다. ${hint}`
+    : `설정 내용의 형식이 올바르지 않습니다. ${hint}`;
 }
 
 function ChangeList({ changes }: { changes: Change[] }) {

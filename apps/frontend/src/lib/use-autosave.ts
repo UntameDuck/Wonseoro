@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, NetworkError, api, newIdempotencyKey } from './api';
+import { problemText } from '@wonseoro/contracts';
 
 export type SaveState =
   | { kind: 'idle' }
@@ -107,7 +108,7 @@ export function useAutosave(args: {
           reason:
             err.httpStatus === 412
               ? '다른 창에서 먼저 저장되었습니다. 새로고침 후 다시 시도해 주십시오.'
-              : (err.problem.detail ?? err.problem.title),
+              : problemText(err.problem).detail,
           retryable,
         });
         return;

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
-import { DocumentStatus } from '@wonseoro/contracts';
+import { DocumentStatus, APPLICATION_STATUS_LABEL, labelOf } from '@wonseoro/contracts';
 import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { AuditService } from '../audit/audit.service';
@@ -85,7 +85,7 @@ export class DocumentService {
       throw ProblemException.versionConflict(
         app.status === 'PAYMENT_PENDING' || app.status === 'PAID'
           ? '결제를 시작한 원서의 서류는 바꿀 수 없습니다. 결제가 확인되면 올린 서류 그대로 접수됩니다.'
-          : `현재 상태(${app.status})에서는 서류를 바꿀 수 없습니다.`,
+          : `${labelOf(APPLICATION_STATUS_LABEL, app.status)} 상태인 원서는 서류를 바꿀 수 없습니다.`,
       );
     }
     if (!documentType) return;
