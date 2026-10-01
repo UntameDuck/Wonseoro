@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { ApiError, NetworkError, api, newIdempotencyKey } from '../lib/api';
-import { Alert, Button } from '@wonseoro/krds';
+import { Alert, Button, Icon } from '@wonseoro/krds';
 import { problemText } from '@wonseoro/contracts';
 
 export interface UploadedDocument {
@@ -175,7 +175,7 @@ function PhaseText({ phase, filename }: { phase: Phase; filename: string | null 
         role="alert"
         style={{ margin: 0, color: 'var(--krds-danger)', fontWeight: 700, fontSize: 'var(--krds-text-sm)' }}
       >
-        <span aria-hidden="true">✕ </span>
+        <Icon name="cross" />
         {name}
         {phase.reason}
       </p>
@@ -201,7 +201,7 @@ function PhaseText({ phase, filename }: { phase: Phase; filename: string | null 
         fontWeight: phase.kind === 'done' ? 700 : 400,
       }}
     >
-      <span aria-hidden="true">{phase.kind === 'done' ? '✓ ' : '⟳ '}</span>
+      <Icon name={phase.kind === 'done' ? 'check' : 'sync'} />
       {name}
       {text}
     </p>
@@ -227,7 +227,7 @@ export function DocumentStatusList({ documents }: { documents: UploadedDocument[
             : d.status === 'REJECTED'
               ? 'var(--krds-danger)'
               : 'var(--krds-fg-muted)';
-        const icon = d.status === 'AVAILABLE' ? '✓' : d.status === 'REJECTED' ? '✕' : '⟳';
+        const icon = d.status === 'AVAILABLE' ? 'check' : d.status === 'REJECTED' ? 'cross' : 'sync';
         return (
           <li
             key={`${d.documentType}-${d.status}`}
@@ -242,7 +242,7 @@ export function DocumentStatusList({ documents }: { documents: UploadedDocument[
             <strong style={{ minWidth: 120 }}>{d.documentType}</strong>
             {/* 색만이 아니라 아이콘 + 안내문구를 함께 준다 */}
             <span style={{ color: tone, fontWeight: 700 }}>
-              <span aria-hidden="true">{icon} </span>
+              <Icon name={icon} />
               {d.guidance}
             </span>
           </li>

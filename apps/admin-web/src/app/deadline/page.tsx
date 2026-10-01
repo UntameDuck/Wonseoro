@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Button, Card, Field } from '@wonseoro/krds';
+import { Alert, Button, Card, Field, kstInputToIso } from '@wonseoro/krds';
 import { useCallback, useEffect, useState } from 'react';
 import { DEADLINE_MODE_LABEL, labelOf } from '@wonseoro/contracts';
 import { ActivationTable, td, th, type ActivationList } from '../../components/activation';
@@ -145,8 +145,9 @@ function ExtensionForm({
   const [message, setMessage] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // datetime-local 은 브라우저의 지역 시각이다. 서버에는 UTC ISO 로 보낸다.
-  const newDeadline = deadline ? new Date(deadline) : null;
+  // 입력은 언제나 한국 시간으로 읽는다 — 담당자 PC 의 시간대를 쓰지 않는다(해외에서 연장해도 같은 마감). 서버에는 UTC ISO 로 보낸다 (U-47)
+  const deadlineIso = deadline ? kstInputToIso(deadline) : null;
+  const newDeadline = deadlineIso ? new Date(deadlineIso) : null;
   const later = newDeadline !== null && newDeadline.getTime() > Date.parse(current.deadlineAt);
   const block = !operator
     ? '담당자를 먼저 지정해 주십시오.'
@@ -198,7 +199,7 @@ function ExtensionForm({
       <Field label="연장 사유" value={reason} onChange={setReason} required multiline maxLength={500} hint="예: 접수 서버 장애로 40분간 제출 불가" />
       <div style={{ margin: 'var(--krds-space-3) 0' }}>
         <label htmlFor="new-deadline" style={{ display: 'block', fontWeight: 700 }}>
-          새 마감시각 <span aria-hidden="true">*</span>
+          새 마감시각 (한국 시간) <span aria-hidden="true">*</span>
         </label>
         <input
           id="new-deadline"
@@ -209,7 +210,7 @@ function ExtensionForm({
           style={{ minHeight: 40, padding: '0 var(--krds-space-2)', fontFamily: 'inherit' }}
         />
         <p id="new-deadline-hint" style={{ margin: 'var(--krds-space-1) 0 0', fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)' }}>
-          이 컴퓨터의 시간대로 입력합니다. 확인: {newDeadline ? `${kst(newDeadline.toISOString())} (한국 시간)` : '-'}
+          이 컴퓨터의 시간대와 상관없이 한국 시간으로 입력합니다. 확인: {newDeadline ? `${kst(newDeadline.toISOString())} (한국 시간)` : '입력 전'}
         </p>
       </div>
       <Button disabled={busy || block !== null} onClick={() => void submit()}>

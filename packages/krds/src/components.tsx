@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useId } from 'react';
+import { Icon, type IconName } from './icon';
 
 /**
  * KRDS Wrapper SDK — 기술설계서 v1.1 §07·§B15
@@ -187,7 +188,7 @@ export function Field({
             fontWeight: 700,
           }}
         >
-          <span aria-hidden="true">✕ </span>
+          <Icon name="cross" />
           {error}
         </p>
       )}
@@ -328,7 +329,7 @@ export function ErrorSummary({
           color: 'var(--krds-danger)',
         }}
       >
-        <span aria-hidden="true">✕ </span>
+        <Icon name="cross" />
         입력을 확인해 주십시오 ({issues.length}건)
       </h2>
       <ul style={{ margin: 0, paddingLeft: '1.2em' }}>
@@ -370,12 +371,14 @@ export function Alert({
   title: string;
   children?: ReactNode;
 }) {
-  const palette = {
-    info: ['var(--krds-primary)', 'var(--krds-primary-weak)', 'ℹ'],
-    warning: ['var(--krds-warning)', 'var(--krds-warning-weak)', '⚠'],
-    danger: ['var(--krds-danger)', 'var(--krds-danger-weak)', '✕'],
-    success: ['var(--krds-success)', 'var(--krds-success-weak)', '✓'],
-  }[tone];
+  const palette = (
+    {
+      info: ['var(--krds-primary)', 'var(--krds-primary-weak)', 'info'],
+      warning: ['var(--krds-warning)', 'var(--krds-warning-weak)', 'warning'],
+      danger: ['var(--krds-danger)', 'var(--krds-danger-weak)', 'cross'],
+      success: ['var(--krds-success)', 'var(--krds-success-weak)', 'check'],
+    } as const
+  )[tone];
 
   return (
     <div
@@ -390,7 +393,7 @@ export function Alert({
     >
       {/* 색만으로 구분하지 않는다. 아이콘 + 텍스트 병행. (v1.1 §07) */}
       <strong style={{ color: palette[0] }}>
-        <span aria-hidden="true">{palette[2]} </span>
+        <Icon name={palette[2] as IconName} />
         {title}
       </strong>
       {children && (

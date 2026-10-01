@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useEffect, useState } from 'react';
-import { Alert, Button, Card, DescriptionList } from '@wonseoro/krds';
+import { Alert, Button, Card, DescriptionList, cycleTitle } from '@wonseoro/krds';
 import { ApiError, NetworkError, api } from '../../../lib/api';
 import { loadSession } from '../../../lib/session';
 import { formatKst } from '../../../lib/use-deadline';
@@ -39,7 +39,7 @@ export default function ReceiptPage({ params }: { params: Promise<{ submissionId
       }
       const cycle = await api.currentCycle().catch(() => null);
       if (cycle?.data.universityName) setUniversityName(cycle.data.universityName);
-      if (cycle) setUniversity(`${cycle.data.universityName ?? cycle.data.universityId} · ${cycle.data.admissionYear}학년도 ${cycle.data.name}`);
+      if (cycle) setUniversity(`${cycle.data.universityName ?? '대학 정보 확인 중'} · ${cycleTitle(cycle.data.admissionYear, cycle.data.name)}`);
     })();
   }, [submissionId, applicantId]);
 

@@ -189,7 +189,7 @@ function EvidenceView({ pkg }: { pkg: EvidencePackage }) {
               [
                 '적용 기록',
                 signed
-                  ? `${labelOf(ACTIVATION_KIND_LABEL, signed.kind)} · ${kst(signed.effectiveAt)} · ${signed.operatorId}${signed.decisionRef ? ` · 결정 ${signed.decisionRef}` : ''} · ${policyTrusted ? '✓ 서명 확인' : '✕ 불일치'}`
+                  ? `${labelOf(ACTIVATION_KIND_LABEL, signed.kind)} · ${kst(signed.effectiveAt)} · ${signed.operatorId}${signed.decisionRef ? ` · 결정 ${signed.decisionRef}` : ''} · ${policyTrusted ? '서명 확인' : '서명 불일치'}`
                   : '없음',
               ],
             ]}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { formatDateTime, formatTime } from '@wonseoro/krds';
 import { NetworkError, api } from './api';
 
 export interface DeadlineView {
@@ -124,20 +125,12 @@ export function formatRemaining(ms: number): string {
   return `${s}초 남음`;
 }
 
-/** 서버가 준 ISO 시각을 한국 시간으로 표시한다. 저장은 UTC, 표시만 Asia/Seoul. */
+/** 서버가 준 ISO 시각을 한국 시간 "2026.12.31 18:00" 으로. 표기 규칙은 KRDS 한 곳에 있다 (T-M5-54). */
 export function formatKst(iso: string | null): string {
-  if (!iso) return '-';
-  return new Date(iso).toLocaleString('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    dateStyle: 'medium',
-    timeStyle: 'medium',
-  });
+  return formatDateTime(iso);
 }
 
+/** 방금 일어난 일의 시각 "17:42:13" (저장 완료 등). */
 export function formatKstTime(iso: string | null): string {
-  if (!iso) return '-';
-  return new Date(iso).toLocaleTimeString('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    hour12: false,
-  });
+  return formatTime(iso);
 }

@@ -126,6 +126,10 @@ jobs:
       - run: npm run typecheck -w @wonseoro/krds -w @wonseoro/frontend -w @wonseoro/admin-web
       # 화면 문구 — 설계 문서 번호·개발 안내·구조 설명이 화면에 나가지 않게 (T-M5-50)
       - run: npm run check:ui-copy
+      # 날짜·시각 표기 — 언제나 한국 시간 (T-M5-54). 러너 시간대와 무관해야 해서 다른 시간대로 돌린다
+      - run: npm test -w @wonseoro/krds
+        env:
+          TZ: America/New_York
 
   # M5에서 활성화 — 기술설계서 v1.0 §8.4 CI/CD Security Gate 10종
   # security:

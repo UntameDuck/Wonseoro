@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card } from '@wonseoro/krds';
+import { Alert, Button, Card, Icon } from '@wonseoro/krds';
 import { APPLICATION_STATUS_LABEL, labelOf } from '@wonseoro/contracts';
 import { Breadcrumb } from '../../krds/navigation';
 import { NetworkError, api } from '../../lib/api';
@@ -124,7 +124,7 @@ export default function DashboardPage() {
                       접수 실패로 보이게 하지 않는다 (T-M4-42 · D-60) */}
                   {r.universityReachable === false && (
                     <p role="status" style={{ margin: 'var(--krds-space-2) 0 0', color: 'var(--krds-warning)', fontSize: 'var(--krds-text-sm)' }}>
-                      <span aria-hidden="true">⚠ </span>
+                      <Icon name="warning" />
                       지금 이 대학 서버 상태를 확인할 수 없습니다
                       {r.universityLastHeartbeatAt ? ` (마지막 확인 ${formatKst(r.universityLastHeartbeatAt)})` : ''}. 접수가
                       취소된 것은 아닙니다 — 대학 접수 페이지에서 확인하실 수 있습니다.
@@ -147,7 +147,7 @@ export default function DashboardPage() {
                       fontSize: 'var(--krds-text-sm)',
                     }}
                   >
-                    <span aria-hidden="true">{r.status === 'FINALIZED' ? '✓ ' : '· '}</span>
+                    <Icon name={r.status === 'FINALIZED' ? 'check' : 'circle'} />
                     {labelOf(APPLICATION_STATUS_LABEL, r.status, '확인 중')}
                   </span>
                   {/* 중앙은 언제나 뒤처질 수 있다. 그 사실을 숨기지 않는다. */}

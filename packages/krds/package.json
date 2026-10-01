@@ -13,7 +13,8 @@
     "react": "^19.0.0"
   },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test --experimental-strip-types src/format.test.ts"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

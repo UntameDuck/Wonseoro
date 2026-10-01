@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert } from '@wonseoro/krds';
+import { Alert, Icon } from '@wonseoro/krds';
 import { ACTIVATION_KIND_LABEL } from '@wonseoro/contracts';
 import { kst } from '../lib/api';
 
@@ -28,9 +28,9 @@ export interface ActivationList {
 
 const KIND = ACTIVATION_KIND_LABEL;
 const SIG = {
-  VALID: '✓ 서명 확인',
-  INVALID: '✕ 서명 불일치',
-  UNKNOWN_KEY: '? 확인할 수 없는 서명 키',
+  VALID: { icon: 'check', text: '서명 확인' },
+  INVALID: { icon: 'cross', text: '서명 불일치' },
+  UNKNOWN_KEY: { icon: 'warning', text: '확인할 수 없는 서명 키' },
 } as const;
 
 export function ActivationBadge({ text }: { text: string }) {
@@ -65,7 +65,7 @@ export function ActivationTable({ list, filter }: { list: ActivationList; filter
       )}
       {list.allSignaturesValid && list.systemChain.valid && (
         <p style={{ fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)', margin: '0 0 var(--krds-space-2)' }}>
-          <span aria-hidden="true">✓ </span>모든 서명이 맞고, 담당자 처리 기록 {list.systemChain.checked}건이 빠지거나 고쳐진 곳 없이 이어집니다.
+          <Icon name="check" />모든 서명이 맞고, 담당자 처리 기록 {list.systemChain.checked}건이 빠지거나 고쳐진 곳 없이 이어집니다.
         </p>
       )}
       {rows.length === 0 ? (
@@ -99,7 +99,8 @@ export function ActivationTable({ list, filter }: { list: ActivationList; filter
                   )}
                 </td>
                 <td style={{ ...td, fontWeight: a.signature === 'VALID' ? 400 : 700, color: a.signature === 'VALID' ? 'inherit' : 'var(--krds-danger)' }}>
-                  {SIG[a.signature]}
+                  <Icon name={SIG[a.signature].icon} />
+                  {SIG[a.signature].text}
                   {/* 서명 키 이름은 검증·문의용이다 — 접어 둔다 (T-M5-51) */}
                   <details style={{ color: 'var(--krds-fg-muted)', fontWeight: 400 }}>
                     <summary style={{ cursor: 'pointer' }}>서명 키</summary>

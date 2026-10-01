@@ -1,6 +1,7 @@
 'use client';
 
 import { problemText } from '@wonseoro/contracts';
+import { formatDateTime } from '@wonseoro/krds';
 
 /**
  * 콘솔 화면의 호출 계층. 화면은 fetch 를 직접 부르지 않는다.
@@ -102,18 +103,9 @@ export function currentCycle(): Promise<Cycle> {
   return request<Cycle>('/api/public/cycle');
 }
 
-/** 저장은 UTC, 표시만 한국 시간. 초는 보이지 않는다 — 운영자가 읽을 단위가 아니다. */
+/** 저장은 UTC, 표시만 한국 시간 "2026.12.31 18:00". 표기 규칙은 KRDS 한 곳에 있다 (T-M5-54). */
 export function kst(iso: string | null | undefined): string {
-  if (!iso) return '-';
-  return new Date(iso).toLocaleString('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  return formatDateTime(iso);
 }
 
 /** 오류를 운영자가 읽을 한 줄로. 추적번호가 있으면 함께 — 문의할 때 그대로 전달한다. */

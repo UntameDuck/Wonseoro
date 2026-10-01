@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Icon } from '@wonseoro/krds';
 
 /**
  * 지원자 흐름 6단계 — 기술설계서 v1.1 §07 (canonical)
@@ -61,7 +62,7 @@ export function StepIndicator({ current }: { current: StepNo }) {
                 fontWeight: state === 'current' ? 700 : 400,
               }}
             >
-              <span aria-hidden="true">{state === 'done' ? '✓ ' : `${s.no}. `}</span>
+              {state === 'done' ? <Icon name="check" /> : <span aria-hidden="true">{`${s.no}. `}</span>}
               {s.label}
               {state === 'current' && <span className="krds-sr-only"> (현재 단계)</span>}
               {state === 'done' && <span className="krds-sr-only"> (완료)</span>}

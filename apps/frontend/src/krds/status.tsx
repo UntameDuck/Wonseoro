@@ -3,8 +3,8 @@
 import type { OperatingModeView } from '../lib/api';
 import type { SaveState } from '../lib/use-autosave';
 import type { DeadlineView } from '../lib/use-deadline';
-import { formatKstTime, formatRemaining } from '../lib/use-deadline';
-import { Alert, Button } from '@wonseoro/krds';
+import { formatKst, formatKstTime, formatRemaining } from '../lib/use-deadline';
+import { Alert, Button, Icon, formatTime } from '@wonseoro/krds';
 
 /**
  * 자동저장 상태 표시 — 기술설계서 v1.1 §07
@@ -35,7 +35,7 @@ export function SaveStatus({ state, onRetry }: { state: SaveState; onRetry: () =
           flexWrap: 'wrap',
         }}
       >
-        <span aria-hidden="true">✕</span>
+        <Icon name="cross" />
         <span>저장 실패 — {state.reason}</span>
         {state.retryable && (
           <button
@@ -63,7 +63,7 @@ export function SaveStatus({ state, onRetry }: { state: SaveState; onRetry: () =
   if (state.kind === 'saving') {
     return (
       <div role="status" style={{ ...base, background: 'var(--krds-bg-muted)' }}>
-        <span aria-hidden="true">⟳</span> 저장 중…
+        <Icon name="sync" /> 저장 중…
       </div>
     );
   }
@@ -71,7 +71,7 @@ export function SaveStatus({ state, onRetry }: { state: SaveState; onRetry: () =
   if (state.kind === 'saved') {
     return (
       <div role="status" style={{ ...base, background: 'var(--krds-success-weak)', color: 'var(--krds-success)' }}>
-        <span aria-hidden="true">✓</span> 저장 완료 {formatKstTime(state.at)}
+        <Icon name="check" /> 저장 완료 {formatKstTime(state.at)}
       </div>
     );
   }
@@ -102,7 +102,7 @@ export function DeadlineBanner({ deadline }: { deadline: DeadlineView }) {
           color: 'var(--krds-fg-muted)',
         }}
       >
-        <span aria-hidden="true">⟳ </span>
+        <Icon name="sync" />
         서버 시각을 확인하는 중입니다. 남은 시간은 서버 기준으로 표시됩니다.
       </div>
     );
@@ -136,11 +136,11 @@ export function DeadlineBanner({ deadline }: { deadline: DeadlineView }) {
       }}
     >
       <strong style={{ color: urgent ? 'var(--krds-danger)' : 'var(--krds-primary-strong)' }}>
-        <span aria-hidden="true">{urgent ? '⚠ ' : '🕐 '}</span>
+        <Icon name={urgent ? 'warning' : 'clock'} />
         {formatRemaining(deadline.remainingMs)}
       </strong>
       <span style={{ color: 'var(--krds-fg-muted)' }}>
-        마감 {deadline.deadlineAt ? formatKstTime(deadline.deadlineAt) : '-'} (서버 시각 기준)
+        마감 {formatKst(deadline.deadlineAt)} (서버 시각 기준)
       </span>
       {deadline.warningMinutes !== null && (
         <span style={{ fontWeight: 700 }}>
@@ -175,12 +175,7 @@ export function OperatingModeBanner({ view }: { view: OperatingModeView | null }
   // `since` 는 서버가 뜬 시각일 뿐이라, "그때부터 끊겼다" 고 말하면 사실이 아니다.
   const since =
     autonomous && view.reason === 'CENTRAL_UNREACHABLE' && view.lastCentralContactAt
-      ? new Date(view.since).toLocaleTimeString('ko-KR', {
-          timeZone: 'Asia/Seoul',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false,
-        })
+      ? formatTime(view.since, { seconds: false })
       : null;
 
   return (
@@ -243,7 +238,7 @@ export function FailureNotice({
       }}
     >
       <h2 style={{ margin: '0 0 var(--krds-space-3)', color: 'var(--krds-danger)' }}>
-        <span aria-hidden="true">⚠ </span>
+        <Icon name="warning" />
         {title}
       </h2>
 
@@ -258,7 +253,7 @@ export function FailureNotice({
         {lastSavedAt && (
           <div style={{ display: 'flex', gap: 'var(--krds-space-3)' }}>
             <dt style={{ fontWeight: 700 }}>마지막 저장</dt>
-            <dd style={{ margin: 0 }}>{formatKstTime(lastSavedAt)}</dd>
+            <dd style={{ margin: 0 }}>{formatKst(lastSavedAt)}</dd>
           </div>
         )}
         {traceId && (

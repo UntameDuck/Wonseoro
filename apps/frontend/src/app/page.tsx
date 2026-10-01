@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, Select } from '@wonseoro/krds';
+import { Alert, Button, Card, Select, cycleTitle, formatDateTime } from '@wonseoro/krds';
 import { ApiError, NetworkError, api } from '../lib/api';
 import { loadSession, saveSession } from '../lib/session';
 import { useOperatingMode } from '../lib/use-operating-mode';
@@ -141,7 +141,7 @@ export default function Home() {
       )}
 
       {!loading && !catalogError && cycle && (
-        <Card title={`${cycle.admissionYear}학년도 ${cycle.name}`}>
+        <Card title={cycleTitle(cycle.admissionYear, cycle.name)}>
           <Select
             label="전형"
             value={typeId}
@@ -171,7 +171,7 @@ export default function Home() {
               }}
             >
               전형료 <strong>{selectedType.feeAmount.toLocaleString('ko-KR')}원</strong> · 마감{' '}
-              {new Date(cycle.closesAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+              {formatDateTime(cycle.closesAt)}
             </p>
           )}
 

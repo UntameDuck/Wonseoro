@@ -1,5 +1,7 @@
 'use client';
 
+import { Icon } from '@wonseoro/krds';
+
 /**
  * 2인 승인 현황 — 기술설계서 v1.1 §A14, §01 E "단독 운영자 1명으로 마감시간 변경 불가"
  *
@@ -53,7 +55,7 @@ export function ApprovalProgress({ state }: { state: ApprovalState }) {
       {slots.map((who, i) => (
         <li key={i} style={chip(who ? 'var(--krds-success-weak)' : 'var(--krds-bg)')}>
           {/* 색만으로 구분하지 않는다. 표시 문자와 글로 함께 말한다. (§07) */}
-          <span aria-hidden="true">{who ? '✓ ' : '○ '}</span>
+          <Icon name={who ? 'check' : 'circle'} />
           승인 {i + 1} <strong>{who ?? '대기'}</strong>
         </li>
       ))}
