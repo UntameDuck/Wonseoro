@@ -215,6 +215,7 @@ Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, s
 | 화면 캡처·다시 찍는 법 | [screenshots/README.md](screenshots/README.md) |
 | 화면 제품화 — 화면 결함·개발 흔적 전수 목록(U-1~U-59)·결정·문구 검사 | [08-ui-production-readiness.md](08-ui-production-readiness.md) |
 | 접근성 — 시험·찾은 결함·세션 만료·CAPTCHA 결정·지원 브라우저 | [09-accessibility.md](09-accessibility.md) · 시험 `tests/a11y/` · KRDS `LiveRegion`·`TableScroll`·`Alert focusKey`·`Card titleId/titleLevel` |
+| 개인정보·법정 고지 — 원서에 받을 항목·필수 절차·고지 체크리스트·지금과의 차이(G-1~G-15)·법무 쟁점 | [10-admission-privacy-and-legal-notices.md](10-admission-privacy-and-legal-notices.md) (2026-10-02 현행 법령 원문 기준, 법률자문 아님) |
 | 흉내·미연결 점검 결과와 일부러 남긴 흉내 | [04-production-readiness.md §7](04-production-readiness.md#7-흉내미연결-전수-점검-2026-09-30) |
 | 노션 문서 지도·동기화 규칙 | [01-notion-sync-protocol.md](01-notion-sync-protocol.md) |
 | 왜 이렇게 정했나 | [adr/](adr/) — 최신 ADR-0009 퍼즐형 CAPTCHA 를 두지 않는다(한도에 걸린 사람의 접근 가능한 길) · ADR-0008 노드 장애 흡수 |
