@@ -64,10 +64,17 @@ export function ConsoleProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
+  // 지정·바꾸기를 누르면 입력칸과 버튼이 서로 바뀐다 — 사라진 자리 대신 바뀐 자리로 포커스를 옮긴다 (T-M5-41)
+  const [focusId, setFocusId] = useState<string | null>(null);
+  useEffect(() => {
+    if (focusId) document.getElementById(focusId)?.focus();
+  }, [focusId, operator]);
+
   const signIn = useCallback(async () => {
     try {
       setOp(await setOperator(draft));
       setError(null);
+      setFocusId('operator-change');
     } catch (err) {
       setError(describe(err));
     }
@@ -76,6 +83,7 @@ export function ConsoleProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     await clearOperator();
     setOp(null);
+    setFocusId('operator-id');
   }, []);
 
   return (
@@ -105,7 +113,7 @@ export function ConsoleProvider({ children }: { children: ReactNode }) {
               <strong>담당자</strong> {operator}{' '}
               <span style={{ color: 'var(--krds-fg-muted)' }}>(개발용 — 신원 증명 아님)</span>
             </span>
-            <Button variant="secondary" onClick={() => void signOut()}>
+            <Button id="operator-change" variant="secondary" onClick={() => void signOut()}>
               담당자 바꾸기
             </Button>
           </div>

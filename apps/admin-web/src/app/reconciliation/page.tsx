@@ -138,7 +138,7 @@ export default function ReconciliationPage() {
             </Button>
           </div>
         </div>
-        {message && <Alert tone={message.tone} title={message.text} />}
+        {message && <Alert tone={message.tone} title={message.text} focusKey={message} />}
       </Card>
 
       {items === null ? (
@@ -152,7 +152,18 @@ export default function ReconciliationPage() {
           <p style={{ margin: 0 }}>{state === 'OPEN' ? '미해결 불일치가 없습니다.' : '해당하는 항목이 없습니다.'}</p>
         </Card>
       ) : (
-        items.map((e) => <ExceptionItem key={e.id} item={e} operator={operator} onResolved={reload} />)
+        items.map((e) => (
+          <ExceptionItem
+            key={e.id}
+            item={e}
+            operator={operator}
+            onResolved={async () => {
+              // 해소한 항목은 미해결 목록에서 빠진다 — 결과를 위 알림으로 말하고 포커스도 그리로 (T-M5-41)
+              setMessage({ tone: 'success', text: '해소로 기록했습니다. 사유와 처리 전후가 감사 기록에 남았습니다.' });
+              await reload();
+            }}
+          />
+        ))
       )}
     </>
   );
@@ -213,7 +224,7 @@ function ExceptionItem({ item, operator, onResolved }: { item: Exception; operat
       </table>
       {open && (
         <>
-          {error && <Alert tone="danger" title={error} />}
+          {error && <Alert tone="danger" title={error} focusKey={error} />}
           <Select label="처리 코드" value={code} onChange={setCode} options={RESOLUTION_OPTIONS} required />
           <Field label="사유 — 무엇을 확인했고 무엇을 했는가" value={reason} onChange={setReason} required multiline maxLength={1000} />
           <Button disabled={busy || block !== null} onClick={() => void resolve()}>

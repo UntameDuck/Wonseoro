@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useId } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { Icon, type IconName } from './icon';
 
 /**
@@ -20,6 +20,7 @@ import { Icon, type IconName } from './icon';
 /* ────────────────────────────────────────────────────────────────────── */
 
 export function Button({
+  id,
   children,
   variant = 'primary',
   type = 'button',
@@ -27,6 +28,8 @@ export function Button({
   onClick,
   fullWidth,
 }: {
+  /** 화면이 동작 뒤 포커스를 돌려줄 때 쓰는 id (T-M5-40) */
+  id?: string;
   children: ReactNode;
   variant?: 'primary' | 'secondary' | 'danger';
   type?: 'button' | 'submit';
@@ -45,6 +48,7 @@ export function Button({
 
   return (
     <button
+      id={id}
       type={type}
       disabled={disabled}
       onClick={onClick}
@@ -320,15 +324,37 @@ export function ErrorSummary({
   issues: Array<{ path: string; message: string }>;
   /**
    * 항목을 누르면 그 칸으로 간다. 칸이 다른 단계에 있으면 화면이 단계를 옮긴 뒤 포커스한다.
+   * 없으면 같은 화면의 `field-<코드>` 칸에 포커스한다.
    * 문장은 서버가 항목 이름으로 시작해 만든다 — 항목 코드를 앞에 붙이지 않는다. (T-M5-52, U-1)
    */
   onSelect?: (path: string) => void;
 }) {
   if (issues.length === 0) return null;
+  return <ErrorSummaryBox issues={issues} {...(onSelect ? { onSelect } : {})} />;
+}
+
+/**
+ * 요약이 나타나면 포커스를 받는다 — 키보드·스크린리더 사용자는 누른 버튼 자리에 남아 있어 무엇이 틀렸는지
+ * 모른다. 요약에서 Tab 하면 첫 항목 링크다 (T-M5-40). 칸을 고쳐 항목이 줄어도 다시 포커스하지 않는다 —
+ * 입력 중인 칸에서 포커스를 빼앗지 않는다. 새 검증 결과로 다시 받게 하려면 화면이 key 를 바꾼다.
+ */
+function ErrorSummaryBox({
+  issues,
+  onSelect,
+}: {
+  issues: Array<{ path: string; message: string }>;
+  onSelect?: (path: string) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    ref.current?.focus();
+  }, []);
   return (
     <div
+      ref={ref}
       role="alert"
       tabIndex={-1}
+      aria-labelledby="error-summary-title"
       style={{
         marginBottom: 'var(--krds-space-5)',
         padding: 'var(--krds-space-4)',
@@ -338,6 +364,7 @@ export function ErrorSummary({
       }}
     >
       <h2
+        id="error-summary-title"
         style={{
           margin: '0 0 var(--krds-space-2)',
           fontSize: 'var(--krds-text-lg)',
@@ -356,9 +383,10 @@ export function ErrorSummary({
                 <a
                   href={`#field-${field}`}
                   onClick={(e) => {
-                    if (!onSelect) return;
                     e.preventDefault();
-                    onSelect(i.path);
+                    if (onSelect) onSelect(i.path);
+                    // 주소 조각(#)으로 옮기면 화면만 움직이고 포커스는 그대로다 — 칸에 직접 포커스한다
+                    else document.getElementById(`field-${field}`)?.focus();
                   }}
                   style={{ color: 'var(--krds-danger)', fontWeight: 700 }}
                 >
@@ -381,11 +409,23 @@ export function Alert({
   tone = 'info',
   title,
   children,
+  focusKey,
 }: {
   tone?: 'info' | 'warning' | 'danger' | 'success';
   title: string;
   children?: ReactNode;
+  /**
+   * 동작의 결과를 알리는 안내면 값을 준다 — 값이 바뀔 때마다(새 결과마다) 이 안내로 포커스를 옮긴다 (T-M5-41).
+   * 승인·적용·검사 뒤 누른 버튼이 비활성으로 바뀌거나 사라지면 포커스가 문서 처음으로 떨어진다.
+   * 결과를 읽은 자리에서 Tab 하면 다음 할 일로 간다. 조회 결과처럼 사람이 누르지 않은 안내에는 주지 않는다.
+   */
+  focusKey?: unknown;
 }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const focusable = focusKey !== undefined;
+  useEffect(() => {
+    if (focusable) ref.current?.focus();
+  }, [focusable, focusKey]);
   const palette = (
     {
       info: ['var(--krds-primary)', 'var(--krds-primary-weak)', 'info'],
@@ -397,7 +437,9 @@ export function Alert({
 
   return (
     <div
+      ref={ref}
       role={tone === 'danger' ? 'alert' : 'status'}
+      {...(focusable ? { tabIndex: -1 } : {})}
       style={{
         margin: 'var(--krds-space-4) 0',
         padding: 'var(--krds-space-4)',
@@ -422,9 +464,22 @@ export function Alert({
 
 /* ────────────────────────────────────────────────────────────────────── */
 
-export function Card({ title, children }: { title?: string; children: ReactNode }) {
+export function Card({
+  title,
+  titleId,
+  children,
+}: {
+  title?: string;
+  /**
+   * 제목에 id 를 주면 화면이 단계·상태를 바꾼 뒤 이 제목으로 포커스를 옮길 수 있다 (T-M5-40).
+   * 누른 버튼이 사라지는 화면 전환에서 포커스가 문서 처음으로 떨어지지 않게 한다.
+   */
+  titleId?: string;
+  children: ReactNode;
+}) {
   return (
     <section
+      {...(titleId && title ? { 'aria-labelledby': titleId } : {})}
       style={{
         background: 'var(--krds-bg)',
         border: '1px solid var(--krds-border)',
@@ -434,7 +489,10 @@ export function Card({ title, children }: { title?: string; children: ReactNode 
       }}
     >
       {title && (
-        <h2 style={{ margin: '0 0 var(--krds-space-4)', fontSize: 'var(--krds-text-xl)' }}>
+        <h2
+          {...(titleId ? { id: titleId, tabIndex: -1 } : {})}
+          style={{ margin: '0 0 var(--krds-space-4)', fontSize: 'var(--krds-text-xl)' }}
+        >
           {title}
         </h2>
       )}

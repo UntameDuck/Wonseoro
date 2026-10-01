@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useCallback, useEffect, useState } from 'react';
+import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Button, Card, DescriptionList, ErrorSummary, Field, fieldOf, cycleTitle } from '@wonseoro/krds';
 import { PROBLEM_TEXT, problemText } from '@wonseoro/contracts';
 import { SchemaForm, type JsonSchema } from '../../../krds/schema-form';
@@ -64,6 +64,24 @@ export default function ApplyPage({
   const [cancelOpen, setCancelOpen] = useState(false);
   /** 결제 전 확인 체크 (U-55) */
   const [payConfirmed, setPayConfirmed] = useState(false);
+  /** 검증할 때마다 오류 요약을 새로 그려 포커스를 다시 받게 한다 (T-M5-40) */
+  const [validationRun, setValidationRun] = useState(0);
+  /**
+   * 그린 뒤 포커스할 곳. 단계를 옮기거나 취소 칸을 열고 닫으면 누른 버튼이 사라진다 — 그대로 두면 포커스가
+   * 문서 처음으로 떨어져 키보드 사용자가 머리글부터 다시 Tab 해야 한다 (T-M5-40).
+   */
+  const focusNext = useRef<string | null>(null);
+  const [focusTick, setFocusTick] = useState(0);
+  const focusAfterRender = useCallback((id: string) => {
+    focusNext.current = id;
+    setFocusTick((n) => n + 1);
+  }, []);
+  useEffect(() => {
+    const id = focusNext.current;
+    if (!id) return;
+    focusNext.current = null;
+    document.getElementById(id)?.focus();
+  }, [focusTick]);
   /** 전형·모집단위·전형료는 대학 설정이 기준이다. 화면에 박지 않는다. (v1.1 §10 §1) */
   const [catalog, setCatalog] = useState<{
     universityName: string;
@@ -230,18 +248,18 @@ export default function ApplyPage({
    * 단계를 옮긴다. 칸에 매이지 않은 오류와 안내는 그 단계의 것이라 지운다. 칸 오류는 고칠 때까지 남는다 —
    * 오류 요약의 링크가 그 칸으로 데려간다 (T-M5-52, U-2).
    */
-  function goTo(next: StepNo) {
+  function goTo(next: StepNo, focusId = STEP_TITLE_ID) {
     setStep(next);
     setIssues((prev) => prev.filter((i) => fieldOf(i.path)));
     setNotice(null);
+    focusAfterRender(focusId);
   }
 
   /** 오류 요약에서 누른 칸으로 간다 — 공통원서 항목은 1단계, 나머지는 3단계에 있다. */
   function selectIssue(path: string) {
     const code = fieldOf(path);
-    goTo(commonCodes.includes(code) ? 1 : 3);
-    // 단계를 그린 뒤에 포커스한다
-    setTimeout(() => document.getElementById(`field-${code}`)?.focus(), 50);
+    // 단계를 그린 뒤에 그 칸에 포커스한다
+    goTo(commonCodes.includes(code) ? 1 : 3, `field-${code}`);
   }
 
   function update(code: string, value: string) {
@@ -263,10 +281,12 @@ export default function ApplyPage({
       // 통과하면 서버가 원서를 작성 완료(READY)로 옮기고 버전이 오른다. 새 ETag 로 이어서 저장한다.
       if (res.etag) setEtag(res.etag);
       setIssues(res.data.issues);
+      setValidationRun((n) => n + 1);
       // 통과하면 서버가 원서를 작성 완료(READY)로 옮긴다 — 화면이 아는 상태도 맞춘다(단계 표시 ✓, U-3)
       if (res.data.valid) {
         setApp((prev) => (prev && prev.status === 'DRAFT' ? { ...prev, status: 'READY' } : prev));
         setStep(5);
+        focusAfterRender(STEP_TITLE_ID);
       }
     } catch (err) {
       handle(err);
@@ -304,6 +324,7 @@ export default function ApplyPage({
         setSubmission(data);
         await reload();
         setStep(6);
+        focusAfterRender(STEP_TITLE_ID);
       } else {
         // 결제를 시작했다 — 원서는 이제 고칠 수 없다(PAYMENT_PENDING). 화면을 서버 상태에 맞춘다.
         await reload();
@@ -330,6 +351,7 @@ export default function ApplyPage({
       setCancelOpen(false);
       setIssues([]);
       await reload();
+      focusAfterRender(CANCELLED_TITLE_ID);
       if (data.refundRequired) {
         setNotice({
           tone: 'info',
@@ -359,6 +381,7 @@ export default function ApplyPage({
       // 422·400 은 업무 검증 실패. 오류 요약으로 보여준다.
       if (err.httpStatus === 422 || err.httpStatus === 400) {
         setIssues([{ path: '', message: t.detail }]);
+        setValidationRun((n) => n + 1);
         return;
       }
       setFailure({ title: t.title, detail: t.detail, traceId: err.problem.traceId });
@@ -383,7 +406,7 @@ export default function ApplyPage({
 
   if (app?.status === 'CANCELLED') {
     return (
-      <Card title="취소된 원서입니다">
+      <Card title="취소된 원서입니다" titleId={CANCELLED_TITLE_ID}>
         {notice && <Alert tone={notice.tone} title={notice.title}>{notice.body}</Alert>}
         <p style={{ marginTop: 0 }}>
           이 원서는 접수 전에 취소되었습니다. 같은 전형에 다시 지원하려면 접수 홈에서 새 원서를 만드십시오.
@@ -432,12 +455,12 @@ export default function ApplyPage({
       </div>
 
       <StepIndicator current={step} completed={completedSteps} />
-      <ErrorSummary issues={issues} onSelect={selectIssue} />
+      <ErrorSummary key={validationRun} issues={issues} onSelect={selectIssue} />
       <SlowNotice busy={busy} />
       {notice && <Alert tone={notice.tone} title={notice.title}>{notice.body}</Alert>}
 
       {step === 1 && (
-        <Card title="1. 공통정보">
+        <Card title="1. 공통정보" titleId={STEP_TITLE_ID}>
           <p style={{ marginTop: 0, color: 'var(--krds-fg-muted)', fontSize: 'var(--krds-text-sm)' }}>
             공통원서에서 가져온 정보입니다. 동의하신 항목만 이 대학으로 전달됩니다.
           </p>
@@ -462,7 +485,7 @@ export default function ApplyPage({
       )}
 
       {step === 2 && app && (
-        <Card title="2. 대학·전형">
+        <Card title="2. 대학·전형" titleId={STEP_TITLE_ID}>
           <DescriptionList
             items={[
               ['대학', catalog?.universityName ?? '불러오는 중…'],
@@ -487,7 +510,7 @@ export default function ApplyPage({
       )}
 
       {step === 3 && (
-        <Card title="3. 추가정보">
+        <Card title="3. 추가정보" titleId={STEP_TITLE_ID}>
           <p style={{ marginTop: 0, color: 'var(--krds-fg-muted)', fontSize: 'var(--krds-text-sm)' }}>
             이 대학이 추가로 요구하는 항목입니다. 대학·전형마다 다릅니다.
           </p>
@@ -509,7 +532,7 @@ export default function ApplyPage({
       )}
 
       {step === 4 && (
-        <Card title="4. 서류">
+        <Card title="4. 서류" titleId={STEP_TITLE_ID}>
           <Alert tone="info" title="서류는 검사를 통과해야 접수에 사용됩니다">
             올리신 파일은 악성코드 검사를 거칩니다. 검사 중에는 접수가 완료되지 않습니다.
           </Alert>
@@ -557,7 +580,7 @@ export default function ApplyPage({
       )}
 
       {step === 5 && app && (
-        <Card title="5. 검토·결제">
+        <Card title="5. 검토·결제" titleId={STEP_TITLE_ID}>
           <DescriptionList
             items={[
               ['대학·전형', `${catalog?.universityName ?? '-'} · ${catalog?.typeName ?? '-'}`],
@@ -634,7 +657,7 @@ export default function ApplyPage({
       )}
 
       {step === 6 && (
-        <Card title={submission ? '접수 완료' : '접수 결과를 불러오지 못했습니다'}>
+        <Card title={submission ? '접수 완료' : '접수 결과를 불러오지 못했습니다'} titleId={STEP_TITLE_ID}>
           {submission ? (
             <>
               <Alert tone="success" title="접수가 완료되었습니다">
@@ -690,7 +713,14 @@ export default function ApplyPage({
       {cancellable && step !== 6 && (
         <Card title="원서 취소">
           {!cancelOpen ? (
-            <Button variant="secondary" onClick={() => setCancelOpen(true)}>
+            <Button
+              id={CANCEL_OPEN_ID}
+              variant="secondary"
+              onClick={() => {
+                setCancelOpen(true);
+                focusAfterRender(CANCEL_REASON_ID);
+              }}
+            >
               이 원서 취소하기
             </Button>
           ) : (
@@ -701,6 +731,7 @@ export default function ApplyPage({
                   : '같은 전형에 다시 지원하려면 새 원서를 만들어야 합니다.'}
               </Alert>
               <Field
+                id={CANCEL_REASON_ID}
                 label="취소 사유"
                 value={cancelReason}
                 onChange={setCancelReason}
@@ -709,7 +740,13 @@ export default function ApplyPage({
                 required
               />
               <div style={{ display: 'flex', gap: 'var(--krds-space-3)' }}>
-                <Button variant="secondary" onClick={() => setCancelOpen(false)}>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setCancelOpen(false);
+                    focusAfterRender(CANCEL_OPEN_ID);
+                  }}
+                >
                   그만두기
                 </Button>
                 <Button onClick={() => void cancel()} disabled={busy || cancelReason.trim().length < 2}>
@@ -723,6 +760,12 @@ export default function ApplyPage({
     </>
   );
 }
+
+/** 포커스를 옮길 자리 (T-M5-40) */
+const STEP_TITLE_ID = 'step-title';
+const CANCELLED_TITLE_ID = 'cancelled-title';
+const CANCEL_OPEN_ID = 'cancel-open';
+const CANCEL_REASON_ID = 'cancel-reason';
 
 /** 결제 상태를 지원자가 읽을 말로. 확인되지 않은 결제를 "실패" 로 보이게 하지 않는다 (§B4). */
 const PAYMENT_LABEL: Record<string, string> = {

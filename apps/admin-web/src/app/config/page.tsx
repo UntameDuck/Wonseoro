@@ -208,7 +208,7 @@ function DraftCreator({
         초안은 효력이 없습니다. 만든 사람이 아닌 두 명이 변경 내역을 확인하고 승인해야 적용됩니다.
         전형 양식·제출 서류·서류 이름·보존기간을 고칠 수 있습니다. 지금 적용 중인 설정에서 시작해 필요한 곳만 고치십시오.
       </p>
-      {message && <Alert tone={message.tone} title={message.text} />}
+      {message && <Alert tone={message.tone} title={message.text} focusKey={message} />}
       <Button variant="secondary" onClick={() => void startFromActive()}>
         지금 적용 중인 설정에서 시작
       </Button>
@@ -239,6 +239,11 @@ function VersionReview({
   const [message, setMessage] = useState<{ tone: 'success' | 'danger' | 'warning'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState('');
+
+  // "검토" 를 누르면 검토 칸이 표 아래에 열린다 — 키보드 사용자가 표의 나머지 줄을 지나지 않게 그 제목으로 간다 (T-M5-41)
+  useEffect(() => {
+    document.getElementById('version-review-title')?.focus();
+  }, []);
 
   const loadDiff = useCallback(async () => {
     setAcknowledged(false);
@@ -301,9 +306,9 @@ function VersionReview({
   const canRollback = version.status === 'RETIRED' && version.activatedAt !== null;
 
   return (
-    <Card title={`${version.version} — ${STATUS_LABEL[version.status]}`}>
+    <Card title={`${version.version} — ${STATUS_LABEL[version.status]}`} titleId="version-review-title">
       <ApprovalProgress state={state} />
-      {message && <Alert tone={message.tone} title={message.text} />}
+      {message && <Alert tone={message.tone} title={message.text} focusKey={message} />}
 
       <h3 style={{ marginBottom: 'var(--krds-space-2)' }}>무엇이 바뀌는가 (현재 적용 중인 설정 대비)</h3>
       {!diff ? (

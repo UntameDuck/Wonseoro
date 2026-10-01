@@ -1,0 +1,1176 @@
+{
+  "test": "T-M5-41 Visible Focus / Focus Order",
+  "environment": "축소 환경 — 로컬 전용 DB(ui-shots-pg)·개발 서버(next dev)",
+  "phase": "applicant",
+  "browser": "Chrome/154.0.8037.92",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "at": "2026-10-01T13:05:59.973Z",
+  "fatal": null,
+  "screens": 19,
+  "tabStops": 171,
+  "problems": [],
+  "detail": [
+    {
+      "name": "접수 홈 (본인확인 전)",
+      "url": "/",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "SELECT",
+          "name": "전형",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "SELECT",
+          "name": "모집단위",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "시연 지원자 채우기",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "지원자 식별자",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "공통원서 가명 토큰",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "내 원서 (본인확인 전)",
+      "url": "/dashboard",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "접수 홈으로",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "없는 화면",
+      "url": "/no-such-page",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "접수 홈으로",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "내 원서로",
+          "outline": 3,
+          "contrast": 4.17
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "접수 홈 (본인확인 뒤)",
+      "url": "/",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "SELECT",
+          "name": "전형",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "SELECT",
+          "name": "모집단위",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "시연 지원자 채우기",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "지원자 식별자",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "공통원서 가명 토큰",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서 작성·제공 동의",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "원서 작성 시작",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "공통원서",
+      "url": "/profile",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "INPUT",
+          "name": "출신 고등학교",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "졸업(예정) 연도",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "이메일",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "휴대전화",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "출신 고등학교",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "졸업(예정) 연도",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "이메일",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "휴대전화",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "저장",
+          "outline": 3,
+          "contrast": 4.17
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "공통원서 (저장 결과)",
+      "url": "/profile",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "INPUT",
+          "name": "출신 고등학교",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "졸업(예정) 연도",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "이메일",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "휴대전화",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "출신 고등학교",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "졸업(예정) 연도",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "이메일",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "휴대전화",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "저장",
+          "outline": 3,
+          "contrast": 4.17
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "원서 1단계",
+      "url": "/apply/31f79605-3e46-463e-a4af-d841507ed8b0",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "INPUT",
+          "name": "출신 고등학교",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "이메일",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "졸업(예정) 연도",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "다음 단계",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이 원서 취소하기",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "원서 1단계 (취소 칸 열림)",
+      "url": "/apply/31f79605-3e46-463e-a4af-d841507ed8b0",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "INPUT",
+          "name": "출신 고등학교",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "이메일",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "졸업(예정) 연도",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "다음 단계",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "취소 사유",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "그만두기",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "원서 2단계",
+      "url": "/apply/31f79605-3e46-463e-a4af-d841507ed8b0",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이전",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "다음 단계",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이 원서 취소하기",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "원서 3단계",
+      "url": "/apply/31f79605-3e46-463e-a4af-d841507ed8b0",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "INPUT",
+          "name": "내신 성적",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "TEXTAREA",
+          "name": "자기소개",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이전",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "다음 단계",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이 원서 취소하기",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "원서 4단계",
+      "url": "/apply/31f79605-3e46-463e-a4af-d841507ed8b0",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "BUTTON",
+          "name": "파일 선택",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이전",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "검사 상태 새로고침",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "검토 단계로",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이 원서 취소하기",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "원서 4단계 (서류 검사 완료)",
+      "url": "/apply/31f79605-3e46-463e-a4af-d841507ed8b0",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "BUTTON",
+          "name": "파일 선택",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이전",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "검사 상태 새로고침",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "검토 단계로",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이 원서 취소하기",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "원서 검증 오류",
+      "url": "/apply/31f79605-3e46-463e-a4af-d841507ed8b0",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "출신 고등학교를 입력해 주십시오.",
+          "outline": 3,
+          "contrast": 4.09
+        },
+        {
+          "tag": "A",
+          "name": "졸업(예정) 연도를 입력해 주십시오.",
+          "outline": 3,
+          "contrast": 4.09
+        },
+        {
+          "tag": "A",
+          "name": "자기소개를 입력해 주십시오.",
+          "outline": 3,
+          "contrast": 4.09
+        },
+        {
+          "tag": "BUTTON",
+          "name": "파일 선택",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이전",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "검사 상태 새로고침",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "검토 단계로",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이 원서 취소하기",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "원서 5단계 검토·결제",
+      "url": "/apply/31f79605-3e46-463e-a4af-d841507ed8b0",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "INPUT",
+          "name": "결제 후에는 원서를 수정하거나 취소할 수 없다는 것을 확인했습니다.",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이전",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이 원서 취소하기",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "원서 5단계 (확인 체크 뒤)",
+      "url": "/apply/31f79605-3e46-463e-a4af-d841507ed8b0",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "INPUT",
+          "name": "결제 후에는 원서를 수정하거나 취소할 수 없다는 것을 확인했습니다.",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이전",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "전형료 결제하고 접수",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이 원서 취소하기",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "원서 6단계 접수 완료",
+      "url": "/apply/31f79605-3e46-463e-a4af-d841507ed8b0",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "접수증 보기·인쇄",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "현재 상태 다시 확인",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "접수증",
+      "url": "/receipt/fb9f38be-ab24-4e84-bb28-7cfa7287f953",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "인쇄",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "내 원서 (접수 뒤)",
+      "url": "/dashboard",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "원서 화면 (불러오기 실패)",
+      "url": "/apply/00000000-0000-4000-8000-000000000000",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "현재 상태 다시 확인",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    }
+  ]
+}

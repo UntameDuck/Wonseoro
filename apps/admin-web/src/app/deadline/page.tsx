@@ -87,7 +87,7 @@ function DeadlineConsole({ cycleId }: { cycleId: string }) {
   return (
     <>
       {error && <Alert tone="danger" title={error} />}
-      {notice && <Alert tone="success" title={notice} />}
+      {notice && <Alert tone="success" title={notice} focusKey={notice} />}
       <Card title="지금 적용 중인 마감">
         {!loaded ? (
           <p role="status" style={{ margin: 0 }}>
@@ -198,7 +198,7 @@ function ExtensionForm({
         현재 마감 <strong>{kst(current.deadlineAt)}</strong> ({current.version}) 을 기준으로 연장합니다.
         마감을 판정하는 방식은 지금 정책과 같습니다. 마감 직전에도 연장할 수 있습니다.
       </p>
-      {message && <Alert tone={message.tone} title={message.text} />}
+      {message && <Alert tone={message.tone} title={message.text} focusKey={message} />}
       <Field
         label="입학처 결정 문서번호"
         value={decisionRef}
@@ -249,12 +249,17 @@ function PendingPolicy({
   const stale = policy.extension && current && policy.extension.extendsVersion !== current.version;
 
   // 멱등키는 누를 때마다 새로 만든다. 담당자가 바뀌면 다른 요청이다.
-  const act = async (fn: () => Promise<unknown>, done: string) => {
+  // 적용하면 이 정책이 대기 목록에서 빠진다 — 결과는 이 카드가 아니라 화면 위 알림이 말하고 포커스도 그리로 간다 (T-M5-41)
+  const act = async (fn: () => Promise<unknown>, done: string, leaves = false) => {
     setBusy(true);
     try {
       await fn();
+      if (leaves) {
+        await onChanged(done);
+        return;
+      }
       setMessage({ tone: 'success', text: done });
-      await onChanged(done);
+      await onChanged();
     } catch (err) {
       const conflict = err instanceof ApiError && err.problem.status === 409;
       setMessage({ tone: conflict ? 'warning' : 'danger', text: describe(err) });
@@ -303,7 +308,7 @@ function PendingPolicy({
           적용하면 거절됩니다. 현재 마감을 기준으로 연장을 다시 작성해 주십시오.
         </Alert>
       )}
-      {message && <Alert tone={message.tone} title={message.text} />}
+      {message && <Alert tone={message.tone} title={message.text} focusKey={message} />}
       <div style={{ display: 'flex', gap: 'var(--krds-space-4)', flexWrap: 'wrap' }}>
         <div>
           <Button
@@ -322,6 +327,7 @@ function PendingPolicy({
               void act(
                 () => adminPost(`deadline-policies/${policy.policyId}/activate`, {}, actionKey('pol-activate')),
                 '적용했습니다. 지원자 화면의 마감이 바뀌고, 서명된 적용 기록이 남았습니다.',
+                true,
               )
             }
           >

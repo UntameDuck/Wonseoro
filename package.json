@@ -34,7 +34,9 @@
     "dev:scanner": "npm run dev -w @wonseoro/document-service",
     "test:m4:observability": "node tests/m4/dashboards.mjs",
     "check:contracts": "node scripts/check-contracts.mjs",
-    "check:ui-copy": "node scripts/check-ui-copy.mjs"
+    "check:ui-copy": "node scripts/check-ui-copy.mjs",
+    "test:a11y:keyboard": "node tests/a11y/keyboard-walk.mjs",
+    "test:a11y:focus": "node tests/a11y/focus-sweep.mjs"
   },
   "devDependencies": {
     "typescript": "^5.6.3",

@@ -5,7 +5,7 @@ import type { SaveState } from '../lib/use-autosave';
 import type { DeadlineView } from '../lib/use-deadline';
 import { formatKst, formatKstTime, formatRemaining } from '../lib/use-deadline';
 import { Alert, Button, Icon, formatTime } from '@wonseoro/krds';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { currentRequestId } from '../lib/api';
 
 /**
@@ -235,6 +235,11 @@ export function FailureNotice({
   serverState?: string | null;
   onRecheck: () => void;
 }) {
+  // 장애 안내는 화면 전체를 바꾼다 — 누른 버튼이 사라져 포커스가 문서 처음으로 떨어진다. 안내 제목으로 옮긴다 (T-M5-40)
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
   // 약속한 넷(마지막 저장·서버가 확인한 상태·요청번호·재조회)을 비워 두지 않는다 — 모르면 모른다고 쓴다 (U-8)
   const saved = lastSavedAt
     ? formatKst(lastSavedAt)
@@ -257,7 +262,7 @@ export function FailureNotice({
         marginBottom: 'var(--krds-space-5)',
       }}
     >
-      <h2 style={{ margin: '0 0 var(--krds-space-3)', color: 'var(--krds-danger)' }}>
+      <h2 ref={headingRef} tabIndex={-1} style={{ margin: '0 0 var(--krds-space-3)', color: 'var(--krds-danger)' }}>
         <Icon name="warning" />
         {title}
       </h2>

@@ -31,6 +31,8 @@ export default function ProfilePage() {
   const [university, setUniversity] = useState<{ id: string; name: string } | null>(null);
   const [released, setReleased] = useState<Set<string>>(new Set());
   const [issues, setIssues] = useState<Array<{ path: string; message: string }>>([]);
+  /** 저장을 누를 때마다 오류 요약을 새로 그려 포커스를 다시 받게 한다 (T-M5-40) */
+  const [saveRun, setSaveRun] = useState(0);
   const [status, setStatus] = useState<{ tone: 'success' | 'danger' | 'warning'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -94,6 +96,7 @@ export default function ProfilePage() {
       fields[f.code] = value;
     }
     setIssues(problems);
+    setSaveRun((n) => n + 1);
     if (problems.length > 0) return;
 
     const saved = new Set(Object.entries(fields).filter(([, v]) => v !== null).map(([k]) => k));
@@ -150,15 +153,23 @@ export default function ProfilePage() {
       </Alert>
 
       {status && <Alert tone={status.tone} title={status.text} />}
-      <ErrorSummary issues={issues} />
+      <ErrorSummary key={saveRun} issues={issues} />
 
       <Card title="기본 정보">
         {COMMON_PROFILE_FIELDS.map((f) => (
           <Field
             key={f.code}
+            // 오류 요약 링크가 이 칸으로 온다 (T-M5-40)
+            id={`field-${f.code}`}
             label={f.title}
             value={values[f.code] ?? ''}
-            onChange={(v) => setValues((prev) => ({ ...prev, [f.code]: v }))}
+            onChange={(v) => {
+              setValues((prev) => ({ ...prev, [f.code]: v }));
+              // 고친 칸의 오류는 다음 저장을 기다리지 않고 지운다 — 원서 화면과 같다 (U-2)
+              setIssues((prev) => prev.filter((i) => i.path !== f.code));
+            }}
+            // 칸 옆에도 요약과 같은 오류를 붙인다 — 스크린리더가 칸에서 오류를 읽는다 (T-M5-42)
+            {...(issues.find((i) => i.path === f.code) ? { error: issues.find((i) => i.path === f.code)!.message } : {})}
             type={f.type === 'integer' ? 'number' : f.format === 'email' ? 'email' : 'text'}
             {...(f.maxLength !== undefined ? { maxLength: f.maxLength } : {})}
           />

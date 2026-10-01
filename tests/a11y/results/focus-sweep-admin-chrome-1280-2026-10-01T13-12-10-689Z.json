@@ -1,0 +1,795 @@
+{
+  "test": "T-M5-41 Visible Focus / Focus Order",
+  "environment": "축소 환경 — 로컬 전용 DB(ui-shots-pg)·개발 서버(next dev)",
+  "phase": "admin",
+  "browser": "Chrome/154.0.8037.92",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "at": "2026-10-01T13:12:10.689Z",
+  "fatal": null,
+  "screens": 10,
+  "tabStops": 118,
+  "problems": [],
+  "detail": [
+    {
+      "name": "콘솔 첫 화면 (담당자 없음)",
+      "url": "/",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "담당자 ID",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "BUTTON",
+          "name": "지정",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "콘솔 첫 화면 (담당자 지정)",
+      "url": "/",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "1건 — 검토·승인하기",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "설정 승인",
+      "url": "/config",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "BUTTON",
+          "name": "검토",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "보기",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "지금 적용 중인 설정에서 시작",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "초안 버전 이름",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "TEXTAREA",
+          "name": "설정 내용 (고급 편집)",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "설정 초안 검토",
+      "url": "/config",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "BUTTON",
+          "name": "검토",
+          "outline": 3,
+          "contrast": 4
+        },
+        {
+          "tag": "BUTTON",
+          "name": "보기",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "SUMMARY",
+          "name": "설정 위치",
+          "outline": 3,
+          "contrast": 4.09
+        },
+        {
+          "tag": "SUMMARY",
+          "name": "설정 위치",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "위 변경 2건 (되돌리기 어려운 변경 1건 포함)을 확인했습니다. 확인 번호 e574d03e",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "지금 적용 중인 설정에서 시작",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "초안 버전 이름",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "TEXTAREA",
+          "name": "설정 내용 (고급 편집)",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "마감 · 연장",
+      "url": "/deadline",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "INPUT",
+          "name": "입학처 결정 문서번호",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "TEXTAREA",
+          "name": "연장 사유",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "INPUT",
+          "name": "새 마감시각 (한국 시간)",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "SUMMARY",
+          "name": "서명 키",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "대조 · 예외",
+      "url": "/reconciliation",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "SELECT",
+          "name": "상태",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "지금 대조 실행 (최근 48시간)",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "증적 조회",
+      "url": "/evidence",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "INPUT",
+          "name": "원서 ID",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "TEXTAREA",
+          "name": "조회 사유",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "증적 (열람 결과)",
+      "url": "/evidence",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "INPUT",
+          "name": "원서 ID",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "TEXTAREA",
+          "name": "조회 사유",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "증적 열기",
+          "outline": 3,
+          "contrast": 4.55
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "보존기간",
+      "url": "/retention",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "BUTTON",
+          "name": "다시 계산",
+          "outline": 3,
+          "contrast": 4.17
+        }
+      ],
+      "problems": []
+    },
+    {
+      "name": "콘솔 없는 화면",
+      "url": "/no-such-page",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17
+        },
+        {
+          "tag": "A",
+          "name": "콘솔 첫 화면으로",
+          "outline": 3,
+          "contrast": 4.17
+        }
+      ],
+      "problems": []
+    }
+  ]
+}

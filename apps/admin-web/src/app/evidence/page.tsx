@@ -125,7 +125,7 @@ export default function EvidencePage() {
           <p style={{ margin: 'var(--krds-space-2) 0 0', fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)' }}>{block}</p>
         )}
       </Card>
-      {error && <Alert tone="danger" title={error} />}
+      {error && <Alert tone="danger" title={error} focusKey={error} />}
       {pkg && <EvidenceView pkg={pkg} />}
     </>
   );
@@ -137,10 +137,11 @@ function EvidenceView({ pkg }: { pkg: EvidencePackage }) {
   const policyTrusted = signed ? signed.signature === 'VALID' && signed.matchesPolicy : false;
   return (
     <>
+      {/* 증적을 열면 맨 위 무결성 결과로 간다 — 누른 버튼이 처리 중 비활성이 되며 포커스가 떨어진다 (T-M5-41) */}
       {pkg.chainVerification.valid ? (
-        <Alert tone="success" title={`감사 체인 ${pkg.chainVerification.checked}건이 끊김 없이 이어집니다`} />
+        <Alert tone="success" title={`감사 체인 ${pkg.chainVerification.checked}건이 끊김 없이 이어집니다`} focusKey={pkg} />
       ) : (
-        <Alert tone="danger" title="감사 체인이 끊겨 있습니다 — 이 증적을 그대로 쓸 수 없습니다">
+        <Alert tone="danger" title="감사 체인이 끊겨 있습니다 — 이 증적을 그대로 쓸 수 없습니다" focusKey={pkg}>
           끊긴 지점: {pkg.chainVerification.brokenAt}
         </Alert>
       )}
