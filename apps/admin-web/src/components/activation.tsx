@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Icon } from '@wonseoro/krds';
+import { Alert, Icon, TableScroll } from '@wonseoro/krds';
 import { ACTIVATION_KIND_LABEL } from '@wonseoro/contracts';
 import { kst } from '../lib/api';
 
@@ -71,46 +71,48 @@ export function ActivationTable({ list, filter }: { list: ActivationList; filter
       {rows.length === 0 ? (
         <p>적용 기록이 없습니다.</p>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--krds-text-sm)' }}>
-          <thead>
-            <tr>
-              {['효력 시각', '종류', '버전', '이전', '담당', '사유 · 결정번호', '서명'].map((h) => (
-                <th key={h} scope="col" style={th}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((a) => (
-              <tr key={a.activationId}>
-                <td style={td}>{kst(a.effectiveAt)}</td>
-                <td style={td}>{KIND[a.kind]}</td>
-                <td style={td}>{a.subjectVersion}</td>
-                <td style={td}>{a.supersedesVersion ?? '-'}</td>
-                <td style={td}>{a.operatorId}</td>
-                <td style={td}>
-                  {a.reason ?? '-'}
-                  {a.decisionRef && (
-                    <>
-                      <br />
-                      <strong>결정 {a.decisionRef}</strong>
-                    </>
-                  )}
-                </td>
-                <td style={{ ...td, fontWeight: a.signature === 'VALID' ? 400 : 700, color: a.signature === 'VALID' ? 'inherit' : 'var(--krds-danger)' }}>
-                  <Icon name={SIG[a.signature].icon} />
-                  {SIG[a.signature].text}
-                  {/* 서명 키 이름은 검증·문의용이다 — 접어 둔다 (T-M5-51) */}
-                  <details style={{ color: 'var(--krds-fg-muted)', fontWeight: 400 }}>
-                    <summary style={{ cursor: 'pointer' }}>서명 키</summary>
-                    {a.keyId}
-                  </details>
-                </td>
+        <TableScroll label="적용 이력">
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--krds-text-sm)' }}>
+            <thead>
+              <tr>
+                {['효력 시각', '종류', '버전', '이전', '담당', '사유 · 결정번호', '서명'].map((h) => (
+                  <th key={h} scope="col" style={th}>
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((a) => (
+                <tr key={a.activationId}>
+                  <td style={td}>{kst(a.effectiveAt)}</td>
+                  <td style={td}>{KIND[a.kind]}</td>
+                  <td style={td}>{a.subjectVersion}</td>
+                  <td style={td}>{a.supersedesVersion ?? '-'}</td>
+                  <td style={td}>{a.operatorId}</td>
+                  <td style={td}>
+                    {a.reason ?? '-'}
+                    {a.decisionRef && (
+                      <>
+                        <br />
+                        <strong>결정 {a.decisionRef}</strong>
+                      </>
+                    )}
+                  </td>
+                  <td style={{ ...td, fontWeight: a.signature === 'VALID' ? 400 : 700, color: a.signature === 'VALID' ? 'inherit' : 'var(--krds-danger)' }}>
+                    <Icon name={SIG[a.signature].icon} />
+                    {SIG[a.signature].text}
+                    {/* 서명 키 이름은 검증·문의용이다 — 접어 둔다 (T-M5-51) */}
+                    <details style={{ color: 'var(--krds-fg-muted)', fontWeight: 400 }}>
+                      <summary style={{ cursor: 'pointer' }}>서명 키</summary>
+                      {a.keyId}
+                    </details>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableScroll>
       )}
     </>
   );

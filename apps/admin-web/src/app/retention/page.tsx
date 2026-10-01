@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Button, Card } from '@wonseoro/krds';
+import { Alert, Button, Card, TableScroll } from '@wonseoro/krds';
 import { useCallback, useEffect, useState } from 'react';
 import { RETENTION_CATEGORIES, RETENTION_PROBLEM_LABEL, labelOf } from '@wonseoro/contracts';
 import { NeedsCycle } from '../../components/console';
@@ -101,36 +101,38 @@ function RetentionPlan({ cycleId }: { cycleId: string }) {
         </Alert>
       )}
       <Card title="데이터 종류별 계획">
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--krds-text-sm)' }}>
-          <caption style={{ textAlign: 'left', paddingBottom: 'var(--krds-space-2)', color: 'var(--krds-fg-muted)' }}>
-            {kst(plan.generatedAt)} 기준
-          </caption>
-          <thead>
-            <tr>
-              {['데이터', '하한과 근거', '설정', '파기 예정', '상태', '대상'].map((h) => (
-                <th key={h} scope="col" style={th}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {plan.items.map((i) => (
-              <tr key={i.code}>
-                <td style={td}>{i.label}</td>
-                <td style={td}>
-                  {i.floor.kind === 'LEGAL' ? `${i.floor.days}일 이상` : i.floor.kind === 'IMMUTABLE' ? '불변' : '대학 결정'}
-                  <br />
-                  <span style={{ color: 'var(--krds-fg-muted)' }}>{i.floor.basis}</span>
-                </td>
-                <td style={td}>{i.days === null ? '-' : `${i.days}일`}</td>
-                <td style={td}>{kst(i.dueAt)}</td>
-                <td style={td}>{STATUS_LABEL[i.status]}</td>
-                <td style={td}>{i.affected ?? '-'}</td>
+        <TableScroll label="데이터 종류별 계획">
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--krds-text-sm)' }}>
+            <caption style={{ textAlign: 'left', paddingBottom: 'var(--krds-space-2)', color: 'var(--krds-fg-muted)' }}>
+              {kst(plan.generatedAt)} 기준
+            </caption>
+            <thead>
+              <tr>
+                {['데이터', '하한과 근거', '설정', '파기 예정', '상태', '대상'].map((h) => (
+                  <th key={h} scope="col" style={th}>
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {plan.items.map((i) => (
+                <tr key={i.code}>
+                  <td style={td}>{i.label}</td>
+                  <td style={td}>
+                    {i.floor.kind === 'LEGAL' ? `${i.floor.days}일 이상` : i.floor.kind === 'IMMUTABLE' ? '불변' : '대학 결정'}
+                    <br />
+                    <span style={{ color: 'var(--krds-fg-muted)' }}>{i.floor.basis}</span>
+                  </td>
+                  <td style={td}>{i.days === null ? '-' : `${i.days}일`}</td>
+                  <td style={td}>{kst(i.dueAt)}</td>
+                  <td style={td}>{STATUS_LABEL[i.status]}</td>
+                  <td style={td}>{i.affected ?? '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableScroll>
       </Card>
       <Button variant="secondary" onClick={() => void load()}>
         다시 계산

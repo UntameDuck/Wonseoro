@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Button, Card, DescriptionList, Field } from '@wonseoro/krds';
+import { Alert, Button, Card, DescriptionList, Field, TableScroll } from '@wonseoro/krds';
 import { useEffect, useState } from 'react';
 import {
   ACTIVATION_KIND_LABEL,
@@ -199,30 +199,32 @@ function EvidenceView({ pkg }: { pkg: EvidencePackage }) {
       )}
 
       <Card title={`처리 이력 (${pkg.timeline.length}건)`}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--krds-text-sm)' }}>
-          <thead>
-            <tr>
-              {['시각', '행위', '결과', '주체', '해시'].map((h) => (
-                <th key={h} scope="col" style={th}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {pkg.timeline.map((t) => (
-              <tr key={t.eventHash}>
-                <td style={td}>{kst(t.at)}</td>
-                <td style={td}>{labelOf(AUDIT_ACTION_LABEL, t.action)}</td>
-                <td style={td}>{labelOf(AUDIT_RESULT_LABEL, t.result)}</td>
-                <td style={td}>{labelOf(ACTOR_TYPE_LABEL, t.actorType)}</td>
-                <td style={td}>
-                  <code>{t.eventHash.slice(0, 10)}</code>
-                </td>
+        <TableScroll label="처리 이력">
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--krds-text-sm)' }}>
+            <thead>
+              <tr>
+                {['시각', '행위', '결과', '주체', '해시'].map((h) => (
+                  <th key={h} scope="col" style={th}>
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {pkg.timeline.map((t) => (
+                <tr key={t.eventHash}>
+                  <td style={td}>{kst(t.at)}</td>
+                  <td style={td}>{labelOf(AUDIT_ACTION_LABEL, t.action)}</td>
+                  <td style={td}>{labelOf(AUDIT_RESULT_LABEL, t.result)}</td>
+                  <td style={td}>{labelOf(ACTOR_TYPE_LABEL, t.actorType)}</td>
+                  <td style={td}>
+                    <code>{t.eventHash.slice(0, 10)}</code>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableScroll>
       </Card>
 
       <Card title="결제 · 서류">

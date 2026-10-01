@@ -108,7 +108,7 @@ export function ConsoleProvider({ children }: { children: ReactNode }) {
           {cycle ? `${cycle.name} (마감 ${kst(cycle.closesAt)})` : ready ? '없음' : '불러오는 중…'}
         </div>
         {operator ? (
-          <div style={{ display: 'flex', gap: 'var(--krds-space-2)', alignItems: 'center' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--krds-space-2)', alignItems: 'center' }}>
             <span>
               <strong>담당자</strong> {operator}{' '}
               <span style={{ color: 'var(--krds-fg-muted)' }}>(개발용 — 신원 증명 아님)</span>
@@ -119,7 +119,7 @@ export function ConsoleProvider({ children }: { children: ReactNode }) {
           </div>
         ) : !devOperator ? (
           ready && (
-            <div style={{ display: 'flex', gap: 'var(--krds-space-2)', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--krds-space-2)', alignItems: 'center' }}>
               <Button disabled>관리자 로그인</Button>
             </div>
           )
@@ -129,7 +129,7 @@ export function ConsoleProvider({ children }: { children: ReactNode }) {
               e.preventDefault();
               void signIn();
             }}
-            style={{ display: 'flex', gap: 'var(--krds-space-2)', alignItems: 'center' }}
+            style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--krds-space-2)', alignItems: 'center' }}
           >
             <label htmlFor="operator-id">
               <strong>담당자 ID</strong>

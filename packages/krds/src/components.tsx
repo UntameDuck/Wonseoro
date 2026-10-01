@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Icon, type IconName } from './icon';
 
 /**
@@ -489,6 +489,36 @@ export function LiveRegion({ children, assertive }: { children?: ReactNode; asse
   );
 }
 
+/**
+ * 넓은 데이터 표 — 좁은 화면(320 CSS px)·확대에서 문서 전체가 아니라 **표만** 제 영역 안에서 옆으로 움직인다
+ * (KWCAG 재배치 — 데이터 표는 2차원 스크롤 예외). 넘칠 때만 Tab 으로 들어올 수 있게 해 키보드로 화살표 스크롤한다 (T-M5-44).
+ */
+export function TableScroll({ label, children }: { label: string; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [scrollable, setScrollable] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => setScrollable(el.scrollWidth > el.clientWidth + 1);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div
+      ref={ref}
+      role="region"
+      aria-label={label}
+      data-scroll-x=""
+      {...(scrollable ? { tabIndex: 0 } : {})}
+      style={{ overflowX: 'auto', maxWidth: '100%' }}
+    >
+      {children}
+    </div>
+  );
+}
+
 /* ────────────────────────────────────────────────────────────────────── */
 
 export function Card({
@@ -547,7 +577,8 @@ export function DescriptionList({ items }: { items: Array<[string, ReactNode]> }
           >
             {k}
           </dt>
-          <dd style={{ margin: 0, flex: 1 }}>{v}</dd>
+          {/* 접수번호처럼 끊을 곳이 없는 긴 값도 좁은 화면·큰 글자에서 줄을 바꾼다 (T-M5-43·44) */}
+          <dd style={{ margin: 0, flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>{v}</dd>
         </div>
       ))}
     </dl>

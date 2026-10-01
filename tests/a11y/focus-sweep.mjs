@@ -26,6 +26,8 @@ const PHASE = process.argv.slice(2).find((a) => !a.startsWith('--'));
 const WIDTH = Number(arg('width', '1280'));
 const HEIGHT = Number(arg('height', '900'));
 const BROWSER = arg('browser', 'chrome');
+/** 글자만 키우기 — 브라우저 설정의 글꼴 크기처럼 문서 기본 글자 크기를 배수로 (T-M5-43, KWCAG 1.4.4) */
+const TEXT_ZOOM = Number(arg('text-zoom', '1'));
 const WEB = 'http://localhost:4001';
 const ADMIN = 'http://localhost:4101';
 const API = 'http://localhost:3101';
@@ -36,6 +38,13 @@ if (!['applicant', 'admin'].includes(PHASE ?? '')) {
 }
 
 const b = await launch({ width: WIDTH, height: HEIGHT, executable: BROWSERS[BROWSER] ?? BROWSER, port: 9335 });
+if (TEXT_ZOOM !== 1) {
+  // 화면은 rem 으로 크기를 잡는다 — 문서 기본 글자 크기를 키우면 글·칸·간격이 함께 커진다
+  await b.send('Page.addScriptToEvaluateOnNewDocument', {
+    // <html> 속성을 바꾸면 화면 프레임워크가 서버 렌더링과 다르다고 경고한다 — 스타일 요소를 더한다
+    source: `document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = 'html { font-size: ${TEXT_ZOOM * 100}% !important; }'; document.head.append(st); });`,
+  });
+}
 const started = Date.now();
 const screens = [];
 const problems = [];
@@ -77,6 +86,26 @@ const STOP = `(() => {
 })()`;
 
 /** 화면에 보이는데 Tab 으로 닿지 않은 누를 수 있는 것, 그리고 tabindex 양수 */
+/**
+ * 재배치(KWCAG 1.4.10) — 문서가 화면보다 넓어 옆으로 밀어야 하는가, 칸 안에서 글이 잘리는가.
+ * 표는 예외다: 표 자체가 제 영역 안에서 옆으로 움직이는 것은 허용된다(문서 전체가 밀리지 않으면).
+ */
+const REFLOW = `(() => {
+  const d = document.documentElement;
+  const over = d.scrollWidth - d.clientWidth;
+  const wide = over > 0
+    ? [...document.querySelectorAll('body *')].filter((e) => e.getBoundingClientRect().right > d.clientWidth + 1 && !e.closest('[data-scroll-x]'))
+        .filter((e) => ![...e.children].some((c) => c.getBoundingClientRect().right > d.clientWidth + 1))
+        .slice(0, 3).map((e) => e.tagName + ' "' + (e.innerText || '').trim().slice(0, 30) + '"')
+    : [];
+  const clipped = [...document.querySelectorAll('main *, header *')].filter((e) => {
+    const cs = getComputedStyle(e);
+    if (!/hidden|clip/.test(cs.overflowX) || e.classList.contains('krds-sr-only') || e.closest('.krds-sr-only')) return false;
+    return e.scrollWidth > e.clientWidth + 1 && (e.innerText || '').trim().length > 0;
+  }).slice(0, 3).map((e) => e.tagName + ' "' + (e.innerText || '').trim().slice(0, 30) + '"');
+  return { over: Math.max(0, over), wide, clipped };
+})()`;
+
 const MISSED = `(() => {
   const sel = 'a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
   const shown = (e) => { const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && !e.closest('[aria-hidden=true]') && !(e.closest('details:not([open])') && e.tagName !== 'SUMMARY'); };
@@ -144,6 +173,9 @@ async function sweep(name) {
   }
   if (!left) bad('Tab 200번 안에 문서 끝을 지나지 못했다');
   await b.evaluate(`document.getElementById('a11y-sweep-start')?.remove()`);
+  const reflow = await b.evaluate(REFLOW);
+  if (reflow.over > 0) bad(`가로 스크롤 ${reflow.over}px — ${reflow.wide.join(' | ')}`);
+  for (const x of reflow.clipped) bad(`글이 잘린다 — ${x}`);
   const m = await b.evaluate(MISSED);
   for (const x of m.missed) bad(`Tab 으로 닿지 않는다 — ${x}`);
   if (m.positive.length) bad(`tabindex 양수 ${m.positive.length}개 — 읽는 순서를 흐트러뜨린다`);
@@ -357,6 +389,7 @@ const result = {
   phase: PHASE,
   browser: b.browser,
   viewport: { width: WIDTH, height: HEIGHT },
+  textZoom: TEXT_ZOOM,
   at: new Date(started).toISOString(),
   fatal,
   screens: screens.length,
@@ -366,7 +399,7 @@ const result = {
 };
 const dir = path.resolve('tests/a11y/results');
 mkdirSync(dir, { recursive: true });
-const file = path.join(dir, `focus-sweep-${PHASE}-${BROWSER}-${WIDTH}-${new Date(started).toISOString().replace(/[:.]/g, '-')}.json`);
+const file = path.join(dir, `focus-sweep-${PHASE}-${BROWSER}-${WIDTH}${TEXT_ZOOM !== 1 ? `-text${TEXT_ZOOM * 100}` : ''}-${new Date(started).toISOString().replace(/[:.]/g, '-')}.json`);
 writeFileSync(file, `${JSON.stringify(result, null, 2)}\n`);
 const ok = !fatal && problems.length === 0;
 console.log(`${ok ? '✔' : '✘'} 화면 ${result.screens}개 · Tab 자리 ${result.tabStops}개 · 문제 ${problems.length}건 → ${path.relative(process.cwd(), file)}`);

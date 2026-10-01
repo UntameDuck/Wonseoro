@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Button, Card, Field, kstInputToIso } from '@wonseoro/krds';
+import { Alert, Button, Card, Field, kstInputToIso, TableScroll } from '@wonseoro/krds';
 import { useCallback, useEffect, useState } from 'react';
 import { DEADLINE_MODE_LABEL, labelOf } from '@wonseoro/contracts';
 import { ActivationTable, td, th, type ActivationList } from '../../components/activation';
@@ -273,34 +273,36 @@ function PendingPolicy({
       <h3 style={{ margin: 0 }}>
         {policy.version} {policy.extension ? '— 마감 연장' : '— 새 마감 정책'}
       </h3>
-      <table style={{ borderCollapse: 'collapse', fontSize: 'var(--krds-text-sm)', margin: 'var(--krds-space-3) 0' }}>
-        <tbody>
-          {policy.extension && (
-            <>
-              <tr>
-                <th scope="row" style={th}>현재 마감</th>
-                <td style={td}>{kst(policy.extension.extendsDeadlineAt)} ({policy.extension.extendsVersion})</td>
-              </tr>
-            </>
-          )}
-          <tr>
-            <th scope="row" style={th}>{policy.extension ? '새 마감' : '마감'}</th>
-            <td style={{ ...td, fontWeight: 700 }}>{kst(policy.deadlineAt)}</td>
-          </tr>
-          {policy.extension && (
-            <>
-              <tr>
-                <th scope="row" style={th}>결정 문서번호</th>
-                <td style={td}>{policy.extension.decisionRef}</td>
-              </tr>
-              <tr>
-                <th scope="row" style={th}>사유</th>
-                <td style={td}>{policy.extension.reason}</td>
-              </tr>
-            </>
-          )}
-        </tbody>
-      </table>
+      <TableScroll label="마감 정책 내용">
+        <table style={{ borderCollapse: 'collapse', fontSize: 'var(--krds-text-sm)', margin: 'var(--krds-space-3) 0' }}>
+          <tbody>
+            {policy.extension && (
+              <>
+                <tr>
+                  <th scope="row" style={th}>현재 마감</th>
+                  <td style={td}>{kst(policy.extension.extendsDeadlineAt)} ({policy.extension.extendsVersion})</td>
+                </tr>
+              </>
+            )}
+            <tr>
+              <th scope="row" style={th}>{policy.extension ? '새 마감' : '마감'}</th>
+              <td style={{ ...td, fontWeight: 700 }}>{kst(policy.deadlineAt)}</td>
+            </tr>
+            {policy.extension && (
+              <>
+                <tr>
+                  <th scope="row" style={th}>결정 문서번호</th>
+                  <td style={td}>{policy.extension.decisionRef}</td>
+                </tr>
+                <tr>
+                  <th scope="row" style={th}>사유</th>
+                  <td style={td}>{policy.extension.reason}</td>
+                </tr>
+              </>
+            )}
+          </tbody>
+        </table>
+      </TableScroll>
       <ApprovalProgress state={state} />
       {stale && (
         <Alert tone="warning" title="기준 정책이 바뀌었습니다">

@@ -1,16 +1,22 @@
 {
-  "test": "T-M5-40 키보드 전용 접수 완주",
+  "test": "T-M5-40 키보드 전용 접수 완주 (+ T-M5-41 포커스 · T-M5-42 스크린리더 재료 · T-M5-43/44 가로 스크롤)",
   "environment": "축소 환경 — 로컬 전용 DB(ui-shots-pg)·개발 서버(next dev)·Mock PG·Mock 검사 엔진",
   "browser": "Chrome/154.0.8037.92",
   "viewport": {
     "width": 320,
-    "height": 800
+    "height": 700
   },
-  "at": "2026-10-01T12:56:33.059Z",
-  "seconds": 28,
+  "textZoom": 1,
+  "at": "2026-10-01T13:35:04.238Z",
+  "seconds": 40,
   "completed": true,
-  "applicationNumber": "2027-UNIV-A-A2JVH5WMP6",
-  "keyPresses": 100,
+  "applicationNumber": "2027-UNIV-A-HLU5UZFPBK",
+  "applicant": {
+    "applicantId": "2bc91a1e-0f3c-49a1-ad94-eeeeb2439825",
+    "subjectToken": "subj-kbd-1790861700264"
+  },
+  "applicationId": "2ce8ff11-2843-4a45-8304-645556890220",
+  "keyPresses": 92,
   "mouseEvents": 0,
   "fatal": null,
   "problems": [],
@@ -58,7 +64,8 @@
           "visible": true
         }
       ],
-      "horizontalScroll": false
+      "horizontalScroll": false,
+      "title": "원서로 — 대학입학 원서접수"
     },
     {
       "name": "공통원서",
@@ -196,60 +203,13 @@
           "visible": true
         },
         {
-          "name": "휴대전화",
-          "tag": "INPUT",
-          "type": "checkbox",
-          "visible": true
-        },
-        {
-          "name": "이메일",
-          "tag": "INPUT",
-          "type": "checkbox",
-          "visible": true
-        },
-        {
-          "name": "졸업(예정) 연도",
-          "tag": "INPUT",
-          "type": "checkbox",
-          "visible": true
-        },
-        {
-          "name": "출신 고등학교",
-          "tag": "INPUT",
-          "type": "checkbox",
-          "visible": true
-        },
-        {
-          "name": "휴대전화",
-          "tag": "INPUT",
-          "type": "text",
-          "visible": true
-        },
-        {
-          "name": "이메일",
-          "tag": "INPUT",
-          "type": "email",
-          "visible": true
-        },
-        {
-          "name": "졸업(예정) 연도",
-          "tag": "INPUT",
-          "type": "number",
-          "visible": true
-        },
-        {
-          "name": "출신 고등학교",
-          "tag": "INPUT",
-          "type": "text",
-          "visible": true
-        },
-        {
           "name": "홈",
           "tag": "A",
           "visible": true
         }
       ],
-      "horizontalScroll": false
+      "horizontalScroll": false,
+      "title": "공통원서 | 원서로"
     },
     {
       "name": "접수 홈 (본인확인 뒤)",
@@ -295,11 +255,12 @@
           "visible": true
         }
       ],
-      "horizontalScroll": false
+      "horizontalScroll": false,
+      "title": "원서로 — 대학입학 원서접수"
     },
     {
       "name": "원서 1단계 공통정보",
-      "url": "/apply/d0dc258f-28f6-4b56-86b3-3fdb81a13600",
+      "url": "/apply/2ce8ff11-2843-4a45-8304-645556890220",
       "stops": [
         {
           "name": "홈",
@@ -366,11 +327,12 @@
           "visible": true
         }
       ],
-      "horizontalScroll": false
+      "horizontalScroll": false,
+      "title": "공통정보 — 원서 작성 | 원서로"
     },
     {
       "name": "원서 2단계 대학·전형",
-      "url": "/apply/d0dc258f-28f6-4b56-86b3-3fdb81a13600",
+      "url": "/apply/2ce8ff11-2843-4a45-8304-645556890220",
       "stops": [
         {
           "name": "이전",
@@ -390,11 +352,12 @@
           "visible": true
         }
       ],
-      "horizontalScroll": false
+      "horizontalScroll": false,
+      "title": "대학·전형 — 원서 작성 | 원서로"
     },
     {
       "name": "원서 3단계 추가정보",
-      "url": "/apply/d0dc258f-28f6-4b56-86b3-3fdb81a13600",
+      "url": "/apply/2ce8ff11-2843-4a45-8304-645556890220",
       "stops": [
         {
           "name": "내신 성적",
@@ -425,11 +388,12 @@
           "visible": true
         }
       ],
-      "horizontalScroll": false
+      "horizontalScroll": false,
+      "title": "추가정보 — 원서 작성 | 원서로"
     },
     {
       "name": "원서 4단계 서류",
-      "url": "/apply/d0dc258f-28f6-4b56-86b3-3fdb81a13600",
+      "url": "/apply/2ce8ff11-2843-4a45-8304-645556890220",
       "stops": [
         {
           "name": "파일 선택",
@@ -461,11 +425,12 @@
           "visible": true
         }
       ],
-      "horizontalScroll": false
+      "horizontalScroll": false,
+      "title": "서류 — 원서 작성 | 원서로"
     },
     {
       "name": "검토 전 검증 오류",
-      "url": "/apply/d0dc258f-28f6-4b56-86b3-3fdb81a13600",
+      "url": "/apply/2ce8ff11-2843-4a45-8304-645556890220",
       "stops": [
         {
           "name": "자기소개를 입력해 주십시오.",
@@ -524,11 +489,12 @@
           "visible": true
         }
       ],
-      "horizontalScroll": false
+      "horizontalScroll": false,
+      "title": "서류 — 원서 작성 | 원서로"
     },
     {
       "name": "원서 5단계 검토·결제",
-      "url": "/apply/d0dc258f-28f6-4b56-86b3-3fdb81a13600",
+      "url": "/apply/2ce8ff11-2843-4a45-8304-645556890220",
       "stops": [
         {
           "name": "결제 후에는 원서를 수정하거나 취소할 수 없다는 것을 확인했습니다.",
@@ -554,11 +520,12 @@
           "visible": true
         }
       ],
-      "horizontalScroll": false
+      "horizontalScroll": false,
+      "title": "검토·결제 — 원서 작성 | 원서로"
     },
     {
       "name": "접수 완료",
-      "url": "/apply/d0dc258f-28f6-4b56-86b3-3fdb81a13600",
+      "url": "/apply/2ce8ff11-2843-4a45-8304-645556890220",
       "stops": [
         {
           "name": "접수증 보기·인쇄",
@@ -566,11 +533,12 @@
           "visible": true
         }
       ],
-      "horizontalScroll": false
+      "horizontalScroll": false,
+      "title": "최종제출 — 원서 작성 | 원서로"
     },
     {
       "name": "접수증",
-      "url": "/receipt/e35c7c9f-020b-444b-b3a6-d5fc2ace4d3c",
+      "url": "/receipt/445a3ece-b7f9-43a7-ad79-b1c64d0d3076",
       "stops": [
         {
           "name": "본문 바로가기",
@@ -599,7 +567,8 @@
           "visible": true
         }
       ],
-      "horizontalScroll": false
+      "horizontalScroll": false,
+      "title": "접수증 | 원서로"
     }
   ]
 }

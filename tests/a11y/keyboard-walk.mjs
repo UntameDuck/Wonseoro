@@ -3,6 +3,7 @@
 // 사용: node tests/a11y/keyboard-walk.mjs [--width=1280] [--height=900] [--browser=chrome|edge]
 //   --width=640  1280 화면을 200% 로 확대한 것과 같은 CSS 폭 (T-M5-43)
 //   --width=320  가장 좁은 휴대전화 폭 (T-M5-44)
+//   --text-zoom=2  글자만 200% (T-M5-43)
 //
 // 하는 일
 //   - 요소를 click() 하지 않는다. Tab·Shift+Tab 으로 포커스를 옮기고 Enter·Space 로 누른다. 글자는 입력기 경로(insertText)
@@ -27,6 +28,8 @@ const arg = (name, def) => process.argv.find((a) => a.startsWith(`--${name}=`))?
 const WIDTH = Number(arg('width', '1280'));
 const HEIGHT = Number(arg('height', '900'));
 const BROWSER = arg('browser', 'chrome');
+/** 글자만 키우기 — 문서 기본 글자 크기 배수 (T-M5-43). --width=640 은 브라우저 200% 확대와 같은 CSS 폭 */
+const TEXT_ZOOM = Number(arg('text-zoom', '1'));
 const WEB = 'http://localhost:4001';
 const PG = 'ui-shots-pg';
 
@@ -40,6 +43,11 @@ execFileSync('docker', [
 ]);
 
 const b = await launch({ width: WIDTH, height: HEIGHT, executable: BROWSERS[BROWSER] ?? BROWSER });
+if (TEXT_ZOOM !== 1) {
+  await b.send('Page.addScriptToEvaluateOnNewDocument', {
+    source: `document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = 'html { font-size: ${TEXT_ZOOM * 100}% !important; }'; document.head.append(st); });`,
+  });
+}
 const started = Date.now();
 
 /* ── 기록 ────────────────────────────────────────────────────────────── */
@@ -316,6 +324,7 @@ const result = {
   environment: '축소 환경 — 로컬 전용 DB(ui-shots-pg)·개발 서버(next dev)·Mock PG·Mock 검사 엔진',
   browser: b.browser,
   viewport: { width: WIDTH, height: HEIGHT },
+  textZoom: TEXT_ZOOM,
   at: new Date(started).toISOString(),
   seconds: Math.round((Date.now() - started) / 1000),
   completed: !fatal && applicationNumber !== null,
@@ -331,7 +340,7 @@ const result = {
 };
 const dir = path.resolve('tests/a11y/results');
 mkdirSync(dir, { recursive: true });
-const file = path.join(dir, `keyboard-walk-${BROWSER}-${WIDTH}-${new Date(started).toISOString().replace(/[:.]/g, '-')}.json`);
+const file = path.join(dir, `keyboard-walk-${BROWSER}-${WIDTH}${TEXT_ZOOM !== 1 ? `-text${TEXT_ZOOM * 100}` : ''}-${new Date(started).toISOString().replace(/[:.]/g, '-')}.json`);
 writeFileSync(file, `${JSON.stringify(result, null, 2)}\n`);
 console.log(`${result.completed && problems.length === 0 ? '✔' : '✘'} 완주 ${result.completed ? '성공' : '실패'} · 접수번호 ${applicationNumber ?? '-'} · 키 ${keys}번 · 문제 ${problems.length}건 → ${path.relative(process.cwd(), file)}`);
 process.exitCode = result.completed && problems.length === 0 ? 0 : 1;

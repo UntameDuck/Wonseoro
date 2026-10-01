@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Button, Card, Field, Select } from '@wonseoro/krds';
+import { Alert, Button, Card, Field, Select, TableScroll } from '@wonseoro/krds';
 import { useCallback, useEffect, useState } from 'react';
 import {
   APPLICATION_STATUS_LABEL,
@@ -197,31 +197,33 @@ function ExceptionItem({ item, operator, onResolved }: { item: Exception; operat
 
   return (
     <Card title={`[${labelOf(EXCEPTION_SEVERITY_LABEL, item.severity)}] ${labelOf(EXCEPTION_TYPE_LABEL, item.exceptionType)}`}>
-      <table style={{ borderCollapse: 'collapse', fontSize: 'var(--krds-text-sm)', marginBottom: 'var(--krds-space-3)' }}>
-        <tbody>
-          <tr>
-            <th scope="row" style={th}>원서</th>
-            <td style={td}>
-              <a href={`/evidence?applicationId=${item.applicationId}`}>{item.applicationId}</a>
-            </td>
-          </tr>
-          <tr>
-            <th scope="row" style={th}>발견</th>
-            <td style={td}>{kst(item.detectedAt)}</td>
-          </tr>
-          <tr>
-            <th scope="row" style={th}>처리 상태</th>
-            <td style={td}>{labelOf(EXCEPTION_STATE_LABEL, item.state)}</td>
-          </tr>
-          {/* 발견 당시 사실(before). 해소 뒤 상태는 감사 기록에 남는다. */}
-          {Object.entries(item.facts).map(([k, v]) => (
-            <tr key={k}>
-              <th scope="row" style={th}>{factLabel(item.exceptionType, k)}</th>
-              <td style={td}>{factValue(item.exceptionType, k, v)}</td>
+      <TableScroll label="발견 당시 사실">
+        <table style={{ borderCollapse: 'collapse', fontSize: 'var(--krds-text-sm)', marginBottom: 'var(--krds-space-3)' }}>
+          <tbody>
+            <tr>
+              <th scope="row" style={th}>원서</th>
+              <td style={td}>
+                <a href={`/evidence?applicationId=${item.applicationId}`}>{item.applicationId}</a>
+              </td>
             </tr>
-          ))}
-        </tbody>
-      </table>
+            <tr>
+              <th scope="row" style={th}>발견</th>
+              <td style={td}>{kst(item.detectedAt)}</td>
+            </tr>
+            <tr>
+              <th scope="row" style={th}>처리 상태</th>
+              <td style={td}>{labelOf(EXCEPTION_STATE_LABEL, item.state)}</td>
+            </tr>
+            {/* 발견 당시 사실(before). 해소 뒤 상태는 감사 기록에 남는다. */}
+            {Object.entries(item.facts).map(([k, v]) => (
+              <tr key={k}>
+                <th scope="row" style={th}>{factLabel(item.exceptionType, k)}</th>
+                <td style={td}>{factValue(item.exceptionType, k, v)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableScroll>
       {open && (
         <>
           {error && <Alert tone="danger" title={error} focusKey={error} />}

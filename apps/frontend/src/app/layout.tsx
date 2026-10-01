@@ -58,7 +58,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               원서로
               <CycleBadge />
             </a>
-            <nav aria-label="주요 메뉴" style={{ display: 'flex', gap: 'var(--krds-space-4)' }}>
+            <nav aria-label="주요 메뉴" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--krds-space-4)' }}>
               <a href="/profile" style={{ color: 'var(--krds-primary)' }}>
                 공통원서
               </a>

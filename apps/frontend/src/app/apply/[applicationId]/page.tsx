@@ -504,7 +504,7 @@ export default function ApplyPage({
           <Alert tone="info" title="전형을 바꾸면 필요한 서류와 전형료가 달라집니다">
             추가로 입력해야 하는 항목도 전형마다 다릅니다.
           </Alert>
-          <div style={{ display: 'flex', gap: 'var(--krds-space-3)' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--krds-space-3)' }}>
             <Button variant="secondary" onClick={() => goTo(1)}>
               이전
             </Button>
@@ -526,7 +526,7 @@ export default function ApplyPage({
             errors={fieldErrors}
             readOnly={!editable}
           />
-          <div style={{ display: 'flex', gap: 'var(--krds-space-3)' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--krds-space-3)' }}>
             <Button variant="secondary" onClick={() => goTo(2)}>
               이전
             </Button>
@@ -564,7 +564,7 @@ export default function ApplyPage({
           />
 
           <div
-            style={{ display: 'flex', gap: 'var(--krds-space-3)', marginTop: 'var(--krds-space-4)' }}
+            style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--krds-space-3)', marginTop: 'var(--krds-space-4)' }}
           >
             <Button variant="secondary" onClick={() => goTo(3)}>
               이전
@@ -641,7 +641,7 @@ export default function ApplyPage({
             </label>
           )}
           <div
-            style={{ display: 'flex', gap: 'var(--krds-space-3)', marginTop: 'var(--krds-space-4)' }}
+            style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--krds-space-3)', marginTop: 'var(--krds-space-4)' }}
           >
             <Button variant="secondary" onClick={() => goTo(4)}>
               이전
@@ -743,7 +743,7 @@ export default function ApplyPage({
                 maxLength={500}
                 required
               />
-              <div style={{ display: 'flex', gap: 'var(--krds-space-3)' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--krds-space-3)' }}>
                 <Button
                   variant="secondary"
                   onClick={() => {

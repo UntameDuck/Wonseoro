@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Button, Card, Field } from '@wonseoro/krds';
+import { Alert, Button, Card, Field, TableScroll } from '@wonseoro/krds';
 import { useCallback, useEffect, useState } from 'react';
 import { CONFIG_VERSION_STATUS_LABEL } from '@wonseoro/contracts';
 import {
@@ -99,36 +99,38 @@ function ConfigConsole({ cycleId }: { cycleId: string }) {
         ) : versions.length === 0 ? (
           <p style={{ margin: 0 }}>설정 버전이 없습니다.</p>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--krds-text-sm)' }}>
-            <caption style={{ textAlign: 'left', paddingBottom: 'var(--krds-space-2)', color: 'var(--krds-fg-muted)' }}>
-              최근 50개. 승인 대기부터 확인하십시오.
-            </caption>
-            <thead>
-              <tr>
-                {['버전', '상태', '작성', '승인', '적용 시각', ''].map((h) => (
-                  <th key={h} scope="col" style={th}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {versions.map((v) => (
-                <tr key={v.id} aria-current={v.id === selected ? 'true' : undefined} style={v.id === selected ? { background: 'var(--krds-primary-weak)' } : undefined}>
-                  <td style={td}>{v.version}</td>
-                  <td style={td}>{STATUS_LABEL[v.status]}</td>
-                  <td style={td}>{v.createdBy}</td>
-                  <td style={td}>{v.approvedBy.length}/2</td>
-                  <td style={td}>{kst(v.activatedAt)}</td>
-                  <td style={td}>
-                    <Button variant="secondary" onClick={() => setSelected(v.id)}>
-                      {v.status === 'DRAFT' || v.status === 'APPROVED' ? '검토' : '보기'}
-                    </Button>
-                  </td>
+          <TableScroll label="설정 버전 목록">
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--krds-text-sm)' }}>
+              <caption style={{ textAlign: 'left', paddingBottom: 'var(--krds-space-2)', color: 'var(--krds-fg-muted)' }}>
+                최근 50개. 승인 대기부터 확인하십시오.
+              </caption>
+              <thead>
+                <tr>
+                  {['버전', '상태', '작성', '승인', '적용 시각', ''].map((h) => (
+                    <th key={h} scope="col" style={th}>
+                      {h}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {versions.map((v) => (
+                  <tr key={v.id} aria-current={v.id === selected ? 'true' : undefined} style={v.id === selected ? { background: 'var(--krds-primary-weak)' } : undefined}>
+                    <td style={td}>{v.version}</td>
+                    <td style={td}>{STATUS_LABEL[v.status]}</td>
+                    <td style={td}>{v.createdBy}</td>
+                    <td style={td}>{v.approvedBy.length}/2</td>
+                    <td style={td}>{kst(v.activatedAt)}</td>
+                    <td style={td}>
+                      <Button variant="secondary" onClick={() => setSelected(v.id)}>
+                        {v.status === 'DRAFT' || v.status === 'APPROVED' ? '검토' : '보기'}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableScroll>
         )}
       </Card>
       {current && (
