@@ -10,7 +10,7 @@
 ## 1. 30초 요약
 
 - **제품**: 원서로(K-Admission) — 대학 입학 원서접수를 대학별 Data Plane 으로 분산하는 플랫폼. 2026 GovTech 공모전 출품작
-- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 20/28 진행 중**. 전체 **101/146** 태스크(✅ 만 셈, 2026-10-02 보안 파이프라인 9개 완료). **CI 네 잡과 Security 기본 열한 잡·서명 다섯 잡 모두 초록**(Actions run 36903506905)
+- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 20/28 진행 중**. 전체 **102/146** 태스크(✅ 만 셈, 2026-10-02 보안 파이프라인 T-M5-20~29 10개 완료). **CI 네 잡과 Security 기본 열한 잡·서명 다섯 잡·admission 실증 잡 모두 초록**(Actions run 36906282615·36906280555)
 - **완료한 핵심 증명**: 로컬 kind 2클러스터 축소 환경에서 **대학 간 장애 격리 T-M4-42 통과**. A대 전면 정지 중 B대 접수·중앙 반영, A대 복구 후 접수까지 확인
 - **최근 완료**: T-M4-07 Peak Mode(ADR-0006) · T-M4-20 전 서비스 계측·로그 상관관계 · T-M4-24 로그 마스킹 강제 · **T-M4-21~23 업무 KPI·대시보드 3종** · **D-50 취소 이벤트 계약 위반 수정** · CI 복구 · **T-M4-40 NAT Adaptive Throttling(ADR-0007)** · 과부하 중 API 프로세스가 죽던 결함 수정 · **T-M4-37 Redis 장애 무영향** · T-M4-39 다중 노드 시험(drain 무중단·노드 장애 때 전체가 멈추던 DB 연결 결함 수정, D-52) · **맡겨진 결정 정리(2026-09-30)** — D-44 ⑦(Pod 당 38)·D-47·D-51(OpenAPI v1.3.0 429)·D-52(ADR-0008)·D-53(ingress-nginx 은퇴) 결정·저장소 반영. §05 runtime 첨부를 차트 렌더링으로 바꿔 CI 가 드리프트를 막는다. **노션 반영은 AI 쓰기가 막혀 [06-notion-changeset.md](06-notion-changeset.md) 로 대기**
 - **T-M4-35 ✅** 중앙 2시간 실제 단절 통과 — 원서 24건 처리·DEAD 0·event loss 0·복구 10초 뒤 전량 전송·재시작 0 (`central-outage-realtime-2026-09-30T01-59-27-784Z.json`)
@@ -33,8 +33,8 @@
 - **T-M5-26 ✅ (2026-10-02)** — 실 PostgreSQL의 대학·중앙 DB를 사용해 권한·감사 체인·결제 콜백·입력 방어·재전송·개인정보 최소화 등 선별 보안 시험 123개를 별도 게이트로 실행한다. 로컬·원격 123개 통과·건너뜀 0이다(Actions run 36898652054). DB 미연결로 통합시험이 skip되어도 게이트가 실패한다
 - **T-M5-27 ✅ (2026-10-02)** — ZAP 2.17.0 고정 digest로 OpenAPI 81개 URL을 실제 대학 API·PostgreSQL에 active scan했다. 첫 실행에서 잘못된 `cycleId`·`limit`가 DB까지 내려가 500이 되는 문제, `/meta/time` 무인자 500, `nosniff` 누락을 찾아 고쳤다. 같은 조건 재실행은 로컬·원격 모두 **WARN 0·High 0·PASS 118**이다(Actions run 36902632192·36902632233). 로컬 보고서는 `E:\DockerData\tools\zap-2.17.0\reports`에 있다
 - **T-M5-28 ✅ (2026-10-02)** — 릴리스/수동 실행이 운영 이미지 5종을 GHCR에 발행하고 registry digest를 Cosign 3.0.6 GitHub OIDC 신원으로 키리스 서명한다. 같은 잡이 정확한 워크플로 신원과 OIDC 발급자로 즉시 검증하고 이미지별 증적을 90일 보관한다. 실제 5종 모두 통과했다(Actions run 36903506905). 로컬 증적은 `E:\DockerData\tools\cosign-3.0.6\run-36903506905`
-- **T-M5-29 착수 (2026-10-02, 🟡)** — 운영 `ClusterImagePolicy`는 GHCR 원서로 이미지에 대해 이 저장소 `security.yml@refs/tags/*`의 GitHub OIDC 서명만 강제한다. 후속 잡은 임시 kind·Policy Controller를 띄워 서명된 admission-api digest 허용과 별도 미서명 scratch digest 거부를 server dry-run으로 실증한다. 실제 원격 실행 전이다
-- **바로 다음 할 일**: T-M5-29 원격 실행 확인 → 인증(로컬 OIDC — 세션 만료·위험 차단 해제도 함께, ADR-0009) → 보안 통제 → …
+- **T-M5-29 ✅ (2026-10-02)** — 운영 `ClusterImagePolicy`는 GHCR 원서로 이미지에 대해 이 저장소 `security.yml@refs/tags/*`의 GitHub OIDC 서명만 강제한다. 후속 잡은 임시 kind·Policy Controller를 띄워 서명된 admission-api digest 허용과 별도 미서명 scratch digest 거부를 server dry-run으로 실증한다 — 미서명은 `policy.sigstore.dev` webhook 이 첫 확인에서 거부, 서명 digest 는 통과(Actions run 36906282615). 첫 실행의 "미서명 통과"는 kubectl dry-run 값을 띄어 써 webhook 이 안 불린 시험 결함이었다(고치고 정적 검사로 막음)
+- **바로 다음 할 일**: 인증(로컬 OIDC — 세션 만료·위험 차단 해제도 함께, ADR-0009) → 보안 통제 → …
 
 ## 2. 반드시 지킬 규칙
 
@@ -208,7 +208,7 @@ Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, s
 
 ## 6. 전체 남은 규모
 
-146개 중 101개 완료, **45개 남음** (2026-10-02 보안 파이프라인 T-M5-20~28 완료). **A. AI 가 이 PC 에서 끝낼 수 있는 것 24개 · B. 외부 환경(K-PaaS·HA DB·PG 계약) 12개 · C. 사람·기관 9개**(T-M5-47 나머지 실물 브라우저 포함).
+146개 중 102개 완료, **44개 남음** (2026-10-02 보안 파이프라인 T-M5-20~29 완료). **A. AI 가 이 PC 에서 끝낼 수 있는 것 23개 · B. 외부 환경(K-PaaS·HA DB·PG 계약) 12개 · C. 사람·기관 9개**(T-M5-47 나머지 실물 브라우저 포함).
 목록과 권장 순서는 [03-next-steps.md 「완성까지 남은 단계」](03-next-steps.md#완성까지-남은-단계-2026-10-01-전수-점검).
 
 ## 7. 어디에 무엇이 있나

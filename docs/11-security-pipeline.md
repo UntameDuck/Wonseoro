@@ -15,7 +15,7 @@
 | T-M5-26 Security Test | ✅ | 로컬·원격 실 PostgreSQL 선별 시험 123개 통과·건너뜀 0 |
 | T-M5-27 DAST | ✅ | 로컬·원격 ZAP OpenAPI active scan WARN 0·High 0·PASS 118 |
 | T-M5-28 Image Signing | ✅ | GHCR 운영 이미지 5종 digest 키리스 서명·신원 검증 |
-| T-M5-29 Admission Controller | 🟡 | 강제 정책·signed allow/unsigned deny 실증 잡 구현, 원격 실행 전 |
+| T-M5-29 Admission Controller | ✅ | 임시 kind·Policy Controller 0.13.1 webhook 이 서명 digest 허용·미서명 digest 거부 |
 
 ## 2. T-M5-24 이미지 검사
 
@@ -120,9 +120,22 @@ Security 수동/릴리스 실행의 후속 잡은 kind 0.33.0·Kubernetes 1.34.1
 0.10.8(app 0.13.1)을 임시로 설치한다. 현재 실행 신원을 정확히 허용하는 실증용 정책 아래에서 같은 실행이 서명한
 admission-api digest는 server dry-run admission을 통과해야 하고, 별도 scratch digest는 서명하지 않은 채 반드시
 거부되어야 한다. private GHCR 자격증명은 테스트 namespace의 일회성 `imagePullSecret`에만 넣는다.
-정책·실증 잡 구현 후 실제 원격 실행 전이라 🟡이다.
+수동 Security run `36906282615`에서 통과했다(같은 커밋 CI run `36906280555` 도 통과).
+
+| 실증 | 결과 |
+|---|---|
+| 미서명 `wonseoro-admission-proof@sha256:820a427b…` | 첫 확인에서 거부 — `admission webhook "policy.sigstore.dev" denied the request: … failed policy: wonseoro-signature-proof … no signatures found` |
+| 같은 실행이 서명한 `wonseoro-admission-api@sha256:c55dfb62…` | server dry-run admission 통과 |
+
+첫 원격 실행(run `36905254247`)은 "미서명 통과"로 실패했다. 정책 결함이 아니라 kubectl 에 dry-run 값을 띄어 써서
+client dry-run 으로 읽혀 webhook 이 아예 불리지 않은 것이다. 등호로 붙인 server dry-run 으로 고치고, 미서명 거부를
+먼저 확인한 뒤(정책이 살아 있을 때) 서명 허용을 보며, 거부 응답이 `policy.sigstore.dev` webhook 에서 왔는지 확인한다.
+`check:security:admission` 이 띄어 쓴 dry-run 과 이 순서를 막는다. 증적 사본은
+`E:\DockerData\tools\policy-controller-0.13.1\run-36906282615`에 있다.
+
+운영 정책(릴리스 태그 신원만 허용)의 실제 클러스터 적용은 K-PaaS 환경과 함께 한다 — 이 실증은 같은 Policy Controller·같은
+정책 형식에서 거부 경로가 실제로 동작함을 보인 것이다.
 
 ## 8. 다음 순서
 
-1. T-M5-29 수동 원격 실행으로 서명 허용·미서명 거부 증적 확보
-2. 로컬 OIDC 인증·RBAC·MFA 단계 진행
+보안 파이프라인 T-M5-20~29 는 모두 끝났다(2026-10-02). 다음은 로컬 OIDC 인증·RBAC·MFA(T-M5-02·10, T-M3-06).
