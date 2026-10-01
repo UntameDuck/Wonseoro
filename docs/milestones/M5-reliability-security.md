@@ -46,8 +46,8 @@
 | T-M5-21 | 2. SAST ✅ 2026-10-02 | Critical 0 |
 | T-M5-22 | 3. Dependency/SCA + CVE ✅ 2026-10-02 | Critical 0 |
 | T-M5-23 | 4. SBOM 생성 ✅ 2026-10-02 | 릴리스마다 첨부 |
-| T-M5-24 | 5. Container Image Scan | Critical 0 |
-| T-M5-25 | 6. IaC/K8s Manifest Scan | 정책 위반 0 |
+| T-M5-24 | 5. Container Image Scan 🟡 2026-10-02 | Critical 0 |
+| T-M5-25 | 6. IaC/K8s Manifest Scan 🟡 2026-10-02 | 정책 위반 0 |
 | T-M5-26 | 7. Unit/Integration Security Test | 통과 |
 | T-M5-27 | 8. DAST/Staging Scan | High 0 |
 | T-M5-28 | 9. Image Signing | 전 이미지 서명 |
@@ -63,6 +63,11 @@
 > 병렬로 추가했다. CodeQL SARIF의 `security-severity` 9.0 이상을 직접 실패시키는 판정기와 경계값 단위 시험을 두었다.
 > SBOM은 재현 가능한 `package-lock.json`을 Syft 1.52.0으로 카탈로그화하며, 로컬 결과는 패키지 266개·관계 1,054개다.
 > 일반 CI에서는 워크플로 산출물로 보관하고 `release.published`에서는 릴리스 자산으로 자동 첨부한다. 원격 Security 워크플로 세 잡이 모두 통과했다(Actions run 36887597976).
+
+> **T-M5-24·25 착수 (2026-10-02)** — Trivy 0.75.0으로 서비스 4종·PgBouncer 실제 이미지를 빌드해
+> OS·라이브러리 Critical 0을 확인했다. Helm·Kubernetes·Dockerfile 설정 파일 19개도 High/Critical 0이다.
+> namespace 한정 release-controller의 Service·NetworkPolicy 동기화 권한 `KSV-0056`만 파일 네 곳·2027-01-31 만료로
+> 제한해 허용했다. 세부 결과와 재실행 범위는 [11-security-pipeline.md](../11-security-pipeline.md). 원격 CI 확인 전이라 🟡이다.
 
 ### 접근성 (권민준) — v1.0 §12.4 / §07
 

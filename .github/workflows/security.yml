@@ -13,7 +13,7 @@ permissions:
 jobs:
   source-security:
     name: secret scan · production SCA
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -46,7 +46,7 @@ jobs:
 
   sast:
     name: CodeQL SAST · Critical 0
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       security-events: write
@@ -67,10 +67,86 @@ jobs:
       - name: SAST Critical 취약점 차단
         run: npm run check:security:sast -- "${{ steps.codeql.outputs.sarif-output }}"
 
+  image-scan:
+    name: image scan · ${{ matrix.image }} · Critical 0
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: admission-api
+            dockerfile: deploy/docker/Dockerfile
+            build_args: --build-arg APP=admission-api
+          - image: event-relay
+            dockerfile: deploy/docker/Dockerfile
+            build_args: --build-arg APP=event-relay
+          - image: document-service
+            dockerfile: deploy/docker/Dockerfile
+            build_args: --build-arg APP=document-service
+          - image: central-api
+            dockerfile: deploy/docker/Dockerfile
+            build_args: --build-arg APP=central-api
+          - image: pgbouncer
+            dockerfile: deploy/docker/pgbouncer/Dockerfile
+            build_args: ""
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: 런타임 이미지 빌드
+        run: >-
+          docker build --pull
+          --file "${{ matrix.dockerfile }}"
+          ${{ matrix.build_args }}
+          --tag "k-admission/${{ matrix.image }}:security-${{ github.sha }}"
+          .
+      - name: 이미지 Critical 취약점 차단
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.75.0
+          scan-type: image
+          image-ref: k-admission/${{ matrix.image }}:security-${{ github.sha }}
+          scanners: vuln
+          vuln-type: os,library
+          severity: CRITICAL
+          exit-code: "1"
+          format: table
+          hide-progress: true
+
+  iac-scan:
+    name: IaC · Kubernetes policy violations 0
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Trivy 0.75.0 설치
+        uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          version: v0.75.0
+          cache: true
+      - name: Helm·Kubernetes·Dockerfile High/Critical 정책 위반 차단
+        shell: bash
+        run: |
+          set -euo pipefail
+          digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+          trivy config \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            --ignorefile .trivyignore.yaml \
+            --skip-dirs node_modules \
+            --skip-dirs .git \
+            --helm-values deploy/charts/k-admission/values.yaml \
+            --helm-values deploy/charts/k-admission/values-m.yaml \
+            --helm-set "api.image.digest=$digest" \
+            --helm-set "eventRelay.image.digest=$digest" \
+            --helm-set "documentService.image.digest=$digest" \
+            --helm-set "database.pooler.image.digest=$digest" \
+            --helm-set documentService.scannerEngine=placeholder-scanner-engine \
+            --helm-set runtimeSecret.name=kadmission-univ-a-runtime \
+            .
+
   sbom:
     name: SPDX SBOM
     if: github.event_name != 'release'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -90,7 +166,7 @@ jobs:
   release-sbom:
     name: 릴리스 SPDX SBOM 첨부
     if: github.event_name == 'release'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       actions: read
       contents: write

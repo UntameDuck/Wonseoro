@@ -1,0 +1,12 @@
+misconfigurations:
+  - id: KSV-0056
+    paths:
+      - "deploy/charts/k-admission/templates/rbac.yaml"
+      - "deploy/gitops/base/reconciler-rbac.yaml"
+      - "deploy/platform/policies/network-rbac.yaml"
+      - "deploy/platform/policies/runtime.yaml"
+    expired_at: 2027-01-31
+    statement: >-
+      Namespace 한정 release-controller가 서명 검증을 통과한 Helm 릴리스의 Service와
+      NetworkPolicy를 동기화해야 한다. 클러스터 범위 권한·Endpoints 직접 권한은 없고,
+      tests/m4/gitops-manifests.mjs가 범위 확대를 막는다. 2027년 1월 재검토한다.
