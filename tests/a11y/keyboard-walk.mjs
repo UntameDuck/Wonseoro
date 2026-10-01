@@ -4,6 +4,7 @@
 //   --width=640  1280 화면을 200% 로 확대한 것과 같은 CSS 폭 (T-M5-43)
 //   --width=320  가장 좁은 휴대전화 폭 (T-M5-44)
 //   --text-zoom=2  글자만 200% (T-M5-43)
+//   --input=touch  휴대전화 흉내(Android Chrome·손가락). Tab 대신 이름으로 찾아 탭한다. 탭한 대상의 크기를 잰다 (T-M5-47)
 //
 // 하는 일
 //   - 요소를 click() 하지 않는다. Tab·Shift+Tab 으로 포커스를 옮기고 Enter·Space 로 누른다. 글자는 입력기 경로(insertText)
@@ -20,7 +21,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { BROWSERS, focusInfo, launch, press, selectAll, sleep, typeText } from './helpers/browser.mjs';
+import { BROWSERS, FOCUS_INFO, focusInfo, launch, press, selectAll, sleep, tap, typeText } from './helpers/browser.mjs';
 import { samplePdf } from './helpers/sample.mjs';
 import { axAudit, axFocused } from './helpers/ax.mjs';
 
@@ -30,6 +31,7 @@ const HEIGHT = Number(arg('height', '900'));
 const BROWSER = arg('browser', 'chrome');
 /** 글자만 키우기 — 문서 기본 글자 크기 배수 (T-M5-43). --width=640 은 브라우저 200% 확대와 같은 CSS 폭 */
 const TEXT_ZOOM = Number(arg('text-zoom', '1'));
+const TOUCH = arg('input', 'keyboard') === 'touch';
 const WEB = 'http://localhost:4001';
 const PG = 'ui-shots-pg';
 
@@ -42,7 +44,7 @@ execFileSync('docker', [
    VALUES ('${applicant.applicantId}', '${applicant.subjectToken}', '\\x00', 'v1')`,
 ]);
 
-const b = await launch({ width: WIDTH, height: HEIGHT, executable: BROWSERS[BROWSER] ?? BROWSER });
+const b = await launch({ width: WIDTH, height: HEIGHT, executable: BROWSERS[BROWSER] ?? BROWSER, touch: TOUCH });
 if (TEXT_ZOOM !== 1) {
   await b.send('Page.addScriptToEvaluateOnNewDocument', {
     source: `document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = 'html { font-size: ${TEXT_ZOOM * 100}% !important; }'; document.head.append(st); });`,
@@ -110,7 +112,8 @@ async function waitText(t, timeout = 30_000) {
 /** 지나간 자리를 기록하고 포커스 표시·위치·순서를 본다. */
 function record(info) {
   current.stops.push({ name: info.name, tag: info.tag, ...(info.type ? { type: info.type } : {}), visible: info.visible });
-  if (info.body) return;
+  // 손가락으로 누르면 포커스 표시를 그리지 않는 것이 정상이다(:focus-visible) — 키보드일 때만 본다
+  if (info.body || TOUCH) return;
   if (!info.visible || !info.focusVisible) problem(`포커스 표시가 보이지 않는다 — ${info.tag} "${info.name}"`);
   if (!info.inView) problem(`포커스된 요소가 화면 밖에 있다 — ${info.tag} "${info.name}"`);
 }
@@ -120,6 +123,7 @@ function record(info) {
  * @param {(i: any) => boolean} match
  */
 async function tabTo(what, match, { max = 60, shift = false } = {}) {
+  if (TOUCH) return touchTo(what, match);
   let prevTop = null;
   for (let i = 0; i < max; i++) {
     await press(b, 'Tab', { shift });
@@ -140,11 +144,55 @@ async function tabTo(what, match, { max = 60, shift = false } = {}) {
   throw new Error(`키보드로 닿지 못했다: ${what} (Tab ${max}번)`);
 }
 
+/**
+ * 손가락 — 화면에 보이는 누를 수 있는 것 가운데 이름이 맞는 것을 찾아 화면 안으로 옮긴다. 글 입력칸이면 탭해서 포커스하고,
+ * 버튼·링크·체크는 activate() 가 탭한다. 키보드처럼 차례로 지나가지 않는다.
+ */
+async function touchTo(what, match) {
+  const candidates = await b.evaluate(`(() => {
+    const sel = 'a[href], button, input:not([type=hidden]), select, textarea, summary';
+    return [...document.querySelectorAll(sel)].map((el, n) => {
+      el.dataset.touchN = String(n);
+      const r = el.getBoundingClientRect();
+      const clean = (t) => (t || '').replace('필수 입력', '').replace(/\\*/g, '').replace(/\\s+/g, ' ').trim();
+      return {
+        n, tag: el.tagName, type: el.getAttribute('type') || '', id: el.id || '', role: el.getAttribute('role') || '',
+        name: clean(el.getAttribute('aria-label') || (el.labels && el.labels.length ? el.labels[0].textContent : '') || el.innerText || el.textContent || el.value || '').slice(0, 80),
+        // 화면 밖으로 밀어 둔 것(본문 바로가기)은 손가락으로 누를 수 없다
+        shown: r.width > 0 && r.height > 0 && r.right > 0 && !el.disabled,
+        inAlert: !!el.closest('[role=alert]'),
+      };
+    });
+  })()`);
+  const hit = candidates.find((c) => c.shown && match(c));
+  if (!hit) throw new Error(`손가락으로 누를 것을 찾지 못했다: ${what}`);
+  await b.evaluate(`document.querySelectorAll('[data-touch-target]').forEach((e) => delete e.dataset.touchTarget); document.querySelector('[data-touch-n="${hit.n}"]').dataset.touchTarget = '1'; document.querySelector('[data-touch-target]').scrollIntoView({ block: 'center' })`);
+  await sleep(150);
+  const entry = (hit.tag === 'INPUT' && !['checkbox', 'radio', 'file'].includes(hit.type)) || hit.tag === 'TEXTAREA';
+  if (entry) await tapTarget();
+  return entry ? await focusInfo(b) : hit;
+}
+
+/** 표시해 둔 대상의 가운데를 탭한다. 대상(체크는 감싼 라벨)의 크기를 잰다 — KWCAG 2.2 대상 크기 24px, KRDS 44px */
+async function tapTarget() {
+  const t = await b.evaluate(`(() => {
+    const el = document.querySelector('[data-touch-target]') || document.activeElement;
+    const target = el.closest('label') || el;
+    const r = target.getBoundingClientRect();
+    const inline = el.tagName === 'A' && getComputedStyle(el).display === 'inline';
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: Math.round(r.width), h: Math.round(r.height), inline, name: (el.innerText || el.labels?.[0]?.innerText || el.getAttribute('aria-label') || '').trim().slice(0, 40) };
+  })()`);
+  current.taps = [...(current.taps ?? []), { name: t.name, w: t.w, h: t.h, inline: t.inline }];
+  if (!t.inline && (t.w < 24 || t.h < 24)) problem(`탭 대상이 작다 ${t.w}×${t.h}px — "${t.name}"`);
+  await tap(b, t.x, t.y);
+}
+
 const named = (name, extra = {}) => (i) =>
   i.name === name && (!extra.tag || i.tag === extra.tag) && (!extra.type || i.type === extra.type);
 
 async function activate(key = 'Enter') {
-  await press(b, key);
+  if (TOUCH) await tapTarget();
+  else await press(b, key);
   keys += 1;
 }
 
@@ -170,11 +218,13 @@ async function walk() {
   // 1. 접수 홈 — 첫 Tab 은 본문 바로가기, 누르면 다음 Tab 이 본문 안이다
   await b.send('Page.navigate', { url: `${WEB}/` });
   await screen('접수 홈', '원서 작성 시작');
-  const skip = await tabTo('본문 바로가기', named('본문 바로가기'), { max: 1 });
-  if (!skip.visible) problem('본문 바로가기가 포커스를 받아도 보이지 않는다');
-  await activate();
-  const first = await tabTo('본문 첫 칸', (i) => !i.body, { max: 3 });
-  if (!first.inMain) problem(`본문 바로가기 뒤 첫 Tab 이 본문 밖이다 — "${first.name}"`);
+  if (!TOUCH) {
+    const skip = await tabTo('본문 바로가기', named('본문 바로가기'), { max: 1 });
+    if (!skip.visible) problem('본문 바로가기가 포커스를 받아도 보이지 않는다');
+    await activate();
+    const first = await tabTo('본문 첫 칸', (i) => !i.body, { max: 3 });
+    if (!first.inMain) problem(`본문 바로가기 뒤 첫 Tab 이 본문 밖이다 — "${first.name}"`);
+  }
 
   await tabTo('지원자 식별자', named('지원자 식별자', { tag: 'INPUT' }));
   await typeText(b, applicant.applicantId);
@@ -205,7 +255,7 @@ async function walk() {
   await tabTo('저장', named('저장', { tag: 'BUTTON' }));
   await activate();
   await expectFocus('저장 검증 오류 뒤 오류 요약', (i) => i.role === 'alert');
-  const link = await tabTo('오류 요약의 항목', (i) => i.tag === 'A', { max: 3 });
+  const link = await tabTo('오류 요약의 항목', (i) => i.tag === 'A' && (i.inAlert ?? true), { max: 3 });
   await activate();
   await expectFocus(`오류 요약 "${link.name}" → 칸`, onId('field-contactEmail'));
   await expectErrorSpoken(link.name);
@@ -270,7 +320,7 @@ async function walk() {
   // 8. 검증 오류 — 오류 요약이 포커스를 받고, 항목 링크가 3단계 그 칸으로 데려간다
   await expectFocus('검토 전 검증 오류 뒤 오류 요약', (i) => i.role === 'alert');
   await screen('검토 전 검증 오류', '입력을 확인해 주십시오');
-  const issue = await tabTo('오류 요약의 항목', (i) => i.tag === 'A', { max: 3 });
+  const issue = await tabTo('오류 요약의 항목', (i) => i.tag === 'A' && (i.inAlert ?? true), { max: 3 });
   await activate();
   await expectFocus(`오류 요약 "${issue.name}" → 3단계 칸`, onId('field-selfIntro'));
   await expectErrorSpoken(issue.name);
@@ -320,7 +370,10 @@ try {
 }
 
 const result = {
-  test: 'T-M5-40 키보드 전용 접수 완주 (+ T-M5-41 포커스 · T-M5-42 스크린리더 재료 · T-M5-43/44 가로 스크롤)',
+  test: TOUCH
+    ? 'T-M5-47 휴대전화(터치) 접수 완주 (+ 탭 대상 크기 · 가로 스크롤 · 스크린리더 재료)'
+    : 'T-M5-40 키보드 전용 접수 완주 (+ T-M5-41 포커스 · T-M5-42 스크린리더 재료 · T-M5-43/44 가로 스크롤)',
+  input: TOUCH ? 'touch (Android Chrome 흉내)' : 'keyboard',
   environment: '축소 환경 — 로컬 전용 DB(ui-shots-pg)·개발 서버(next dev)·Mock PG·Mock 검사 엔진',
   browser: b.browser,
   viewport: { width: WIDTH, height: HEIGHT },
@@ -332,7 +385,7 @@ const result = {
   // 개발용 시험 지원자 — 실제 사람이 아니다. focus-sweep 이 같은 원서의 접수 완료 화면을 다시 본다
   applicant,
   applicationId,
-  keyPresses: keys,
+  ...(TOUCH ? { taps: keys } : { keyPresses: keys }),
   mouseEvents: 0,
   fatal,
   problems,
@@ -340,7 +393,7 @@ const result = {
 };
 const dir = path.resolve('tests/a11y/results');
 mkdirSync(dir, { recursive: true });
-const file = path.join(dir, `keyboard-walk-${BROWSER}-${WIDTH}${TEXT_ZOOM !== 1 ? `-text${TEXT_ZOOM * 100}` : ''}-${new Date(started).toISOString().replace(/[:.]/g, '-')}.json`);
+const file = path.join(dir, `${TOUCH ? 'touch-walk' : 'keyboard-walk'}-${BROWSER}-${WIDTH}${TEXT_ZOOM !== 1 ? `-text${TEXT_ZOOM * 100}` : ''}-${new Date(started).toISOString().replace(/[:.]/g, '-')}.json`);
 writeFileSync(file, `${JSON.stringify(result, null, 2)}\n`);
-console.log(`${result.completed && problems.length === 0 ? '✔' : '✘'} 완주 ${result.completed ? '성공' : '실패'} · 접수번호 ${applicationNumber ?? '-'} · 키 ${keys}번 · 문제 ${problems.length}건 → ${path.relative(process.cwd(), file)}`);
+console.log(`${result.completed && problems.length === 0 ? '✔' : '✘'} 완주 ${result.completed ? '성공' : '실패'} · 접수번호 ${applicationNumber ?? '-'} · ${TOUCH ? '탭' : '키'} ${keys}번 · 문제 ${problems.length}건 → ${path.relative(process.cwd(), file)}`);
 process.exitCode = result.completed && problems.length === 0 ? 0 : 1;

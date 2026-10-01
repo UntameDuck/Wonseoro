@@ -123,13 +123,14 @@ try {
 const result = {
   test: 'T-M5-46 CAPTCHA 대체수단 — 접근 가능한 한도 해제 경로',
   environment: '축소 환경 — 로컬 전용 DB·개발 서버. 검증 응답 한 번만 429(Retry-After 6초)로 바꿨다',
+  browser: b.browser,
   at: new Date(started).toISOString(),
   passed: problems.length === 0,
   steps,
 };
 const dir = path.resolve('tests/a11y/results');
 mkdirSync(dir, { recursive: true });
-const file = path.join(dir, `rate-limit-${new Date(started).toISOString().replace(/[:.]/g, '-')}.json`);
+const file = path.join(dir, `rate-limit-${b.browser.split('/')[0].toLowerCase()}-${new Date(started).toISOString().replace(/[:.]/g, '-')}.json`);
 writeFileSync(file, `${JSON.stringify(result, null, 2)}\n`);
 console.log(`${result.passed ? '✔' : '✘'} 한도 해제 경로 — 문제 ${problems.length}건 → ${path.relative(process.cwd(), file)}`);
 process.exitCode = result.passed ? 0 : 1;

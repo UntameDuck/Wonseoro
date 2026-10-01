@@ -55,16 +55,18 @@
 
 ### 접근성 (권민준) — v1.0 §12.4 / §07
 
+> **2026-10-01** T-M5-40~46 ✅, T-M5-47 🟡. 시험·찾은 결함·고친 것·지원 브라우저는 **[09-accessibility.md](../09-accessibility.md)**. 시험은 `tests/a11y/`(설치 없이 Chrome·Edge 를 DevTools 프로토콜로 조작).
+
 | ID | 태스크 | 인수기준 |
 |---|---|---|
-| T-M5-40 | 키보드 전용 접수 완주 | 1~6단계 + 완료까지 마우스 없이 |
-| T-M5-41 | Visible Focus / Focus Order | 전 화면 |
-| T-M5-42 | Screen Reader 검증 | Label·Error·Step·Status 전달 |
-| T-M5-43 | 200% 확대 | 기능 손실 없음 |
-| T-M5-44 | 모바일 320 CSS px | 가로 스크롤 없음 |
-| T-M5-45 | Session Timeout 사전 경고 | 입력 유실 전 경고 + 연장 옵션 |
-| T-M5-46 | CAPTCHA 대체수단 | 접근 가능한 경로 제공 |
-| T-M5-47 | 브라우저 상호운용 | Chrome/Edge/Safari/Firefox + 모바일 |
+| T-M5-40 | 키보드 전용 접수 완주 ✅ 2026-10-01 | 1~6단계 + 완료까지 마우스 없이 |
+| T-M5-41 | Visible Focus / Focus Order ✅ 2026-10-01 | 전 화면 |
+| T-M5-42 | Screen Reader 검증 ✅ 2026-10-01 | Label·Error·Step·Status 전달 (접근성 트리 재료 — 실제 스크린리더 청취는 T-M5-48) |
+| T-M5-43 | 200% 확대 ✅ 2026-10-01 | 기능 손실 없음 |
+| T-M5-44 | 모바일 320 CSS px ✅ 2026-10-01 | 가로 스크롤 없음 |
+| T-M5-45 | Session Timeout 사전 경고 ✅ 2026-10-01 | 입력 유실 전 경고 + 연장 옵션 |
+| T-M5-46 | CAPTCHA 대체수단 ✅ 2026-10-01 | 접근 가능한 경로 제공 (ADR-0009 — 퍼즐형 CAPTCHA 를 두지 않는다) |
+| T-M5-47 | 브라우저 상호운용 🟡 2026-10-01 | Chrome/Edge/Safari/Firefox + 모바일 — Chrome·Edge·휴대전화 흉내 통과, 실물 Firefox·Safari 는 사람 |
 | T-M5-48 | KWCAG 2.2 자동 + **수동** 검사 | 자동만으로 끝내지 않는다 |
 
 ### 화면 제품화 (권민준)

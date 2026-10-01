@@ -21,5 +21,13 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "typescript": "^5.6.0"
-  }
+  },
+  "browserslist": [
+    "chrome >= 92",
+    "edge >= 92",
+    "firefox >= 98",
+    "safari >= 15.4",
+    "ios_saf >= 15.4",
+    "samsung >= 16"
+  ]
 }

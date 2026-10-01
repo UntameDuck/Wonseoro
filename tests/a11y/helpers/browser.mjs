@@ -19,7 +19,7 @@ export const BROWSERS = {
  * 브라우저를 띄우고 첫 탭에 붙는다.
  * @param {{ width: number, height: number, port?: number, executable?: string, profile?: string }} o
  */
-export async function launch({ width, height, port = 9334, executable, profile = 'a11y' }) {
+export async function launch({ width, height, port = 9334, executable, profile = 'a11y', touch = false }) {
   const work = path.join(os.tmpdir(), 'wonseoro-a11y');
   mkdirSync(work, { recursive: true });
   const exe = executable ?? process.env.CHROME ?? BROWSERS.chrome;
@@ -100,9 +100,18 @@ export async function launch({ width, height, port = 9334, executable, profile =
   await send('Emulation.setDeviceMetricsOverride', {
     width,
     height,
-    deviceScaleFactor: 1,
-    mobile: width < 600,
+    deviceScaleFactor: touch ? 3 : 1,
+    mobile: touch || width < 600,
   });
+  if (touch) {
+    // 휴대전화 흉내 — 손가락 입력과 모바일 브라우저 이름(Android Chrome). 화면은 이 이름으로 기기를 가리지 않지만
+    // 사이트가 모바일 브라우저로 알아보는 경로를 그대로 탄다 (T-M5-47)
+    await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+    await send('Emulation.setUserAgentOverride', {
+      userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36',
+      platform: 'Android',
+    });
+  }
 
   return {
     browser: version.Browser,
@@ -202,3 +211,12 @@ export const FOCUS_INFO = `(() => {
 })()`;
 
 export const focusInfo = (b) => b.evaluate(FOCUS_INFO);
+
+/* ── 손가락 ──────────────────────────────────────────────────────────── */
+
+/** 화면 좌표 한 곳을 손가락으로 누른다(누르고 뗀다) — 브라우저가 탭으로 알아듣고 포커스·클릭을 만든다. */
+export async function tap(b, x, y) {
+  await b.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, radiusX: 4, radiusY: 4, force: 1 }] });
+  await b.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await sleep(120);
+}

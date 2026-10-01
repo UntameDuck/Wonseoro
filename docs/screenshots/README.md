@@ -53,7 +53,7 @@
 | [15-home-central-down](failure/15-home-central-down.png) | 중앙 정지 | 접수 홈에 운영 배너가 뜬다. 대학 서버가 계속 처리하니 다시 결제·작성하지 말라는 안내 |
 | [16-dashboard-central-down](failure/16-dashboard-central-down.png) | 중앙 정지 | 내 원서 — **"이미 접수한 원서는 영향을 받지 않습니다"**. 조회 실패를 접수 실패처럼 보이게 하지 않는다 |
 | [17-profile-central-down](failure/17-profile-central-down.png) | 중앙 정지 | 공통원서를 쓸 수 없다. 원서는 직접 입력으로 계속 쓸 수 있다 |
-| [18-apply-university-down](failure/18-apply-university-down.png) | 대학 API 정지 | 작성한 내용이 보관되어 있다는 안내 · **마지막 저장 · 서버가 확인한 상태 · 요청번호**를 언제나 채운다(모르면 모른다고) · 현재 상태 다시 확인 |
+| [18-apply-university-down](failure/18-apply-university-down.png) | 대학 API 정지 | 화면 큰 제목 "원서 작성"(2026-10-01 다시 찍음 — T-M5-42, 화면마다 h1 하나) · 작성한 내용이 보관되어 있다는 안내(포커스를 받는다) · **마지막 저장 · 서버가 확인한 상태 · 요청번호**를 언제나 채운다(모르면 모른다고) · 현재 상태 다시 확인 |
 | [19-home-university-down](failure/19-home-university-down.png) | 대학 API 정지 | 모집 정보를 불러올 수 없다는 안내 · 다시 시도 |
 
 ## 관리자 콘솔

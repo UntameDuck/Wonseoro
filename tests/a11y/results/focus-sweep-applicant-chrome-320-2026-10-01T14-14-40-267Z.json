@@ -4,11 +4,11 @@
   "phase": "applicant",
   "browser": "Chrome/154.0.8037.92",
   "viewport": {
-    "width": 1280,
-    "height": 900
+    "width": 320,
+    "height": 700
   },
-  "textZoom": 2,
-  "at": "2026-10-01T13:31:06.831Z",
+  "textZoom": 1,
+  "at": "2026-10-01T14:14:40.267Z",
   "fatal": null,
   "screens": 19,
   "tabStops": 171,
@@ -487,12 +487,12 @@
       "problems": [],
       "title": "공통원서 | 원서로",
       "liveRegions": [
-        "저장했습니다 (2026.10.01 22:31). 새로 만드는 원서부터 반영됩니다."
+        "저장했습니다 (2026.10.01 23:14). 새로 만드는 원서부터 반영됩니다."
       ]
     },
     {
       "name": "원서 1단계",
-      "url": "/apply/1b5a2c03-b2e1-41b9-960e-ab5a528dd0c6",
+      "url": "/apply/af0f208d-c8e6-4bcd-9109-e43bd8df01cd",
       "stops": [
         {
           "tag": "A",
@@ -573,7 +573,7 @@
     },
     {
       "name": "원서 1단계 (취소 칸 열림)",
-      "url": "/apply/1b5a2c03-b2e1-41b9-960e-ab5a528dd0c6",
+      "url": "/apply/af0f208d-c8e6-4bcd-9109-e43bd8df01cd",
       "stops": [
         {
           "tag": "A",
@@ -661,7 +661,7 @@
     },
     {
       "name": "원서 2단계",
-      "url": "/apply/1b5a2c03-b2e1-41b9-960e-ab5a528dd0c6",
+      "url": "/apply/af0f208d-c8e6-4bcd-9109-e43bd8df01cd",
       "stops": [
         {
           "tag": "A",
@@ -728,7 +728,7 @@
     },
     {
       "name": "원서 3단계",
-      "url": "/apply/1b5a2c03-b2e1-41b9-960e-ab5a528dd0c6",
+      "url": "/apply/af0f208d-c8e6-4bcd-9109-e43bd8df01cd",
       "stops": [
         {
           "tag": "A",
@@ -809,7 +809,7 @@
     },
     {
       "name": "원서 4단계",
-      "url": "/apply/1b5a2c03-b2e1-41b9-960e-ab5a528dd0c6",
+      "url": "/apply/af0f208d-c8e6-4bcd-9109-e43bd8df01cd",
       "stops": [
         {
           "tag": "A",
@@ -891,7 +891,7 @@
     },
     {
       "name": "원서 4단계 (서류 검사 완료)",
-      "url": "/apply/1b5a2c03-b2e1-41b9-960e-ab5a528dd0c6",
+      "url": "/apply/af0f208d-c8e6-4bcd-9109-e43bd8df01cd",
       "stops": [
         {
           "tag": "A",
@@ -973,7 +973,7 @@
     },
     {
       "name": "원서 검증 오류",
-      "url": "/apply/1b5a2c03-b2e1-41b9-960e-ab5a528dd0c6",
+      "url": "/apply/af0f208d-c8e6-4bcd-9109-e43bd8df01cd",
       "stops": [
         {
           "tag": "A",
@@ -1077,7 +1077,7 @@
     },
     {
       "name": "원서 5단계 검토·결제",
-      "url": "/apply/1b5a2c03-b2e1-41b9-960e-ab5a528dd0c6",
+      "url": "/apply/af0f208d-c8e6-4bcd-9109-e43bd8df01cd",
       "stops": [
         {
           "tag": "A",
@@ -1139,12 +1139,12 @@
       "problems": [],
       "title": "검토·결제 — 원서 작성 | 원서로",
       "liveRegions": [
-        "저장 완료 22:32:01"
+        "저장 완료 23:15:23"
       ]
     },
     {
       "name": "원서 5단계 (확인 체크 뒤)",
-      "url": "/apply/1b5a2c03-b2e1-41b9-960e-ab5a528dd0c6",
+      "url": "/apply/af0f208d-c8e6-4bcd-9109-e43bd8df01cd",
       "stops": [
         {
           "tag": "A",
@@ -1213,12 +1213,12 @@
       "problems": [],
       "title": "검토·결제 — 원서 작성 | 원서로",
       "liveRegions": [
-        "저장 완료 22:32:01"
+        "저장 완료 23:15:23"
       ]
     },
     {
       "name": "원서 6단계 접수 완료",
-      "url": "/apply/1b5a2c03-b2e1-41b9-960e-ab5a528dd0c6",
+      "url": "/apply/af0f208d-c8e6-4bcd-9109-e43bd8df01cd",
       "stops": [
         {
           "tag": "A",
@@ -1273,12 +1273,12 @@
       "problems": [],
       "title": "최종제출 — 원서 작성 | 원서로",
       "liveRegions": [
-        "저장 완료 22:32:01"
+        "저장 완료 23:15:23"
       ]
     },
     {
       "name": "접수증",
-      "url": "/receipt/9986ba99-7998-4e9d-90be-a115761fd6fe",
+      "url": "/receipt/8273fb80-f2a0-409d-b26b-aeda4ba74e09",
       "stops": [
         {
           "tag": "A",
@@ -1407,7 +1407,7 @@
       "problems": [],
       "title": "공통정보 — 원서 작성 | 원서로",
       "liveRegions": [
-        "찾을 수 없습니다 작성하신 내용은 보관되어 있습니다. 처음부터 다시 작성하지 않으셔도 됩니다. 마지막 저장 확인할 수 없습니다 서버가 확인한 상태 지금은 확인할 수 없습니다. 연결되면 \"현재 상태 다시 확인\" 을 눌러 주십시오. 요청번호 09a4a9e832fd693527d06bc897a0b9eb 현재 상태 다시 확인"
+        "찾을 수 없습니다 작성하신 내용은 보관되어 있습니다. 처음부터 다시 작성하지 않으셔도 됩니다. 마지막 저장 확인할 수 없습니다 서버가 확인한 상태 지금은 확인할 수 없습니다. 연결되면 \"현재 상태 다시 확인\" 을 눌러 주십시오. 요청번호 31979046afb557b3b3076c6c8ec52938 현재 상태 다시 확인"
       ]
     }
   ]

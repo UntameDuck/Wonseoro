@@ -2,13 +2,13 @@
   "test": "T-M5-41 Visible Focus / Focus Order · T-M5-42 Screen Reader",
   "environment": "축소 환경 — 로컬 전용 DB(ui-shots-pg)·개발 서버(next dev)",
   "phase": "applicant",
-  "browser": "Chrome/154.0.8037.92",
+  "browser": "Edg/154.0.4258.48",
   "viewport": {
-    "width": 640,
-    "height": 800
+    "width": 1280,
+    "height": 900
   },
-  "textZoom": 2,
-  "at": "2026-10-01T13:32:31.429Z",
+  "textZoom": 1,
+  "at": "2026-10-01T14:06:28.583Z",
   "fatal": null,
   "screens": 19,
   "tabStops": 171,
@@ -487,12 +487,12 @@
       "problems": [],
       "title": "공통원서 | 원서로",
       "liveRegions": [
-        "저장했습니다 (2026.10.01 22:32). 새로 만드는 원서부터 반영됩니다."
+        "저장했습니다 (2026.10.01 23:06). 새로 만드는 원서부터 반영됩니다."
       ]
     },
     {
       "name": "원서 1단계",
-      "url": "/apply/dbf20433-c00d-4b6f-aaf3-bdc31ad521c8",
+      "url": "/apply/6342ea18-2ca9-459d-ad9d-d4a2a10bac99",
       "stops": [
         {
           "tag": "A",
@@ -573,7 +573,7 @@
     },
     {
       "name": "원서 1단계 (취소 칸 열림)",
-      "url": "/apply/dbf20433-c00d-4b6f-aaf3-bdc31ad521c8",
+      "url": "/apply/6342ea18-2ca9-459d-ad9d-d4a2a10bac99",
       "stops": [
         {
           "tag": "A",
@@ -661,7 +661,7 @@
     },
     {
       "name": "원서 2단계",
-      "url": "/apply/dbf20433-c00d-4b6f-aaf3-bdc31ad521c8",
+      "url": "/apply/6342ea18-2ca9-459d-ad9d-d4a2a10bac99",
       "stops": [
         {
           "tag": "A",
@@ -728,7 +728,7 @@
     },
     {
       "name": "원서 3단계",
-      "url": "/apply/dbf20433-c00d-4b6f-aaf3-bdc31ad521c8",
+      "url": "/apply/6342ea18-2ca9-459d-ad9d-d4a2a10bac99",
       "stops": [
         {
           "tag": "A",
@@ -809,7 +809,7 @@
     },
     {
       "name": "원서 4단계",
-      "url": "/apply/dbf20433-c00d-4b6f-aaf3-bdc31ad521c8",
+      "url": "/apply/6342ea18-2ca9-459d-ad9d-d4a2a10bac99",
       "stops": [
         {
           "tag": "A",
@@ -891,7 +891,7 @@
     },
     {
       "name": "원서 4단계 (서류 검사 완료)",
-      "url": "/apply/dbf20433-c00d-4b6f-aaf3-bdc31ad521c8",
+      "url": "/apply/6342ea18-2ca9-459d-ad9d-d4a2a10bac99",
       "stops": [
         {
           "tag": "A",
@@ -973,7 +973,7 @@
     },
     {
       "name": "원서 검증 오류",
-      "url": "/apply/dbf20433-c00d-4b6f-aaf3-bdc31ad521c8",
+      "url": "/apply/6342ea18-2ca9-459d-ad9d-d4a2a10bac99",
       "stops": [
         {
           "tag": "A",
@@ -1077,7 +1077,7 @@
     },
     {
       "name": "원서 5단계 검토·결제",
-      "url": "/apply/dbf20433-c00d-4b6f-aaf3-bdc31ad521c8",
+      "url": "/apply/6342ea18-2ca9-459d-ad9d-d4a2a10bac99",
       "stops": [
         {
           "tag": "A",
@@ -1139,12 +1139,12 @@
       "problems": [],
       "title": "검토·결제 — 원서 작성 | 원서로",
       "liveRegions": [
-        "저장 완료 22:33:30"
+        "저장 완료 23:07:12"
       ]
     },
     {
       "name": "원서 5단계 (확인 체크 뒤)",
-      "url": "/apply/dbf20433-c00d-4b6f-aaf3-bdc31ad521c8",
+      "url": "/apply/6342ea18-2ca9-459d-ad9d-d4a2a10bac99",
       "stops": [
         {
           "tag": "A",
@@ -1213,12 +1213,12 @@
       "problems": [],
       "title": "검토·결제 — 원서 작성 | 원서로",
       "liveRegions": [
-        "저장 완료 22:33:30"
+        "저장 완료 23:07:12"
       ]
     },
     {
       "name": "원서 6단계 접수 완료",
-      "url": "/apply/dbf20433-c00d-4b6f-aaf3-bdc31ad521c8",
+      "url": "/apply/6342ea18-2ca9-459d-ad9d-d4a2a10bac99",
       "stops": [
         {
           "tag": "A",
@@ -1273,12 +1273,12 @@
       "problems": [],
       "title": "최종제출 — 원서 작성 | 원서로",
       "liveRegions": [
-        "저장 완료 22:33:30"
+        "저장 완료 23:07:12"
       ]
     },
     {
       "name": "접수증",
-      "url": "/receipt/216cd7d0-0a42-44c7-8be1-2092883322d8",
+      "url": "/receipt/86780ff6-ba1e-4f36-992d-f0a2a1dfd8bc",
       "stops": [
         {
           "tag": "A",
@@ -1407,7 +1407,7 @@
       "problems": [],
       "title": "공통정보 — 원서 작성 | 원서로",
       "liveRegions": [
-        "찾을 수 없습니다 작성하신 내용은 보관되어 있습니다. 처음부터 다시 작성하지 않으셔도 됩니다. 마지막 저장 확인할 수 없습니다 서버가 확인한 상태 지금은 확인할 수 없습니다. 연결되면 \"현재 상태 다시 확인\" 을 눌러 주십시오. 요청번호 321b2424edc02f8bf1fb5fd9e05f1922 현재 상태 다시 확인"
+        "찾을 수 없습니다 작성하신 내용은 보관되어 있습니다. 처음부터 다시 작성하지 않으셔도 됩니다. 마지막 저장 확인할 수 없습니다 서버가 확인한 상태 지금은 확인할 수 없습니다. 연결되면 \"현재 상태 다시 확인\" 을 눌러 주십시오. 요청번호 255658bb48b8ab88dd2e8fabf5dc4471 현재 상태 다시 확인"
       ]
     }
   ]

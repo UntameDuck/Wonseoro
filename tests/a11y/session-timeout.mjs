@@ -125,13 +125,14 @@ try {
 const result = {
   test: 'T-M5-45 Session Timeout 사전 경고',
   environment: '축소 환경 — 로컬 전용 DB(ui-shots-pg)·개발 서버. 만료 시각만 앞당겼다(세션 유지 30분·경고 5분 전)',
+  browser: b.browser,
   at: new Date(started).toISOString(),
   passed: problems.length === 0,
   steps,
 };
 const dir = path.resolve('tests/a11y/results');
 mkdirSync(dir, { recursive: true });
-const file = path.join(dir, `session-timeout-${new Date(started).toISOString().replace(/[:.]/g, '-')}.json`);
+const file = path.join(dir, `session-timeout-${b.browser.split('/')[0].toLowerCase()}-${new Date(started).toISOString().replace(/[:.]/g, '-')}.json`);
 writeFileSync(file, `${JSON.stringify(result, null, 2)}\n`);
 console.log(`${result.passed ? '✔' : '✘'} 세션 만료 경고 — 문제 ${problems.length}건 → ${path.relative(process.cwd(), file)}`);
 process.exitCode = result.passed ? 0 : 1;

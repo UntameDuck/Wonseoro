@@ -444,7 +444,7 @@ function ChangeList({ changes }: { changes: Change[] }) {
           <strong>[{riskLabel[c.risk]}]</strong> {c.summary}{' '}
           {/* 설정 경로는 요약이 이름으로 말한다. 원문은 문의·대조용으로 접어 둔다 (T-M5-51) */}
           <details style={{ display: 'inline-block', fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)' }}>
-            <summary style={{ cursor: 'pointer' }}>설정 위치</summary>
+            <summary style={{ cursor: 'pointer', padding: '2px 0', whiteSpace: 'nowrap' }}>설정 위치</summary>
             <code>{c.path}</code>
           </details>
         </li>

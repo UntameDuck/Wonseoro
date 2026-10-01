@@ -2,16 +2,16 @@
   "test": "T-M5-41 Visible Focus / Focus Order · T-M5-42 Screen Reader",
   "environment": "축소 환경 — 로컬 전용 DB(ui-shots-pg)·개발 서버(next dev)",
   "phase": "admin",
-  "browser": "Chrome/154.0.8037.92",
+  "browser": "Edg/154.0.4258.48",
   "viewport": {
-    "width": 320,
-    "height": 700
+    "width": 1280,
+    "height": 900
   },
   "textZoom": 1,
-  "at": "2026-10-01T13:43:36.813Z",
+  "at": "2026-10-01T14:23:54.761Z",
   "fatal": null,
   "screens": 10,
-  "tabStops": 124,
+  "tabStops": 119,
   "problems": [],
   "detail": [
     {
@@ -296,13 +296,6 @@
           "say": "button \"담당자 바꾸기\""
         },
         {
-          "tag": "DIV",
-          "name": "설정 버전 목록",
-          "outline": 3,
-          "contrast": 4.55,
-          "say": "region \"설정 버전 목록\""
-        },
-        {
           "tag": "BUTTON",
           "name": "검토",
           "outline": 3,
@@ -401,13 +394,6 @@
           "outline": 3,
           "contrast": 4.17,
           "say": "button \"담당자 바꾸기\""
-        },
-        {
-          "tag": "DIV",
-          "name": "설정 버전 목록",
-          "outline": 3,
-          "contrast": 4.55,
-          "say": "region \"설정 버전 목록\""
         },
         {
           "tag": "BUTTON",
@@ -552,13 +538,6 @@
           "outline": 3,
           "contrast": 4.55,
           "say": "DateTime \"새 마감시각 (한국 시간)\" — 이 컴퓨터의 시간대와 상관없이 한국 시간으로 입력합니다. 확인: 입력 전"
-        },
-        {
-          "tag": "DIV",
-          "name": "적용 이력",
-          "outline": 3,
-          "contrast": 4.55,
-          "say": "region \"적용 이력\""
         },
         {
           "tag": "SUMMARY",
@@ -812,19 +791,12 @@
           "outline": 3,
           "contrast": 4.55,
           "say": "button \"증적 열기\""
-        },
-        {
-          "tag": "DIV",
-          "name": "처리 이력",
-          "outline": 3,
-          "contrast": 4.55,
-          "say": "region \"처리 이력\""
         }
       ],
       "problems": [],
       "title": "증적 조회 | 원서로 입학처 콘솔",
       "liveRegions": [
-        "감사 체인 14건이 끊김 없이 이어집니다"
+        "감사 체인 19건이 끊김 없이 이어집니다"
       ]
     },
     {
@@ -886,13 +858,6 @@
           "outline": 3,
           "contrast": 4.17,
           "say": "button \"담당자 바꾸기\""
-        },
-        {
-          "tag": "DIV",
-          "name": "데이터 종류별 계획",
-          "outline": 3,
-          "contrast": 4.55,
-          "say": "region \"데이터 종류별 계획\""
         },
         {
           "tag": "BUTTON",

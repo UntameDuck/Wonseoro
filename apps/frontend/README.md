@@ -59,3 +59,6 @@
 - 모바일 320 CSS px 대응
 - Session Timeout 사전 경고 + 연장 옵션
 - CAPTCHA 사용 시 접근 가능한 대체수단 제공
+
+시험과 결과는 [docs/09-accessibility.md](../../docs/09-accessibility.md) — 키보드 완주·전 화면 포커스·스크린리더 재료·확대·320px·세션 만료·한도 해제·휴대전화 터치(`tests/a11y/`).
+지원 브라우저는 `package.json` 의 `browserslist`(Chrome·Edge 92+, Firefox 98+, Safari·iOS 15.4+, 삼성 인터넷 16+)이고, 같은 문서 「지원 브라우저」에 근거가 있다.

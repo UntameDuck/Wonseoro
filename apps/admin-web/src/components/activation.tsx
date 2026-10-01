@@ -104,7 +104,7 @@ export function ActivationTable({ list, filter }: { list: ActivationList; filter
                     {SIG[a.signature].text}
                     {/* 서명 키 이름은 검증·문의용이다 — 접어 둔다 (T-M5-51) */}
                     <details style={{ color: 'var(--krds-fg-muted)', fontWeight: 400 }}>
-                      <summary style={{ cursor: 'pointer' }}>서명 키</summary>
+                      <summary style={{ cursor: 'pointer', padding: '2px 0', whiteSpace: 'nowrap' }}>서명 키</summary>
                       {a.keyId}
                     </details>
                   </td>

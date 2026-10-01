@@ -103,7 +103,8 @@ export function Breadcrumb({ trail }: { trail: Array<{ label: string; href?: str
           <li key={t.label} style={{ display: 'flex', gap: 'var(--krds-space-2)' }}>
             {i > 0 && <span aria-hidden="true">›</span>}
             {t.href ? (
-              <Link href={t.href} style={{ color: 'var(--krds-primary)' }}>
+              // 누르는 영역을 24px 이상으로 — 안쪽 여백을 바깥 여백으로 되돌려 모양·자리는 그대로다 (KWCAG 2.2 대상 크기, T-M5-47)
+              <Link href={t.href} style={{ color: 'var(--krds-primary)', display: 'inline-block', padding: '2px 6px', margin: '-2px -6px' }}>
                 {t.label}
               </Link>
             ) : (

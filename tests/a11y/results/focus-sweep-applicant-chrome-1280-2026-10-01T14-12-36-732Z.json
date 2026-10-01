@@ -4,11 +4,11 @@
   "phase": "applicant",
   "browser": "Chrome/154.0.8037.92",
   "viewport": {
-    "width": 320,
-    "height": 800
+    "width": 1280,
+    "height": 900
   },
   "textZoom": 1,
-  "at": "2026-10-01T13:27:54.502Z",
+  "at": "2026-10-01T14:12:36.732Z",
   "fatal": null,
   "screens": 19,
   "tabStops": 171,
@@ -487,12 +487,12 @@
       "problems": [],
       "title": "공통원서 | 원서로",
       "liveRegions": [
-        "저장했습니다 (2026.10.01 22:28). 새로 만드는 원서부터 반영됩니다."
+        "저장했습니다 (2026.10.01 23:12). 새로 만드는 원서부터 반영됩니다."
       ]
     },
     {
       "name": "원서 1단계",
-      "url": "/apply/3e46fdb2-5ebc-4106-af48-cfae60caf78a",
+      "url": "/apply/c2a3fbd8-0d33-4242-bb5a-9be658b80c60",
       "stops": [
         {
           "tag": "A",
@@ -573,7 +573,7 @@
     },
     {
       "name": "원서 1단계 (취소 칸 열림)",
-      "url": "/apply/3e46fdb2-5ebc-4106-af48-cfae60caf78a",
+      "url": "/apply/c2a3fbd8-0d33-4242-bb5a-9be658b80c60",
       "stops": [
         {
           "tag": "A",
@@ -661,7 +661,7 @@
     },
     {
       "name": "원서 2단계",
-      "url": "/apply/3e46fdb2-5ebc-4106-af48-cfae60caf78a",
+      "url": "/apply/c2a3fbd8-0d33-4242-bb5a-9be658b80c60",
       "stops": [
         {
           "tag": "A",
@@ -728,7 +728,7 @@
     },
     {
       "name": "원서 3단계",
-      "url": "/apply/3e46fdb2-5ebc-4106-af48-cfae60caf78a",
+      "url": "/apply/c2a3fbd8-0d33-4242-bb5a-9be658b80c60",
       "stops": [
         {
           "tag": "A",
@@ -809,7 +809,7 @@
     },
     {
       "name": "원서 4단계",
-      "url": "/apply/3e46fdb2-5ebc-4106-af48-cfae60caf78a",
+      "url": "/apply/c2a3fbd8-0d33-4242-bb5a-9be658b80c60",
       "stops": [
         {
           "tag": "A",
@@ -891,7 +891,7 @@
     },
     {
       "name": "원서 4단계 (서류 검사 완료)",
-      "url": "/apply/3e46fdb2-5ebc-4106-af48-cfae60caf78a",
+      "url": "/apply/c2a3fbd8-0d33-4242-bb5a-9be658b80c60",
       "stops": [
         {
           "tag": "A",
@@ -973,7 +973,7 @@
     },
     {
       "name": "원서 검증 오류",
-      "url": "/apply/3e46fdb2-5ebc-4106-af48-cfae60caf78a",
+      "url": "/apply/c2a3fbd8-0d33-4242-bb5a-9be658b80c60",
       "stops": [
         {
           "tag": "A",
@@ -1077,7 +1077,7 @@
     },
     {
       "name": "원서 5단계 검토·결제",
-      "url": "/apply/3e46fdb2-5ebc-4106-af48-cfae60caf78a",
+      "url": "/apply/c2a3fbd8-0d33-4242-bb5a-9be658b80c60",
       "stops": [
         {
           "tag": "A",
@@ -1139,12 +1139,12 @@
       "problems": [],
       "title": "검토·결제 — 원서 작성 | 원서로",
       "liveRegions": [
-        "저장 완료 22:28:37"
+        "저장 완료 23:13:21"
       ]
     },
     {
       "name": "원서 5단계 (확인 체크 뒤)",
-      "url": "/apply/3e46fdb2-5ebc-4106-af48-cfae60caf78a",
+      "url": "/apply/c2a3fbd8-0d33-4242-bb5a-9be658b80c60",
       "stops": [
         {
           "tag": "A",
@@ -1213,12 +1213,12 @@
       "problems": [],
       "title": "검토·결제 — 원서 작성 | 원서로",
       "liveRegions": [
-        "저장 완료 22:28:37"
+        "저장 완료 23:13:21"
       ]
     },
     {
       "name": "원서 6단계 접수 완료",
-      "url": "/apply/3e46fdb2-5ebc-4106-af48-cfae60caf78a",
+      "url": "/apply/c2a3fbd8-0d33-4242-bb5a-9be658b80c60",
       "stops": [
         {
           "tag": "A",
@@ -1273,12 +1273,12 @@
       "problems": [],
       "title": "최종제출 — 원서 작성 | 원서로",
       "liveRegions": [
-        "저장 완료 22:28:37"
+        "저장 완료 23:13:21"
       ]
     },
     {
       "name": "접수증",
-      "url": "/receipt/5ade5cc9-ded0-4a58-8172-366fea8e563e",
+      "url": "/receipt/8d7b6af2-b8ff-4127-9c69-5e71f729e19f",
       "stops": [
         {
           "tag": "A",
@@ -1407,7 +1407,7 @@
       "problems": [],
       "title": "공통정보 — 원서 작성 | 원서로",
       "liveRegions": [
-        "찾을 수 없습니다 작성하신 내용은 보관되어 있습니다. 처음부터 다시 작성하지 않으셔도 됩니다. 마지막 저장 확인할 수 없습니다 서버가 확인한 상태 지금은 확인할 수 없습니다. 연결되면 \"현재 상태 다시 확인\" 을 눌러 주십시오. 요청번호 4bfcee390619fed7afb2593e049c4d18 현재 상태 다시 확인"
+        "찾을 수 없습니다 작성하신 내용은 보관되어 있습니다. 처음부터 다시 작성하지 않으셔도 됩니다. 마지막 저장 확인할 수 없습니다 서버가 확인한 상태 지금은 확인할 수 없습니다. 연결되면 \"현재 상태 다시 확인\" 을 눌러 주십시오. 요청번호 052295d9471a93ec6dbc342fdf6a5429 현재 상태 다시 확인"
       ]
     }
   ]

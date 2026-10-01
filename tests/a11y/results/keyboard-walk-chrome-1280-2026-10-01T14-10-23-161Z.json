@@ -1,21 +1,22 @@
 {
   "test": "T-M5-40 키보드 전용 접수 완주 (+ T-M5-41 포커스 · T-M5-42 스크린리더 재료 · T-M5-43/44 가로 스크롤)",
+  "input": "keyboard",
   "environment": "축소 환경 — 로컬 전용 DB(ui-shots-pg)·개발 서버(next dev)·Mock PG·Mock 검사 엔진",
   "browser": "Chrome/154.0.8037.92",
   "viewport": {
-    "width": 320,
-    "height": 700
+    "width": 1280,
+    "height": 900
   },
-  "textZoom": 2,
-  "at": "2026-10-01T13:37:47.991Z",
-  "seconds": 44,
+  "textZoom": 1,
+  "at": "2026-10-01T14:10:23.161Z",
+  "seconds": 26,
   "completed": true,
-  "applicationNumber": "2027-UNIV-A-DPQZUL42QT",
+  "applicationNumber": "2027-UNIV-A-K2EWHC25N9",
   "applicant": {
-    "applicantId": "17f07d12-6cb9-4411-b523-9267335a4c36",
-    "subjectToken": "subj-kbd-1790861862639"
+    "applicantId": "1c4ed45f-78fd-4abd-8a10-35fa2dd35c80",
+    "subjectToken": "subj-kbd-1790863821436"
   },
-  "applicationId": "b104d41e-8729-4596-a1fb-d0549e28beda",
+  "applicationId": "1a3d1bc1-a421-4b96-8d37-e180f57014dc",
   "keyPresses": 92,
   "mouseEvents": 0,
   "fatal": null,
@@ -260,7 +261,7 @@
     },
     {
       "name": "원서 1단계 공통정보",
-      "url": "/apply/b104d41e-8729-4596-a1fb-d0549e28beda",
+      "url": "/apply/1a3d1bc1-a421-4b96-8d37-e180f57014dc",
       "stops": [
         {
           "name": "홈",
@@ -332,7 +333,7 @@
     },
     {
       "name": "원서 2단계 대학·전형",
-      "url": "/apply/b104d41e-8729-4596-a1fb-d0549e28beda",
+      "url": "/apply/1a3d1bc1-a421-4b96-8d37-e180f57014dc",
       "stops": [
         {
           "name": "이전",
@@ -357,7 +358,7 @@
     },
     {
       "name": "원서 3단계 추가정보",
-      "url": "/apply/b104d41e-8729-4596-a1fb-d0549e28beda",
+      "url": "/apply/1a3d1bc1-a421-4b96-8d37-e180f57014dc",
       "stops": [
         {
           "name": "내신 성적",
@@ -393,7 +394,7 @@
     },
     {
       "name": "원서 4단계 서류",
-      "url": "/apply/b104d41e-8729-4596-a1fb-d0549e28beda",
+      "url": "/apply/1a3d1bc1-a421-4b96-8d37-e180f57014dc",
       "stops": [
         {
           "name": "파일 선택",
@@ -430,7 +431,7 @@
     },
     {
       "name": "검토 전 검증 오류",
-      "url": "/apply/b104d41e-8729-4596-a1fb-d0549e28beda",
+      "url": "/apply/1a3d1bc1-a421-4b96-8d37-e180f57014dc",
       "stops": [
         {
           "name": "자기소개를 입력해 주십시오.",
@@ -494,7 +495,7 @@
     },
     {
       "name": "원서 5단계 검토·결제",
-      "url": "/apply/b104d41e-8729-4596-a1fb-d0549e28beda",
+      "url": "/apply/1a3d1bc1-a421-4b96-8d37-e180f57014dc",
       "stops": [
         {
           "name": "결제 후에는 원서를 수정하거나 취소할 수 없다는 것을 확인했습니다.",
@@ -525,7 +526,7 @@
     },
     {
       "name": "접수 완료",
-      "url": "/apply/b104d41e-8729-4596-a1fb-d0549e28beda",
+      "url": "/apply/1a3d1bc1-a421-4b96-8d37-e180f57014dc",
       "stops": [
         {
           "name": "접수증 보기·인쇄",
@@ -538,7 +539,7 @@
     },
     {
       "name": "접수증",
-      "url": "/receipt/45c59bf6-1dcd-45a3-a202-a03367c5b240",
+      "url": "/receipt/f0ef3d55-c014-4729-8ce9-8d59c49ff589",
       "stops": [
         {
           "name": "본문 바로가기",

@@ -103,7 +103,13 @@ const REFLOW = `(() => {
     if (!/hidden|clip/.test(cs.overflowX) || e.classList.contains('krds-sr-only') || e.closest('.krds-sr-only')) return false;
     return e.scrollWidth > e.clientWidth + 1 && (e.innerText || '').trim().length > 0;
   }).slice(0, 3).map((e) => e.tagName + ' "' + (e.innerText || '').trim().slice(0, 30) + '"');
-  return { over: Math.max(0, over), wide, clipped };
+  // 누르는 대상 크기 — KWCAG 2.2(= WCAG 2.5.8) 24×24px. 문장 속 링크는 예외. 체크·라디오는 감싼 라벨이 대상이다
+  const small = [...document.querySelectorAll('a[href], button:not([disabled]), input:not([type=hidden]):not([disabled]), select, textarea, summary')]
+    .filter((e) => !e.closest('.krds-sr-only') && !e.classList.contains('krds-skip') && !e.closest('nextjs-portal'))
+    .map((e) => { const t = e.closest('label') || e; const r = t.getBoundingClientRect(); const cs = getComputedStyle(e); return { e, w: r.width, h: r.height, inline: cs.display === 'inline' }; })
+    .filter((x) => x.w > 0 && x.h > 0 && !x.inline && (x.w < 23.5 || x.h < 23.5)) // 소수점 측정 오차는 넘긴다
+    .slice(0, 5).map((x) => x.e.tagName + ' "' + (x.e.innerText || x.e.getAttribute('aria-label') || '').trim().slice(0, 30) + '" ' + Math.round(x.w) + '×' + Math.round(x.h));
+  return { over: Math.max(0, over), wide, clipped, small };
 })()`;
 
 const MISSED = `(() => {
@@ -176,6 +182,7 @@ async function sweep(name) {
   const reflow = await b.evaluate(REFLOW);
   if (reflow.over > 0) bad(`가로 스크롤 ${reflow.over}px — ${reflow.wide.join(' | ')}`);
   for (const x of reflow.clipped) bad(`글이 잘린다 — ${x}`);
+  for (const x of reflow.small) bad(`누르는 대상이 24px 보다 작다 — ${x}`);
   const m = await b.evaluate(MISSED);
   for (const x of m.missed) bad(`Tab 으로 닿지 않는다 — ${x}`);
   if (m.positive.length) bad(`tabindex 양수 ${m.positive.length}개 — 읽는 순서를 흐트러뜨린다`);
