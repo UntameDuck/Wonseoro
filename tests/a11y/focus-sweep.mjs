@@ -19,6 +19,7 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { BROWSERS, focusInfo, launch, press, sleep, typeText } from './helpers/browser.mjs';
 import { samplePdf } from './helpers/sample.mjs';
+import { axAudit, axFocused } from './helpers/ax.mjs';
 
 const arg = (name, def) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split('=')[1] ?? def;
 const PHASE = process.argv.slice(2).find((a) => !a.startsWith('--'));
@@ -86,6 +87,8 @@ const MISSED = `(() => {
 })()`;
 
 async function sweep(name) {
+  // 화면이 다 그려진 뒤에 돈다 — 불러오는 중에 돌면 늦게 나타난 링크를 "닿지 않는다" 로 센다
+  await b.waitFor(`!document.body.innerText.includes('불러오는 중')`, '불러오기', 15_000).catch(() => {});
   await sleep(500);
   await b.evaluate(`(() => {
     document.querySelectorAll('nextjs-portal').forEach((e) => e.remove());
@@ -129,7 +132,9 @@ async function sweep(name) {
       else bad(`포커스가 갇힌다 — "${s.name}" 로 되돌아온다`);
       break;
     }
-    screen.stops.push({ tag: s.tag, name: s.name, outline: s.outline, contrast: s.contrast });
+    // 스크린리더가 이 자리에서 읽을 재료 — 역할·이름·필수·오류·설명 (T-M5-42)
+    const say = await axFocused(b);
+    screen.stops.push({ tag: s.tag, name: s.name, outline: s.outline, contrast: s.contrast, say: say?.text ?? '' });
     if (s.outline < 2 || !s.focusVisible) bad(`포커스 표시가 보이지 않는다 — ${s.tag} "${s.name}"`);
     else if (s.contrast < 3) bad(`포커스 표시 명암비 ${s.contrast}:1 (3:1 미만) — ${s.tag} "${s.name}"`);
     if (!s.inView) bad(`포커스된 요소가 화면 밖 — ${s.tag} "${s.name}"`);
@@ -142,6 +147,10 @@ async function sweep(name) {
   const m = await b.evaluate(MISSED);
   for (const x of m.missed) bad(`Tab 으로 닿지 않는다 — ${x}`);
   if (m.positive.length) bad(`tabindex 양수 ${m.positive.length}개 — 읽는 순서를 흐트러뜨린다`);
+  const ax = await axAudit(b);
+  for (const x of ax.problems) bad(`스크린리더: ${x}`);
+  screen.title = ax.title;
+  screen.liveRegions = ax.liveRegions;
   screens.push(screen);
   console.log(`${screen.problems.length ? '✘' : '✔'} ${name} — Tab 자리 ${screen.stops.length}개`);
 }
@@ -343,7 +352,7 @@ try {
 }
 
 const result = {
-  test: 'T-M5-41 Visible Focus / Focus Order',
+  test: 'T-M5-41 Visible Focus / Focus Order · T-M5-42 Screen Reader',
   environment: '축소 환경 — 로컬 전용 DB(ui-shots-pg)·개발 서버(next dev)',
   phase: PHASE,
   browser: b.browser,

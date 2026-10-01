@@ -4,7 +4,7 @@ import type { OperatingModeView } from '../lib/api';
 import type { SaveState } from '../lib/use-autosave';
 import type { DeadlineView } from '../lib/use-deadline';
 import { formatKst, formatKstTime, formatRemaining } from '../lib/use-deadline';
-import { Alert, Button, Icon, formatTime } from '@wonseoro/krds';
+import { Alert, Button, Icon, LiveRegion, formatTime } from '@wonseoro/krds';
 import { useEffect, useRef, useState } from 'react';
 import { currentRequestId } from '../lib/api';
 
@@ -15,6 +15,18 @@ import { currentRequestId } from '../lib/api';
  * 사용자가 "지금 저장됐나?"를 불안해하는 것이 마감 직전 불안의 큰 부분이다.
  */
 export function SaveStatus({ state, onRetry }: { state: SaveState; onRetry: () => void }) {
+  // 알림 영역 둘을 늘 그려 두고 안의 글만 바꾼다 — 저장 중·완료는 차례를 기다려(polite), 실패는 바로(assertive)
+  // 읽는다. 상태마다 영역을 새로 그리면 스크린리더가 바뀐 것을 놓친다 (T-M5-42)
+  const failed = state.kind === 'failed';
+  return (
+    <>
+      <LiveRegion>{!failed && <SaveStatusText state={state} />}</LiveRegion>
+      <LiveRegion assertive>{failed && <SaveStatusText state={state} onRetry={onRetry} />}</LiveRegion>
+    </>
+  );
+}
+
+function SaveStatusText({ state, onRetry }: { state: SaveState; onRetry?: () => void }) {
   const base = {
     display: 'flex',
     alignItems: 'center',
@@ -28,7 +40,6 @@ export function SaveStatus({ state, onRetry }: { state: SaveState; onRetry: () =
   if (state.kind === 'failed') {
     return (
       <div
-        role="alert"
         style={{
           ...base,
           background: 'var(--krds-danger-weak)',
@@ -39,7 +50,7 @@ export function SaveStatus({ state, onRetry }: { state: SaveState; onRetry: () =
       >
         <Icon name="cross" />
         <span>저장 실패 — {state.reason}</span>
-        {state.retryable && (
+        {state.retryable && onRetry && (
           <button
             type="button"
             onClick={onRetry}
@@ -64,7 +75,7 @@ export function SaveStatus({ state, onRetry }: { state: SaveState; onRetry: () =
 
   if (state.kind === 'saving') {
     return (
-      <div role="status" style={{ ...base, background: 'var(--krds-bg-muted)' }}>
+      <div style={{ ...base, background: 'var(--krds-bg-muted)' }}>
         <Icon name="sync" /> 저장 중…
       </div>
     );
@@ -72,17 +83,13 @@ export function SaveStatus({ state, onRetry }: { state: SaveState; onRetry: () =
 
   if (state.kind === 'saved') {
     return (
-      <div role="status" style={{ ...base, background: 'var(--krds-success-weak)', color: 'var(--krds-success)' }}>
+      <div style={{ ...base, background: 'var(--krds-success-weak)', color: 'var(--krds-success)' }}>
         <Icon name="check" /> 저장 완료 {formatKstTime(state.at)}
       </div>
     );
   }
 
-  return (
-    <div role="status" style={{ ...base, color: 'var(--krds-fg-muted)' }}>
-      자동으로 저장됩니다
-    </div>
-  );
+  return <div style={{ ...base, color: 'var(--krds-fg-muted)' }}>자동으로 저장됩니다</div>;
 }
 
 /* ────────────────────────────────────────────────────────────────────── */
@@ -92,10 +99,27 @@ export function SaveStatus({ state, onRetry }: { state: SaveState; onRetry: () =
  * 서버 시각 기준이며, 서버와 통신이 끊기면 남은 시간을 **단정하지 않는다.**
  */
 export function DeadlineBanner({ deadline }: { deadline: DeadlineView }) {
+  // 남은 시간은 매초 바뀐다 — 배너 전체를 알림 영역으로 두면 스크린리더가 매초 끼어들어 읽는다(10분 전부터는
+  // assertive 라 입력도 끊긴다). 배너는 보이기만 하고, 알림은 경고 단계(30·10·5·1분 전)가 바뀔 때만 한다 (T-M5-42)
+  const urgent = deadline.warningMinutes !== null && deadline.warningMinutes <= 10;
+  const warning =
+    !deadline.stale && !deadline.passed && deadline.warningMinutes !== null
+      ? `마감 ${deadline.warningMinutes}분 전입니다. 작성 중인 내용을 먼저 저장해 주십시오.`
+      : '';
+  return (
+    <>
+      <DeadlineBannerView deadline={deadline} urgent={urgent} />
+      <p className="krds-sr-only" role={urgent ? 'alert' : 'status'} aria-live={urgent ? 'assertive' : 'polite'}>
+        {warning}
+      </p>
+    </>
+  );
+}
+
+function DeadlineBannerView({ deadline, urgent }: { deadline: DeadlineView; urgent: boolean }) {
   if (deadline.stale) {
     return (
       <div
-        role="status"
         style={{
           padding: 'var(--krds-space-3)',
           background: 'var(--krds-bg-muted)',
@@ -119,12 +143,9 @@ export function DeadlineBanner({ deadline }: { deadline: DeadlineView }) {
     );
   }
 
-  // 30분 이하부터 경고 톤을 올린다. 색만이 아니라 문구도 바뀐다.
-  const urgent = deadline.warningMinutes !== null && deadline.warningMinutes <= 10;
+  // 10분 이하부터 경고 톤을 올린다. 색만이 아니라 문구도 바뀐다.
   return (
     <div
-      role="status"
-      aria-live={urgent ? 'assertive' : 'polite'}
       style={{
         display: 'flex',
         flexWrap: 'wrap',
@@ -145,7 +166,8 @@ export function DeadlineBanner({ deadline }: { deadline: DeadlineView }) {
         마감 {formatKst(deadline.deadlineAt)} (서버 시각 기준)
       </span>
       {deadline.warningMinutes !== null && (
-        <span style={{ fontWeight: 700 }}>
+        // 같은 문장을 위 알림 영역이 읽는다 — 훑어 읽기에서 두 번 듣지 않게 숨긴다
+        <span aria-hidden="true" style={{ fontWeight: 700 }}>
           {deadline.warningMinutes}분 전입니다. 작성 중인 내용을 먼저 저장해 주십시오.
         </span>
       )}
@@ -169,7 +191,11 @@ export function DeadlineBanner({ deadline }: { deadline: DeadlineView }) {
  * 경고 톤이 아니라 안내 톤이다. 지원자가 잘못한 것도, 할 일이 있는 것도 아니다.
  */
 export function OperatingModeBanner({ view }: { view: OperatingModeView | null }) {
-  if (!view) return null;
+  // 작성 중에 중앙이 끊기면 배너가 나타난다 — 늘 있는 알림 영역 안에 그려야 스크린리더가 알린다 (T-M5-42)
+  return <LiveRegion>{view && <OperatingModeAlert view={view} />}</LiveRegion>;
+}
+
+function OperatingModeAlert({ view }: { view: OperatingModeView }) {
   const autonomous = view.mode === 'AUTONOMOUS';
   if (!autonomous && !view.sync.lagging) return null;
 
@@ -306,7 +332,11 @@ export function SlowNotice({ busy, afterMs = 10_000 }: { busy: boolean; afterMs?
     const t = setTimeout(() => setSlow(true), afterMs);
     return () => clearTimeout(t);
   }, [busy, afterMs]);
-  if (!slow) return null;
+  // 10초 뒤에 나타난다 — 늘 있는 알림 영역 안에 그려야 스크린리더가 알린다 (T-M5-42)
+  return <LiveRegion>{slow && <SlowAlert />}</LiveRegion>;
+}
+
+function SlowAlert() {
   const id = currentRequestId();
   return (
     <Alert tone="info" title="요청 처리 시간이 길어지고 있습니다">

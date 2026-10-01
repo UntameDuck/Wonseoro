@@ -21,6 +21,7 @@ import { Icon, type IconName } from './icon';
 
 export function Button({
   id,
+  describedBy,
   children,
   variant = 'primary',
   type = 'button',
@@ -30,6 +31,8 @@ export function Button({
 }: {
   /** 화면이 동작 뒤 포커스를 돌려줄 때 쓰는 id (T-M5-40) */
   id?: string;
+  /** 스크린리더가 버튼 이름 뒤에 읽을 설명의 id 들 — 같은 이름의 버튼이 여럿일 때 무엇의 버튼인지 (T-M5-42) */
+  describedBy?: string;
   children: ReactNode;
   variant?: 'primary' | 'secondary' | 'danger';
   type?: 'button' | 'submit';
@@ -49,6 +52,7 @@ export function Button({
   return (
     <button
       id={id}
+      aria-describedby={describedBy}
       type={type}
       disabled={disabled}
       onClick={onClick}
@@ -104,7 +108,9 @@ export function Field({
   const id = fixedId ?? generatedId;
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
-  const describedBy = [hint ? hintId : null, error ? errorId : null]
+  const countId = `${id}-count`;
+  // 스크린리더는 칸에서 안내·오류·글자 수를 설명으로 읽는다 (T-M5-42)
+  const describedBy = [hint ? hintId : null, error ? errorId : null, maxLength ? countId : null]
     .filter(Boolean)
     .join(' ');
 
@@ -142,9 +148,11 @@ export function Field({
         }}
       >
         {label}
+        {/* 별표는 눈으로 보는 표시다. 스크린리더는 칸의 required 로 "필수" 를 읽는다 — 이름에 별표·"필수 입력" 을
+            넣으면 "출신 고등학교 별표 필수 입력, 필수" 로 두 번 읽는다 (T-M5-42) */}
         {required && (
-          <span style={{ color: 'var(--krds-danger)', marginLeft: 4 }}>
-            *<span className="krds-sr-only">필수 입력</span>
+          <span aria-hidden="true" style={{ color: 'var(--krds-danger)', marginLeft: 4 }}>
+            *
           </span>
         )}
       </label>
@@ -170,6 +178,7 @@ export function Field({
 
       {maxLength && (
         <p
+          id={countId}
           style={{
             margin: 'var(--krds-space-1) 0 0',
             fontSize: 'var(--krds-text-xs)',
@@ -256,9 +265,11 @@ export function Select({
         }}
       >
         {label}
+        {/* 별표는 눈으로 보는 표시다. 스크린리더는 칸의 required 로 "필수" 를 읽는다 — 이름에 별표·"필수 입력" 을
+            넣으면 "출신 고등학교 별표 필수 입력, 필수" 로 두 번 읽는다 (T-M5-42) */}
         {required && (
-          <span style={{ color: 'var(--krds-danger)', marginLeft: 4 }}>
-            *<span className="krds-sr-only">필수 입력</span>
+          <span aria-hidden="true" style={{ color: 'var(--krds-danger)', marginLeft: 4 }}>
+            *
           </span>
         )}
       </label>
@@ -283,6 +294,7 @@ export function Select({
         disabled={disabled}
         aria-describedby={[hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined}
         aria-invalid={error ? true : undefined}
+        aria-required={required ? true : undefined}
         onChange={(e) => onChange(e.target.value)}
         style={{
           width: '100%',
@@ -421,6 +433,8 @@ export function Alert({
    */
   focusKey?: unknown;
 }) {
+  // 알림 영역(role)은 위험(오류)과 포커스를 받는 결과 안내에만 둔다. 화면에 늘 있는 안내 상자까지 알림 영역이면
+  // 단계를 옮길 때마다 스크린리더가 안내문을 덩달아 읽는다. 나중에 나타나 알려야 하는 안내는 LiveRegion 안에 둔다 (T-M5-42)
   const ref = useRef<HTMLDivElement>(null);
   const focusable = focusKey !== undefined;
   useEffect(() => {
@@ -438,7 +452,7 @@ export function Alert({
   return (
     <div
       ref={ref}
-      role={tone === 'danger' ? 'alert' : 'status'}
+      role={tone === 'danger' ? 'alert' : focusable ? 'status' : undefined}
       {...(focusable ? { tabIndex: -1 } : {})}
       style={{
         margin: 'var(--krds-space-4) 0',
@@ -462,11 +476,25 @@ export function Alert({
   );
 }
 
+/**
+ * 늘 그려 두는 알림 영역 — 안의 글이 바뀌면 스크린리더가 읽는다 (T-M5-42, KWCAG 상태 메시지).
+ * 알림 영역은 알릴 글보다 **먼저** 문서에 있어야 한다. 글과 함께 새로 생긴 알림 영역은 스크린리더가 놓치기 쉽다.
+ * 그래서 나타났다 사라지는 안내(오래 걸리는 요청·업로드 진행·운영 배너)는 이 영역 안에서 바꾼다.
+ */
+export function LiveRegion({ children, assertive }: { children?: ReactNode; assertive?: boolean }) {
+  return (
+    <div role={assertive ? 'alert' : 'status'} aria-live={assertive ? 'assertive' : 'polite'} aria-atomic="true">
+      {children}
+    </div>
+  );
+}
+
 /* ────────────────────────────────────────────────────────────────────── */
 
 export function Card({
   title,
   titleId,
+  titleLevel = 2,
   children,
 }: {
   title?: string;
@@ -475,8 +503,11 @@ export function Card({
    * 누른 버튼이 사라지는 화면 전환에서 포커스가 문서 처음으로 떨어지지 않게 한다.
    */
   titleId?: string;
+  /** 화면의 큰 제목이 이 카드 제목이면 1 — 화면마다 큰 제목(h1)은 하나다 (T-M5-42). 모양은 같다 */
+  titleLevel?: 1 | 2;
   children: ReactNode;
 }) {
+  const Heading = titleLevel === 1 ? 'h1' : 'h2';
   return (
     <section
       {...(titleId && title ? { 'aria-labelledby': titleId } : {})}
@@ -489,12 +520,12 @@ export function Card({
       }}
     >
       {title && (
-        <h2
+        <Heading
           {...(titleId ? { id: titleId, tabIndex: -1 } : {})}
           style={{ margin: '0 0 var(--krds-space-4)', fontSize: 'var(--krds-text-xl)' }}
         >
           {title}
-        </h2>
+        </Heading>
       )}
       {children}
     </section>

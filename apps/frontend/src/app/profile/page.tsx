@@ -133,7 +133,7 @@ export default function ProfilePage() {
   if (subjectToken === null) return <p role="status">불러오는 중…</p>;
   if (!subjectToken) {
     return (
-      <Card title="본인확인이 필요합니다">
+      <Card title="본인확인이 필요합니다" titleLevel={1}>
         <p style={{ marginTop: 0 }}>공통원서를 작성하려면 접수 홈에서 먼저 본인확인을 해 주십시오.</p>
         <a href="/" style={{ color: 'var(--krds-primary)' }}>
           접수 홈으로
@@ -152,7 +152,8 @@ export default function ProfilePage() {
         원서는 바뀌지 않습니다.
       </Alert>
 
-      {status && <Alert tone={status.tone} title={status.text} />}
+      {/* 저장 결과로 포커스를 옮긴다 — 스크린리더가 결과를 읽고, 저장 버튼이 처리 중 비활성이 되며 포커스가 떨어지지 않게 */}
+      {status && <Alert tone={status.tone} title={status.text} focusKey={status} />}
       <ErrorSummary key={saveRun} issues={issues} />
 
       <Card title="기본 정보">

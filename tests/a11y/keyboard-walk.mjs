@@ -21,6 +21,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { BROWSERS, focusInfo, launch, press, selectAll, sleep, typeText } from './helpers/browser.mjs';
 import { samplePdf } from './helpers/sample.mjs';
+import { axAudit, axFocused } from './helpers/ax.mjs';
 
 const arg = (name, def) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split('=')[1] ?? def;
 const WIDTH = Number(arg('width', '1280'));
@@ -61,7 +62,19 @@ async function screen(name, readyText) {
   current = { name, url: await b.evaluate('location.pathname'), stops: [], horizontalScroll: false };
   screens.push(current);
   await checkOverflow();
+  // 스크린리더 재료 — 이름 없는 칸·오류 설명·단계·큰 제목·카운트다운 알림 (T-M5-42)
+  const ax = await axAudit(b);
+  for (const x of ax.problems) problem(`스크린리더: ${x}`);
+  current.title = ax.title;
   console.log(`▶ ${name}`);
+}
+
+/** 오류 링크로 간 칸 — 스크린리더가 "올바르지 않음" 과 오류 문장을 읽어야 한다 (T-M5-42) */
+async function expectErrorSpoken(message) {
+  const say = await axFocused(b);
+  if (!say?.states.includes('올바르지 않음')) problem(`오류 칸을 "올바르지 않음" 으로 알리지 않는다 — ${say?.text}`);
+  if (!say?.description.includes(message)) problem(`오류 칸의 설명에 오류 문장이 없다 — ${say?.text}`);
+  return say;
 }
 
 /** 가로 스크롤 — 문서 폭이 화면보다 넓으면 좁은 화면·확대에서 옆으로 밀어야 읽힌다 (KWCAG 1.4.10 재배치) */
@@ -187,6 +200,7 @@ async function walk() {
   const link = await tabTo('오류 요약의 항목', (i) => i.tag === 'A', { max: 3 });
   await activate();
   await expectFocus(`오류 요약 "${link.name}" → 칸`, onId('field-contactEmail'));
+  await expectErrorSpoken(link.name);
   await selectAll(b);
   await typeText(b, 'applicant@example.com');
   await tabTo('저장', named('저장', { tag: 'BUTTON' }));
@@ -251,6 +265,7 @@ async function walk() {
   const issue = await tabTo('오류 요약의 항목', (i) => i.tag === 'A', { max: 3 });
   await activate();
   await expectFocus(`오류 요약 "${issue.name}" → 3단계 칸`, onId('field-selfIntro'));
+  await expectErrorSpoken(issue.name);
   await typeText(b, '공공 서비스의 장애 대응에 관심이 있어 분산 시스템을 공부하고 있습니다.');
   await tabTo('다음 단계', named('다음 단계', { tag: 'BUTTON' }));
   await activate();
@@ -297,7 +312,7 @@ try {
 }
 
 const result = {
-  test: 'T-M5-40 키보드 전용 접수 완주',
+  test: 'T-M5-40 키보드 전용 접수 완주 (+ T-M5-41 포커스 · T-M5-42 스크린리더 재료 · T-M5-43/44 가로 스크롤)',
   environment: '축소 환경 — 로컬 전용 DB(ui-shots-pg)·개발 서버(next dev)·Mock PG·Mock 검사 엔진',
   browser: b.browser,
   viewport: { width: WIDTH, height: HEIGHT },

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { ApiError, NetworkError, api, newIdempotencyKey } from '../lib/api';
-import { Alert, Button, Icon } from '@wonseoro/krds';
+import { Alert, Button, Icon, LiveRegion } from '@wonseoro/krds';
 import { UPLOAD_FORMATS, problemText, uploadLimitText } from '@wonseoro/contracts';
 
 export interface UploadedDocument {
@@ -47,6 +47,8 @@ export function FileUpload({
   onUploaded: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const labelId = `upload-${documentType}-label`;
+  const limitId = `upload-${documentType}-limit`;
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
   const [filename, setFilename] = useState<string | null>(null);
 
@@ -126,8 +128,9 @@ export function FileUpload({
         marginBottom: 'var(--krds-space-4)',
       }}
     >
-      <p style={{ margin: '0 0 var(--krds-space-2)', fontWeight: 700 }}>{label}</p>
+      <p id={labelId} style={{ margin: '0 0 var(--krds-space-2)', fontWeight: 700 }}>{label}</p>
       <p
+        id={limitId}
         style={{
           margin: '0 0 var(--krds-space-3)',
           fontSize: 'var(--krds-text-sm)',
@@ -150,12 +153,16 @@ export function FileUpload({
         aria-hidden="true"
         tabIndex={-1}
       />
-      <Button variant="secondary" onClick={() => inputRef.current?.click()}>
+      {/* 서류가 여럿이면 "파일 선택" 버튼이 여럿이다 — 어느 서류의 버튼인지 설명으로 읽는다 (T-M5-42) */}
+      <Button variant="secondary" onClick={() => inputRef.current?.click()} describedBy={`${labelId} ${limitId}`}>
         파일 선택
       </Button>
 
+      {/* 업로드 중·완료·검사 중·실패가 바뀔 때마다 읽는다 — 영역은 늘 있고 글만 바뀐다 (T-M5-42) */}
       <div style={{ marginTop: 'var(--krds-space-3)' }}>
-        <PhaseText phase={phase} filename={filename} scan={scan} />
+        <LiveRegion>
+          <PhaseText phase={phase} filename={filename} scan={scan} />
+        </LiveRegion>
       </div>
     </div>
   );
@@ -178,10 +185,7 @@ function PhaseText({ phase, filename, scan }: { phase: Phase; filename: string |
   }
   if (phase.kind === 'failed') {
     return (
-      <p
-        role="alert"
-        style={{ margin: 0, color: 'var(--krds-danger)', fontWeight: 700, fontSize: 'var(--krds-text-sm)' }}
-      >
+      <p style={{ margin: 0, color: 'var(--krds-danger)', fontWeight: 700, fontSize: 'var(--krds-text-sm)' }}>
         <Icon name="cross" />
         {name}
         {phase.reason}
@@ -202,7 +206,6 @@ function PhaseText({ phase, filename, scan }: { phase: Phase; filename: string |
 
   return (
     <p
-      role="status"
       style={{
         margin: 0,
         fontSize: 'var(--krds-text-sm)',

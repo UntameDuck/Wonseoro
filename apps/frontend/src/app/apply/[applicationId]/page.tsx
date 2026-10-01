@@ -392,21 +392,25 @@ export default function ApplyPage({
 
   if (failure) {
     return (
-      <FailureNotice
-        title={failure.title}
-        {...(failure.detail ? { detail: failure.detail } : {})}
-        {...(failure.traceId ? { traceId: failure.traceId } : {})}
-        lastSavedAt={app?.lastSavedAt ?? null}
-        savedHere={lastSavedHere(applicationId)}
-        serverState={selfCheck?.application.summary ?? null}
-        onRecheck={() => void recheck()}
-      />
+      <>
+        {/* 화면마다 큰 제목은 하나 — 장애 안내만 남아도 어느 화면인지 말한다 (T-M5-42) */}
+        <h1 style={{ fontSize: 'var(--krds-text-2xl)', marginTop: 0 }}>원서 작성</h1>
+        <FailureNotice
+          title={failure.title}
+          {...(failure.detail ? { detail: failure.detail } : {})}
+          {...(failure.traceId ? { traceId: failure.traceId } : {})}
+          lastSavedAt={app?.lastSavedAt ?? null}
+          savedHere={lastSavedHere(applicationId)}
+          serverState={selfCheck?.application.summary ?? null}
+          onRecheck={() => void recheck()}
+        />
+      </>
     );
   }
 
   if (app?.status === 'CANCELLED') {
     return (
-      <Card title="취소된 원서입니다" titleId={CANCELLED_TITLE_ID}>
+      <Card title="취소된 원서입니다" titleId={CANCELLED_TITLE_ID} titleLevel={1}>
         {notice && <Alert tone={notice.tone} title={notice.title}>{notice.body}</Alert>}
         <p style={{ marginTop: 0 }}>
           이 원서는 접수 전에 취소되었습니다. 같은 전형에 다시 지원하려면 접수 홈에서 새 원서를 만드십시오.
@@ -457,7 +461,7 @@ export default function ApplyPage({
       <StepIndicator current={step} completed={completedSteps} />
       <ErrorSummary key={validationRun} issues={issues} onSelect={selectIssue} />
       <SlowNotice busy={busy} />
-      {notice && <Alert tone={notice.tone} title={notice.title}>{notice.body}</Alert>}
+      {notice && <Alert tone={notice.tone} title={notice.title} focusKey={notice}>{notice.body}</Alert>}
 
       {step === 1 && (
         <Card title="1. 공통정보" titleId={STEP_TITLE_ID}>

@@ -51,15 +51,19 @@ export default function ReceiptPage({ params }: { params: Promise<{ submissionId
 
   if (error) {
     return (
-      <Alert tone="danger" title="접수증을 보여 드릴 수 없습니다">
-        {error}
-      </Alert>
+      <>
+        <h1 style={{ fontSize: 'var(--krds-text-2xl)', marginTop: 0 }}>원서 접수증</h1>
+        <Alert tone="danger" title="접수증을 보여 드릴 수 없습니다">
+          {error}
+        </Alert>
+      </>
     );
   }
   if (!receipt) return <p role="status">접수증을 불러오는 중…</p>;
 
   return (
-    <Card title="원서 접수증">
+    // 화면의 큰 제목(h1)은 접수증 제목이다 — 모양은 그대로 (T-M5-42)
+    <Card title="원서 접수증" titleLevel={1}>
       <DescriptionList
         items={[
           ['대학·모집', university ?? '-'],
