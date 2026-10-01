@@ -50,7 +50,7 @@
 | T-M5-25 | 6. IaC/K8s Manifest Scan ✅ 2026-10-02 | 정책 위반 0 |
 | T-M5-26 | 7. Unit/Integration Security Test ✅ 2026-10-02 | 통과 |
 | T-M5-27 | 8. DAST/Staging Scan ✅ 2026-10-02 | High 0 |
-| T-M5-28 | 9. Image Signing | 전 이미지 서명 |
+| T-M5-28 | 9. Image Signing 🟡 2026-10-02 | 전 이미지 서명 |
 | T-M5-29 | 10. Admission Controller | **미서명 이미지 배포 거부 실증** |
 
 > **T-M5-20·22 완료 (2026-10-02)** — `.github/workflows/security.yml`에 Gitleaks 8.30.1 Git 전체 이력 검사와 운영 의존성 SCA를 추가했다.
@@ -78,6 +78,11 @@
 > 검사했다. 첫 스캔이 찾은 잘못된 UUID·정수 쿼리의 500, `/meta/time` 무인자 500, `nosniff` 누락을 고쳤다.
 > 같은 조건 재실행은 로컬·원격 모두 **WARN 0·High 0·PASS 118**이다. JSON 보고서의 실제 site와 High 수를 별도 판정하며
 > HTML·JSON 보고서를 CI 산출물로 14일 보관한다(Actions run 36902632192·36902632233).
+
+> **T-M5-28 착수 (2026-10-02)** — Security 워크플로에 릴리스/수동 이미지 발행 잡을 추가했다. 운영 이미지 5종을
+> GHCR에 발행하고 태그가 아닌 registry digest를 Cosign 3.0.6 GitHub OIDC 신원으로 서명한다. 같은 잡이 정확한
+> `security.yml@<git ref>` 신원과 GitHub OIDC 발급자를 검증하고 이미지별 reference·검증 JSON을 90일 보관한다.
+> 실제 원격 실행 전이라 🟡이다.
 
 ### 접근성 (권민준) — v1.0 §12.4 / §07
 

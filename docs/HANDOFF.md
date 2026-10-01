@@ -32,7 +32,8 @@
 - **T-M5-24·25 ✅ (2026-10-02)** — Trivy 0.75.0으로 서비스 4종·PgBouncer 실제 이미지 Critical 0, Helm·Kubernetes·Dockerfile 설정 파일 19개 High/Critical 0을 로컬과 원격 matrix에서 확인했다(Actions run 36890582638). `KSV-0056`은 namespace 한정 release-controller의 서명된 Helm 동기화에 필요한 권한만 파일 네 곳·2027-01-31 만료로 허용했다. 세부는 [11-security-pipeline.md](11-security-pipeline.md)
 - **T-M5-26 ✅ (2026-10-02)** — 실 PostgreSQL의 대학·중앙 DB를 사용해 권한·감사 체인·결제 콜백·입력 방어·재전송·개인정보 최소화 등 선별 보안 시험 123개를 별도 게이트로 실행한다. 로컬·원격 123개 통과·건너뜀 0이다(Actions run 36898652054). DB 미연결로 통합시험이 skip되어도 게이트가 실패한다
 - **T-M5-27 ✅ (2026-10-02)** — ZAP 2.17.0 고정 digest로 OpenAPI 81개 URL을 실제 대학 API·PostgreSQL에 active scan했다. 첫 실행에서 잘못된 `cycleId`·`limit`가 DB까지 내려가 500이 되는 문제, `/meta/time` 무인자 500, `nosniff` 누락을 찾아 고쳤다. 같은 조건 재실행은 로컬·원격 모두 **WARN 0·High 0·PASS 118**이다(Actions run 36902632192·36902632233). 로컬 보고서는 `E:\DockerData\tools\zap-2.17.0\reports`에 있다
-- **바로 다음 할 일**: **T-M5-28·29**(이미지 서명·Admission Controller) → 인증(로컬 OIDC — 세션 만료·위험 차단 해제도 함께, ADR-0009) → 보안 통제 → …
+- **T-M5-28 착수 (2026-10-02, 🟡)** — 릴리스/수동 실행이 운영 이미지 5종을 GHCR에 발행하고 registry digest를 Cosign 3.0.6 GitHub OIDC 신원으로 키리스 서명한다. 같은 잡이 정확한 워크플로 신원과 OIDC 발급자로 즉시 검증하고 이미지별 증적을 90일 보관한다. 실제 수동 원격 실행 전이다
+- **바로 다음 할 일**: T-M5-28 원격 실행 확인 → **T-M5-29 Admission Controller** → 인증(로컬 OIDC — 세션 만료·위험 차단 해제도 함께, ADR-0009) → 보안 통제 → …
 
 ## 2. 반드시 지킬 규칙
 

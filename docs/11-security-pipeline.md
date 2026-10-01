@@ -14,7 +14,7 @@
 | T-M5-25 IaC/K8s Manifest Scan | ✅ | 로컬·원격 Helm·Kubernetes·Dockerfile 19개 High/Critical 0 |
 | T-M5-26 Security Test | ✅ | 로컬·원격 실 PostgreSQL 선별 시험 123개 통과·건너뜀 0 |
 | T-M5-27 DAST | ✅ | 로컬·원격 ZAP OpenAPI active scan WARN 0·High 0·PASS 118 |
-| T-M5-28 Image Signing | ⬜ | 다음 작업 |
+| T-M5-28 Image Signing | 🟡 | 5개 이미지 digest 키리스 서명·검증 워크플로 구현, 실제 실행 전 |
 | T-M5-29 Admission Controller | ⬜ | 다음 작업 |
 
 ## 2. T-M5-24 이미지 검사
@@ -87,7 +87,17 @@ DB 앞 쿼리 형식 차단, 현재 열린 모집 선택, 전 응답 `nosniff`�
 `E:\DockerData\tools\zap-2.17.0\reports\zap-report.{json,html}`에 있다. JSON에는 공격 요청에 대한 4xx와
 캐시 정책을 설명하는 Informational 3종만 남았다.
 
-## 6. 다음 순서
+## 6. T-M5-28 이미지 서명
 
-1. T-M5-28: 키 없는 OIDC 서명으로 모든 릴리스 이미지 서명·검증
+`release.published`와 명시적인 수동 실행에서 admission-api·event-relay·document-service·central-api·PgBouncer
+5개 이미지를 GHCR에 발행한다. 태그를 배포 신뢰 기준으로 쓰지 않고 registry가 돌려준 digest 참조를 Cosign 3.0.6으로
+서명한다. 장기 개인키를 저장하지 않고 GitHub Actions OIDC의 단기 신원으로 서명하며, 같은 잡에서 발급자
+`https://token.actions.githubusercontent.com`와 정확한 `security.yml@<git ref>` 신원을 다시 검증한다.
+이미지별 reference와 검증 JSON은 90일 산출물로 남는다. Sigstore Policy Controller의 일반 이미지 서명 검증과
+호환되도록 legacy OCI 서명 형식을 명시했다. 워크플로 불변조건 검사는 5종 누락, tag 서명, 느슨한 신원,
+이동 가능한 Action 참조가 생기면 실패한다. 실제 수동 원격 실행 전이라 🟡이다.
+
+## 7. 다음 순서
+
+1. T-M5-28 수동 원격 실행으로 5개 이미지 서명·검증 증적 확보
 2. T-M5-29: 정책 엔진에서 미서명 이미지는 거부하고 서명 이미지만 허용하는 실증
