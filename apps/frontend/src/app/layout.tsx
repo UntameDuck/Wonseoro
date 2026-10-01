@@ -78,10 +78,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             color: 'var(--krds-fg-muted)',
           }}
         >
-          <p style={{ margin: 0 }}>
-            최종 접수 여부는 각 대학 서버가 원본으로 관리합니다. 통합 조회 화면의 반영이
-            지연되어도 접수 자체는 유효합니다.
-          </p>
+          {/* 설계 설명("원본은 대학 서버")을 두지 않는다. 운영기관·문의처·개인정보처리방침은 대학 설정에 값이
+              생기면 여기 둔다 — 지어낸 연락처를 넣지 않는다 (T-M5-50, 08 결정 12) */}
+          <p style={{ margin: 0 }}>원서로 · 대학입학 원서접수</p>
         </footer>
       </body>
     </html>

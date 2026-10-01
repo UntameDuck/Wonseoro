@@ -126,12 +126,6 @@ export default function Home() {
     <>
       <h1 style={{ fontSize: 'var(--krds-text-2xl)', marginTop: 0 }}>원서접수</h1>
 
-      <Alert tone="info" title="이 서비스의 구조">
-        공통원서·대학검색·내 원서는 중앙에서 제공하지만, 작성·서류·결제·최종접수는{' '}
-        <strong>각 대학 서버에서 처리</strong>합니다. 중앙에 장애가 생겨도 이미 시작한 대학 접수는
-        계속 진행됩니다.
-      </Alert>
-
       <OperatingModeBanner view={operatingMode} />
 
       {loading && <Card title="모집 정보를 불러오는 중입니다">잠시만 기다려 주십시오.</Card>}

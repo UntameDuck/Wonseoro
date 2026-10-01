@@ -45,9 +45,11 @@ export interface RetentionCategory {
   personal: boolean;
 }
 
+// basis 는 콘솔 보존기간 화면에 그대로 보인다 — 법령·규정 이름만 쓰고 설계 문서 번호는 주석에 둔다(T-M5-50).
+// 대학 결정 항목의 설계 근거: v1.0 §9
 const INSTITUTION = {
   kind: 'INSTITUTION',
-  basis: 'v1.0 §9 — 각 대학 개인정보처리방침·입시업무 규정',
+  basis: '각 대학 개인정보처리방침·입시업무 규정',
 } as const;
 
 export const RETENTION_CATEGORIES = {
@@ -108,23 +110,26 @@ export const RETENTION_CATEGORIES = {
     floor: {
       kind: 'LEGAL',
       days: 730,
-      basis: '개인정보의 안전성 확보조치 기준 제8조 — 2년 이상 (v1.0 §2.2)',
+      // 설계 근거: v1.0 §2.2
+      basis: '개인정보의 안전성 확보조치 기준 제8조 — 2년 이상',
     },
     // 감사 체인 안에 있다. 기간이 지나도 체인에서 빼면 체인이 끊긴다. WORM 이관 뒤에 다룬다.
     purge: 'NONE',
     personal: false,
   },
   AUDIT_EVENT: {
-    label: '감사 이벤트 (hash-chain)',
+    label: '감사 기록 (위변조 검출 체인)',
     anchor: 'EVENT_TIME',
-    floor: { kind: 'IMMUTABLE', basis: 'v1.0 §9 — 운영자에게 삭제·수정 권한 없음, WORM' },
+    // 설계 근거: v1.0 §9 — 운영자에게 삭제·수정 권한 없음, WORM
+    floor: { kind: 'IMMUTABLE', basis: '접수 분쟁의 증거 — 운영자도 지우거나 고칠 수 없다' },
     purge: 'NONE',
     personal: false,
   },
   ACTIVATION_RECORD: {
     label: '마감·설정 적용 기록 (서명)',
     anchor: 'EVENT_TIME',
-    floor: { kind: 'IMMUTABLE', basis: 'v1.1 §B17 — 불변 기록 (D-35)' },
+    // 설계 근거: v1.1 §B17 불변 기록 (D-35)
+    floor: { kind: 'IMMUTABLE', basis: '마감·설정 변경의 증거 — 고칠 수 없는 서명 기록' },
     purge: 'NONE',
     personal: false,
   },

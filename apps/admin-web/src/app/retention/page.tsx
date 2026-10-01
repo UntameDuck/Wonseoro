@@ -34,7 +34,8 @@ const STATUS_LABEL: Record<PlanItem['status'], string> = {
   UNSET: '미설정 — 파기 대상 아님',
   RETAINED: '보존 중',
   DUE: '파기 대상',
-  DUE_BUT_CHAINED: '기간 지남 — 감사 체인이라 보관(WORM 이관 뒤 처리)',
+  // 감사 체인에서 빼면 체인이 끊긴다 — WORM 이관(T-M3-03) 뒤에 처리한다
+  DUE_BUT_CHAINED: '기간 지남 — 감사 기록과 묶여 있어 보관 중',
   IMMUTABLE: '기간을 정할 수 없는 기록',
 };
 

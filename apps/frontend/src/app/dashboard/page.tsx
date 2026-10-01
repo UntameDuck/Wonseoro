@@ -90,7 +90,7 @@ export default function DashboardPage() {
       ) : (
         <>
           <p style={{ fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)' }}>
-            중앙 조회 기준 시각: {formatKst(serverTime)}
+            조회 시각: {formatKst(serverTime)}
           </p>
           {rows.map((r) => (
             <Card key={`${r.universityId}-${r.applicationNumber}`}>

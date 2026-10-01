@@ -1,42 +1,111 @@
-import { Card } from '@wonseoro/krds';
+'use client';
+
+import { Alert, Card, DescriptionList } from '@wonseoro/krds';
+import { useEffect, useState, type ReactNode } from 'react';
+import { NeedsCycle } from '../components/console';
+import { adminGet, describe, kst } from '../lib/api';
 
 /**
- * 콘솔 첫 화면. 무엇을 하는 곳인지와 **하지 않는 것**을 먼저 말한다.
- * 운영자가 이 콘솔로 할 수 없는 일을 할 수 있다고 믿으면, 그 믿음이 사고가 된다.
+ * 콘솔 첫 화면 — 지금 처리할 일. (T-M5-50)
+ *
+ * 전에는 "이 콘솔에서 하는 일 / 하지 않는 일" 설명문이었다. 그 원칙(2인 승인·사유 기록·결정 문서번호)은
+ * 각 화면이 버튼 옆에 이유로 말하고, 전체 설명은 운영 안내(apps/admin-web/README.md)로 옮겼다.
+ * 담당자가 콘솔을 열면 먼저 알아야 하는 것은 기다리는 승인과 풀리지 않은 불일치다 — 기존 조회 API 로 센다.
  */
 export default function Home() {
   return (
     <>
       <h1 style={{ fontSize: 'var(--krds-text-2xl)', marginTop: 0 }}>입학처 콘솔</h1>
-      <Card title="이 콘솔에서 하는 일">
+      <NeedsCycle>{(cycle) => <Today cycleId={cycle.id} />}</NeedsCycle>
+      <Card title="메뉴">
         <ul style={{ margin: 0, paddingLeft: '1.2em', lineHeight: 1.8 }}>
           <li>
-            <a href="/config">설정 승인</a> — 전형 양식·서류·보존정책 변경 초안을 만들고,{' '}
-            <strong>무엇이 바뀌는지 확인하고</strong> 두 명이 승인합니다. 깨진 양식은 초안 단계에서 거절됩니다
+            <a href="/config">설정 승인</a> — 전형 양식·서류·보존기간 변경 초안 검토·승인·적용
           </li>
           <li>
-            <a href="/deadline">마감 · 연장</a> — 입학처 결정에 따른 마감 연장을 기록하고 적용합니다.
-            적용 기록은 서명되어 고칠 수 없습니다
+            <a href="/deadline">마감 · 연장</a> — 입학처 결정에 따른 마감 연장 기록·승인·적용
           </li>
           <li>
-            <a href="/reconciliation">대조 · 예외</a> — 결제·접수·중앙 반영이 어긋난 건만 모아 보고,
-            사유와 함께 해소합니다
+            <a href="/reconciliation">대조 · 예외</a> — 결제·접수·통합 조회 반영이 어긋난 건 해소
           </li>
           <li>
-            <a href="/evidence">증적 조회</a> — 한 원서의 접수 과정을 재구성합니다. 조회 사실이 기록됩니다
+            <a href="/evidence">증적 조회</a> — 한 원서의 접수 과정 확인 (조회 사실이 기록됩니다)
           </li>
           <li>
-            <a href="/retention">보존기간</a> — 데이터 종류별 파기 계획을 봅니다. 아무것도 지우지 않습니다
+            <a href="/retention">보존기간</a> — 데이터 종류별 파기 계획 확인
           </li>
-        </ul>
-      </Card>
-      <Card title="이 콘솔이 하지 않는 일">
-        <ul style={{ margin: 0, paddingLeft: '1.2em', lineHeight: 1.8 }}>
-          <li>혼자서 마감시각·설정을 바꾸는 것 — 작성자가 아닌 두 명의 승인이 필요합니다</li>
-          <li>데이터를 직접 고치는 것 — 모든 보정은 사유와 함께 기록됩니다</li>
-          <li>마감 연장을 결정하는 것 — 입학처 결정 문서번호 없이는 연장을 만들 수 없습니다</li>
         </ul>
       </Card>
     </>
+  );
+}
+
+interface Summary {
+  pendingConfigs: number;
+  pendingPolicies: number;
+  openExceptions: number;
+  deadlineAt: string | null;
+}
+
+function Today({ cycleId }: { cycleId: string }) {
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const [configs, policies, exceptions] = await Promise.all([
+          adminGet<{ versions: Array<{ status: string }> }>('config/versions', { cycleId }),
+          adminGet<{ policies: Array<{ activatedAt: string | null; deadlineAt: string }> }>('deadline-policies', { cycleId }),
+          adminGet<{ exceptions: unknown[] }>('reconciliation/exceptions', { state: 'OPEN' }),
+        ]);
+        const now = Date.now();
+        const current = policies.policies
+          .filter((p) => p.activatedAt && Date.parse(p.activatedAt) <= now)
+          .sort((a, b) => Date.parse(b.activatedAt!) - Date.parse(a.activatedAt!))[0];
+        setSummary({
+          pendingConfigs: configs.versions.filter((v) => v.status === 'DRAFT' || v.status === 'APPROVED').length,
+          pendingPolicies: policies.policies.filter((p) => !p.activatedAt).length,
+          openExceptions: exceptions.exceptions.length,
+          deadlineAt: current?.deadlineAt ?? null,
+        });
+        setError(null);
+      } catch (err) {
+        setError(describe(err));
+      }
+    })();
+  }, [cycleId]);
+
+  if (error) return <Alert tone="danger" title={`업무 현황을 불러오지 못했습니다. ${error}`} />;
+  if (!summary) {
+    return (
+      <Card title="지금 처리할 일">
+        <p role="status" style={{ margin: 0 }}>
+          불러오는 중…
+        </p>
+      </Card>
+    );
+  }
+
+  const count = (n: number, href: string, label: string): ReactNode =>
+    n === 0 ? (
+      <span>없음</span>
+    ) : (
+      <a href={href}>
+        <strong>{n}건</strong> — {label}
+      </a>
+    );
+
+  return (
+    <Card title="지금 처리할 일">
+      <DescriptionList
+        items={[
+          ['승인 대기 설정', count(summary.pendingConfigs, '/config', '검토·승인하기')],
+          ['승인 대기 마감 정책', count(summary.pendingPolicies, '/deadline', '검토·승인하기')],
+          ['미해결 불일치', count(summary.openExceptions, '/reconciliation', '확인·해소하기')],
+          ['지금 적용 중인 마감', summary.deadlineAt ? kst(summary.deadlineAt) : '적용된 마감 정책 없음'],
+        ]}
+      />
+    </Card>
   );
 }

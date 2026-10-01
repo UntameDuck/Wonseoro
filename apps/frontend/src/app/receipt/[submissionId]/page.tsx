@@ -19,6 +19,7 @@ export default function ReceiptPage({ params }: { params: Promise<{ submissionId
   const applicantId = typeof window !== 'undefined' ? (loadSession()?.applicantId ?? '') : '';
   const [receipt, setReceipt] = useState<{ applicationNumber: string; finalizedAt: string } | null>(null);
   const [university, setUniversity] = useState<string | null>(null);
+  const [universityName, setUniversityName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -36,6 +37,7 @@ export default function ReceiptPage({ params }: { params: Promise<{ submissionId
         );
       }
       const cycle = await api.currentCycle().catch(() => null);
+      if (cycle?.data.universityName) setUniversityName(cycle.data.universityName);
       if (cycle) setUniversity(`${cycle.data.universityName ?? cycle.data.universityId} · ${cycle.data.admissionYear}학년도 ${cycle.data.name}`);
     })();
   }, [submissionId, applicantId]);
@@ -65,7 +67,8 @@ export default function ReceiptPage({ params }: { params: Promise<{ submissionId
         ]}
       />
       <p style={{ fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)' }}>
-        접수 여부의 원본은 대학 서버입니다. 통합 조회 화면의 반영이 늦어도 이 접수는 유효합니다.
+        {universityName ? `${universityName} 입학처` : '대학 입학처'}가 발급한 접수증입니다. 접수 내용은 이 입학처에
+        문의해 주십시오.
       </p>
       <Button onClick={() => window.print()}>인쇄</Button>
     </Card>

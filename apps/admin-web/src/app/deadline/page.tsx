@@ -94,7 +94,7 @@ function DeadlineConsole({ cycleId }: { cycleId: string }) {
           </p>
         ) : (
           <Alert tone="warning" title="적용 중인 마감 정책이 없습니다">
-            마감 판정이 거부되고 있거나, 개발용 환경변수 정책으로 판정 중입니다.
+            승인·적용된 마감 정책이 있어야 접수 마감을 판정할 수 있습니다. 마감 정책을 만들어 두 명의 승인을 받아 적용해 주십시오.
           </Alert>
         )}
       </Card>
@@ -183,7 +183,7 @@ function ExtensionForm({
     <Card title="마감 연장 초안 만들기">
       <p style={{ marginTop: 0, fontSize: 'var(--krds-text-sm)' }}>
         현재 마감 <strong>{kst(current.deadlineAt)}</strong> ({current.version}) 을 기준으로 연장합니다.
-        판정 방식은 그대로 물려받습니다. 마감 임박 잠금에는 걸리지 않습니다.
+        마감을 판정하는 방식은 지금 정책과 같습니다. 마감 직전에도 연장할 수 있습니다.
       </p>
       {message && <Alert tone={message.tone} title={message.text} />}
       <Field

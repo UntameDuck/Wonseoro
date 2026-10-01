@@ -381,8 +381,8 @@ function VersionReview({
         <div style={{ marginTop: 'var(--krds-space-5)' }}>
           <h3>이 설정으로 되돌리기</h3>
           <p style={{ fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)' }}>
-            전에 두 명의 승인을 받아 적용된 적이 있는 설정입니다. 새 승인 없이 되돌릴 수 있지만
-            사유가 서명된 기록에 남습니다. 마감 임박 잠금에도 걸리지 않습니다 — 복구는 막지 않습니다.
+            전에 두 명의 승인을 받아 적용된 적이 있는 설정입니다. 새 승인 없이, 마감 직전에도 되돌릴 수
+            있습니다. 되돌린 사유는 서명된 기록에 남습니다.
           </p>
           <Field label="되돌리는 사유" value={reason} onChange={setReason} required multiline maxLength={500} />
           <Button

@@ -123,6 +123,8 @@ jobs:
       - run: npm run build -w @wonseoro/contracts
       # 지원자 웹·운영 콘솔·KRDS 공용 컴포넌트 — 전에는 지원자 웹만 검사했다
       - run: npm run typecheck -w @wonseoro/krds -w @wonseoro/frontend -w @wonseoro/admin-web
+      # 화면 문구 — 설계 문서 번호·개발 안내·구조 설명이 화면에 나가지 않게 (T-M5-50)
+      - run: npm run check:ui-copy
 
   # M5에서 활성화 — 기술설계서 v1.0 §8.4 CI/CD Security Gate 10종
   # security:

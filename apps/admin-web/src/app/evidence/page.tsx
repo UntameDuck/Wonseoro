@@ -122,14 +122,13 @@ function EvidenceView({ pkg }: { pkg: EvidencePackage }) {
       {pkg.submission && !pkg.deadlinePolicy && (
         <Alert tone="danger" title="마감 판정에 쓰인 정책을 찾을 수 없습니다">
           접수 기록의 정책 버전({pkg.submission.deadlinePolicyVersion})이 마감 정책 이력에 없습니다.
-          개발용 환경변수 정책으로 판정된 접수로 보입니다. &ldquo;어떤 마감으로 판정했는가&rdquo; 에
-          답할 수 없으므로 분쟁 증거로 쓸 수 없습니다.
+          &ldquo;어떤 마감으로 판정했는가&rdquo; 에 답할 수 없으므로 분쟁 증거로 쓸 수 없습니다.
         </Alert>
       )}
       {pkg.deadlinePolicy && !signed && (
         <Alert tone="warning" title="적용된 마감 정책의 서명 기록이 없습니다">
-          서명 기록이 도입되기 전에 적용된 정책이거나 개발용 정책입니다. 승인자는 있지만 &ldquo;누가 적용했는가&rdquo;
-          와 &ldquo;그 뒤로 바뀌지 않았는가&rdquo; 는 증명하지 못합니다.
+          승인자는 기록되어 있지만 &ldquo;누가 적용했는가&rdquo; 와 &ldquo;그 뒤로 바뀌지 않았는가&rdquo; 는
+          증명하지 못합니다.
         </Alert>
       )}
       {signed && !policyTrusted && (
