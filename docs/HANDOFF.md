@@ -30,7 +30,8 @@
 - **접근성 T-M5-40~46 ✅·47 🟡 (2026-10-01)** — [09-accessibility.md](09-accessibility.md). 시험 `tests/a11y/`(설치 없이 Chrome·Edge 를 DevTools 프로토콜로 — 키보드 완주·전 화면 포커스·스크린리더 재료·200%·320px·세션 만료·한도 해제·휴대전화 터치). 고친 것: 화면 전환 뒤 포커스 유실(단계 제목·오류 요약·결과 안내로), **마감 카운트다운을 매초 읽던 알림 영역**, 필수 표시 이중 낭독, 늘 있는 안내 상자까지 알림 영역이던 것(`LiveRegion` 으로 정리), 큰 제목 없는 화면, 콘솔 표의 320 가로 스크롤(`TableScroll`), 24px 미만 누르는 대상. **새로 둔 것**: 지원자 세션 만료(무활동 30분·5분 전 경고·경고/만료 순간 즉시 저장 — `lib/session.ts` 한 곳, 본인확인이 붙으면 거기만 바꾼다), 429 한도 안내(`RateLimitNotice` — 전에는 화면 전체를 장애 안내로 바꾸며 "자동으로 다시 시도" 라고 했지만 다시 보내지 않았다), **퍼즐형 CAPTCHA 를 두지 않는다(ADR-0009)**, 지원 브라우저 `browserslist`(Chrome·Edge 92+·Firefox 98+·Safari 15.4+). 47 의 실물 Firefox·Safari 는 사람(또는 시험용 브라우저 내려받기 승인)
 - **보안 파이프라인 T-M5-20~23 ✅ (2026-10-02)** — `.github/workflows/security.yml`의 세 병렬 잡이 원격에서 통과했다(Actions run 36887597976). Gitleaks 8.30.1 전체 이력 실제 비밀 0건, CodeQL `security-extended` Critical 0, 운영 의존성 Critical 0·High 2·Moderate 2, SPDX 2.3 SBOM 패키지 266개·관계 1,054개. NestJS 10→11로 기존 Critical을 없앴다. 시험 값 오탐 39건은 `.gitleaks.toml`에서 값 형식만 좁게 제외했다. SBOM은 일반 CI 산출물과 `release.published` 릴리스 자산을 모두 만든다
 - **T-M5-24·25 ✅ (2026-10-02)** — Trivy 0.75.0으로 서비스 4종·PgBouncer 실제 이미지 Critical 0, Helm·Kubernetes·Dockerfile 설정 파일 19개 High/Critical 0을 로컬과 원격 matrix에서 확인했다(Actions run 36890582638). `KSV-0056`은 namespace 한정 release-controller의 서명된 Helm 동기화에 필요한 권한만 파일 네 곳·2027-01-31 만료로 허용했다. 세부는 [11-security-pipeline.md](11-security-pipeline.md)
-- **바로 다음 할 일**: **T-M5-26~29**(보안 시험·DAST·서명·Admission Controller) → 인증(로컬 OIDC — 세션 만료·위험 차단 해제도 함께, ADR-0009) → 보안 통제 → …
+- **T-M5-26 착수 (2026-10-02, 🟡)** — 실 PostgreSQL의 대학·중앙 DB를 사용해 권한·감사 체인·결제 콜백·입력 방어·재전송·개인정보 최소화 등 선별 보안 시험 123개를 별도 게이트로 실행한다. 로컬 123개 통과·건너뜀 0이며 원격 확인 전이다. DB 미연결로 통합시험이 skip되어도 게이트가 실패한다
+- **바로 다음 할 일**: T-M5-26 원격 통과 확인 → **T-M5-27~29**(DAST·서명·Admission Controller) → 인증(로컬 OIDC — 세션 만료·위험 차단 해제도 함께, ADR-0009) → 보안 통제 → …
 
 ## 2. 반드시 지킬 규칙
 

@@ -143,6 +143,54 @@ jobs:
             --helm-set runtimeSecret.name=kadmission-univ-a-runtime \
             .
 
+  security-tests:
+    name: security tests · real PostgreSQL · skipped 0
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wonseoro
+          POSTGRES_PASSWORD: wonseoro
+          POSTGRES_DB: univ_a
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wonseoro -d univ_a"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      ADMIN_DATABASE_URL: postgresql://wonseoro:wonseoro@localhost:5432/univ_a
+      UNIVERSITY_DATABASE_URL: postgresql://kadmission_app:kadmission_app_dev@localhost:5432/univ_a
+      UNIVERSITY_DATABASE_ADMIN_URL: postgresql://wonseoro:wonseoro@localhost:5432/univ_a
+      CENTRAL_DATABASE_URL: postgresql://wonseoro:wonseoro@localhost:5432/central
+      UNIVERSITY_ID: UNIV-A
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: 대학 DB 보안 시험 준비
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0001_init.sql
+          psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0002_db_roles.sql
+          psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/dev-roles.sql
+          psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/seed-dev.sql
+          psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/ci-seed-deadline.sql
+      - name: 중앙 DB 보안 시험 준비
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -c 'CREATE DATABASE central'
+          psql "$CENTRAL_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/central/0001_init.sql
+          psql "$CENTRAL_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/central/0002_vault.sql
+          psql "$CENTRAL_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/central/0003_summary_names.sql
+      - name: 선별 보안 시험 통과·건너뜀 0 강제
+        run: npm run test:security
+
   sbom:
     name: SPDX SBOM
     if: github.event_name != 'release'
