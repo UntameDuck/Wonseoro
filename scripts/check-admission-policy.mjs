@@ -24,8 +24,10 @@ assert.ok(job, 'admission-policy 잡이 있어야 합니다.');
 assert.deepEqual(job.needs, ['signed-images']);
 assert.match(source, /policy-controller[\s\S]+--version 0\.10\.8/);
 assert.match(source, /policy\.sigstore\.dev\/include=true/);
-assert.match(source, /run signed-proof[\s\S]+--dry-run server/);
-assert.match(source, /run unsigned-proof[\s\S]+if \[\[ \$status -eq 0 \]\]/);
+// 띄어 쓴 `--dry-run server` 는 client dry-run 이 되어 webhook 을 거치지 않는다
+assert.doesNotMatch(source, /--dry-run(?!=)/);
+assert.match(source, /run unsigned-proof[\s\S]+--dry-run=server[\s\S]+policy\.sigstore\.dev[\s\S]+run signed-proof[\s\S]+--dry-run=server/);
+assert.match(source, /if \[\[ \$denied -ne 1 \]\]/);
 assert.match(source, /unsigned-control\.Dockerfile/);
 
 console.log('admission policy: release identity only · enforce · signed allow / unsigned deny proof');

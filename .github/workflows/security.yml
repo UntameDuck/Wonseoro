@@ -500,26 +500,41 @@ jobs:
           mkdir -p admission-results
           overrides='{"spec":{"imagePullSecrets":[{"name":"ghcr-read"}]}}'
 
-          kubectl --namespace signature-policy-test run signed-proof \
-            --image "$SIGNED_REFERENCE" \
-            --restart Never \
-            --overrides "$overrides" \
-            --dry-run server -o yaml > admission-results/signed-admitted.yaml
-
-          set +e
-          rejection="$(kubectl --namespace signature-policy-test run unsigned-proof \
-            --image "$UNSIGNED_REFERENCE" \
-            --restart Never \
-            --overrides "$overrides" \
-            --dry-run server -o yaml 2>&1)"
-          status=$?
-          set -e
-          if [[ $status -eq 0 ]]; then
+          # 값을 띄어 쓰면(dry-run 뒤 공백 + server) kubectl 이 client dry-run 으로 읽어 webhook 을 부르지 않는다.
+          # 반드시 등호로 붙여 API 서버 admission 까지 보낸다.
+          # 정책이 webhook 에 퍼지기 전 잠깐은 통과할 수 있어, 미서명 거부부터 최대 6번 확인한다.
+          # 거부가 확인된 뒤에야 서명 이미지 허용을 본다 — 정책이 살아 있을 때의 허용이어야 의미가 있다.
+          denied=0
+          for attempt in 1 2 3 4 5 6; do
+            set +e
+            rejection="$(kubectl --namespace signature-policy-test run unsigned-proof \
+              --image "$UNSIGNED_REFERENCE" \
+              --restart Never \
+              --overrides "$overrides" \
+              --dry-run=server -o yaml 2>&1)"
+            status=$?
+            set -e
+            if [[ $status -ne 0 ]]; then
+              denied=1
+              break
+            fi
+            echo "미서명 이미지가 아직 통과합니다(${attempt}/6). 정책 전파를 기다립니다." >&2
+            sleep 10
+          done
+          if [[ $denied -ne 1 ]]; then
             echo "미서명 이미지가 admission을 통과했습니다." >&2
             exit 1
           fi
           printf '%s\n' "$rejection" | tee admission-results/unsigned-rejected.txt
+          grep -Fq 'policy.sigstore.dev' admission-results/unsigned-rejected.txt
           grep -Eiq 'denied|failed policy|signature|no matching' admission-results/unsigned-rejected.txt
+
+          kubectl --namespace signature-policy-test run signed-proof \
+            --image "$SIGNED_REFERENCE" \
+            --restart Never \
+            --overrides "$overrides" \
+            --dry-run=server -o yaml > admission-results/signed-admitted.yaml
+          grep -Fq "$SIGNED_REFERENCE" admission-results/signed-admitted.yaml
           printf 'signed=%s\nunsigned=%s\n' "$SIGNED_REFERENCE" "$UNSIGNED_REFERENCE" > admission-results/references.txt
       - name: Admission 실증 증적 보관
         if: always()
