@@ -19,7 +19,7 @@ import {
 } from '../../../lib/api';
 import { useAutosave } from '../../../lib/use-autosave';
 import { formatKst, useDeadline } from '../../../lib/use-deadline';
-import { lastSavedHere, loadSession } from '../../../lib/session';
+import { SESSION_EXPIRING_EVENT, lastSavedHere, loadSession } from '../../../lib/session';
 import { useOperatingMode } from '../../../lib/use-operating-mode';
 
 /**
@@ -110,6 +110,14 @@ export default function ApplyPage({
     debounceMs: 15_000,
     ...(frozen ? { frozen: true } : {}),
   });
+
+  // 세션이 곧 끝나거나 끝났다 — 자동저장(입력 멈춘 뒤 15초)을 기다리지 않고 바로 저장한다. 입력을 잃지 않게 (T-M5-45)
+  const saveNow = autosave.saveNow;
+  useEffect(() => {
+    const onExpiring = () => void saveNow();
+    window.addEventListener(SESSION_EXPIRING_EVENT, onExpiring);
+    return () => window.removeEventListener(SESSION_EXPIRING_EVENT, onExpiring);
+  }, [saveNow]);
 
   /** 서버 상태부터 읽는다. 재연결 후에도 항상 서버가 기준이다. (v1.1 §10 §4) */
   const reload = useCallback(async () => {

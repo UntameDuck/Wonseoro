@@ -37,7 +37,8 @@
     "check:ui-copy": "node scripts/check-ui-copy.mjs",
     "test:a11y:keyboard": "node tests/a11y/keyboard-walk.mjs",
     "test:a11y:focus": "node tests/a11y/focus-sweep.mjs",
-    "test:a11y:deadline": "node tests/a11y/deadline-announce.mjs"
+    "test:a11y:deadline": "node tests/a11y/deadline-announce.mjs",
+    "test:a11y:session": "node tests/a11y/session-timeout.mjs"
   },
   "devDependencies": {
     "typescript": "^5.6.3",

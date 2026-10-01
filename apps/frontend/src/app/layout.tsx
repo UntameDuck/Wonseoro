@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import '@wonseoro/krds/tokens.css';
 import { CycleBadge } from '../krds/cycle-badge';
+import { SessionTimeout } from '../krds/session-timeout';
 
 /**
  * 화면마다 제목이 다르다 — "검토·결제 — 원서 작성 | 원서로". 탭·스크린리더·방문 기록이 화면을 구별한다
@@ -90,6 +91,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               생기면 여기 둔다 — 지어낸 연락처를 넣지 않는다 (T-M5-50, 08 결정 12) */}
           <p style={{ margin: 0 }}>원서로 · 대학입학 원서접수</p>
         </footer>
+        {/* 세션 만료 5분 전 경고·연장 (T-M5-45) */}
+        <SessionTimeout />
       </body>
     </html>
   );

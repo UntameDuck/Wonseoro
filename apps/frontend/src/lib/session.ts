@@ -16,15 +16,72 @@ export interface Session {
   applicantId: string;
   subjectToken: string;
   applicationId?: string;
+  /** 이 시각이 지나면 세션이 끝난다. 신원을 실은 요청이 성공할 때마다 뒤로 민다 (T-M5-45) */
+  expiresAt?: string;
 }
 
 const KEY = 'wonseoro.dev.session';
 
+/**
+ * 세션 유지 시간 — 아무 동작(서버 요청) 없이 30분이 지나면 끝난다. 공용 PC 에 남은 개인정보를 지키려는 것이다.
+ * 끝나기 5분 전에 알리고 연장할 수 있게 한다(KWCAG 시간 조절 — 20초 이상 여유, 간단한 동작으로 연장).
+ * 본인확인(T-M5-02)이 붙으면 만료 시각은 인증 세션에서 받고, 연장은 세션 갱신을 부른다 — 바꿀 곳은 이 파일이다.
+ */
+export const SESSION_IDLE_MS = 30 * 60_000;
+export const SESSION_WARN_MS = 5 * 60_000;
+/** 세션이 바뀌면(연장·종료) 알린다 — 경고 대화상자가 듣는다 */
+export const SESSION_EVENT = 'wonseoro:session';
+/** 곧 끝난다·끝났다 — 작성 화면은 이 때 바로 저장한다. 입력을 잃기 전에 (T-M5-45) */
+export const SESSION_EXPIRING_EVENT = 'wonseoro:session-expiring';
+
 export function saveSession(s: Session): void {
   try {
-    sessionStorage.setItem(KEY, JSON.stringify(s));
+    sessionStorage.setItem(KEY, JSON.stringify({ ...s, expiresAt: new Date(Date.now() + SESSION_IDLE_MS).toISOString() }));
+    window.dispatchEvent(new Event(SESSION_EVENT));
   } catch {
     /* 저장이 안 돼도 흐름은 계속된다 */
+  }
+}
+
+/** 지원자가 "계속 이용하기" 를 눌렀다 — 만료를 뒤로 민다. 세션이 없거나 이미 끝났으면 아무것도 하지 않는다. */
+export function extendSession(): void {
+  const s = loadSession();
+  if (s) saveSession(s);
+}
+
+/**
+ * 서버 요청이 성공했다 — 쓰고 있다는 뜻이라 만료를 뒤로 민다. 단 경고가 뜬 뒤에는 밀지 않는다:
+ * 경고 순간의 저장·서류 검사 확인 같은 화면이 스스로 보낸 요청이 경고를 말없이 닫으면 안 된다.
+ * 경고 뒤 연장은 지원자가 직접 누를 때만이다 (T-M5-45).
+ */
+export function touchSession(): void {
+  const at = sessionExpiresAt();
+  if (at !== null && at - Date.now() > SESSION_WARN_MS) extendSession();
+}
+
+/** 세션을 끝낸다 — 시간이 다 됐거나 지원자가 "지금 종료" 를 눌렀다. */
+export function endSession(): void {
+  try {
+    sessionStorage.removeItem(KEY);
+    window.dispatchEvent(new Event(SESSION_EVENT));
+  } catch {
+    /* 저장소를 쓸 수 없으면 세션도 없다 */
+  }
+}
+
+/** 세션이 끝나는 시각(밀리초). 세션이 없으면 null. 만료 시각이 없는 옛 세션은 지금부터 센다. */
+export function sessionExpiresAt(): number | null {
+  try {
+    const raw = sessionStorage.getItem(KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as Session;
+    if (!s.expiresAt) {
+      saveSession(s);
+      return Date.now() + SESSION_IDLE_MS;
+    }
+    return Date.parse(s.expiresAt);
+  } catch {
+    return null;
   }
 }
 
@@ -48,10 +105,24 @@ export function lastSavedHere(applicationId: string): string | null {
   }
 }
 
-export function loadSession(): Session | null {
+/** 만료와 상관없이 저장된 세션 — 끝나는 순간 어느 원서였는지 알려고 쓴다 */
+export function peekSession(): Session | null {
   try {
     const raw = sessionStorage.getItem(KEY);
     return raw ? (JSON.parse(raw) as Session) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 지금 세션. 만료 시각이 지났으면 없는 것으로 본다 — 끝난 세션의 신원으로 요청하지 않는다. */
+export function loadSession(): Session | null {
+  try {
+    const raw = sessionStorage.getItem(KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as Session;
+    if (s.expiresAt && Date.parse(s.expiresAt) <= Date.now()) return null;
+    return s;
   } catch {
     return null;
   }

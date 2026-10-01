@@ -7,6 +7,8 @@
  *   - 오류는 problem+json 으로 온다
  */
 
+import { touchSession } from './session';
+
 const ADMISSION = process.env.NEXT_PUBLIC_ADMISSION_API ?? 'http://localhost:3001';
 const CENTRAL = process.env.NEXT_PUBLIC_CENTRAL_API ?? 'http://localhost:3000';
 
@@ -129,6 +131,8 @@ export async function call<T>(path: string, opts: CallOptions = {}): Promise<Api
     const retryAfter = Number(res.headers.get('retry-after'));
     throw new ApiError(parsed as Problem, res.status, Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null);
   }
+  // 신원을 실은 요청이 성공했다 — 지원자가 쓰고 있다. 세션 만료를 뒤로 민다 (T-M5-45)
+  if (opts.applicantId || opts.subjectToken) touchSession();
   return {
     data: parsed as T,
     etag: res.headers.get('etag'),
