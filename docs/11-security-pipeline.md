@@ -12,7 +12,7 @@
 | T-M5-23 SBOM | ✅ | SPDX 2.3, 패키지 266·관계 1,054. CI 산출물과 Release 자산 자동 첨부 |
 | T-M5-24 Container Image Scan | ✅ | 로컬·원격 5개 이미지 Critical 0 |
 | T-M5-25 IaC/K8s Manifest Scan | ✅ | 로컬·원격 Helm·Kubernetes·Dockerfile 19개 High/Critical 0 |
-| T-M5-26 Security Test | 🟡 | 로컬 실 PostgreSQL 선별 시험 123개 통과·건너뜀 0, 원격 CI 확인 전 |
+| T-M5-26 Security Test | ✅ | 로컬·원격 실 PostgreSQL 선별 시험 123개 통과·건너뜀 0 |
 | T-M5-27 DAST | ⬜ | 다음 작업 |
 | T-M5-28 Image Signing | ⬜ | 다음 작업 |
 | T-M5-29 Admission Controller | ⬜ | 다음 작업 |
@@ -67,10 +67,10 @@ Endpoints 직접 권한은 없고 `tests/m4/gitops-manifests.mjs`가 권한 범�
 로컬은 E 드라이브 Docker 데이터의 개발 PostgreSQL 두 DB를 사용해 **총 123개·건너뜀 0**을 확인했다.
 `.github/workflows/security.yml`의 전용 잡은 빈 PostgreSQL 16 DB에 canonical 대학 DDL과 중앙 마이그레이션을 적용한 뒤
 같은 명령을 실행한다. DB가 없어서 통합시험이 `skip`되면 성공으로 보지 않고 게이트를 실패시킨다.
+원격 Security 잡도 123개·건너뜀 0으로 통과했다(Actions run 36898652054).
 
 ## 5. 다음 순서
 
-1. 원격 CI에서 T-M5-26 통과 확인 후 완료 수 반영
-2. T-M5-27: 로컬 staging API를 기동해 DAST High 0 강제
-3. T-M5-28: 키 없는 OIDC 서명으로 모든 릴리스 이미지 서명·검증
-4. T-M5-29: 정책 엔진에서 미서명 이미지는 거부하고 서명 이미지만 허용하는 실증
+1. T-M5-27: 로컬 staging API를 기동해 DAST High 0 강제
+2. T-M5-28: 키 없는 OIDC 서명으로 모든 릴리스 이미지 서명·검증
+3. T-M5-29: 정책 엔진에서 미서명 이미지는 거부하고 서명 이미지만 허용하는 실증

@@ -19,10 +19,10 @@
 | M2 결제·Finalize·화면 | **24/24** | ✅ Demo Gate 1~5 통과 |
 | M3 운영 안전장치 | **13/15** (+🟡 2) | ✅ **종료 2026-09-27** — 🟡 T-M3-03 WORM·T-M3-06 JWKS 는 M5 |
 | **M4 분산 실증** | **20/28** | ◀ 진행 중 — 차트·kind·Flux Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표·Peak Mode·계측·로그 마스킹·KPI 대시보드·NAT Adaptive Throttling·Redis 장애·중앙 2시간 단절·PG 지연 ✅, 노드 장애 🟡 |
-| M5 신뢰성·보안·접근성 | **20/42** | ◀ **보안 파이프라인 T-M5-20~25 ✅(2026-10-02)** — Git 전체 이력 비밀 0·CodeQL Critical 0·운영 의존성 Critical 0·SPDX SBOM·이미지 5종 Critical 0·IaC 19개 High/Critical 0 원격 CI 통과 · **접근성 T-M5-40~46 ✅·47 🟡(2026-10-01)** — 키보드 완주·전 화면 포커스·스크린리더 재료·200%·320px·세션 만료 경고·CAPTCHA 대체 경로, Chrome·Edge·휴대전화 흉내([09](09-accessibility.md)) · 화면 제품화 T-M5-50~56 추가 · **T-M5-53 개발 입력 가두기 ✅ · T-M5-50 설계 설명·문서 번호 걷어내기 ✅ · T-M5-51 내부 코드 대신 사람 말(계약 1.5.0) ✅ · T-M5-52 오류·검증 문구 ✅ · T-M5-54 표기 통일 ✅ · T-M5-55 상태·기본 화면 ✅ · T-M5-56 흐름·와이어프레임·27장 다시 찍기 ✅ — 화면 제품화 끝** (2026-10-01) |
+| M5 신뢰성·보안·접근성 | **21/42** | ◀ **보안 파이프라인 T-M5-20~26 ✅(2026-10-02)** — Git 전체 이력 비밀 0·CodeQL Critical 0·운영 의존성 Critical 0·SPDX SBOM·이미지 5종 Critical 0·IaC 19개 High/Critical 0·실 DB 보안 시험 123개 건너뜀 0 원격 CI 통과 · **접근성 T-M5-40~46 ✅·47 🟡(2026-10-01)** — 키보드 완주·전 화면 포커스·스크린리더 재료·200%·320px·세션 만료 경고·CAPTCHA 대체 경로, Chrome·Edge·휴대전화 흉내([09](09-accessibility.md)) · 화면 제품화 T-M5-50~56 추가 · **T-M5-53 개발 입력 가두기 ✅ · T-M5-50 설계 설명·문서 번호 걷어내기 ✅ · T-M5-51 내부 코드 대신 사람 말(계약 1.5.0) ✅ · T-M5-52 오류·검증 문구 ✅ · T-M5-54 표기 통일 ✅ · T-M5-55 상태·기본 화면 ✅ · T-M5-56 흐름·와이어프레임·27장 다시 찍기 ✅ — 화면 제품화 끝** (2026-10-01) |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 98/146 태스크** (✅ 만 센다. 🟡 4 — T-M3-03·T-M3-06·T-M4-39·T-M5-47). **423개 테스트**
+**총 99/146 태스크** (✅ 만 센다. 🟡 4 — T-M3-03·T-M3-06·T-M4-39·T-M5-47). **423개 테스트**
 (admission-api 323 · server-kit 51 · central-api 29 · event-relay 7 · document-service 8 · krds 5, 2026-10-01). DB 포함(CI 재현 DB) 실패 0.
 DB 포함 실행(CI 재현 DB)은 admission-api 3 skip(`ADMIN_API_TOKEN` 미설정) 외 전부 pass.
 배포 스크립트 시험 별도: Peak Mode 예약 계산 9건(`npm run test:m4:peak-schedule`), 대시보드·KPI 규칙 일관성(`npm run test:m4:observability`).
@@ -136,13 +136,13 @@ T-M5-40~46 ✅·47 🟡 — **[09-accessibility.md](09-accessibility.md)**. 설�
 
 ## 완성까지 남은 단계 (2026-10-01 전수 점검)
 
-**146개 중 98개 완료, 48개 남음**(2026-10-02 보안 파이프라인 T-M5-20~25 완료. 🟡 부분 완료 4개 — T-M3-03·T-M3-06·T-M4-39·T-M5-47 — 는 남은 쪽에 센다).
+**146개 중 99개 완료, 47개 남음**(2026-10-02 보안 파이프라인 T-M5-20~26 완료. 🟡 부분 완료 4개 — T-M3-03·T-M3-06·T-M4-39·T-M5-47 — 는 남은 쪽에 센다).
 코드에 TODO·FIXME 는 없다. 남은 일은 태스크 표와 아래 목록에 전부 있다. 흉내 구현(헤더 인증·관리자 공유 토큰·Mock PG·Mock 검사 엔진)은
 운영 모드에서 기동이 막혀 있다 — 그 넷을 실물로 바꾸는 것이 "제품" 과 "시연" 의 차이다.
 
 | 누가 할 수 있나 | 개수 | 태스크 |
 |---|---|---|
-| **A. AI 가 이 PC 에서 끝낼 수 있다** (코드·CI·kind) | **27** | ~~화면 제품화 T-M5-50~56~~ ✅ · ~~접근성 T-M5-40~46~~ ✅([09](09-accessibility.md))(개발 흔적 걷어내기·사람 말·오류 문구·개발 입력 가두기·표기·상태·와이어프레임 정합 — [08](08-ui-production-readiness.md)) · T-M3-03(WORM — MinIO Object Lock 으로), T-M3-06(JWKS 캐시 — 로컬 OIDC 와 함께) · T-M4-10(Outbox 파티션·보관) · T-M5-01~10 보안 통제(인증 T-M5-02·MFA T-M5-10 은 로컬 OIDC 발급자로 먼저) · ~~T-M5-20~25 비밀·SAST·SCA·SBOM·이미지·IaC 스캔~~ ✅ · T-M5-26~29 보안 파이프라인(보안 시험·DAST·서명·admission controller) · T-M5-62·63·65(복구 검증 자동화·Writer fencing·만료 경보) · T-M6-01·02·03·06·07·11·14(온보딩 도구·호환 시험·CSP 사전 점검·상태 페이지·최소 정보 지원 화면·처리 흐름도·온보딩 문서) |
+| **A. AI 가 이 PC 에서 끝낼 수 있다** (코드·CI·kind) | **26** | ~~화면 제품화 T-M5-50~56~~ ✅ · ~~접근성 T-M5-40~46~~ ✅([09](09-accessibility.md))(개발 흔적 걷어내기·사람 말·오류 문구·개발 입력 가두기·표기·상태·와이어프레임 정합 — [08](08-ui-production-readiness.md)) · T-M3-03(WORM — MinIO Object Lock 으로), T-M3-06(JWKS 캐시 — 로컬 OIDC 와 함께) · T-M4-10(Outbox 파티션·보관) · T-M5-01~10 보안 통제(인증 T-M5-02·MFA T-M5-10 은 로컬 OIDC 발급자로 먼저) · ~~T-M5-20~26 비밀·SAST·SCA·SBOM·이미지·IaC 스캔·보안 시험~~ ✅ · T-M5-27~29 보안 파이프라인(DAST·서명·admission controller) · T-M5-62·63·65(복구 검증 자동화·Writer fencing·만료 경보) · T-M6-01·02·03·06·07·11·14(온보딩 도구·호환 시험·CSP 사전 점검·상태 페이지·최소 정보 지원 화면·처리 흐름도·온보딩 문서) |
 | **B. 외부 환경이 있어야 한다** (K-PaaS·HA DB·PG 계약) | **12** | T-M4-06(DB HA 계층) · T-M4-30·31·32(부하 500·1,500·3,000 VU) · T-M4-36(부하 중 DB Failover) · T-M4-39 판정(Edge 재시도) · T-M4-41(6시간 Soak) · T-M5-60·61·64(Multi-AZ·PITR·DR 훈련) · T-M6-04·05(실 PG sandbox·정산 실계정) |
 | **C. 사람·기관이 해야 한다** | **9** | T-M0-08(제출 PDF 정정 — 문구 준비됨) · T-M5-47 나머지(실물 Firefox·Safari — 또는 시험용 브라우저 내려받기 승인) · T-M5-48(KWCAG 수동 검사 — 실제 스크린리더) · T-M6-08·09(런북·운영 캘린더 확정) · T-M6-10(War-room 훈련) · T-M6-12(영향평가) · T-M6-13(Compliance 실증) · T-M6-15(대학 Shadow Test) |
 
@@ -162,7 +162,7 @@ T-M5-40~46 ✅·47 🟡 — **[09-accessibility.md](09-accessibility.md)**. 설�
 
 0. ~~**D-62 증적 감사 체인**~~ — ✅ 2026-10-01 수정(재현 시험 3개)
 1. ~~**화면 제품화 T-M5-50~56**~~ ✅ + ~~접근성 T-M5-40~46~~ ✅·47 🟡 — **둘 다 끝(2026-10-01)**. 접근성 시험은 `tests/a11y/`, 결과·결정은 [09](09-accessibility.md). 47 의 실물 Firefox·Safari 는 C(사람)
-2. **보안 파이프라인 T-M5-20~29 진행 중** — ~~T-M5-20~25 Gitleaks·CodeQL·운영 의존성 SCA·SPDX SBOM·이미지·IaC 검사~~ ✅ 로컬·원격 통과(Actions run 36890582638). 5개 이미지 Critical 0, 설정 파일 19개 High/Critical 0. **T-M5-26 보안 시험 🟡** — 실 PostgreSQL에서 선별 보안 시험 123개·건너뜀 0 로컬 통과, 원격 확인 전([11](11-security-pipeline.md)). 다음은 DAST·서명·Admission Controller(운영 서명키만 사람)
+2. **보안 파이프라인 T-M5-20~29 진행 중** — ~~T-M5-20~26 Gitleaks·CodeQL·운영 의존성 SCA·SPDX SBOM·이미지·IaC 검사·실 DB 보안 시험~~ ✅ 로컬·원격 통과(Actions run 36898652054). 5개 이미지 Critical 0, 설정 파일 19개 High/Critical 0, 보안 시험 123개·건너뜀 0([11](11-security-pipeline.md)). 다음은 **T-M5-27~29 DAST·서명·Admission Controller**(운영 서명키만 사람)
 3. 인증 — 로컬 OIDC 발급자(개발용 컨테이너)로 `AUTH_MODE=gateway`·RBAC 6역할·관리자 MFA·JWKS 캐시(T-M5-02·10, T-M3-06)
 4. 보안 통제 T-M5-01·03~09 — 필드 암호화·SSRF 출구 허용 목록·실 clamd·Vault 경로 분리·mTLS
 5. T-M4-10 Outbox 파티션·보관 — DDL 변경이라 노션 §02 첨부 교체가 따른다

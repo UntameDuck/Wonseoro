@@ -48,7 +48,7 @@
 | T-M5-23 | 4. SBOM 생성 ✅ 2026-10-02 | 릴리스마다 첨부 |
 | T-M5-24 | 5. Container Image Scan ✅ 2026-10-02 | Critical 0 |
 | T-M5-25 | 6. IaC/K8s Manifest Scan ✅ 2026-10-02 | 정책 위반 0 |
-| T-M5-26 | 7. Unit/Integration Security Test 🟡 2026-10-02 | 통과 |
+| T-M5-26 | 7. Unit/Integration Security Test ✅ 2026-10-02 | 통과 |
 | T-M5-27 | 8. DAST/Staging Scan | High 0 |
 | T-M5-28 | 9. Image Signing | 전 이미지 서명 |
 | T-M5-29 | 10. Admission Controller | **미서명 이미지 배포 거부 실증** |
@@ -72,7 +72,7 @@
 > **T-M5-26 착수 (2026-10-02)** — 공용 설정·가명화·로그 마스킹, 대학 권한·감사·결제·입력 방어,
 > 파일 검사 엔진 실패 폐쇄, 중앙 재전송·위장 발신·개인정보 최소화 시험을 별도 Security 잡으로 묶었다.
 > 실 PostgreSQL 대학·중앙 DB에서 로컬 **123개 통과·건너뜀 0**이다. TAP 요약을 검사하므로 DB 미연결로 통합시험이
-> 건너뛰어지는 경우도 실패한다. 원격 CI 확인 전이라 🟡이다.
+> 건너뛰어지는 경우도 실패한다. 원격 Security와 일반 CI도 통과했다(Actions run 36898652054·36898651960).
 
 ### 접근성 (권민준) — v1.0 §12.4 / §07
 
