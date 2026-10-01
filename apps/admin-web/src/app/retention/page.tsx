@@ -2,6 +2,7 @@
 
 import { Alert, Button, Card } from '@wonseoro/krds';
 import { useCallback, useEffect, useState } from 'react';
+import { RETENTION_CATEGORIES, RETENTION_PROBLEM_LABEL, labelOf } from '@wonseoro/contracts';
 import { NeedsCycle } from '../../components/console';
 import { adminGet, describe, kst } from '../../lib/api';
 
@@ -80,12 +81,12 @@ function RetentionPlan({ cycleId }: { cycleId: string }) {
   return (
     <>
       <Alert tone="info" title="파기 계획만 보여 줍니다 — 이 화면은 아무것도 지우지 않습니다">
-        보존기간은 설정(retention)으로 바꾸고, 설정은 두 명의 승인을 거쳐 적용됩니다. 모집 마감{' '}
+        보존기간은 설정 승인 화면에서 바꾸고, 바꾼 설정은 두 명의 승인을 거쳐 적용됩니다. 모집 마감{' '}
         {kst(plan.cycleClosesAt)} 기준. 적용 설정 {plan.configVersion ?? '없음'}.
       </Alert>
       {!plan.configured && (
         <Alert tone="warning" title="보존 정책이 설정되지 않았습니다">
-          설정에 retention 이 없으면 어떤 데이터도 파기 대상이 되지 않습니다.
+          적용 중인 설정에 보존기간이 없으면 어떤 데이터도 파기 대상이 되지 않습니다.
         </Alert>
       )}
       {plan.problems.length > 0 && (
@@ -93,7 +94,7 @@ function RetentionPlan({ cycleId }: { cycleId: string }) {
           <ul style={{ margin: 0, paddingLeft: '1.2em' }}>
             {plan.problems.map((p) => (
               <li key={`${p.category}-${p.message}`}>
-                [{p.category}] {p.message}
+                [{(RETENTION_CATEGORIES as Record<string, { label: string }>)[p.category]?.label ?? labelOf(RETENTION_PROBLEM_LABEL, p.category)}] {p.message}
               </li>
             ))}
           </ul>

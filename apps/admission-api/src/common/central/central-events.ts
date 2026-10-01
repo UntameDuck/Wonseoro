@@ -27,6 +27,8 @@ export function finalizedEventData(src: {
   admissionYear: number;
   admissionTypeCode: string;
   departmentCode: string;
+  admissionTypeName?: string;
+  departmentName?: string;
   applicationNumber: string;
   requestedAt: string;
   paymentApprovedAt: string | null;
@@ -38,6 +40,9 @@ export function finalizedEventData(src: {
     admissionYear: src.admissionYear,
     admissionTypeCode: src.admissionTypeCode,
     departmentCode: src.departmentCode,
+    // 내 원서가 코드(`EARLY · CSE`) 대신 이름을 보이게 한다 (T-M5-51, U-7)
+    ...(src.admissionTypeName ? { admissionTypeName: src.admissionTypeName.slice(0, 200) } : {}),
+    ...(src.departmentName ? { departmentName: src.departmentName.slice(0, 200) } : {}),
     status: 'FINALIZED',
     requestedAt: src.requestedAt,
     paymentApprovedAt: src.paymentApprovedAt,

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: K-Admission University Data Plane API
-  version: 1.4.0
+  version: 1.5.0
   description: >
     Reference contract for a university-local K-Admission data plane.
     The university DB is the source of truth; central sync is not in the applicant critical path.
@@ -24,6 +24,11 @@ info:
     common profile API on the central host; the active config includes its body and config drafts
     are linted (§A5); universities send the §04 heartbeat and the dashboard shows which university
     is unreachable. All additions are optional fields or new paths.
+
+
+    1.5.0 adds display names so screens never show internal codes (T-M5-51): the dashboard summary
+    carries `admissionTypeName` and `departmentName` (sent by the university in
+    `application.finalized`), and common-profile consents carry `universityName`. Optional, additive.
 
 
     Common rules:
@@ -1984,6 +1989,9 @@ components:
             required: [universityId, fieldCodes, grantedAt]
             properties:
               universityId: { type: string }
+              universityName:
+                type: [string, 'null']
+                description: Registry name of the university (1.5.0) — shown instead of the id
               fieldCodes:
                 type: array
                 items: { type: string }
@@ -2255,6 +2263,12 @@ components:
         admissionYear: { type: integer }
         admissionTypeCode: { type: string }
         departmentCode: { type: string }
+        admissionTypeName:
+          type: [string, 'null']
+          description: Display name from the university (1.5.0). Null for rows synced before the university sent names.
+        departmentName:
+          type: [string, 'null']
+          description: Display name from the university (1.5.0). Null for rows synced before the university sent names.
         status: { type: string }
         applicationNumber: { type: [string, 'null'] }
         submittedAt: { type: [string, 'null'], format: date-time }

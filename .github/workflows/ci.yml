@@ -106,6 +106,7 @@ jobs:
       - run: psql "$DATABASE_URL" -c 'CREATE DATABASE central'
       - run: psql "${DATABASE_URL%/*}/central" -v ON_ERROR_STOP=1 -f infra/db/central/0001_init.sql
       - run: psql "${DATABASE_URL%/*}/central" -v ON_ERROR_STOP=1 -f infra/db/central/0002_vault.sql
+      - run: psql "${DATABASE_URL%/*}/central" -v ON_ERROR_STOP=1 -f infra/db/central/0003_summary_names.sql
       - run: npm run test -w @wonseoro/central-api
         env:
           DATABASE_URL: postgresql://wonseoro:wonseoro@localhost:5432/central

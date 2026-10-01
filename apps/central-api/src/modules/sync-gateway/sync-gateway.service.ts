@@ -367,8 +367,8 @@ export class SyncGatewayService {
       `INSERT INTO application_summary
          (university_id, application_id, admission_year, admission_type_code,
           department_code, status, application_number, submitted_at,
-          last_sequence, subject_ref, last_synced_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now())
+          last_sequence, subject_ref, admission_type_name, department_name, last_synced_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now())
        ON CONFLICT (university_id, application_id) DO UPDATE
          SET status = EXCLUDED.status,
              -- 한 번 들어온 참조는 덮지 않는다. 이후 이벤트에 빠져 있어도
@@ -377,6 +377,9 @@ export class SyncGatewayService {
              application_number = COALESCE(EXCLUDED.application_number,
                                            application_summary.application_number),
              submitted_at = COALESCE(EXCLUDED.submitted_at, application_summary.submitted_at),
+             -- 표시 이름(T-M5-51). 취소 알림에는 없다 — 있던 이름을 지우지 않는다
+             admission_type_name = COALESCE(EXCLUDED.admission_type_name, application_summary.admission_type_name),
+             department_name = COALESCE(EXCLUDED.department_name, application_summary.department_name),
              last_sequence = EXCLUDED.last_sequence,
              last_synced_at = now()
        -- 늦게 도착한 과거 이벤트로 최신 상태를 덮지 않는다. (v1.1 §A3 OUT_OF_ORDER)
@@ -395,6 +398,8 @@ export class SyncGatewayService {
         // 대학이 보내주지 않으면 null 이다. 그 원서는 Dashboard 에 뜨지 않는다 —
         // 잘못된 사람에게 보여주는 것보다 안 보여주는 쪽이 낫다. (D-27)
         isPurposeRef(data.subjectRef) ? data.subjectRef : null,
+        data.admissionTypeName ? String(data.admissionTypeName).slice(0, 200) : null,
+        data.departmentName ? String(data.departmentName).slice(0, 200) : null,
       ],
     );
   }

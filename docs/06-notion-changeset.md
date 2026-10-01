@@ -10,8 +10,8 @@
 
 | 노션 문서 | 첨부 이름 | 저장소 파일 | 바이트 | SHA-256 | 근거 |
 |---|---|---|---|---|---|
-| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.4.0) | 90,088 | `ca2b9fa0151cbf35143776d6ba40767e865c4ffe5780c6f72eef087023049a48` | D-51 · D-55 ~ D-61 |
-| [§04 CloudEvents](https://app.notion.com/p/3df75ab5debe81d68e37fabd3678dcc4) | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | 5,787 | `56719bada4a9439b5908df690508876b616bf5bfc53b7765fbee23b173b6f5db` | D-47 |
+| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.5.0) | 90,894 | `7a315c155e58dd01818af20c46d7accdb0f2c005fd27fe6c1b20bc7fd0a542f0` | D-51 · D-55 ~ D-61 · T-M5-51 |
+| [§04 CloudEvents](https://app.notion.com/p/3df75ab5debe81d68e37fabd3678dcc4) | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | 6,104 | `3ed7ec8a340c50f6e7de25b2c3322ffd7c6b4914fd046afdc67a2efea699ca02` | D-47 · T-M5-51 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` (v1.2) | 4,036 | `1aaef0db712e1d9a15da41fb86b7832a3da8c6decfdcd5992a57bb071e5b1975` | D-44 · D-49 · D-52 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` (v1.2, 차트 렌더링) | 34,582 | `9446584b3462120941697fab13b5399a22bd5ffcc6430da592953ec5b20b5706` | D-44 · D-52 |
 | [§07 KRDS](https://app.notion.com/p/3df75ab5debe812db3d1e06d0761e38e) | `k-admission-krds-wireframe.html` | `docs/spec-assets/krds-wireframe.html` (v1.2) | 8,548 | `698d3abda827340f3abd40fceeb8b7ae63d7e2a6ea8d0e707d3cf4308562995e` | D-43 |
@@ -59,11 +59,15 @@
 > 검사 대기 `downloadUrl`·검사 결과 `signature`, `/healthz/dependencies` 의 `clock`, ConfigDiff `warnings`, 현재 설정 본문, 중앙 공통원서 `GET·PUT /api/v1/profile`,
 > 이벤트 수신 규칙(`(source,id)` 중복 제거·미등록 대학 400·심장박동), "내 원서" 대학별 `universityReachable`. 전부 optional 필드·새 경로라 호환 변경이다(§A16).
 
+> **2026-10-01 v1.5.0** — 화면이 내부 코드를 보이지 않게 표시 이름을 더했다(T-M5-51). "내 원서" 요약 `admissionTypeName`·`departmentName`(대학이 접수 알림에 싣는다),
+> 공통원서 동의 `universityName`. optional 필드 추가라 호환 변경이다(§A16).
+
 ### §04 CloudEvents Schema
 
 - `subjectRef` 절의 패턴 `^[A-Za-z0-9_-]{1,64}[.][A-Za-z0-9_-]{43}$` → `^[A-Za-z0-9_-]{1,16}[.][A-Za-z0-9_-]{43}$`,
   뒤에 "— keyId 16자 이내(D-47). 전체 60자 이하라 중앙 `subject_ref varchar(64)` 에 들어간다" 를 붙인다
 - 「첨부」 절에 "**2026-09-30** — keyId 상한을 16자로 좁힌 판으로 교체(D-47). 생성기와 중앙 DB 가 이미 16자라 기존 이벤트는 그대로 통과한다" 를 더한다
+- 「첨부」 절에 "**2026-10-01** — `application.finalized` 에 선택 필드 `admissionTypeName`·`departmentName`(표시 이름, 개인정보 아님, 200자)을 더한 판(T-M5-51). 이름 없는 이벤트도 그대로 통과한다. 중앙은 스키마로 거르지 않으므로 배포 순서와 무관하다" 를 더한다
 - 「이벤트 타입」 절에 더한다 (D-60 — 스키마 첨부는 그대로):
 
   > 대학이 보내는 것 — `application.finalized`·`application.cancelled`(Outbox, 원서 원장), `sync.heartbeat`(event-relay 가 기본 60초마다, Outbox 를 거치지 않는다 —

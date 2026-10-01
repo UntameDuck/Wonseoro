@@ -1,6 +1,7 @@
 'use client';
 
 import { Alert } from '@wonseoro/krds';
+import { ACTIVATION_KIND_LABEL } from '@wonseoro/contracts';
 import { kst } from '../lib/api';
 
 export interface ActivationView {
@@ -25,11 +26,11 @@ export interface ActivationList {
   systemChain: { valid: boolean; brokenAt?: string; checked: number };
 }
 
-const KIND = { ACTIVATE: '적용', EXTEND: '연장', ROLLBACK: '되돌리기' } as const;
+const KIND = ACTIVATION_KIND_LABEL;
 const SIG = {
   VALID: '✓ 서명 확인',
   INVALID: '✕ 서명 불일치',
-  UNKNOWN_KEY: '? 모르는 키',
+  UNKNOWN_KEY: '? 확인할 수 없는 서명 키',
 } as const;
 
 export function ActivationBadge({ text }: { text: string }) {
@@ -58,13 +59,13 @@ export function ActivationTable({ list, filter }: { list: ActivationList; filter
         </Alert>
       )}
       {!list.systemChain.valid && (
-        <Alert tone="danger" title="운영자 감사 체인이 끊겨 있습니다">
-          빠지거나 고쳐진 기록이 있습니다. 끊긴 지점: {list.systemChain.brokenAt ?? '-'}
+        <Alert tone="danger" title="담당자 처리 기록이 끊겨 있습니다">
+          빠지거나 고쳐진 기록이 있습니다. 보안 담당자에게 알리십시오. 끊긴 기록 번호: {list.systemChain.brokenAt ?? '-'}
         </Alert>
       )}
       {list.allSignaturesValid && list.systemChain.valid && (
         <p style={{ fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)', margin: '0 0 var(--krds-space-2)' }}>
-          <span aria-hidden="true">✓ </span>모든 서명이 맞고, 운영자 감사 체인 {list.systemChain.checked}건이 끊김 없이 이어집니다.
+          <span aria-hidden="true">✓ </span>모든 서명이 맞고, 담당자 처리 기록 {list.systemChain.checked}건이 빠지거나 고쳐진 곳 없이 이어집니다.
         </p>
       )}
       {rows.length === 0 ? (
@@ -99,8 +100,11 @@ export function ActivationTable({ list, filter }: { list: ActivationList; filter
                 </td>
                 <td style={{ ...td, fontWeight: a.signature === 'VALID' ? 400 : 700, color: a.signature === 'VALID' ? 'inherit' : 'var(--krds-danger)' }}>
                   {SIG[a.signature]}
-                  <br />
-                  <span style={{ color: 'var(--krds-fg-muted)', fontWeight: 400 }}>{a.keyId}</span>
+                  {/* 서명 키 이름은 검증·문의용이다 — 접어 둔다 (T-M5-51) */}
+                  <details style={{ color: 'var(--krds-fg-muted)', fontWeight: 400 }}>
+                    <summary style={{ cursor: 'pointer' }}>서명 키</summary>
+                    {a.keyId}
+                  </details>
                 </td>
               </tr>
             ))}

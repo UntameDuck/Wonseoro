@@ -7,3 +7,4 @@ export * from './audit';
 export * from './deadline-policy';
 export * from './retention';
 export * from './common-profile';
+export * from './labels';

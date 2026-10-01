@@ -130,3 +130,44 @@ describe('Diff digest — 승인이 본 것과 같은지', () => {
     assert.equal(diff.changes[0]?.risk, 'DESTRUCTIVE');
   });
 });
+
+describe('Config Diff — 요약은 승인자가 읽을 말이다 (T-M5-51, U-42)', () => {
+  const TITLED = {
+    forms: {
+      EARLY: {
+        type: 'object',
+        properties: {
+          gpa: { type: 'number', maximum: 5, title: '내신 성적' },
+          selfIntro: { type: 'string', maxLength: 1500, title: '자기소개' },
+        },
+      },
+    },
+    fees: { EARLY: 55000 },
+    documentLabels: { TRANSCRIPT: '학교생활기록부' },
+  };
+  const NAMES = { EARLY: '학생부종합전형' };
+
+  it('항목 삭제는 전형 이름과 항목 이름으로 말한다 — 경로는 path 에 남는다', () => {
+    const after = structuredClone(TITLED) as { forms: { EARLY: { properties: Record<string, unknown> } } };
+    delete after.forms.EARLY.properties.gpa;
+    const hit = diffConfig(TITLED, after as Record<string, unknown>, NAMES).changes.find((c) => c.path === 'forms.EARLY.properties.gpa');
+    assert.ok(hit);
+    assert.match(hit.summary, /^학생부종합전형 — '내신 성적' 항목이 삭제됩니다/);
+  });
+
+  it('제약 변경·전형료 변경도 이름으로 말한다', () => {
+    const after = structuredClone(TITLED);
+    after.forms.EARLY.properties.selfIntro.maxLength = 500;
+    after.fees.EARLY = 60000;
+    const summaries = diffConfig(TITLED, after, NAMES).changes.map((c) => c.summary);
+    assert.ok(summaries.includes("학생부종합전형 — '자기소개' 항목의 최대 글자 수가 1500 → 500(으)로 바뀝니다."), summaries.join('\n'));
+    assert.ok(summaries.includes('학생부종합전형 전형료가 55000 → 60000(으)로 바뀝니다.'), summaries.join('\n'));
+  });
+
+  it('이름을 모르면 코드로 말하되 설정 경로를 쏟지 않는다', () => {
+    const after = structuredClone(TITLED);
+    after.fees.EARLY = 60000;
+    const [change] = diffConfig(TITLED, after).changes;
+    assert.equal(change?.summary, 'EARLY 전형 전형료가 55000 → 60000(으)로 바뀝니다.');
+  });
+});

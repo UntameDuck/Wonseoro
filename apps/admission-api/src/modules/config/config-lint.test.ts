@@ -56,12 +56,19 @@ describe('Config Linter (§A5)', () => {
     assert.ok(r.warnings.some((w) => w.includes('requiredDocuments.EARLY')));
   });
 
-  it('이름(title) 없는 항목·공통원서 표시 없는 옛 양식은 경고한다', () => {
+  it('이름(title) 없는 항목은 초안을 거절한다 — 화면에 항목 코드가 보인다 (U-29)', () => {
     const r = lintConfig(
       { forms: { EARLY: { type: 'object', properties: { highSchool: { type: 'string' } } } } },
       ['EARLY'],
     );
-    assert.ok(r.warnings.some((w) => w.includes('title')));
+    assert.ok(r.errors.some((e) => e.includes('title') && e.includes('highSchool')));
+  });
+
+  it('공통원서 표시 없는 옛 양식은 경고한다', () => {
+    const r = lintConfig(
+      { forms: { EARLY: { type: 'object', properties: { highSchool: { type: 'string', title: '출신 고등학교' } } } } },
+      ['EARLY'],
+    );
     assert.ok(r.warnings.some((w) => w.includes('x-profile')));
   });
 });

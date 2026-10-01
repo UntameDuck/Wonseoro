@@ -1,6 +1,6 @@
 import { Controller, Get, Header, Param, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
-import { CACHE_CONTROL_PII } from '@wonseoro/contracts';
+import { APPLICATION_STATUS_LABEL, AUDIT_ACTION_LABEL, CACHE_CONTROL_PII, labelOf } from '@wonseoro/contracts';
 import { Db } from '@wonseoro/server-kit';
 import { applicantFrom } from '../../common/identity/identity';
 import { Ownership } from '../../common/identity/ownership.service';
@@ -104,7 +104,7 @@ export class SelfCheckController {
       case 'CANCELLED':
         return '취소된 원서입니다. 결제하신 전형료가 있으면 대학이 환불 절차를 안내합니다.';
       default:
-        return `현재 상태: ${status}`;
+        return `현재 상태: ${labelOf(APPLICATION_STATUS_LABEL, status, '확인 중')}`;
     }
   }
 
@@ -232,24 +232,8 @@ export class SelfCheckController {
     );
     return rows.map((r) => ({
       at: r.occurred_at.toISOString(),
-      what: LABELS[r.action] ?? r.action,
+      what: labelOf(AUDIT_ACTION_LABEL, r.action),
       result: r.result,
     }));
   }
 }
-
-/** 감사 액션을 사용자가 읽을 수 있는 말로 바꾼다. */
-const LABELS: Record<string, string> = {
-  LOGIN_SUCCEEDED: '로그인',
-  APPLICATION_CREATED: '원서 생성',
-  APPLICATION_SAVED: '원서 저장',
-  DOCUMENT_UPLOAD_STARTED: '서류 업로드',
-  DOCUMENT_VERIFIED: '서류 검사',
-  PAYMENT_INTENT_CREATED: '결제 시작',
-  PAYMENT_VERIFIED: '결제 확인',
-  FINALIZE_REQUESTED: '접수 요청',
-  FINALIZE_VALIDATION_PASSED: '접수 검증 통과',
-  APPLICATION_FINALIZED: '접수 완료',
-  APPLICATION_CANCELLED: '원서 취소',
-  RECEIPT_ISSUED: '접수증 발급',
-};

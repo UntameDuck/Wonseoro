@@ -192,7 +192,7 @@ export default function ProfilePage() {
             items={profile.consents
               .filter((c) => c.universityId !== university?.id)
               .map((c) => [
-                c.universityId,
+                c.universityName ?? '대학 정보 확인 중',
                 `${c.fieldCodes
                   .map((code) => COMMON_PROFILE_FIELDS.find((f) => f.code === code)?.title ?? code)
                   .join(', ')} (${formatKst(c.grantedAt)})`,

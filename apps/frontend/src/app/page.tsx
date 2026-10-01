@@ -145,7 +145,7 @@ export default function Home() {
             label="전형"
             value={typeId}
             onChange={setTypeId}
-            options={types.map((t) => ({ value: t.id, label: `${t.name} (${t.code})` }))}
+            options={types.map((t) => ({ value: t.id, label: t.name }))}
             hint="전형에 따라 작성할 항목과 전형료가 달라집니다."
             required
           />

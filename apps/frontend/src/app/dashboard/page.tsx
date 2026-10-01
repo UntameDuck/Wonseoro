@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card } from '@wonseoro/krds';
+import { APPLICATION_STATUS_LABEL, labelOf } from '@wonseoro/contracts';
 import { Breadcrumb } from '../../krds/navigation';
 import { NetworkError, api } from '../../lib/api';
 import { loadSession } from '../../lib/session';
@@ -16,6 +17,8 @@ interface Row {
   status: string;
   admissionTypeCode: string;
   departmentCode: string;
+  admissionTypeName?: string | null;
+  departmentName?: string | null;
   lastSyncedAt: string;
 }
 
@@ -104,11 +107,14 @@ export default function DashboardPage() {
               >
                 <div>
                   <h2 style={{ margin: 0, fontSize: 'var(--krds-text-lg)' }}>
-                    {r.universityName ?? r.universityId}
+                    {r.universityName ?? '대학 정보 확인 중'}
                   </h2>
-                  <p style={{ margin: 'var(--krds-space-1) 0', color: 'var(--krds-fg-muted)' }}>
-                    {r.admissionTypeCode} · {r.departmentCode}
-                  </p>
+                  {/* 코드(EARLY · CSE)는 보이지 않는다. 이름 없이 동기화된 옛 행은 줄을 비운다 (T-M5-51) */}
+                  {(r.admissionTypeName || r.departmentName) && (
+                    <p style={{ margin: 'var(--krds-space-1) 0', color: 'var(--krds-fg-muted)' }}>
+                      {[r.admissionTypeName, r.departmentName].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
                   {r.applicationNumber && (
                     <p style={{ margin: 0 }}>
                       접수번호 <strong>{r.applicationNumber}</strong>
@@ -142,7 +148,7 @@ export default function DashboardPage() {
                     }}
                   >
                     <span aria-hidden="true">{r.status === 'FINALIZED' ? '✓ ' : '· '}</span>
-                    {r.status === 'FINALIZED' ? '접수 완료' : r.status}
+                    {labelOf(APPLICATION_STATUS_LABEL, r.status, '확인 중')}
                   </span>
                   {/* 중앙은 언제나 뒤처질 수 있다. 그 사실을 숨기지 않는다. */}
                   <p

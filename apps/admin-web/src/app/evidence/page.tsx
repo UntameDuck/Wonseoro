@@ -2,6 +2,17 @@
 
 import { Alert, Button, Card, DescriptionList, Field } from '@wonseoro/krds';
 import { useEffect, useState } from 'react';
+import {
+  ACTIVATION_KIND_LABEL,
+  ACTOR_TYPE_LABEL,
+  APPLICATION_STATUS_LABEL,
+  AUDIT_ACTION_LABEL,
+  AUDIT_RESULT_LABEL,
+  DEADLINE_MODE_LABEL,
+  DOCUMENT_STATUS_LABEL,
+  PAYMENT_STATUS_LABEL,
+  labelOf,
+} from '@wonseoro/contracts';
 import { td, th } from '../../components/activation';
 import { useConsole } from '../../components/console';
 import { adminGet, describe, kst } from '../../lib/api';
@@ -39,6 +50,19 @@ interface EvidencePackage {
   documents: Array<{ documentType: string; status: string; sha256: string }>;
   timeline: Array<{ at: string; action: string; result: string; actorType: string; eventHash: string }>;
   chainVerification: { valid: boolean; checked: number; brokenAt?: string };
+}
+
+/** 지금 적용 중인 설정의 서류 이름. 못 읽으면 빈 사전 — 서류 코드를 그대로 보인다. */
+function useDocumentLabels(): Record<string, string> {
+  const { cycle } = useConsole();
+  const [labels, setLabels] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!cycle) return;
+    void adminGet<{ config: { documentLabels?: Record<string, string> } }>('config/active', { cycleId: cycle.id })
+      .then((r) => setLabels(r.config.documentLabels ?? {}))
+      .catch(() => setLabels({}));
+  }, [cycle]);
+  return labels;
 }
 
 /**
@@ -108,6 +132,7 @@ export default function EvidencePage() {
 }
 
 function EvidenceView({ pkg }: { pkg: EvidencePackage }) {
+  const docLabels = useDocumentLabels();
   const signed = pkg.deadlinePolicy?.signedActivation ?? null;
   const policyTrusted = signed ? signed.signature === 'VALID' && signed.matchesPolicy : false;
   return (
@@ -150,7 +175,7 @@ function EvidenceView({ pkg }: { pkg: EvidencePackage }) {
             ]}
           />
         ) : (
-          <p style={{ margin: 0 }}>접수가 확정되지 않은 원서입니다. (상태 {pkg.application.status})</p>
+          <p style={{ margin: 0 }}>접수가 확정되지 않은 원서입니다. (상태: {labelOf(APPLICATION_STATUS_LABEL, pkg.application.status)})</p>
         )}
       </Card>
 
@@ -158,13 +183,13 @@ function EvidenceView({ pkg }: { pkg: EvidencePackage }) {
         <Card title="판정에 쓰인 마감 정책">
           <DescriptionList
             items={[
-              ['정책', `${pkg.deadlinePolicy.version} · ${pkg.deadlinePolicy.mode}`],
+              ['정책', `${pkg.deadlinePolicy.version} · ${labelOf(DEADLINE_MODE_LABEL, pkg.deadlinePolicy.mode)}`],
               ['마감', kst(pkg.deadlinePolicy.deadlineAt)],
               ['승인', pkg.deadlinePolicy.approvedBy.join(', ') || '-'],
               [
                 '적용 기록',
                 signed
-                  ? `${signed.kind} · ${kst(signed.effectiveAt)} · ${signed.operatorId}${signed.decisionRef ? ` · 결정 ${signed.decisionRef}` : ''} · ${policyTrusted ? '✓ 서명 확인' : '✕ 불일치'}`
+                  ? `${labelOf(ACTIVATION_KIND_LABEL, signed.kind)} · ${kst(signed.effectiveAt)} · ${signed.operatorId}${signed.decisionRef ? ` · 결정 ${signed.decisionRef}` : ''} · ${policyTrusted ? '✓ 서명 확인' : '✕ 불일치'}`
                   : '없음',
               ],
             ]}
@@ -172,7 +197,7 @@ function EvidenceView({ pkg }: { pkg: EvidencePackage }) {
         </Card>
       )}
 
-      <Card title={`Timeline (${pkg.timeline.length}건)`}>
+      <Card title={`처리 이력 (${pkg.timeline.length}건)`}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--krds-text-sm)' }}>
           <thead>
             <tr>
@@ -187,9 +212,9 @@ function EvidenceView({ pkg }: { pkg: EvidencePackage }) {
             {pkg.timeline.map((t) => (
               <tr key={t.eventHash}>
                 <td style={td}>{kst(t.at)}</td>
-                <td style={td}>{t.action}</td>
-                <td style={td}>{t.result}</td>
-                <td style={td}>{t.actorType}</td>
+                <td style={td}>{labelOf(AUDIT_ACTION_LABEL, t.action)}</td>
+                <td style={td}>{labelOf(AUDIT_RESULT_LABEL, t.result)}</td>
+                <td style={td}>{labelOf(ACTOR_TYPE_LABEL, t.actorType)}</td>
                 <td style={td}>
                   <code>{t.eventHash.slice(0, 10)}</code>
                 </td>
@@ -202,8 +227,9 @@ function EvidenceView({ pkg }: { pkg: EvidencePackage }) {
       <Card title="결제 · 서류">
         <DescriptionList
           items={[
-            ...pkg.payments.map((p, i): [string, string] => [`결제 ${i + 1}`, `${p.status} · ${p.amount.toLocaleString('ko-KR')}원 · 확인 ${kst(p.verifiedAt)}`]),
-            ...pkg.documents.map((d): [string, string] => [d.documentType, `${d.status} · sha256 ${d.sha256.slice(0, 12)}…`]),
+            ...pkg.payments.map((p, i): [string, string] => [`결제 ${i + 1}`, `${labelOf(PAYMENT_STATUS_LABEL, p.status)} · ${p.amount.toLocaleString('ko-KR')}원 · 확인 ${kst(p.verifiedAt)}`]),
+            // 서류 이름은 지금 적용 중인 설정의 서류 이름에서 읽는다 — 코드(TRANSCRIPT)를 보이지 않는다
+            ...pkg.documents.map((d): [string, string] => [docLabels[d.documentType] ?? d.documentType, `${labelOf(DOCUMENT_STATUS_LABEL, d.status)} · 파일 지문 ${d.sha256.slice(0, 12)}…`]),
           ]}
         />
         <p style={{ fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)', marginBottom: 0 }}>

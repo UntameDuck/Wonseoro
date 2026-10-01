@@ -65,6 +65,12 @@ export interface ApplicationFinalizedData {
   admissionYear: number;
   admissionTypeCode: string;
   departmentCode: string;
+  /**
+   * 화면에 보일 전형·모집단위 이름 (T-M5-51, U-7). 선택 — 이름이 없던 옛 알림도 받는다.
+   * 개인정보가 아니다. 중앙이 대학에 되묻지 않고 "내 원서" 에 이름을 보이려고 싣는다.
+   */
+  admissionTypeName?: string;
+  departmentName?: string;
   status: 'FINALIZED';
   requestedAt: string;
   paymentApprovedAt: string | null;

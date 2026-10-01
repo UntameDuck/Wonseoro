@@ -2,6 +2,7 @@
 
 import { Alert, Button, Card, Field } from '@wonseoro/krds';
 import { useCallback, useEffect, useState } from 'react';
+import { CONFIG_VERSION_STATUS_LABEL } from '@wonseoro/contracts';
 import {
   ActivationBadge,
 } from '../../components/activation';
@@ -40,12 +41,7 @@ interface Diff {
   warnings?: string[];
 }
 
-const STATUS_LABEL: Record<Version['status'], string> = {
-  DRAFT: '승인 대기',
-  APPROVED: '승인 완료 · 적용 전',
-  ACTIVE: '적용 중',
-  RETIRED: '물러남',
-};
+const STATUS_LABEL: Record<Version['status'], string> = CONFIG_VERSION_STATUS_LABEL;
 
 /**
  * 설정 승인 — T-M3-11, v1.1 §A14
@@ -203,14 +199,14 @@ function DraftCreator({
     <Card title="새 설정 초안 만들기">
       <p style={{ marginTop: 0, fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)' }}>
         초안은 효력이 없습니다. 만든 사람이 아닌 두 명이 변경 내역을 확인하고 승인해야 적용됩니다.
-        양식(forms)·서류(requiredDocuments·optionalDocuments·documentLabels)·보존(retention)을 고칩니다.
+        전형 양식·제출 서류·서류 이름·보존기간을 고칠 수 있습니다. 지금 적용 중인 설정에서 시작해 필요한 곳만 고치십시오.
       </p>
       {message && <Alert tone={message.tone} title={message.text} />}
       <Button variant="secondary" onClick={() => void startFromActive()}>
         지금 적용 중인 설정에서 시작
       </Button>
       <Field label="초안 버전 이름" value={version} onChange={setVersion} required maxLength={64} />
-      <Field label="설정 (JSON)" value={text} onChange={setText} required multiline />
+      <Field label="설정 내용 (고급 편집)" value={text} onChange={setText} required multiline />
       <Button
         disabled={busy || !operator || !version.trim() || !text.trim()}
         onClick={() => void create()}
@@ -412,7 +408,11 @@ function ChangeList({ changes }: { changes: Change[] }) {
       {changes.map((c) => (
         <li key={`${c.kind}:${c.path}`}>
           <strong>[{riskLabel[c.risk]}]</strong> {c.summary}{' '}
-          <code style={{ fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)' }}>{c.path}</code>
+          {/* 설정 경로는 요약이 이름으로 말한다. 원문은 문의·대조용으로 접어 둔다 (T-M5-51) */}
+          <details style={{ display: 'inline-block', fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)' }}>
+            <summary style={{ cursor: 'pointer' }}>설정 위치</summary>
+            <code>{c.path}</code>
+          </details>
         </li>
       ))}
     </ul>

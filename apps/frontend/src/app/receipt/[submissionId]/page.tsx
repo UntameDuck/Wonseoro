@@ -63,7 +63,6 @@ export default function ReceiptPage({ params }: { params: Promise<{ submissionId
             </strong>,
           ],
           ['접수 시각', formatKst(receipt.finalizedAt)],
-          ['접수 확인 번호', submissionId],
         ]}
       />
       <p style={{ fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)' }}>

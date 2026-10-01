@@ -86,7 +86,7 @@ const BASE = {
     EARLY: {
       type: 'object',
       required: ['highSchool'],
-      properties: { highSchool: { type: 'string', minLength: 2, maxLength: 100 } },
+      properties: { highSchool: { type: 'string', minLength: 2, maxLength: 100, title: '출신 고등학교' } },
     },
   },
   fees: { EARLY: 55000 },

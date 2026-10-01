@@ -45,6 +45,25 @@ describe('중앙 이벤트 본문은 CloudEvents 스키마를 따른다 (D-50)',
     assert.ok(ok, errors);
   });
 
+  it('접수 이벤트에 전형·모집단위 표시 이름을 싣는다 — 내 원서가 코드 대신 이름을 보인다 (T-M5-51)', () => {
+    const data = finalizedEventData({
+      applicationId: APP,
+      admissionYear: 2027,
+      admissionTypeCode: 'EARLY',
+      departmentCode: 'CSE',
+      admissionTypeName: '학생부종합전형',
+      departmentName: '컴퓨터공학과',
+      applicationNumber: '2027-A-ABCDEF',
+      requestedAt: '2026-09-11T08:59:40Z',
+      paymentApprovedAt: null,
+      finalizedAt: '2026-09-11T08:59:42Z',
+    });
+    const { ok, errors } = validate('ApplicationFinalizedData', data);
+    assert.ok(ok, errors);
+    assert.equal(data.admissionTypeName, '학생부종합전형');
+    assert.equal(data.departmentName, '컴퓨터공학과');
+  });
+
   it('취소 이벤트 — 사유 문장 없이 분류만', () => {
     const data = cancelledEventData({ applicationId: APP, cancelledAt: '2026-09-23T00:14:52.814Z' });
     const { ok, errors } = validate('ApplicationCancelledData', data);

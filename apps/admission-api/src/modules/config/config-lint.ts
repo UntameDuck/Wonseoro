@@ -93,8 +93,10 @@ export function lintConfig(config: unknown, typeCodes: readonly string[] | null)
         const untitled = Object.entries(properties)
           .filter(([, p]) => isObject(p) && (typeof p.title !== 'string' || p.title.trim() === ''))
           .map(([field]) => field);
+        // 이름이 없으면 화면이 항목 코드를 라벨로 보인다 — 지원자가 읽을 수 없는 칸이다. 새 초안은 거절한다(T-M5-51, U-29).
+        // 이미 적용된 설정은 그대로 동작한다 — 이 검사는 초안을 만들 때 돈다.
         if (untitled.length > 0) {
-          warnings.push(`${at}: 이름(title)이 없는 항목은 화면에 항목 코드가 그대로 보입니다 — ${untitled.join(', ')}`);
+          errors.push(`${at}: 이름(title)이 없는 항목이 있습니다. 지원자 화면에 항목 이름으로 보일 title 을 넣어 주십시오 — ${untitled.join(', ')}`);
         }
         const offStandard = Object.entries(properties)
           .filter(([field, p]) => isObject(p) && p['x-profile'] === true && !COMMON_PROFILE_CODES.includes(field))

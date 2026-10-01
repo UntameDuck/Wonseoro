@@ -40,6 +40,8 @@
         "admissionYear": { "type": "integer", "minimum": 2020, "maximum": 2200 },
         "admissionTypeCode": { "type": "string", "maxLength": 64 },
         "departmentCode": { "type": "string", "maxLength": 64 },
+        "admissionTypeName": { "type": "string", "maxLength": 200, "description": "display name for the dashboard — optional, not personal data (T-M5-51)" },
+        "departmentName": { "type": "string", "maxLength": 200, "description": "display name for the dashboard — optional, not personal data (T-M5-51)" },
         "status": { "const": "FINALIZED" },
         "requestedAt": { "type": "string", "format": "date-time" },
         "paymentApprovedAt": { "type": ["string","null"], "format": "date-time" },

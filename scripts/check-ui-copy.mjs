@@ -22,6 +22,7 @@ const TARGETS = [
   'apps/admin-web/src',
   'packages/krds/src',
   'packages/contracts/src/retention.ts',
+  'packages/contracts/src/labels.ts',
 ];
 
 const RULES = [

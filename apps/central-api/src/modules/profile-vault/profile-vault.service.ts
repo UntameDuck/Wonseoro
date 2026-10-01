@@ -14,7 +14,7 @@ export interface SnapshotRequest {
 /** 지원자가 보는 자기 공통원서. */
 export interface ApplicantProfile {
   fields: Record<string, unknown>;
-  consents: Array<{ universityId: string; fieldCodes: string[]; grantedAt: string }>;
+  consents: Array<{ universityId: string; universityName: string | null; fieldCodes: string[]; grantedAt: string }>;
   updatedAt: string | null;
 }
 
@@ -65,10 +65,24 @@ export class ProfileVaultService {
         ORDER BY university_id`,
       [subjectToken],
     );
+    // 화면은 대학 이름으로 보인다(T-M5-51, U-22). Vault 표와 JOIN 하지 않고 따로 읽는다 —
+    // 운영에서 Vault 는 별도 DB 인스턴스로 나뉜다(0002_vault.sql). 등록부 이름은 공개 정보다.
+    const ids = consents.rows.map((c) => c.university_id);
+    const names = ids.length
+      ? new Map(
+          (
+            await this.db.query<{ id: string; name: string }>(
+              `SELECT id, name FROM kadmission_central.university_registry WHERE id = ANY($1::text[])`,
+              [ids],
+            )
+          ).rows.map((u) => [u.id, u.name]),
+        )
+      : new Map<string, string>();
     return {
       fields: rows[0]?.fields ?? {},
       consents: consents.rows.map((c) => ({
         universityId: c.university_id,
+        universityName: names.get(c.university_id) ?? null,
         fieldCodes: c.field_codes,
         grantedAt: c.granted_at.toISOString(),
       })),

@@ -2,6 +2,17 @@
 
 import { Alert, Button, Card, Field, Select } from '@wonseoro/krds';
 import { useCallback, useEffect, useState } from 'react';
+import {
+  APPLICATION_STATUS_LABEL,
+  EVENT_TYPE_LABEL,
+  EXCEPTION_FACT_LABEL,
+  EXCEPTION_SEVERITY_LABEL,
+  EXCEPTION_STATE_LABEL,
+  EXCEPTION_TYPE_LABEL,
+  OUTBOX_STATUS_LABEL,
+  PAYMENT_STATUS_LABEL,
+  labelOf,
+} from '@wonseoro/contracts';
 import { td, th } from '../../components/activation';
 import { useConsole } from '../../components/console';
 import { actionKey, adminGet, adminPost, describe, kst } from '../../lib/api';
@@ -16,19 +27,35 @@ interface Exception {
   detectedAt: string;
 }
 
-/** 검사 종류를 운영자 말로. 코드만 보여주면 무엇이 문제인지 다시 찾아봐야 한다. */
-const TYPE_LABEL: Record<string, string> = {
-  PAYMENT_CONFIRMED_WITHOUT_SUBMISSION: '결제는 확인됐는데 접수 기록이 없음',
-  SUBMISSION_WITHOUT_CONFIRMED_PAYMENT: '접수됐는데 확인된 결제가 없음',
-  FINALIZED_WITHOUT_SUBMISSION: '확정 상태인데 접수 원장이 없음 (DB 손상 의심)',
-  SUBMISSION_WITHOUT_FINALIZED_STATUS: '접수 원장과 원서 상태가 어긋남',
-  CENTRAL_ACK_MISSING: '중앙 통합 조회 반영 지연 — 접수 실패 아님',
-  OUTBOX_DEAD_LETTER: '중앙 전송을 포기한 이벤트',
-  PAYMENT_STATE_UNKNOWN_STALE: '확인 못 한 결제가 오래 방치됨',
-  REFUND_REQUIRED_AFTER_CANCEL: '취소된 원서에 환불이 필요함',
+/**
+ * 사실 항목의 "status" 가 무엇의 상태인지는 예외 종류가 정한다 — 같은 PENDING 이 전송 대기이기도, 결제 확인 중이기도 하다.
+ * 대조 검사(reconciliation.service)가 어느 표에서 읽었는지에 맞춘다.
+ */
+const STATUS_SOURCE: Record<string, { label: string; dict: Record<string, string> }> = {
+  CENTRAL_ACK_MISSING: { label: '전송 상태', dict: OUTBOX_STATUS_LABEL },
+  OUTBOX_DEAD_LETTER: { label: '전송 상태', dict: OUTBOX_STATUS_LABEL },
+  FINALIZED_WITHOUT_SUBMISSION: { label: '원서 상태', dict: APPLICATION_STATUS_LABEL },
+  SUBMISSION_WITHOUT_FINALIZED_STATUS: { label: '원서 상태', dict: APPLICATION_STATUS_LABEL },
 };
 
-const SEVERITY_LABEL = { CRITICAL: '긴급', HIGH: '높음', WARN: '주의', INFO: '안내' } as const;
+function factLabel(type: string, key: string): string {
+  if (key === 'status') return STATUS_SOURCE[type]?.label ?? '결제 상태';
+  return labelOf(EXCEPTION_FACT_LABEL, key);
+}
+
+/** 발견 당시 사실의 값을 사람 말로 — 시각은 한국 시간, 상태는 사전, 금액은 원. 모르는 값은 그대로. */
+function factValue(type: string, key: string, v: unknown): string {
+  if (v === null || v === undefined) return '-';
+  if (typeof v === 'object') return JSON.stringify(v);
+  const s = String(v);
+  if (/_at$|At$/.test(key) && !Number.isNaN(Date.parse(s))) return kst(s);
+  if (/amount|Amount/.test(key) && Number.isFinite(Number(s))) return `${Number(s).toLocaleString('ko-KR')}원`;
+  if (key === 'event_type') return labelOf(EVENT_TYPE_LABEL, s);
+  if (key === 'status') return labelOf(STATUS_SOURCE[type]?.dict ?? PAYMENT_STATUS_LABEL, s);
+  if (/Status$|^afterVerify$/.test(key)) return labelOf(PAYMENT_STATUS_LABEL, s);
+  if (key === 'attempt_count') return `${s}회`;
+  return s;
+}
 
 const RESOLUTION_OPTIONS = [
   { value: '', label: '선택하십시오' },
@@ -76,7 +103,7 @@ export default function ReconciliationPage() {
       );
       setMessage({
         tone: 'info',
-        text: `최근 48시간 대조: 검사 ${r.checked}건 · 새 불일치 ${r.opened}건 · 저절로 풀림 ${r.autoResolved}건 · 남은 불일치 ${r.stillOpen}건`,
+        text: `최근 48시간 대조: 검사 ${r.checked}건 · 새 불일치 ${r.opened}건 · 자동 해소 ${r.autoResolved}건 · 남은 불일치 ${r.stillOpen}건`,
       });
       await reload();
     } catch (err) {
@@ -100,7 +127,7 @@ export default function ReconciliationPage() {
                 { value: 'OPEN', label: '미해결' },
                 { value: 'MANUAL_REVIEW', label: '수동 검토 중' },
                 { value: 'RESOLVED', label: '해소됨' },
-                { value: 'AUTO_RESOLVED', label: '저절로 풀림' },
+                { value: 'AUTO_RESOLVED', label: EXCEPTION_STATE_LABEL.AUTO_RESOLVED },
                 { value: 'ALL', label: '전체' },
               ]}
             />
@@ -152,7 +179,7 @@ function ExceptionItem({ item, operator, onResolved }: { item: Exception; operat
   };
 
   return (
-    <Card title={`[${SEVERITY_LABEL[item.severity]}] ${TYPE_LABEL[item.exceptionType] ?? item.exceptionType}`}>
+    <Card title={`[${labelOf(EXCEPTION_SEVERITY_LABEL, item.severity)}] ${labelOf(EXCEPTION_TYPE_LABEL, item.exceptionType)}`}>
       <table style={{ borderCollapse: 'collapse', fontSize: 'var(--krds-text-sm)', marginBottom: 'var(--krds-space-3)' }}>
         <tbody>
           <tr>
@@ -166,14 +193,14 @@ function ExceptionItem({ item, operator, onResolved }: { item: Exception; operat
             <td style={td}>{kst(item.detectedAt)}</td>
           </tr>
           <tr>
-            <th scope="row" style={th}>상태</th>
-            <td style={td}>{item.state}</td>
+            <th scope="row" style={th}>처리 상태</th>
+            <td style={td}>{labelOf(EXCEPTION_STATE_LABEL, item.state)}</td>
           </tr>
           {/* 발견 당시 사실(before). 해소 뒤 상태는 감사 기록에 남는다. */}
           {Object.entries(item.facts).map(([k, v]) => (
             <tr key={k}>
-              <th scope="row" style={th}>{k}</th>
-              <td style={td}>{typeof v === 'object' ? JSON.stringify(v) : String(v)}</td>
+              <th scope="row" style={th}>{factLabel(item.exceptionType, k)}</th>
+              <td style={td}>{factValue(item.exceptionType, k, v)}</td>
             </tr>
           ))}
         </tbody>

@@ -176,7 +176,7 @@ export interface DocumentSpec {
 /** 공통원서 — 중앙 Vault 에 있는 지원자 본인의 것. (D-57) */
 export interface CommonProfile {
   fields: Record<string, string | number>;
-  consents: Array<{ universityId: string; fieldCodes: string[]; grantedAt: string }>;
+  consents: Array<{ universityId: string; universityName?: string | null; fieldCodes: string[]; grantedAt: string }>;
   updatedAt: string | null;
 }
 
@@ -376,6 +376,9 @@ export const api = {
         status: string;
         admissionTypeCode: string;
         departmentCode: string;
+        /** 표시 이름 (계약 1.5.0). 이름 없이 동기화된 옛 행은 null — 화면은 코드를 보이지 않는다 */
+        admissionTypeName?: string | null;
+        departmentName?: string | null;
         lastSyncedAt: string;
       }>;
     }>(

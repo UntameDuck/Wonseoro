@@ -51,7 +51,6 @@ export default function ApplyPage({
   const [busy, setBusy] = useState(false);
   /** 서버가 준 추가문항 스키마. 화면은 이걸 보고 필드를 그린다. (v1.1 §A5) */
   const [schema, setSchema] = useState<JsonSchema | null>(null);
-  const [schemaVersion, setSchemaVersion] = useState<string | null>(null);
   /** 공통원서에서 온 항목(1단계)과 이 전형이 받는 서류(4단계). 둘 다 대학 설정에서 온다. (D-56) */
   const [profileFields, setProfileFields] = useState<string[]>([]);
   const [documents, setDocuments] = useState<DocumentSpec[]>([]);
@@ -159,7 +158,6 @@ export default function ApplyPage({
       .formSchema(applicationId, applicantId)
       .then(({ data }) => {
         setSchema(data.schema as JsonSchema);
-        setSchemaVersion(data.schemaVersion);
         setProfileFields(data.profileFields ?? []);
         setDocuments(data.documents ?? []);
       })
@@ -418,14 +416,6 @@ export default function ApplyPage({
         <Card title="3. 추가정보">
           <p style={{ marginTop: 0, color: 'var(--krds-fg-muted)', fontSize: 'var(--krds-text-sm)' }}>
             이 대학이 추가로 요구하는 항목입니다. 대학·전형마다 다릅니다.
-            {schemaVersion && (
-              <>
-                {' '}
-                <span style={{ color: 'var(--krds-fg-subtle)' }}>
-                  (양식 버전 {schemaVersion})
-                </span>
-              </>
-            )}
           </p>
           <SchemaForm
             schema={schema}
@@ -564,7 +554,6 @@ export default function ApplyPage({
                     </strong>,
                   ],
                   ['접수 시각', formatKst(submission.finalizedAt)],
-                  ['적용 마감정책', submission.deadlinePolicyVersion],
                 ]}
               />
               {/* 중앙 동기화 지연은 접수완료 여부와 분리해 표시한다. (v1.1 §07) */}

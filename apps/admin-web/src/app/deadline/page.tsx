@@ -2,6 +2,7 @@
 
 import { Alert, Button, Card, Field } from '@wonseoro/krds';
 import { useCallback, useEffect, useState } from 'react';
+import { DEADLINE_MODE_LABEL, labelOf } from '@wonseoro/contracts';
 import { ActivationTable, td, th, type ActivationList } from '../../components/activation';
 import {
   ApprovalProgress,
@@ -89,7 +90,7 @@ function DeadlineConsole({ cycleId }: { cycleId: string }) {
           <p style={{ margin: 0, fontSize: 'var(--krds-text-lg)' }}>
             <strong>{kst(current.deadlineAt)}</strong>{' '}
             <span style={{ fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)' }}>
-              정책 {current.version} · {current.mode} · 적용 {kst(current.activatedAt)}
+              정책 {current.version} · {labelOf(DEADLINE_MODE_LABEL, current.mode)} · 적용 {kst(current.activatedAt)}
             </span>
           </p>
         ) : (

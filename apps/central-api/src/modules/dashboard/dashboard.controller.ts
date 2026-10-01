@@ -53,7 +53,8 @@ export class DashboardController {
     // 화면이 그 대학만 "확인 불가" 로 보이게 한다 — 나머지 대학 원서는 평소대로다 (T-M4-42).
     const { rows } = await this.db.query<Record<string, unknown>>(
       `SELECT a.university_id, u.name AS university_name, a.application_id, a.admission_year,
-              a.admission_type_code, a.department_code, a.status, a.application_number,
+              a.admission_type_code, a.department_code, a.admission_type_name, a.department_name,
+              a.status, a.application_number,
               a.submitted_at, a.last_sequence, a.last_synced_at, s.last_heartbeat_at,
               (s.last_heartbeat_at IS NOT NULL
                 AND s.last_heartbeat_at > now() - make_interval(secs => $2)) AS reachable
@@ -78,6 +79,9 @@ export class DashboardController {
         admissionYear: Number(r.admission_year),
         admissionTypeCode: String(r.admission_type_code),
         departmentCode: String(r.department_code),
+        // 화면은 이름을 보인다 — 코드는 지원자가 읽을 말이 아니다(T-M5-51). 이름 없이 들어온 옛 행은 null
+        admissionTypeName: r.admission_type_name ? String(r.admission_type_name) : null,
+        departmentName: r.department_name ? String(r.department_name) : null,
         status: String(r.status),
         applicationNumber: r.application_number ? String(r.application_number) : null,
         submittedAt: r.submitted_at ? (r.submitted_at as Date).toISOString() : null,

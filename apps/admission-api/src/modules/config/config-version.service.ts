@@ -244,17 +244,23 @@ export class ConfigVersionService {
 
     // 활성 설정이 없으면 빈 것과 비교한다. 첫 설정은 전부 추가다.
     // 설정 검사 경고를 함께 보인다 — 동작은 하지만 의도와 다를 수 있는 것을 승인자가 보고 판단한다.
-    const lint = lintConfig(target.config_json, await this.typeCodes(target.cycle_id));
-    return { ...diffConfig(base[0]?.config_json ?? {}, target.config_json), warnings: lint.warnings };
+    const types = await this.types(target.cycle_id);
+    const lint = lintConfig(target.config_json, Object.keys(types));
+    return { ...diffConfig(base[0]?.config_json ?? {}, target.config_json, types), warnings: lint.warnings };
   }
 
-  /** 이 모집의 전형 코드. 설정 검사가 모르는 전형 코드를 찾는 데 쓴다. */
-  private async typeCodes(cycleId: string): Promise<string[]> {
-    const { rows } = await this.db.query<{ code: string }>(
-      `SELECT code FROM admission_type WHERE cycle_id = $1`,
+  /** 이 모집의 전형 코드 → 이름. 설정 검사가 모르는 전형 코드를 찾고, Diff 요약이 전형 이름을 쓴다. */
+  private async types(cycleId: string): Promise<Record<string, string>> {
+    const { rows } = await this.db.query<{ code: string; name: string }>(
+      `SELECT code, name FROM admission_type WHERE cycle_id = $1`,
       [cycleId],
     );
-    return rows.map((r) => r.code);
+    return Object.fromEntries(rows.map((r) => [r.code, r.name]));
+  }
+
+  /** 이 모집의 전형 코드. */
+  private async typeCodes(cycleId: string): Promise<string[]> {
+    return Object.keys(await this.types(cycleId));
   }
 
   /**

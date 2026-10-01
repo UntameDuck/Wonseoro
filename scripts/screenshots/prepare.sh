@@ -39,7 +39,7 @@ case "${1:-}" in
     # 두 번째 지원자 — 공통원서를 쓰지 않은 사람(검증 오류·취소·대조 예외 장면)
     $P -d univ_a -c "INSERT INTO kadmission.applicant (id, subject_token, pii_ciphertext, pii_key_version)
                      VALUES ('55555555-5555-5555-5555-555555555555', 'subj-dev-0002', '\x00', 'v1')"
-    for f in 0001_init.sql 0002_vault.sql; do $P -d central < "infra/db/central/$f" > /dev/null; done
+    for f in 0001_init.sql 0002_vault.sql 0003_summary_names.sql; do $P -d central < "infra/db/central/$f" > /dev/null; done
     $P -d central -c "INSERT INTO kadmission_central.university_registry (id, name, status) VALUES ('UNIV-A', '원서로대학교', 'ACTIVE')"
     # 앞선 실행이 남긴 원서 ID 는 새 DB 에 없다
     rm -f "$(node -p "require('os').tmpdir()")/wonseoro-shots/state.json"

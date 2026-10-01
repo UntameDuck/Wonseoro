@@ -304,6 +304,26 @@ describe('중앙 저장 범위 (v1.0 §17.1)', () => {
     assert.equal(rows[0]?.subject_ref, ref);
   });
 
+  it('전형·모집단위 표시 이름을 저장하고, 이름 없는 뒤 알림이 지우지 않는다 (T-M5-51)', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    const gateway = new SyncGatewayService(db);
+    const appId = randomUUID().replace(/-/g, '');
+    await gateway.ingest(
+      event({ data: { applicationId: appId, admissionTypeName: '학생부종합전형', departmentName: '컴퓨터공학과' } }),
+    );
+    // 이름이 없는 옛 대학의 뒤 알림 — 있던 이름을 지우지 않는다
+    await gateway.ingest(event({ kadmissionsequence: 2, data: { applicationId: appId } }));
+
+    const { rows } = await db.query<{ admission_type_name: string | null; department_name: string | null; last_sequence: string }>(
+      `SELECT admission_type_name, department_name, last_sequence FROM application_summary
+        WHERE university_id = $1 AND application_id = $2`,
+      [UNIV, appId],
+    );
+    assert.equal(Number(rows[0]?.last_sequence), 2);
+    assert.equal(rows[0]?.admission_type_name, '학생부종합전형');
+    assert.equal(rows[0]?.department_name, '컴퓨터공학과');
+  });
+
   it('요약 테이블에 개인정보 컬럼이 없다', async (t) => {
     if (!available) return t.skip('DATABASE_URL 없음');
     const { rows } = await db.query<{ column_name: string }>(
@@ -440,6 +460,8 @@ describe('Common Profile Vault — 목적 최소화 (v1.0 §17, v1.1 §10 §3)',
     const vault = new ProfileVaultService(db);
     const subject = token();
     await vault.replaceProfile(subject, { highSchool: 'X' }, [{ universityId: UNIV, fieldCodes: ['highSchool'] }]);
+    const granted = await vault.profileOf(subject);
+    assert.equal(granted.consents[0]?.universityName, '테스트대학교', '화면은 대학 id 대신 이름을 보인다 (T-M5-51)');
     const saved = await vault.replaceProfile(subject, { highSchool: 'X' }, []);
     assert.deepEqual(saved.consents, []);
 

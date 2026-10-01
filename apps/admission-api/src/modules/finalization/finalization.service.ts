@@ -349,6 +349,8 @@ export class FinalizationService implements OnModuleInit {
         admissionYear: app.admissionYear,
         admissionTypeCode: app.admissionTypeCode,
         departmentCode: app.departmentCode,
+        admissionTypeName: app.admissionTypeName,
+        departmentName: app.departmentName,
         applicationNumber,
         requestedAt: input.requestedAt.toISOString(),
         paymentApprovedAt: payment.providerApprovedAt,
@@ -468,6 +470,8 @@ export class FinalizationService implements OnModuleInit {
       admissionYear: number;
       admissionTypeCode: string;
       departmentCode: string;
+      admissionTypeName: string;
+      departmentName: string;
       applicationNumber: string;
       requestedAt: string;
       paymentApprovedAt: string | null;
@@ -491,6 +495,8 @@ export class FinalizationService implements OnModuleInit {
       admissionYear: src.admissionYear,
       admissionTypeCode: src.admissionTypeCode,
       departmentCode: src.departmentCode,
+      admissionTypeName: src.admissionTypeName,
+      departmentName: src.departmentName,
       applicationNumber: src.applicationNumber,
       requestedAt: src.requestedAt,
       paymentApprovedAt: src.paymentApprovedAt,
@@ -577,6 +583,7 @@ export class FinalizationService implements OnModuleInit {
       `SELECT a.id, a.cycle_id, a.status, a.version,
               c.admission_year, c.university_id,
               t.code AS admission_type_code, d.code AS department_code,
+              t.name AS admission_type_name, d.name AS department_name,
               p.subject_token
          FROM application a
          JOIN applicant p ON p.id = a.applicant_id
@@ -597,6 +604,8 @@ export class FinalizationService implements OnModuleInit {
       universityId: String(r.university_id),
       admissionTypeCode: String(r.admission_type_code),
       departmentCode: String(r.department_code),
+      admissionTypeName: String(r.admission_type_name),
+      departmentName: String(r.department_name),
       subjectToken: String(r.subject_token),
     };
   }
