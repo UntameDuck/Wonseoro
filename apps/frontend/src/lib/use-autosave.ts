@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, NetworkError, api, newIdempotencyKey } from './api';
+import { rememberSaved } from './session';
 import { problemText } from '@wonseoro/contracts';
 
 export type SaveState =
@@ -76,7 +77,9 @@ export function useAutosave(args: {
       lastSentRef.current = serialized;
       pendingRef.current = null;
       keyRef.current = newIdempotencyKey('save'); // 다음 저장은 새 행동이다
-      setState({ kind: 'saved', at: res.data.lastSavedAt ?? res.data.serverTime });
+      const at = res.data.lastSavedAt ?? res.data.serverTime;
+      rememberSaved(applicationId, at);
+      setState({ kind: 'saved', at });
     } catch (err) {
       if (err instanceof NetworkError) {
         // 연결이 끊겼다. 내용은 pendingRef 에 남아 있다. 재연결 시 다시 보낸다.

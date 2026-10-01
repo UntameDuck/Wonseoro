@@ -77,7 +77,7 @@ const RESOLUTION_OPTIONS = [
 export default function ReconciliationPage() {
   const { operator } = useConsole();
   const [state, setState] = useState('OPEN');
-  const [items, setItems] = useState<Exception[]>([]);
+  const [items, setItems] = useState<Exception[] | null>(null);
   const [message, setMessage] = useState<{ tone: 'success' | 'danger' | 'info'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -141,7 +141,13 @@ export default function ReconciliationPage() {
         {message && <Alert tone={message.tone} title={message.text} />}
       </Card>
 
-      {items.length === 0 ? (
+      {items === null ? (
+        <Card>
+          <p role="status" style={{ margin: 0 }}>
+            불러오는 중…
+          </p>
+        </Card>
+      ) : items.length === 0 ? (
         <Card>
           <p style={{ margin: 0 }}>{state === 'OPEN' ? '미해결 불일치가 없습니다.' : '해당하는 항목이 없습니다.'}</p>
         </Card>

@@ -119,6 +119,16 @@ body {
   border: 0;
 }
 
+/* 인쇄 — 접수증 같은 화면을 종이로 낼 때 메뉴·버튼·바닥글을 뺀다 (T-M5-55, U-33) */
+@media print {
+  .krds-no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+}
+
 /* 움직임을 줄이도록 설정한 사용자를 존중한다 */
 @media (prefers-reduced-motion: reduce) {
   *,

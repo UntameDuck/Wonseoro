@@ -5,6 +5,8 @@ import type { SaveState } from '../lib/use-autosave';
 import type { DeadlineView } from '../lib/use-deadline';
 import { formatKst, formatKstTime, formatRemaining } from '../lib/use-deadline';
 import { Alert, Button, Icon, formatTime } from '@wonseoro/krds';
+import { useEffect, useState } from 'react';
+import { currentRequestId } from '../lib/api';
 
 /**
  * 자동저장 상태 표시 — 기술설계서 v1.1 §07
@@ -215,17 +217,35 @@ export function OperatingModeBanner({ view }: { view: OperatingModeView | null }
  */
 export function FailureNotice({
   title,
+  detail,
   traceId,
   lastSavedAt,
+  savedHere,
+  serverState,
   onRecheck,
-  children,
 }: {
   title: string;
+  detail?: string;
   traceId?: string;
+  /** 서버가 알려 준 마지막 저장 시각 */
   lastSavedAt?: string | null;
+  /** 서버에 닿지 못했을 때 — 이 기기에서 마지막으로 저장에 성공한 시각 */
+  savedHere?: string | null;
+  /** 서버가 확인한 현재 상태(Self-check 요약). 서버에 닿지 못하면 없다 */
+  serverState?: string | null;
   onRecheck: () => void;
-  children?: React.ReactNode;
 }) {
+  // 약속한 넷(마지막 저장·서버가 확인한 상태·요청번호·재조회)을 비워 두지 않는다 — 모르면 모른다고 쓴다 (U-8)
+  const saved = lastSavedAt
+    ? formatKst(lastSavedAt)
+    : savedHere
+      ? `${formatKst(savedHere)} (이 기기에 남은 기록)`
+      : '확인할 수 없습니다';
+  const rows: Array<[string, string, boolean?]> = [
+    ['마지막 저장', saved],
+    ['서버가 확인한 상태', serverState ?? '지금은 확인할 수 없습니다. 연결되면 "현재 상태 다시 확인" 을 눌러 주십시오.'],
+    ['요청번호', traceId || '-', true],
+  ];
   return (
     <div
       role="alert"
@@ -247,25 +267,51 @@ export function FailureNotice({
         됩니다.
       </p>
 
-      {children}
+      {detail && <p style={{ margin: '0 0 var(--krds-space-3)' }}>{detail}</p>}
 
-      <dl style={{ margin: '0 0 var(--krds-space-4)', fontSize: 'var(--krds-text-sm)' }}>
-        {lastSavedAt && (
-          <div style={{ display: 'flex', gap: 'var(--krds-space-3)' }}>
-            <dt style={{ fontWeight: 700 }}>마지막 저장</dt>
-            <dd style={{ margin: 0 }}>{formatKst(lastSavedAt)}</dd>
+      <dl style={{ margin: '0 0 var(--krds-space-4)', fontSize: 'var(--krds-text-sm)', display: 'grid', gap: 'var(--krds-space-2)' }}>
+        {rows.map(([k, v, mono]) => (
+          <div key={k} style={{ display: 'flex', gap: 'var(--krds-space-3)', flexWrap: 'wrap' }}>
+            <dt style={{ fontWeight: 700, minWidth: 120 }}>{k}</dt>
+            {/* 요청번호 — 고객센터 문의 시 이 번호로 사건을 특정한다 */}
+            <dd style={{ margin: 0, fontFamily: mono ? 'monospace' : undefined, wordBreak: 'break-all' }}>{v}</dd>
           </div>
-        )}
-        {traceId && (
-          <div style={{ display: 'flex', gap: 'var(--krds-space-3)' }}>
-            <dt style={{ fontWeight: 700 }}>요청번호</dt>
-            {/* 고객센터 문의 시 이 번호로 사건을 특정한다. */}
-            <dd style={{ margin: 0, fontFamily: 'monospace' }}>{traceId}</dd>
-          </div>
-        )}
+        ))}
       </dl>
 
       <Button onClick={onRecheck}>현재 상태 다시 확인</Button>
     </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────── */
+
+/**
+ * 오래 걸리는 요청 안내 — 와이어프레임 "요청 처리 시간이 길어지고 있습니다" (T-M5-55, U-59).
+ * 결제·접수를 누르고 아무 말 없이 기다리게 하면 같은 버튼을 다시 누른다. 서버는 같은 요청을 한 번만
+ * 처리하지만(멱등 키), 지원자는 그것을 모른다. 10초가 넘으면 기다려도 된다는 것과 요청번호를 보인다.
+ */
+export function SlowNotice({ busy, afterMs = 10_000 }: { busy: boolean; afterMs?: number }) {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!busy) {
+      setSlow(false);
+      return;
+    }
+    const t = setTimeout(() => setSlow(true), afterMs);
+    return () => clearTimeout(t);
+  }, [busy, afterMs]);
+  if (!slow) return null;
+  const id = currentRequestId();
+  return (
+    <Alert tone="info" title="요청 처리 시간이 길어지고 있습니다">
+      같은 버튼을 반복해서 누르지 않아도 됩니다. 처리가 끝나면 이 화면이 바뀝니다.
+      {id && (
+        <>
+          {' '}
+          요청번호: <span style={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{id}</span>
+        </>
+      )}
+    </Alert>
   );
 }

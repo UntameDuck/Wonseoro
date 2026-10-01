@@ -66,6 +66,8 @@ export default function ConfigPage() {
 function ConfigConsole({ cycleId }: { cycleId: string }) {
   const { operator } = useConsole();
   const [versions, setVersions] = useState<Version[]>([]);
+  /** 불러오는 중과 "버전 없음" 을 나눈다 (T-M5-55) */
+  const [loaded, setLoaded] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,6 +75,7 @@ function ConfigConsole({ cycleId }: { cycleId: string }) {
     try {
       const r = await adminGet<{ versions: Version[] }>('config/versions', { cycleId });
       setVersions(r.versions);
+      setLoaded(true);
       setError(null);
     } catch (err) {
       setError(describe(err));
@@ -89,7 +92,11 @@ function ConfigConsole({ cycleId }: { cycleId: string }) {
     <>
       {error && <Alert tone="danger" title={error} />}
       <Card title="설정 버전">
-        {versions.length === 0 ? (
+        {!loaded ? (
+          <p role="status" style={{ margin: 0 }}>
+            불러오는 중…
+          </p>
+        ) : versions.length === 0 ? (
           <p style={{ margin: 0 }}>설정 버전이 없습니다.</p>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--krds-text-sm)' }}>

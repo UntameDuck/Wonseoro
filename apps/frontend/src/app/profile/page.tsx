@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { COMMON_PROFILE_FIELDS, commonProfileProblem, problemText } from '@wonseoro/contracts';
 import { Alert, Button, Card, DescriptionList, ErrorSummary, Field } from '@wonseoro/krds';
 import { Breadcrumb } from '../../krds/navigation';
+import { SlowNotice } from '../../krds/status';
 import { ApiError, NetworkError, api, type CommonProfile } from '../../lib/api';
 import { loadSession } from '../../lib/session';
 import { formatKst } from '../../lib/use-deadline';
@@ -201,6 +202,7 @@ export default function ProfilePage() {
         </Card>
       )}
 
+      <SlowNotice busy={busy} />
       <Button onClick={() => void save()} disabled={busy || profile === null}>
         {busy ? '저장 중…' : '저장'}
       </Button>

@@ -70,7 +70,9 @@ export default function ReceiptPage({ params }: { params: Promise<{ submissionId
         {universityName ? `${universityName} 입학처` : '대학 입학처'}가 발급한 접수증입니다. 접수 내용은 이 입학처에
         문의해 주십시오.
       </p>
-      <Button onClick={() => window.print()}>인쇄</Button>
+      <div className="krds-no-print">
+        <Button onClick={() => window.print()}>인쇄</Button>
+      </div>
     </Card>
   );
 }

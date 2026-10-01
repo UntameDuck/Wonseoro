@@ -4,7 +4,8 @@ import '@wonseoro/krds/tokens.css';
 import { ConsoleProvider } from '../components/console';
 
 export const metadata: Metadata = {
-  title: '원서로 관리자 — 입학처 콘솔',
+  // 화면마다 제목이 다르다 — "마감 · 연장 | 원서로 입학처 콘솔" (T-M5-55)
+  title: { default: '원서로 입학처 콘솔', template: '%s | 원서로 입학처 콘솔' },
   description: '설정 승인 · 마감 연장 · 대조 · 증적',
   robots: { index: false, follow: false },
 };

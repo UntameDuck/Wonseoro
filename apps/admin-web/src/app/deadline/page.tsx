@@ -51,6 +51,8 @@ export default function DeadlinePage() {
 function DeadlineConsole({ cycleId }: { cycleId: string }) {
   const { operator } = useConsole();
   const [policies, setPolicies] = useState<Policy[]>([]);
+  /** 한 번이라도 불러왔는가 — 불러오는 중과 "정말 없음" 을 나눈다 (T-M5-55, U-9) */
+  const [loaded, setLoaded] = useState(false);
   const [activations, setActivations] = useState<ActivationList | null>(null);
   const [error, setError] = useState<string | null>(null);
   // 적용이 끝난 정책은 대기 목록에서 빠진다. 그 카드 안에 성공 알림을 두면 함께 사라진다.
@@ -64,6 +66,7 @@ function DeadlineConsole({ cycleId }: { cycleId: string }) {
       ]);
       setPolicies(p.policies);
       setActivations(a);
+      setLoaded(true);
       setError(null);
     } catch (err) {
       setError(describe(err));
@@ -86,7 +89,11 @@ function DeadlineConsole({ cycleId }: { cycleId: string }) {
       {error && <Alert tone="danger" title={error} />}
       {notice && <Alert tone="success" title={notice} />}
       <Card title="지금 적용 중인 마감">
-        {current ? (
+        {!loaded ? (
+          <p role="status" style={{ margin: 0 }}>
+            불러오는 중…
+          </p>
+        ) : current ? (
           <p style={{ margin: 0, fontSize: 'var(--krds-text-lg)' }}>
             <strong>{kst(current.deadlineAt)}</strong>{' '}
             <span style={{ fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)' }}>
@@ -103,7 +110,11 @@ function DeadlineConsole({ cycleId }: { cycleId: string }) {
       {current && <ExtensionForm cycleId={cycleId} current={current} operator={operator} onCreated={reload} />}
 
       <Card title="승인 대기">
-        {pending.length === 0 ? (
+        {!loaded ? (
+          <p role="status" style={{ margin: 0 }}>
+            불러오는 중…
+          </p>
+        ) : pending.length === 0 ? (
           <p style={{ margin: 0 }}>승인 대기 중인 마감 정책이 없습니다.</p>
         ) : (
           pending.map((p) => (

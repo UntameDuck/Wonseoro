@@ -28,6 +28,26 @@ export function saveSession(s: Session): void {
   }
 }
 
+/**
+ * 이 기기에서 마지막으로 저장에 성공한 시각. 대학 서버에 처음부터 닿지 못하면 서버의 마지막 저장 시각을
+ * 읽을 수 없다 — 그때 장애 안내가 "마지막 저장" 을 비워 두지 않게 한다 (T-M5-55, U-8).
+ */
+export function rememberSaved(applicationId: string, at: string): void {
+  try {
+    sessionStorage.setItem(`wonseoro.saved.${applicationId}`, at);
+  } catch {
+    /* 저장이 안 돼도 흐름은 계속된다 */
+  }
+}
+
+export function lastSavedHere(applicationId: string): string | null {
+  try {
+    return sessionStorage.getItem(`wonseoro.saved.${applicationId}`);
+  } catch {
+    return null;
+  }
+}
+
 export function loadSession(): Session | null {
   try {
     const raw = sessionStorage.getItem(KEY);

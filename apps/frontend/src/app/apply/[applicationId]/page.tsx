@@ -6,7 +6,7 @@ import { PROBLEM_TEXT, problemText } from '@wonseoro/contracts';
 import { SchemaForm, type JsonSchema } from '../../../krds/schema-form';
 import { DocumentStatusList, FileUpload } from '../../../krds/file-upload';
 import { Breadcrumb, STEPS, StepIndicator, type StepNo } from '../../../krds/navigation';
-import { DeadlineBanner, FailureNotice, OperatingModeBanner, SaveStatus } from '../../../krds/status';
+import { DeadlineBanner, FailureNotice, OperatingModeBanner, SaveStatus, SlowNotice } from '../../../krds/status';
 import {
   ApiError,
   NetworkError,
@@ -19,7 +19,7 @@ import {
 } from '../../../lib/api';
 import { useAutosave } from '../../../lib/use-autosave';
 import { formatKst, useDeadline } from '../../../lib/use-deadline';
-import { loadSession } from '../../../lib/session';
+import { lastSavedHere, loadSession } from '../../../lib/session';
 import { useOperatingMode } from '../../../lib/use-operating-mode';
 
 /**
@@ -124,8 +124,13 @@ export default function ApplyPage({
         title:
           err instanceof NetworkError
             ? '대학 접수 서버에 연결할 수 없습니다'
-            : '원서를 불러오지 못했습니다',
-        ...(err instanceof ApiError ? { traceId: err.problem.traceId } : {}),
+            : problemText(err instanceof ApiError ? err.problem : null).title,
+        // 연결이 끊겨도 요청번호는 화면이 만들어 보냈으니 남아 있다 (U-8)
+        ...(err instanceof ApiError
+          ? { traceId: err.problem.traceId }
+          : err instanceof NetworkError && err.traceId
+            ? { traceId: err.traceId }
+            : {}),
       });
     }
   }, [applicationId, applicantId]);
@@ -133,6 +138,11 @@ export default function ApplyPage({
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  // 단계가 바뀌면 탭 제목도 바뀐다 — "검토·결제 — 원서 작성 | 원서로" (T-M5-55)
+  useEffect(() => {
+    document.title = `${STEPS[step - 1]!.label} — 원서 작성 | 원서로`;
+  }, [step]);
 
   // 전형·모집단위 정보를 대학 API 에서 읽는다.
   useEffect(() => {
@@ -329,7 +339,11 @@ export default function ApplyPage({
 
   function handle(err: unknown) {
     if (err instanceof NetworkError) {
-      setFailure({ title: '서버에 연결할 수 없습니다', detail: '인터넷 연결을 확인한 뒤 현재 상태를 다시 확인해 주십시오.' });
+      setFailure({
+        title: '서버에 연결할 수 없습니다',
+        detail: '인터넷 연결을 확인한 뒤 현재 상태를 다시 확인해 주십시오.',
+        ...(err.traceId ? { traceId: err.traceId } : {}),
+      });
       return;
     }
     if (err instanceof ApiError) {
@@ -350,17 +364,13 @@ export default function ApplyPage({
     return (
       <FailureNotice
         title={failure.title}
+        {...(failure.detail ? { detail: failure.detail } : {})}
         {...(failure.traceId ? { traceId: failure.traceId } : {})}
         lastSavedAt={app?.lastSavedAt ?? null}
+        savedHere={lastSavedHere(applicationId)}
+        serverState={selfCheck?.application.summary ?? null}
         onRecheck={() => void recheck()}
-      >
-        {failure.detail && <p style={{ margin: '0 0 var(--krds-space-3)' }}>{failure.detail}</p>}
-        {selfCheck && (
-          <Alert tone="info" title="서버가 확인한 현재 상태">
-            {selfCheck.application.summary}
-          </Alert>
-        )}
-      </FailureNotice>
+      />
     );
   }
 
@@ -400,6 +410,7 @@ export default function ApplyPage({
 
       <StepIndicator current={step} />
       <ErrorSummary issues={issues} onSelect={selectIssue} />
+      <SlowNotice busy={busy} />
       {notice && <Alert tone={notice.tone} title={notice.title}>{notice.body}</Alert>}
 
       {step === 1 && (

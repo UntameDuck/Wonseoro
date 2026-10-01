@@ -2,9 +2,13 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import '@wonseoro/krds/tokens.css';
 
+/**
+ * 화면마다 제목이 다르다 — "검토·결제 — 원서 작성 | 원서로". 탭·스크린리더·방문 기록이 화면을 구별한다
+ * (KWCAG 2.4.2 페이지 제목, T-M5-55). 경로별 이름은 각 경로의 layout.tsx 에 있다.
+ */
 export const metadata: Metadata = {
-  title: '원서로 — 대학입학 원서접수',
-  description: 'K-PaaS 기반 분산형 대학입학 원서접수 표준 플랫폼',
+  title: { default: '원서로 — 대학입학 원서접수', template: '%s | 원서로' },
+  description: '대학입학 원서를 쓰고, 서류를 올리고, 전형료를 내고 접수하는 곳입니다.',
 };
 
 /** 사용자가 확대할 수 있어야 한다. maximum-scale 로 막지 않는다. (KWCAG 2.2) */
@@ -18,11 +22,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="ko">
       <body>
         {/* 키보드 사용자가 반복 내비게이션을 건너뛴다 */}
-        <a className="krds-skip" href="#main">
+        <a className="krds-skip krds-no-print" href="#main">
           본문 바로가기
         </a>
 
         <header
+          className="krds-no-print"
           style={{
             background: 'var(--krds-bg)',
             borderBottom: '1px solid var(--krds-border)',
@@ -70,6 +75,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </main>
 
         <footer
+          className="krds-no-print"
           style={{
             maxWidth: 960,
             margin: '0 auto',

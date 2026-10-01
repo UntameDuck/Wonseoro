@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, Icon } from '@wonseoro/krds';
-import { APPLICATION_STATUS_LABEL, labelOf } from '@wonseoro/contracts';
+import { APPLICATION_STATUS_LABEL, labelOf, problemText } from '@wonseoro/contracts';
 import { Breadcrumb } from '../../krds/navigation';
-import { NetworkError, api } from '../../lib/api';
+import { ApiError, NetworkError, api } from '../../lib/api';
 import { loadSession } from '../../lib/session';
 import { formatKst } from '../../lib/use-deadline';
 
@@ -35,25 +35,34 @@ interface Row {
 export default function DashboardPage() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [centralDown, setCentralDown] = useState(false);
+  /** 본인확인을 하지 않았다 — "원서가 없습니다" 와 다르다 (T-M5-55, U-34) */
+  const [noSession, setNoSession] = useState(false);
+  /** 중앙 장애가 아닌 오류(신원 불일치 등). 장애 안내로 보이지 않는다 (U-35) */
+  const [failed, setFailed] = useState<{ title: string; detail: string } | null>(null);
   const [serverTime, setServerTime] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const session = loadSession();
     if (!session) {
-      setRows([]);
+      setNoSession(true);
       return;
     }
+    setNoSession(false);
+    setFailed(null);
     try {
       const { data } = await api.dashboard(session.subjectToken);
       setRows(data.applications);
       setServerTime(data.serverTime);
       setCentralDown(false);
     } catch (err) {
+      // 연결 자체가 안 될 때만 "통합 조회 일시 중단" 이다. 나머지는 그 오류를 말한다 — 전에는 신원 불일치(403)도
+      // 중앙 장애로 보여, 지원자가 기다리기만 했다 (U-35)
       if (err instanceof NetworkError) {
         setCentralDown(true);
         return;
       }
-      setCentralDown(true);
+      setCentralDown(false);
+      setFailed(problemText(err instanceof ApiError ? err.problem : null));
     }
   }, []);
 
@@ -66,7 +75,21 @@ export default function DashboardPage() {
       <Breadcrumb trail={[{ label: '홈', href: '/' }, { label: '내 원서' }]} />
       <h1 style={{ fontSize: 'var(--krds-text-2xl)', marginTop: 0 }}>내 원서</h1>
 
-      {centralDown ? (
+      {noSession ? (
+        <Card title="본인확인이 필요합니다">
+          <p style={{ marginTop: 0 }}>내 원서를 보려면 접수 홈에서 먼저 본인확인을 해 주십시오.</p>
+          <a href="/" style={{ color: 'var(--krds-primary)' }}>
+            접수 홈으로
+          </a>
+        </Card>
+      ) : failed ? (
+        <Alert tone="danger" title={failed.title}>
+          <p style={{ margin: '0 0 var(--krds-space-3)' }}>{failed.detail}</p>
+          <Button variant="secondary" onClick={() => void load()}>
+            다시 시도
+          </Button>
+        </Alert>
+      ) : centralDown ? (
         /**
          * 중앙 장애. **접수가 안 됐다고 말하지 않는다.**
          * 여기서 "조회 실패"를 "접수 실패"처럼 보이게 하면

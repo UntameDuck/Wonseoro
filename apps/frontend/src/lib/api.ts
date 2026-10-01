@@ -35,9 +35,34 @@ export class ApiError extends Error {
 
 /** 네트워크 자체가 안 될 때. 화면은 이것을 "장애"로 다룬다. */
 export class NetworkError extends Error {
-  constructor(readonly cause_: string) {
+  constructor(
+    readonly cause_: string,
+    /** 이 요청에 붙였던 요청번호 — 연결이 끊겨도 문의할 번호가 남는다 (T-M5-55, U-8) */
+    readonly traceId: string = '',
+  ) {
     super('서버에 연결할 수 없습니다');
   }
+}
+
+/**
+ * 요청번호. 화면이 만들어 W3C `traceparent` 로 보낸다 — 서버는 그 추적 ID 를 problem 의 traceId·로그에 쓴다.
+ * 화면이 번호를 먼저 알기 때문에 연결이 끊긴 요청에도 번호를 보일 수 있고(U-8), 오래 걸리는 요청 안내에도
+ * 지금 기다리는 요청의 번호를 보일 수 있다(U-59). 고객센터는 이 번호로 서버 로그를 찾는다.
+ */
+let lastTraceId = '';
+export function currentRequestId(): string {
+  return lastTraceId;
+}
+
+function newTraceparent(): { header: string; traceId: string } {
+  const hex = (bytes: number) => {
+    const buf = new Uint8Array(bytes);
+    if (typeof crypto !== 'undefined' && 'getRandomValues' in crypto) crypto.getRandomValues(buf);
+    else for (let i = 0; i < bytes; i++) buf[i] = Math.floor(Math.random() * 256);
+    return [...buf].map((b) => b.toString(16).padStart(2, '0')).join('');
+  };
+  const traceId = hex(16);
+  return { header: `00-${traceId}-${hex(8)}-01`, traceId };
 }
 
 /**
@@ -82,6 +107,9 @@ export async function call<T>(path: string, opts: CallOptions = {}): Promise<Api
   if (opts.ifMatch) headers['if-match'] = opts.ifMatch;
   if (opts.applicantId) headers['x-applicant-id'] = opts.applicantId;
   if (opts.subjectToken) headers['x-subject-token'] = opts.subjectToken;
+  const trace = newTraceparent();
+  headers.traceparent = trace.header;
+  lastTraceId = trace.traceId;
 
   let res: Response;
   try {
@@ -91,7 +119,7 @@ export async function call<T>(path: string, opts: CallOptions = {}): Promise<Api
       body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
     });
   } catch (err) {
-    throw new NetworkError((err as Error).message);
+    throw new NetworkError((err as Error).message, trace.traceId);
   }
 
   const text = await res.text();

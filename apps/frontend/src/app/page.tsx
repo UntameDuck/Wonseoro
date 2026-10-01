@@ -7,7 +7,7 @@ import { ApiError, NetworkError, api } from '../lib/api';
 import { loadSession, saveSession } from '../lib/session';
 import { useOperatingMode } from '../lib/use-operating-mode';
 import { IdentitySection } from '../krds/identity';
-import { OperatingModeBanner } from '../krds/status';
+import { OperatingModeBanner, SlowNotice } from '../krds/status';
 import { problemText } from '@wonseoro/contracts';
 
 /**
@@ -200,6 +200,7 @@ export default function Home() {
             </Alert>
           )}
 
+          <SlowNotice busy={busy} />
           <Button
             onClick={() => void start()}
             disabled={busy || applicantId.length < 8 || !subjectToken || !typeId || !departmentId}
