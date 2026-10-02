@@ -34,7 +34,7 @@
 - **T-M5-27 ✅ (2026-10-02)** — ZAP 2.17.0 고정 digest로 OpenAPI 81개 URL을 실제 대학 API·PostgreSQL에 active scan했다. 첫 실행에서 잘못된 `cycleId`·`limit`가 DB까지 내려가 500이 되는 문제, `/meta/time` 무인자 500, `nosniff` 누락을 찾아 고쳤다. 같은 조건 재실행은 로컬·원격 모두 **WARN 0·High 0·PASS 118**이다(Actions run 36902632192·36902632233). 로컬 보고서는 `E:\DockerData\tools\zap-2.17.0\reports`에 있다
 - **T-M5-28 ✅ (2026-10-02)** — 릴리스/수동 실행이 운영 이미지 5종을 GHCR에 발행하고 registry digest를 Cosign 3.0.6 GitHub OIDC 신원으로 키리스 서명한다. 같은 잡이 정확한 워크플로 신원과 OIDC 발급자로 즉시 검증하고 이미지별 증적을 90일 보관한다. 실제 5종 모두 통과했다(Actions run 36903506905). 로컬 증적은 `E:\DockerData\tools\cosign-3.0.6\run-36903506905`
 - **T-M5-29 ✅ (2026-10-02)** — 운영 `ClusterImagePolicy`는 GHCR 원서로 이미지에 대해 이 저장소 `security.yml@refs/tags/*`의 GitHub OIDC 서명만 강제한다. 후속 잡은 임시 kind·Policy Controller를 띄워 서명된 admission-api digest 허용과 별도 미서명 scratch digest 거부를 server dry-run으로 실증한다 — 미서명은 `policy.sigstore.dev` webhook 이 첫 확인에서 거부, 서명 digest 는 통과(Actions run 36906282615). 첫 실행의 "미서명 통과"는 kubectl dry-run 값을 띄어 써 webhook 이 안 불린 시험 결함이었다(고치고 정적 검사로 막음)
-- **바로 다음 할 일**: 인증(로컬 OIDC — 세션 만료·위험 차단 해제도 함께, ADR-0009) → 보안 통제 → …
+- **바로 다음 할 일**: 인증 — 준비 끝([12](12-authentication-plan.md): Keycloak 26.8.0 이미지·기동 확인, 결정 A1~A12, 순서 9단계). 첫 커밋은 로컬 발급자 + JWKS 캐시 검증기. 인증(로컬 OIDC — 세션 만료·위험 차단 해제도 함께, ADR-0009) → 보안 통제 → …
 
 ## 2. 반드시 지킬 규칙
 
@@ -221,6 +221,7 @@ Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, s
 | 화면 캡처·다시 찍는 법 | [screenshots/README.md](screenshots/README.md) |
 | 화면 제품화 — 화면 결함·개발 흔적 전수 목록(U-1~U-59)·결정·문구 검사 | [08-ui-production-readiness.md](08-ui-production-readiness.md) |
 | 접근성 — 시험·찾은 결함·세션 만료·CAPTCHA 결정·지원 브라우저 | [09-accessibility.md](09-accessibility.md) · 시험 `tests/a11y/` · KRDS `LiveRegion`·`TableScroll`·`Alert focusKey`·`Card titleId/titleLevel` |
+| 인증 착수 준비 — 현황·결정 A1~A12(로컬 Keycloak·API 직접 검증·JWKS 캐시·역할 매핑·MFA·step-up)·작업 순서·인수 시험 | [12-authentication-plan.md](12-authentication-plan.md) |
 | 개인정보·법정 고지 — 원서에 받을 항목·필수 절차·고지 체크리스트·지금과의 차이(G-1~G-15)·법무 쟁점 | [10-admission-privacy-and-legal-notices.md](10-admission-privacy-and-legal-notices.md) (2026-10-02 현행 법령 원문 기준, 법률자문 아님) |
 | 흉내·미연결 점검 결과와 일부러 남긴 흉내 | [04-production-readiness.md §7](04-production-readiness.md#7-흉내미연결-전수-점검-2026-09-30) |
 | 노션 문서 지도·동기화 규칙 | [01-notion-sync-protocol.md](01-notion-sync-protocol.md) |
