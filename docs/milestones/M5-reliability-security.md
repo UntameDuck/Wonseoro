@@ -35,6 +35,10 @@
 | T-M5-09 | BOLA 방어 | §09 | Cross-user/Cross-university 객체 접근 0 |
 | T-M5-10 | Admin MFA + Step-up | §06 | 민감정보 조회 시 목적·사유 입력 |
 
+> **T-M5-02·10 착수 (2026-10-03)** — 계획·결정은 [12-authentication-plan.md](../12-authentication-plan.md). 단계 1·2 끝: 로컬 Keycloak 26.8.0
+> (담당자 렐름 비밀번호+TOTP·역할 6종, 지원자 렐름), `server-kit` 토큰 검증기·JWKS 캐시(단위 17개), 실제 발급자로 로그인 길 24개·
+> 발급자 정지 중 검증 11개 통과. 다음은 대학 API 연결(단계 3).
+
 > **T-M5-08 착수 (2026-09-30, D-58)** — magic-byte 검사는 M1 부터 있다. AV 는 ClamAV(clamd INSTREAM) 어댑터·서명 URL 다운로드·해시 대조·엔진 버전 기록까지 구현하고
 > 같은 프로토콜의 가짜 clamd 로 시험했다(서류 워커 시험 8개). **남은 것: 실 clamd·서명 DB 로 확인**(이미지 내려받기 필요), Zip Bomb·매크로 문서 판정 확인, clamd 배치.
 

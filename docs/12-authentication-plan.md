@@ -31,7 +31,7 @@
 | A3 | **API 가 토큰을 직접 검증한다 — `AUTH_MODE=oidc` 추가**(dev-headers·gateway 는 그대로 둔다) | 차트에 gateway 가 없고, T-M3-06 의 "중앙 IAM 이 끊겨도 이미 접속한 사용자는 계속" 은 **대학 쪽 JWKS 캐시**가 있어야 성립한다 |
 | A4 | **JWKS 캐시는 `server-kit` 에 직접 둔다**(서명 검증은 `jose` 6.2.12) — 메모리 + 마지막으로 받은 키 묶음 보관, 모르는 `kid` 면 쿨다운을 두고 한 번만 다시 받기, 발급자가 죽어도 **최대 보관 시간까지 기존 키로 검증**, 키 나이 지표 | `jose` 의 원격 키 묶음은 발급자 장애 때 버틴다는 보장이 없다. 인수 시험이 "발급자 차단 중 검증 지속" 이다 |
 | A5 | **역할 매핑**: 계약 범위 → 앱 역할 — `admin` → `admission-admin`, `operator` → `admission-admin`(대사는 업무다), `auditor` → `security-auditor`. platform-viewer·sre-operator·release-controller·break-glass 는 **업무 API 권한이 없다**(K8s 전용) | 노션 06: "admission-admin: 업무 Config API만, Kubernetes 권한 없음", "security-auditor: Audit/Security Read-only". 계약 범위 이름과 역할 이름이 달라 **대장 D-N 으로 올린다**(구현 첫 커밋에서 번호) |
-| A6 | **MFA·step-up**: staff 렐름은 로그인 때 TOTP 필수(ACR `2`). 운영 API 는 모든 경로에서 `acr ≥ 2` 를 요구. **민감 동작**(증적 패키지 열람, Config·마감 승인/활성화/되돌리기, 대사 예외 해결)은 `auth_time` 5분 이내 + **목적·사유 입력**을 요구하고, 넘으면 다시 인증(`max_age=0`)으로 보낸다 | T-M5-10 인수기준 "민감정보 조회 시 목적·사유 입력", STRIDE E-03 "server-side RBAC/ABAC; step-up; two-person approval" |
+| A6 | **MFA·step-up**: staff 렐름은 로그인 때 TOTP 필수(인증 수준 2 — 토큰에는 이름 `acr=mfa` 로 실린다). 운영 API 는 모든 경로에서 `acr=mfa` 를 요구. **민감 동작**(증적 패키지 열람, Config·마감 승인/활성화/되돌리기, 대사 예외 해결)은 `auth_time` 5분 이내 + **목적·사유 입력**을 요구하고, 넘으면 다시 인증(`max_age=0`)으로 보낸다 | T-M5-10 인수기준 "민감정보 조회 시 목적·사유 입력", STRIDE E-03 "server-side RBAC/ABAC; step-up; two-person approval" |
 | A7 | **콘솔 로그인은 서버 쪽(BFF)** — Next.js 서버가 Authorization Code + PKCE 를 하고 토큰은 서버에만 둔다. 브라우저에는 `HttpOnly`·`Secure`·`SameSite=Lax` 세션 쿠키만 | 노션 06 App Security "Secure/HttpOnly/SameSite Cookie". 콘솔은 이미 서버에서 API 를 부른다(`lib/server.ts`) |
 | A8 | **지원자 로그인은 공개 클라이언트 + PKCE** — 액세스 토큰은 메모리, 회전되는 갱신 토큰만 `sessionStorage`. 지원자 세션 무활동 30분은 **발급자 세션 설정(SSO Session Idle 30분)** 으로 옮기고, 5분 전 경고·"연장" 은 토큰 갱신으로 바꾼다 | 지금 화면은 브라우저에서 API 를 직접 부른다(CORS). `lib/session.ts` 한 곳만 바꾸면 된다(T-M5-45 에서 그렇게 모아 뒀다) |
 | A9 | **지원자 등록**: 첫 인증 요청에서 토큰 `sub`(렐름별 가명)를 `subject_token` 으로 `applicant` 행을 만든다. 실명·주민번호 등은 받지 않는다(`pii_ciphertext` 는 필드 암호화 T-M5-06·실 본인확인과 함께) | 법정 고지 문서 [10 §6 G-7](10-admission-privacy-and-legal-notices.md) — 주민번호 수집은 본인확인 기관 연동 때 결정 |
@@ -43,8 +43,8 @@
 
 | 단계 | 내용 | 끝났다고 말할 근거 |
 |---|---|---|
-| 1 | 로컬 발급자 — compose `auth` 프로필, 렐름 파일 2개(`infra/auth/`), 시험 담당자 6역할·지원자 2명·TOTP 시험 비밀(로컬 전용 시드값) | 기동 후 discovery·JWKS·역할 클레임·ACR 확인 스크립트 통과 |
-| 2 | `server-kit` OIDC 검증기 + JWKS 캐시 | 단위 시험: 서명·만료·발급자·대상(aud) 위조 거절, 키 회전, 발급자 차단 중 검증 지속, 모르는 kid 폭주 시 다시 받기 1회 |
+| 1 ✅ | 로컬 발급자 — compose `auth` 프로필, 렐름 파일 2개(`infra/auth/`), 시험 담당자 6역할·지원자 2명·TOTP 시험 비밀(로컬 전용 시드값) | 기동 후 discovery·JWKS·역할 클레임·ACR 확인 스크립트 통과 — `test:auth:issuer` 24개 |
+| 2 ✅ | `server-kit` OIDC 검증기 + JWKS 캐시 | 단위 시험: 서명·만료·발급자·대상(aud) 위조 거절, 키 회전, 발급자 차단 중 검증 지속, 모르는 kid 폭주 시 다시 받기 1회 |
 | 3 | 대학 API `AUTH_MODE=oidc` — 지원자(`sub`→applicant), 운영 API 역할·ACR·step-up 가드, 2인 승인 신원을 토큰 `sub` 로 | **수직 권한 시험**(역할×경로 전 조합, STRIDE E-03), 본인 승인 금지, 기존 소유권 시험(R10)·BOLA 시험 유지 |
 | 4 | 중앙 API `AUTH_MODE=oidc` | 대시보드·프로필 금고가 토큰 가명으로만 동작 |
 | 5 | 콘솔 로그인(BFF)·MFA·민감 동작 재인증·목적·사유 | 브라우저 시험: 로그인→TOTP→승인, 5분 지난 증적 열람은 재인증, 다른 역할은 메뉴·API 모두 거절 |
@@ -73,6 +73,20 @@
 - 운영 발급자의 키 보관(HSM/KMS)·KCMVP 판단 — 노션 06 Secret 절 그대로 기관 정책
 - 노션 반영: 계약 `openIdConnectUrl` 예시값·범위↔역할 매핑·첨부 RBAC 3종→6종 — [06-notion-changeset.md](06-notion-changeset.md) 에 준비
 
-## 6. 바로 시작할 첫 커밋
+## 6. 진행 기록
 
-단계 1(로컬 발급자) → 단계 2(검증기·캐시)를 한 묶음으로. 두 단계는 화면을 건드리지 않아 다른 세션과 겹칠 일이 적다.
+### 단계 1·2 ✅ (2026-10-03)
+
+- **로컬 발급자** — `infra/compose/docker-compose.dev.yml` 의 `keycloak`(프로필 `auth`, :18080), 렐름 `infra/auth/wonseoro-staff.realm.json`·`wonseoro-applicant.realm.json`, 계정 안내 [infra/auth/README.md](../infra/auth/README.md).
+  담당자 로그인 흐름은 Keycloak 의 인증 수준(LoA) 흐름 — 수준 1 비밀번호, 수준 2 TOTP(5분 지나면 다시). 콘솔 클라이언트는 최소 수준 `mfa` 를 요구한다
+- **`npm run test:auth:issuer`** 24개 통과 — 사람이 하는 로그인 길(PKCE → 비밀번호 → OTP → code 교환)을 그대로 밟는다. 비밀번호만으로 토큰 없음, 토큰의 역할·대상·`acr=mfa`·`auth_time`·5분 수명,
+  5분 안 재요청은 화면 없이 통과, `max_age=0` 재인증은 OTP 를 다시 묻고 인증 시각이 새로 찍힘, 틀린 OTP·비활성 break-glass 거절, 지원자 토큰은 역할 없음·대학·중앙 API 둘 다 대상
+- **검증기** — `packages/server-kit/src/oidc/`(`OidcVerifier`·`JwksCache`, `jose` 6.2.12). 공개키 알고리즘만(none·HS* 거절), kid 필수, iss·aud·exp·iat·sub, 시계 오차 30초.
+  토큰 탓은 `OidcTokenError`(401), 키를 쓸 수 없으면 `OidcUnavailableError`(503)로 나눈다. 단위 시험 17개(위조 서명·알고리즘 혼동·kid 폭주 시 한 번만 다시 받기·키 교체·2시간 단절·최대 보관 시간 초과 닫힌 실패·스냅숏 재기동·다른 발급자 discovery·비밀 키 성분 거절)
+- **`npm run test:auth:verifier`** 11개 통과 — 실제 Keycloak 토큰을 검증하고, **발급자 컨테이너를 멈춘 채** 같은 검증기가 계속 검증, 발급자 장애 중 새로 뜬 검증기도 스냅숏 파일로 검증(Pod 재기동),
+  스냅숏도 없으면 503. 다른 렐름 토큰은 키 단계(`unknown-key`)에서, 다른 대상은 aud 에서 거절
+- `jose` 6 은 ESM 전용이라 Node 22.12 이상의 `require(esm)` 으로 읽는다 — `engines` 를 `>=22.12` 로 올렸다(CI·이미지는 Node 22 최신)
+
+### 다음 — 단계 3
+
+대학 API `AUTH_MODE=oidc`: 지원자(`sub` → applicant 등록), 운영 API 역할·`acr=mfa`·재인증 가드, 2인 승인 신원을 토큰 `sub` 로. 범위↔역할 이름 차이(A5)는 이때 대장 D-N 으로 올린다.

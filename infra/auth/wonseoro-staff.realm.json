@@ -1,0 +1,191 @@
+{
+  "realm": "wonseoro-staff",
+  "displayName": "원서로 담당자",
+  "enabled": true,
+  "sslRequired": "external",
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyDigits": 6,
+  "otpPolicyPeriod": 30,
+  "attributes": {
+    "acr.loa.map": "{\"pwd\":\"1\",\"mfa\":\"2\"}"
+  },
+  "browserFlow": "browser-loa",
+  "roles": {
+    "realm": [
+      { "name": "platform-viewer", "description": "조회만, Secret 금지 (K8s)" },
+      { "name": "sre-operator", "description": "scale/restart/log, Secret 원문·RBAC 변경 금지 (K8s)" },
+      { "name": "admission-admin", "description": "업무 Config API만, Kubernetes 권한 없음" },
+      { "name": "security-auditor", "description": "Audit/Security Read-only" },
+      { "name": "release-controller", "description": "지정 namespace 의 승인 Release 만 reconcile (K8s)" },
+      { "name": "break-glass", "description": "평소 disable, 짧은 TTL, 사용 즉시 경보" }
+    ]
+  },
+  "authenticatorConfig": [
+    { "alias": "loa-1-password", "config": { "loa-condition-level": "1", "loa-max-age": "36000" } },
+    { "alias": "loa-2-otp", "config": { "loa-condition-level": "2", "loa-max-age": "300" } }
+  ],
+  "authenticationFlows": [
+    {
+      "alias": "browser-loa",
+      "description": "비밀번호(수준 1) → TOTP(수준 2). 수준 2는 5분이 지나면 다시 묻는다(step-up)",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "auth-cookie", "requirement": "ALTERNATIVE", "priority": 10, "autheticatorFlow": false, "userSetupAllowed": false },
+        { "flowAlias": "browser-loa-forms", "requirement": "ALTERNATIVE", "priority": 20, "autheticatorFlow": true, "userSetupAllowed": false }
+      ]
+    },
+    {
+      "alias": "browser-loa-forms",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "flowAlias": "browser-loa-1", "requirement": "CONDITIONAL", "priority": 10, "autheticatorFlow": true, "userSetupAllowed": false },
+        { "flowAlias": "browser-loa-2", "requirement": "CONDITIONAL", "priority": 20, "autheticatorFlow": true, "userSetupAllowed": false }
+      ]
+    },
+    {
+      "alias": "browser-loa-1",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "conditional-level-of-authentication", "authenticatorConfig": "loa-1-password", "requirement": "REQUIRED", "priority": 10, "autheticatorFlow": false, "userSetupAllowed": false },
+        { "authenticator": "auth-username-password-form", "requirement": "REQUIRED", "priority": 20, "autheticatorFlow": false, "userSetupAllowed": false }
+      ]
+    },
+    {
+      "alias": "browser-loa-2",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "conditional-level-of-authentication", "authenticatorConfig": "loa-2-otp", "requirement": "REQUIRED", "priority": 10, "autheticatorFlow": false, "userSetupAllowed": false },
+        { "authenticator": "auth-otp-form", "requirement": "REQUIRED", "priority": 20, "autheticatorFlow": false, "userSetupAllowed": true }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "admin-web",
+      "name": "원서로 운영 콘솔",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "admin-web-dev-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "redirectUris": ["http://localhost:4100/*", "http://localhost:4101/*"],
+      "webOrigins": ["+"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "minimum.acr.value": "mfa",
+        "default.acr.values": "mfa",
+        "post.logout.redirect.uris": "http://localhost:4100/*##http://localhost:4101/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": { "claim.name": "roles", "multivalued": "true", "jsonType.label": "String", "access.token.claim": "true", "id.token.claim": "false", "userinfo.token.claim": "false" }
+        },
+        {
+          "name": "audience-admission-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.custom.audience": "wonseoro-admission-api", "access.token.claim": "true", "id.token.claim": "false" }
+        }
+      ]
+    },
+    {
+      "clientId": "wonseoro-dev-cli",
+      "name": "개발 시험용 (로컬 전용 — 운영 렐름에 두지 않는다)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "protocolMappers": [
+        {
+          "name": "roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": { "claim.name": "roles", "multivalued": "true", "jsonType.label": "String", "access.token.claim": "true", "id.token.claim": "false", "userinfo.token.claim": "false" }
+        },
+        {
+          "name": "audience-admission-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.custom.audience": "wonseoro-admission-api", "access.token.claim": "true", "id.token.claim": "false" }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin-a", "enabled": true, "email": "admin-a@univ-a.test", "emailVerified": true, "firstName": "입학처", "lastName": "담당자A",
+      "realmRoles": ["admission-admin"],
+      "credentials": [
+        { "type": "password", "value": "dev-admin-a-pass", "temporary": false },
+        { "type": "otp", "userLabel": "dev", "secretData": "{\"value\":\"dev-otp-admin-a-0001\"}", "credentialData": "{\"subType\":\"totp\",\"digits\":6,\"counter\":0,\"period\":30,\"algorithm\":\"HmacSHA1\"}" }
+      ]
+    },
+    {
+      "username": "admin-b", "enabled": true, "email": "admin-b@univ-a.test", "emailVerified": true, "firstName": "입학처", "lastName": "담당자B",
+      "realmRoles": ["admission-admin"],
+      "credentials": [
+        { "type": "password", "value": "dev-admin-b-pass", "temporary": false },
+        { "type": "otp", "userLabel": "dev", "secretData": "{\"value\":\"dev-otp-admin-b-0002\"}", "credentialData": "{\"subType\":\"totp\",\"digits\":6,\"counter\":0,\"period\":30,\"algorithm\":\"HmacSHA1\"}" }
+      ]
+    },
+    {
+      "username": "auditor", "enabled": true, "email": "auditor@univ-a.test", "emailVerified": true, "firstName": "보안", "lastName": "감사자",
+      "realmRoles": ["security-auditor"],
+      "credentials": [
+        { "type": "password", "value": "dev-auditor-pass", "temporary": false },
+        { "type": "otp", "userLabel": "dev", "secretData": "{\"value\":\"dev-otp-auditor-0003\"}", "credentialData": "{\"subType\":\"totp\",\"digits\":6,\"counter\":0,\"period\":30,\"algorithm\":\"HmacSHA1\"}" }
+      ]
+    },
+    {
+      "username": "viewer", "enabled": true, "email": "viewer@univ-a.test", "emailVerified": true, "firstName": "플랫폼", "lastName": "조회자",
+      "realmRoles": ["platform-viewer"],
+      "credentials": [
+        { "type": "password", "value": "dev-viewer-pass", "temporary": false },
+        { "type": "otp", "userLabel": "dev", "secretData": "{\"value\":\"dev-otp-viewer-00004\"}", "credentialData": "{\"subType\":\"totp\",\"digits\":6,\"counter\":0,\"period\":30,\"algorithm\":\"HmacSHA1\"}" }
+      ]
+    },
+    {
+      "username": "sre", "enabled": true, "email": "sre@univ-a.test", "emailVerified": true, "firstName": "운영", "lastName": "SRE",
+      "realmRoles": ["sre-operator"],
+      "credentials": [
+        { "type": "password", "value": "dev-sre-pass", "temporary": false },
+        { "type": "otp", "userLabel": "dev", "secretData": "{\"value\":\"dev-otp-sre-000000005\"}", "credentialData": "{\"subType\":\"totp\",\"digits\":6,\"counter\":0,\"period\":30,\"algorithm\":\"HmacSHA1\"}" }
+      ]
+    },
+    {
+      "username": "release", "enabled": true, "email": "release@univ-a.test", "emailVerified": true, "firstName": "배포", "lastName": "관리자",
+      "realmRoles": ["release-controller"],
+      "credentials": [
+        { "type": "password", "value": "dev-release-pass", "temporary": false },
+        { "type": "otp", "userLabel": "dev", "secretData": "{\"value\":\"dev-otp-release-00006\"}", "credentialData": "{\"subType\":\"totp\",\"digits\":6,\"counter\":0,\"period\":30,\"algorithm\":\"HmacSHA1\"}" }
+      ]
+    },
+    {
+      "username": "breakglass", "enabled": false, "email": "breakglass@univ-a.test", "emailVerified": true, "firstName": "비상", "lastName": "계정",
+      "realmRoles": ["break-glass"],
+      "credentials": [
+        { "type": "password", "value": "dev-breakglass-pass", "temporary": false },
+        { "type": "otp", "userLabel": "dev", "secretData": "{\"value\":\"dev-otp-breakglass-07\"}", "credentialData": "{\"subType\":\"totp\",\"digits\":6,\"counter\":0,\"period\":30,\"algorithm\":\"HmacSHA1\"}" }
+      ]
+    }
+  ]
+}

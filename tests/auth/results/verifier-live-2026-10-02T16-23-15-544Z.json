@@ -1,0 +1,52 @@
+{
+  "test": "토큰 검증기·JWKS 캐시 — 실제 로컬 발급자와 발급자 정지 (T-M5-02 단계 2, T-M3-06)",
+  "environment": "축소 환경 — 로컬 Keycloak 26.8.0(start-dev)·로컬 프로세스",
+  "at": "2026-10-02T16:23:15.544Z",
+  "passed": true,
+  "steps": [
+    {
+      "ok": true,
+      "what": "실제 담당자 토큰 검증 — 역할 admission-admin, 수준 mfa"
+    },
+    {
+      "ok": true,
+      "what": "실제 지원자 토큰 검증 — 역할 없음, 주체 있음"
+    },
+    {
+      "ok": true,
+      "what": "담당자 토큰은 지원자 렐름 검증기를 통과하지 못한다 — unknown-key"
+    },
+    {
+      "ok": true,
+      "what": "지원자 토큰은 담당자 렐름 검증기를 통과하지 못한다 — unknown-key"
+    },
+    {
+      "ok": true,
+      "what": "담당자 토큰은 중앙 API 대상이 아니다(aud) — invalid-claims"
+    },
+    {
+      "ok": true,
+      "what": "발급자 컨테이너가 멈췄다(연결 거부)"
+    },
+    {
+      "ok": true,
+      "what": "발급자가 멈춘 뒤에도 같은 검증기가 이미 받은 키로 검증한다"
+    },
+    {
+      "ok": true,
+      "what": "다시 받기 실패는 기록하고 키는 버리지 않는다 — fetch failed"
+    },
+    {
+      "ok": true,
+      "what": "발급자 장애 중 새로 뜬 검증기도 스냅숏의 키로 검증한다(Pod 재기동)"
+    },
+    {
+      "ok": true,
+      "what": "스냅숏도 없으면 판단할 수 없다고 답한다(503) — OidcUnavailableError"
+    },
+    {
+      "ok": true,
+      "what": "발급자를 다시 띄웠다"
+    }
+  ]
+}

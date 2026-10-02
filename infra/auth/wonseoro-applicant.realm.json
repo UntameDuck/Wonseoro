@@ -1,0 +1,79 @@
+{
+  "realm": "wonseoro-applicant",
+  "displayName": "원서로 지원자",
+  "enabled": true,
+  "sslRequired": "external",
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+  "bruteForceProtected": true,
+  "failureFactor": 10,
+  "attributes": {
+    "acr.loa.map": "{\"identity\":\"1\"}"
+  },
+  "clients": [
+    {
+      "clientId": "applicant-web",
+      "name": "원서로 지원자 화면",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "redirectUris": ["http://localhost:4001/*", "http://localhost:3001/*"],
+      "webOrigins": ["http://localhost:4001", "http://localhost:3001"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:4001/*##http://localhost:3001/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-admission-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.custom.audience": "wonseoro-admission-api", "access.token.claim": "true", "id.token.claim": "false" }
+        },
+        {
+          "name": "audience-central-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.custom.audience": "wonseoro-central-api", "access.token.claim": "true", "id.token.claim": "false" }
+        }
+      ]
+    },
+    {
+      "clientId": "wonseoro-dev-cli",
+      "name": "개발 시험용 (로컬 전용 — 운영 렐름에 두지 않는다)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "protocolMappers": [
+        {
+          "name": "audience-admission-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.custom.audience": "wonseoro-admission-api", "access.token.claim": "true", "id.token.claim": "false" }
+        },
+        {
+          "name": "audience-central-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.custom.audience": "wonseoro-central-api", "access.token.claim": "true", "id.token.claim": "false" }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "applicant-1", "enabled": true, "email": "applicant-1@example.test", "emailVerified": true, "firstName": "지원", "lastName": "일",
+      "credentials": [{ "type": "password", "value": "dev-applicant-1-pass", "temporary": false }]
+    },
+    {
+      "username": "applicant-2", "enabled": true, "email": "applicant-2@example.test", "emailVerified": true, "firstName": "지원", "lastName": "이",
+      "credentials": [{ "type": "password", "value": "dev-applicant-2-pass", "temporary": false }]
+    }
+  ]
+}

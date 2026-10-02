@@ -61,3 +61,17 @@ services:
     image: mockserver/mockserver:latest
     profiles: ['payment']
     ports: ['1080:1080']
+
+  # 로컬 OIDC 발급자 (T-M5-02·10, docs/12-authentication-plan.md A1).
+  # 렐름 두 개를 시작할 때 읽어 들인다 — infra/auth/*.realm.json. 개발 전용(start-dev, 내장 DB).
+  # 담당자 렐름은 비밀번호 + TOTP, 지원자 렐름은 본인확인 흉내다. 시험 계정은 infra/auth/README.md.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.0@sha256:b0f60d489d51c5d113390bdf5461d4c06e6051be026c05549f2e1e10ec352bcc
+    profiles: ['auth']
+    command: ['start-dev', '--import-realm', '--health-enabled=true']
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: kcadmin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: kcadmin-dev
+      KC_HOSTNAME: http://localhost:18080
+    ports: ['18080:8080']
+    volumes: ['../auth:/opt/keycloak/data/import:ro']

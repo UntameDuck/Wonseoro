@@ -5,7 +5,7 @@
   "description": "원서로 / K-Admission — K-PaaS 기반 분산형 대학입학 원서접수 표준 플랫폼",
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.12"
   },
   "workspaces": [
     "packages/*",
@@ -45,6 +45,8 @@
     "test:security:dast-gate": "node --test scripts/check-zap-report.test.mjs",
     "pretest:security": "npm run build -w @wonseoro/contracts -w @wonseoro/server-kit -w @wonseoro/admission-api -w @wonseoro/document-service -w @wonseoro/central-api",
     "test:security": "node scripts/run-security-tests.mjs",
+    "test:auth:issuer": "node tests/auth/local-issuer.mjs",
+    "test:auth:verifier": "node tests/auth/verifier-live.mjs",
     "test:a11y:keyboard": "node tests/a11y/keyboard-walk.mjs",
     "test:a11y:focus": "node tests/a11y/focus-sweep.mjs",
     "test:a11y:deadline": "node tests/a11y/deadline-announce.mjs",
