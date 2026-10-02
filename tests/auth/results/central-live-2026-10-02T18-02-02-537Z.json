@@ -1,0 +1,44 @@
+{
+  "test": "중앙·대학 API oidc + 실제 로컬 발급자 — 같은 지원자 토큰으로 공통원서 Snapshot 이 이어진다 (T-M5-02 단계 4)",
+  "environment": "축소 환경 — 로컬 Keycloak 26.8.0·CI 재현 DB(:5499)·로컬 프로세스 둘",
+  "at": "2026-10-02T18:02:02.537Z",
+  "passed": true,
+  "steps": [
+    {
+      "ok": true,
+      "what": "지원자 토큰 하나로 두 API 대상 — wonseoro-central-api,wonseoro-admission-api"
+    },
+    {
+      "ok": true,
+      "what": "중앙: 토큰 없이는 공통원서를 못 본다"
+    },
+    {
+      "ok": true,
+      "what": "중앙: 실제 로그인 토큰으로 공통원서 저장·이 대학 동의 (200)"
+    },
+    {
+      "ok": true,
+      "what": "중앙: 내 공통원서를 다시 읽는다"
+    },
+    {
+      "ok": true,
+      "what": "중앙: 다른 지원자는 내 공통원서를 못 본다"
+    },
+    {
+      "ok": true,
+      "what": "중앙: 담당자 토큰은 지원자 API 에 못 쓴다"
+    },
+    {
+      "ok": true,
+      "what": "중앙: \"내 원서\" 가 토큰으로 열린다"
+    },
+    {
+      "ok": true,
+      "what": "대학: 같은 토큰으로 원서 (200)"
+    },
+    {
+      "ok": true,
+      "what": "대학 원서(재실행 — 처음 만들 때의 Snapshot)에 중앙 공통원서가 들어 있다"
+    }
+  ]
+}

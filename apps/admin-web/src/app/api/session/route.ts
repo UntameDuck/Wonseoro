@@ -1,17 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DEV_OPERATOR, OPERATOR_COOKIE, currentOperator, productionBlocker } from '../../../lib/server';
+import { OIDC_MODE } from '../../../lib/auth';
+import { DEV_OPERATOR, OPERATOR_COOKIE, currentOperator, currentSession, productionBlocker } from '../../../lib/server';
 
 /**
- * 담당자 지정 — **개발 전용.** 관리자 SSO(T-M5-10) 가 이 자리를 대신한다.
+ * 지금 담당자.
  *
- * 입력한 이름이 그대로 `x-admin-id` 가 되어 승인·적용 기록에 남는다. 증명된 신원이 아니다.
- * 그래서 운영에서는 거절하고(productionBlocker), 개발 서버가 아니면 아예 받지 않는다(T-M5-53).
+ * 관리자 로그인 모드(T-M5-10) — 로그인 세션의 담당자 이름·표시 이름·역할·직접 인증 시각. 바꾸는 길은 로그인뿐이다
+ * (`/api/auth/login`·`/api/auth/logout`). 토큰은 돌려주지 않는다.
  *
+ * 개발 모드 — 담당자 지정(**개발 전용**). 입력한 이름이 그대로 `x-admin-id` 가 되어 승인·적용 기록에 남는다.
+ * 증명된 신원이 아니다. 그래서 운영에서는 거절하고(productionBlocker), 개발 서버가 아니면 아예 받지 않는다(T-M5-53).
  * SameSite=Strict — 다른 사이트에서 시작한 요청에는 이 쿠키가 실리지 않는다.
  */
 export async function GET() {
+  if (OIDC_MODE) {
+    const session = await currentSession();
+    return NextResponse.json(
+      {
+        mode: 'oidc',
+        operator: session?.user.username ?? null,
+        name: session?.user.name ?? null,
+        roles: session?.user.roles ?? [],
+        authTime: session?.authTime ?? null,
+        devOperator: false,
+        unavailable: productionBlocker(),
+      },
+      { headers: { 'cache-control': 'no-store' } },
+    );
+  }
   // devOperator 가 거짓이면 화면은 입력칸 대신 관리자 로그인 자리를 보인다.
-  return NextResponse.json({ operator: await currentOperator(), devOperator: DEV_OPERATOR });
+  return NextResponse.json({ mode: 'dev', operator: await currentOperator(), devOperator: DEV_OPERATOR });
 }
 
 export async function POST(req: NextRequest) {
@@ -44,6 +62,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE() {
+  if (OIDC_MODE) return NextResponse.json({ detail: '로그아웃을 이용해 주십시오.' }, { status: 405 });
   const res = NextResponse.json({ operator: null });
   res.cookies.delete(OPERATOR_COOKIE);
   return res;

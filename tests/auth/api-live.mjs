@@ -101,10 +101,11 @@ try {
   const t1 = a1.tokens.access_token;
   const t2 = a2.tokens.access_token;
 
-  const anon = await call('GET', '/api/v1/admission-cycles/current');
+  const PROTECTED = `/api/v1/applications/${randomUUID()}`;
+  const anon = await call('GET', PROTECTED);
   check(anon.status === 401 && anon.json.code === 'UNAUTHENTICATED', `토큰 없는 지원자 요청은 401 (${anon.status} ${anon.json.code})`);
-  const cyc = await call('GET', '/api/v1/admission-cycles/current', t1);
-  check(cyc.status === 200, `지원자 토큰으로 모집 정보 조회 (${cyc.status})`);
+  const cyc = await call('GET', '/api/v1/admission-cycles/current');
+  check(cyc.status === 200, `모집 정보는 로그인 전에도 보인다(공개, D-65) (${cyc.status})`);
   const made = await call('POST', '/api/v1/applications', t1, {
     cycleId: CYCLE, admissionTypeId: '22222222-2222-2222-2222-222222222222', departmentId: '33333333-3333-3333-3333-333333333333',
   });
@@ -118,7 +119,7 @@ try {
   const staffOnApplicant = await staffLogin('admin-a');
   if (!staffOnApplicant.tokens) throw new Error(`담당자 로그인 실패 ${staffOnApplicant.error}`);
   const adminA = staffOnApplicant.tokens.access_token;
-  check((await call('GET', '/api/v1/admission-cycles/current', adminA)).status === 401, '담당자 토큰으로는 지원자 API 를 못 쓴다');
+  check((await call('GET', PROTECTED, adminA)).status === 401, '담당자 토큰으로는 지원자 API 를 못 쓴다');
   check((await call('GET', `/admin/v1/config/active?cycleId=${CYCLE}`, t1)).status === 401, '지원자 토큰으로는 운영 API 를 못 쓴다');
 
   // 담당자 — 역할별

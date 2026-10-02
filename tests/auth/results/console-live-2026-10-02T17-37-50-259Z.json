@@ -1,0 +1,92 @@
+{
+  "test": "운영 콘솔 관리자 로그인(BFF) — 실제 콘솔 서버·대학 API·로컬 발급자 (T-M5-10 단계 5)",
+  "environment": "축소 환경 — next dev(:4100)·admission-api(:3111, oidc)·로컬 Keycloak 26.8.0·CI 재현 DB(:5499)",
+  "at": "2026-10-02T17:37:50.259Z",
+  "passed": true,
+  "steps": [
+    {
+      "ok": true,
+      "what": "로그인 전 운영 API 중계는 401 (401)"
+    },
+    {
+      "ok": true,
+      "what": "로그인 전 세션 없음(관리자 로그인 모드)"
+    },
+    {
+      "ok": true,
+      "what": "로그인 요청이 인증 수준 mfa·PKCE·nonce 를 싣는다"
+    },
+    {
+      "ok": true,
+      "what": "발급자가 비밀번호와 일회용 번호를 차례로 묻는다"
+    },
+    {
+      "ok": true,
+      "what": "콜백이 원래 화면(/config)으로 돌려보낸다 (http://localhost:4100/config)"
+    },
+    {
+      "ok": true,
+      "what": "세션 쿠키는 HttpOnly·SameSite=Lax"
+    },
+    {
+      "ok": true,
+      "what": "로그인용 쿠키(state·PKCE)는 콜백에서 지운다"
+    },
+    {
+      "ok": true,
+      "what": "쿠키 안에 토큰이 평문으로 없다(암호화)"
+    },
+    {
+      "ok": true,
+      "what": "세션 정보 — 입학처 담당자A (admin-a), 토큰은 주지 않는다"
+    },
+    {
+      "ok": true,
+      "what": "로그인한 담당자의 운영 API 중계 (200)"
+    },
+    {
+      "ok": true,
+      "what": "콘솔 화면 표시(x-requested-with) 없는 상태 변경 요청은 403 (403)"
+    },
+    {
+      "ok": true,
+      "what": "액세스 토큰이 끝나 가면 갱신 토큰으로 바꿔 쿠키를 새로 준다 — 인증 시각은 그대로"
+    },
+    {
+      "ok": true,
+      "what": "꾸민 세션 쿠키는 401"
+    },
+    {
+      "ok": true,
+      "what": "로그인 뒤 돌아갈 곳이 다른 사이트면 콘솔 첫 화면으로 (http://localhost:4100/)"
+    },
+    {
+      "ok": true,
+      "what": "감사자는 증적 경로를 통과한다 (400)"
+    },
+    {
+      "ok": true,
+      "what": "감사자의 설정 조회는 운영 API 가 403"
+    },
+    {
+      "ok": true,
+      "what": "state 가 다른 콜백은 로그인 실패로 돌려보낸다"
+    },
+    {
+      "ok": true,
+      "what": "본인 확인 다시 하기는 발급자에 max_age=0 으로 요청한다"
+    },
+    {
+      "ok": true,
+      "what": "로그아웃은 발급자 로그아웃 주소를 준다"
+    },
+    {
+      "ok": true,
+      "what": "로그아웃 뒤 운영 API 중계는 401"
+    },
+    {
+      "ok": true,
+      "what": "콘솔 화면이 아닌 로그아웃 요청은 403"
+    }
+  ]
+}

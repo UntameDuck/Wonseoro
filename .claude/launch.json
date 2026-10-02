@@ -82,6 +82,18 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["--env-file=scripts/screenshots/env/admin.env", "node_modules/next/dist/bin/next", "dev", "apps/admin-web", "-p", "4101"],
       "port": 4101
+    },
+    {
+      "name": "auth-admission",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--env-file=scripts/auth/env/admission.env", "apps/admission-api/dist/main.js"],
+      "port": 3111
+    },
+    {
+      "name": "auth-admin",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--env-file=scripts/auth/env/admin.env", "node_modules/next/dist/bin/next", "dev", "apps/admin-web", "-p", "4100"],
+      "port": 4100
     }
   ]
 }

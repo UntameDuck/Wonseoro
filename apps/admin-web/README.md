@@ -24,7 +24,20 @@
 
 ## 신원
 
-- 브라우저는 admission-api 를 직접 부르지 않는다. 콘솔 서버(`/api/admin/*`)가 운영 토큰을 붙여 넘긴다 — 토큰은 브라우저에 없다
-- 담당자 ID 입력칸은 **개발 서버(`next dev`)에서만** 그린다. 입력한 이름이 그대로 승인·적용 기록에 남고 증명된 신원이 아니다.
-  운영 빌드에는 들어가지 않고(`ADMIN_DEV_OPERATOR=1` 로 빌드하면 멈춘다), 담당자 쿠키도 믿지 않는다(T-M5-53).
-  관리자 SSO·MFA(T-M5-10)가 이 자리를 맡는다. 그 전에는 운영에서 콘솔이 동작을 거부한다
+- 브라우저는 admission-api 를 직접 부르지 않는다. 콘솔 서버(`/api/admin/*`)가 자격을 붙여 넘긴다 — 토큰은 브라우저에 없다
+- **관리자 로그인(운영)** — `ADMIN_AUTH_MODE=oidc`. 콘솔 서버가 담당자 렐름에서 Authorization Code + PKCE 로 로그인하고(비밀번호 + 일회용 번호),
+  토큰은 AES-256-GCM 으로 봉인한 HttpOnly 쿠키에만 둔다. 만료 전 갱신·로그아웃(발급자 세션도). 민감 동작은 운영 API 가 5분 안의 재인증을 요구하고,
+  화면이 "본인 확인 다시 하기" 로 다시 로그인시킨다(T-M5-10, [docs/12](../../docs/12-authentication-plan.md) 단계 5)
+
+  | 환경변수 | 뜻 |
+  |---|---|
+  | `ADMIN_AUTH_MODE=oidc` | 관리자 로그인을 켠다. 운영은 이것만 허용한다 |
+  | `ADMIN_OIDC_ISSUER` | 담당자 렐름 발급자(운영은 https·로컬 아님) |
+  | `ADMIN_OIDC_CLIENT_ID` · `ADMIN_OIDC_CLIENT_SECRET` | 콘솔 클라이언트(기밀) |
+  | `ADMIN_PUBLIC_URL` | 이 콘솔의 주소 — 로그인 콜백 `<주소>/auth/callback` |
+  | `ADMIN_SESSION_SECRET` | 세션 쿠키 봉인 비밀(32자 이상). 바꾸면 모두 다시 로그인한다 |
+  | `ADMISSION_API_URL` | 대학 API |
+
+  로컬: `scripts/auth/env/admin.env` + 미리보기 `auth-admin`(:4100)·`auth-admission`(:3111), 시험 `npm run test:auth:console`
+- **개발 서버** — 관리자 로그인 모드가 아니면 담당자 ID 입력칸을 **개발 서버(`next dev`)에서만** 그린다. 입력한 이름이 그대로 승인·적용 기록에 남고 증명된 신원이 아니다.
+  운영 빌드에는 들어가지 않고(`ADMIN_DEV_OPERATOR=1` 로 빌드하면 멈춘다), 담당자 쿠키도 믿지 않는다(T-M5-53). 운영에서는 콘솔이 동작을 거부한다

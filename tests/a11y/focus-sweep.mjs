@@ -1,8 +1,10 @@
 // T-M5-41 Visible Focus / Focus Order — 모든 화면을 Tab 으로 한 바퀴 돈다.
 //
-// 사용: node tests/a11y/focus-sweep.mjs <applicant|admin> [--width=1280] [--browser=chrome|edge]
+// 사용: node tests/a11y/focus-sweep.mjs <applicant|admin|admin-oidc> [--width=1280] [--browser=chrome|edge]
 //   applicant  지원자 웹(:4001) — 접수 홈·공통원서·내 원서·원서 1~6단계·접수증·없는 화면·장애 안내
 //   admin      입학처 콘솔(:4101) — 첫 화면·설정 승인(검토 열기)·마감·대조·증적·보존기간·없는 화면
+//   admin-oidc 관리자 로그인 콘솔(:4100, 미리보기 `auth-admin`·`auth-admission`·로컬 발급자) — 로그인 전 화면, 키보드로
+//              발급자 로그인(비밀번호·일회용 번호), 로그인 뒤 첫 화면·설정 승인. 발급자 화면 자체는 돌지 않는다(우리 화면이 아니다)
 //
 // 화면마다 문서 처음에서 Tab 을 눌러 끝을 지나 다시 처음으로 돌아올 때까지 간다. 각 자리에서 본다.
 //   - 포커스 표시가 보이는가 — 테두리 2px 이상, 키보드 포커스 표시(:focus-visible)
@@ -31,9 +33,10 @@ const TEXT_ZOOM = Number(arg('text-zoom', '1'));
 const WEB = 'http://localhost:4001';
 const ADMIN = 'http://localhost:4101';
 const API = 'http://localhost:3101';
+const ADMIN_OIDC = 'http://localhost:4100';
 const PG = 'ui-shots-pg';
-if (!['applicant', 'admin'].includes(PHASE ?? '')) {
-  console.error('사용: node tests/a11y/focus-sweep.mjs <applicant|admin> [--width=1280] [--browser=chrome|edge]');
+if (!['applicant', 'admin', 'admin-oidc'].includes(PHASE ?? '')) {
+  console.error('사용: node tests/a11y/focus-sweep.mjs <applicant|admin|admin-oidc> [--width=1280] [--browser=chrome|edge]');
   process.exit(2);
 }
 
@@ -379,9 +382,41 @@ async function admin() {
   await sweep('콘솔 없는 화면');
 }
 
+/* ── 관리자 로그인 콘솔 (T-M5-10) ────────────────────────────────────── */
+
+async function adminOidc() {
+  const { freshTotp } = await import('../auth/helpers/totp.mjs');
+  const realm = JSON.parse(readFileSync(path.resolve('infra/auth/wonseoro-staff.realm.json'), 'utf8'));
+  const u = realm.users.find((x) => x.username === 'admin-a');
+  const password = u.credentials.find((c) => c.type === 'password').value;
+  const otpSecret = JSON.parse(u.credentials.find((c) => c.type === 'otp').secretData).value;
+
+  await go(`${ADMIN_OIDC}/`, '관리자 로그인이 필요합니다');
+  await sweep('콘솔 로그인 전 (관리자 로그인)');
+  // 키보드로 로그인 — 발급자 화면은 첫 칸(사용자 이름)에 포커스를 둔다
+  await keyTo('관리자 로그인');
+  await b.waitFor(`location.host === 'localhost:18080' && !!document.querySelector('#username')`, '발급자 로그인 화면');
+  await b.evaluate(`document.querySelector('#username').focus()`);
+  await typeText(b, 'admin-a');
+  await press(b, 'Tab');
+  await typeText(b, password);
+  await press(b, 'Enter');
+  await b.waitFor(`!!document.querySelector('#otp')`, '일회용 번호 화면');
+  await b.evaluate(`document.querySelector('#otp').focus()`);
+  await typeText(b, await freshTotp(otpSecret));
+  await press(b, 'Enter');
+  await b.waitFor(`location.origin === ${JSON.stringify(ADMIN_OIDC)} && document.body.innerText.includes('로그아웃')`, '로그인 뒤 콘솔', 60_000);
+  await b.waitFor(`document.body.innerText.includes('지금 처리할 일')`, '첫 화면');
+  await sweep('콘솔 첫 화면 (관리자 로그인)');
+  await go(`${ADMIN_OIDC}/config`, '설정 버전');
+  await b.waitFor(`!document.body.innerText.includes('불러오는 중')`, '설정 목록');
+  await sweep('설정 승인 (관리자 로그인)');
+}
+
 let fatal = null;
 try {
   if (PHASE === 'applicant') await applicant();
+  else if (PHASE === 'admin-oidc') await adminOidc();
   else await admin();
 } catch (err) {
   fatal = err.message;

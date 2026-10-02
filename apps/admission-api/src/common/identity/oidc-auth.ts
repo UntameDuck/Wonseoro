@@ -55,6 +55,10 @@ export const PUBLIC_ROUTES: ReadonlySet<string> = new Set([
   'GET /api/v1/meta/time',
   'GET /api/v1/meta/operating-mode',
   'GET /api/v1/meta/signing-keys',
+  // 모집·전형·모집단위 — 누구에게나 같은 공개 정보, 로그인 전 화면·운영 콘솔이 보인다 (계약 1.7.0, D-65)
+  'GET /api/v1/admission-cycles/current',
+  'GET /api/v1/admission-types',
+  'GET /api/v1/departments',
   // PG 가 부른다 — 신원 대신 서명으로 막는다 (D-40)
   'POST /api/v1/payments/callbacks/:provider',
 ]);

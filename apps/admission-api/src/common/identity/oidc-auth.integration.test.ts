@@ -139,24 +139,28 @@ after(async () => {
 });
 
 const SKIP = 'DATABASE_URL 이 없거나 DB 에 닿지 않는다';
+/** 지원자 토큰이 필요한 경로 — 없는 원서라 토큰이 맞으면 404(소유권), 토큰이 틀리면 401 */
+const PROTECTED = `/api/v1/applications/00000000-0000-4000-8000-000000000000`;
 
 describe('OIDC 인증 — HTTP (T-M5-02·10 단계 3)', () => {
   it('계약의 공개 경로는 토큰 없이, 지원자 경로는 토큰이 있어야 한다', async (ctx) => {
     if (!available) return ctx.skip(SKIP);
     assert.equal((await call('GET', '/api/v1/meta/time')).status, 200);
-    const anon = await call('GET', `/api/v1/admission-cycles/current`);
+    // 모집·전형·모집단위는 공개다(계약 1.7.0, D-65) — 로그인 전 화면과 운영 콘솔이 보인다
+    assert.equal((await call('GET', '/api/v1/admission-cycles/current')).status, 200);
+    const anon = await call('GET', PROTECTED);
     assert.equal(anon.status, 401);
     assert.equal(anon.json.code, 'UNAUTHENTICATED');
     assert.match(String(anon.headers['www-authenticate']), /^Bearer/);
-    assert.equal((await call('GET', '/api/v1/admission-cycles/current', 'not.a.token')).status, 401);
+    assert.equal((await call('GET', PROTECTED, 'not.a.token')).status, 401);
   });
 
   it('처음 온 지원자는 등록된다 — 개인정보 없이, 한 번만', async (ctx) => {
     if (!available) return ctx.skip(SKIP);
     const sub = `oidc-${randomUUID()}`;
     const t = await token('applicant', sub);
-    assert.equal((await call('GET', '/api/v1/admission-cycles/current', t)).status, 200);
-    assert.equal((await call('GET', '/api/v1/admission-cycles/current', t)).status, 200);
+    assert.equal((await call('GET', PROTECTED, t)).status, 404);
+    assert.equal((await call('GET', PROTECTED, t)).status, 404);
     const { rows } = await db.query<{ n: string; key: string; len: number }>(
       `SELECT count(*) AS n, max(pii_key_version) AS key, max(octet_length(pii_ciphertext)) AS len FROM applicant WHERE subject_token = $1`,
       [sub],
@@ -185,16 +189,16 @@ describe('OIDC 인증 — HTTP (T-M5-02·10 단계 3)', () => {
     if (!available) return ctx.skip(SKIP);
     const staff = await token('staff', 'admin-a');
     const applicant = await token('applicant', `oidc-${randomUUID()}`);
-    assert.equal((await call('GET', '/api/v1/admission-cycles/current', staff)).status, 401);
+    assert.equal((await call('GET', PROTECTED, staff)).status, 401);
     assert.equal((await call('GET', `/admin/v1/config/active?cycleId=${CYCLE}`, applicant)).status, 401);
   });
 
   it('위조·만료·다른 대상 토큰을 거절한다', async (ctx) => {
     if (!available) return ctx.skip(SKIP);
     const other = await realm('applicant-k1'); // 같은 kid, 다른 키
-    assert.equal((await call('GET', '/api/v1/admission-cycles/current', await token('applicant', 'x', { signWith: other.key }))).status, 401);
-    assert.equal((await call('GET', '/api/v1/admission-cycles/current', await token('applicant', 'x', { expSec: -120 }))).status, 401);
-    assert.equal((await call('GET', '/api/v1/admission-cycles/current', await token('applicant', 'x', { aud: 'wonseoro-central-api' }))).status, 401);
+    assert.equal((await call('GET', PROTECTED, await token('applicant', 'x', { signWith: other.key }))).status, 401);
+    assert.equal((await call('GET', PROTECTED, await token('applicant', 'x', { expSec: -120 }))).status, 401);
+    assert.equal((await call('GET', PROTECTED, await token('applicant', 'x', { aud: 'wonseoro-central-api' }))).status, 401);
   });
 
   it('운영 API — 역할별로 열리는 곳만 열린다(수직 권한)', async (ctx) => {
@@ -271,10 +275,10 @@ describe('OIDC 인증 — HTTP (T-M5-02·10 단계 3)', () => {
   it('발급자가 죽어도 이미 받은 키로 계속 검증한다(T-M3-06)', async (ctx) => {
     if (!available) return ctx.skip(SKIP);
     const t = await token('applicant', `oidc-${randomUUID()}`);
-    assert.equal((await call('GET', '/api/v1/admission-cycles/current', t)).status, 200);
+    assert.equal((await call('GET', PROTECTED, t)).status, 404);
     server.closeAllConnections();
     await new Promise<void>((r) => server.close(() => r()));
-    assert.equal((await call('GET', '/api/v1/admission-cycles/current', t)).status, 200);
+    assert.equal((await call('GET', PROTECTED, t)).status, 404, '발급자가 멈춰도 토큰은 통과(404 = 인증 뒤 소유권 판단)');
     const staff = await token('staff', 'admin-a');
     assert.equal((await call('GET', `/admin/v1/config/active?cycleId=${CYCLE}`, staff)).status, 200);
   });

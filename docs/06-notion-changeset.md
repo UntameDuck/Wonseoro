@@ -10,7 +10,7 @@
 
 | 노션 문서 | 첨부 이름 | 저장소 파일 | 바이트 | SHA-256 | 근거 |
 |---|---|---|---|---|---|
-| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.6.0) | 91,632 | `ff54a550dee7d51a7656996e90a576ad313558ce7357995796cfb879b16370cd` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 |
+| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.7.0) | 91,997 | `3f1f86040457a5ce2bb6bef9de7cc177cfecb3c9fc387420607eb837e30be6df` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 |
 | [§04 CloudEvents](https://app.notion.com/p/3df75ab5debe81d68e37fabd3678dcc4) | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | 6,104 | `3ed7ec8a340c50f6e7de25b2c3322ffd7c6b4914fd046afdc67a2efea699ca02` | D-47 · T-M5-51 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` (v1.2) | 4,036 | `1aaef0db712e1d9a15da41fb86b7832a3da8c6decfdcd5992a57bb071e5b1975` | D-44 · D-49 · D-52 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` (v1.2, 차트 렌더링) | 34,582 | `9446584b3462120941697fab13b5399a22bd5ffcc6430da592953ec5b20b5706` | D-44 · D-52 |
@@ -63,6 +63,8 @@
 > 공통원서 동의 `universityName`. optional 필드 추가라 호환 변경이다(§A16).
 
 > **2026-10-01 v1.6.0** — 접수증 응답에 `admissionTypeName`·`departmentName`·`status`(T-M2-11 접수증 항목), Self-check 결제에 `requestedAt`(결제 확인 중 화면). 추가만이라 호환 변경이다(§A16). (T-M5-56)
+
+> **2026-10-03 v1.7.0** — 지금 모집·전형·모집단위 조회를 공개(`security: []`)로. 누구에게나 같은 공개 정보이고 로그인 전 화면·운영 콘솔이 보인다. 요구를 푸는 변경이라 호환이다(§A16). (D-65)
 
 ### §04 CloudEvents Schema
 

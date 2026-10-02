@@ -37,7 +37,9 @@
 - **인증 단계 1·2 ✅ (2026-10-03)** — 로컬 Keycloak 26.8.0(`docker compose … --profile auth up -d keycloak`, :18080, 렐름 `infra/auth/`): 담당자 비밀번호+TOTP(`acr=mfa`, 5분 뒤 재인증)·역할 6종, 지원자 렐름. `server-kit` `OidcVerifier`·`JwksCache` — 발급자를 멈춘 채 검증 지속·스냅숏으로 재기동(`test:auth:issuer` 24·`test:auth:verifier` 11·단위 17). [12 §6](12-authentication-plan.md)
 - **인증 단계 3 ✅ (2026-10-03)** — 대학 API `AUTH_MODE=oidc`: 요청 한도보다 먼저 토큰 검증(`app.setup.ts`), 지원자 첫 로그인 등록(개인정보 없음), 운영 API 경로마다 계약 범위 → 역할(`@AdminScope`, **D-64**)·비밀번호+OTP·민감 동작 8개 5분 재인증(RFC 9470), 2인 승인 신원 = 토큰의 담당자. 시험: 계약 대조 8·역할 표 6·HTTP 9(BOLA·수직 권한·발급자 정지)·실제 Keycloak 끝에서 끝까지 19(`test:auth:api`). [12 §6](12-authentication-plan.md)
 - **인증 단계 4 ✅ (2026-10-03)** — 중앙 API `AUTH_MODE=oidc`: 공통원서·"내 원서" 가 지원자 렐름 토큰의 sub 를 가명 토큰으로 쓴다(대학과 같은 sub). 실제 로그인 한 번으로 중앙에 쓴 공통원서가 대학 원서에 들어오는 것까지 확인(`test:auth:central` 9). 보안 선별 시험 173개
-- **바로 다음 할 일**: 인증 단계 5 — 운영 콘솔 로그인(BFF·재인증·목적/사유 화면, 접근성 시험 다시). 인증(로컬 OIDC — 세션 만료·위험 차단 해제도 함께, ADR-0009) → 보안 통제 → …
+- **인증 단계 5 ✅ (2026-10-03)** — 운영 콘솔 관리자 로그인(`ADMIN_AUTH_MODE=oidc`): 콘솔 서버가 PKCE 로그인·토큰을 AES-GCM 봉인 HttpOnly 쿠키에만·만료 전 갱신, 재인증 안내 → `max_age=0` 재로그인, 로그아웃. 로그인 모드에서는 개발용 담당자 입력이 없다. 미리보기 `auth-admin`·`auth-admission`(env `scripts/auth/env/`). `test:auth:console` 21, 접근성 `focus-sweep admin-oidc`. 계약 **1.7.0**(모집·전형·모집단위 공개, D-65)
+- **⚠️ D-66 (2026-10-03 수정)** — 10-02 NestJS 11 업그레이드 뒤 CORS 기본 메서드가 GET·HEAD·POST 로 줄어 **브라우저의 원서 저장(PATCH)·공통원서 저장(PUT)·서류 삭제(DELETE)가 막혀 있었다**. CI·DAST 는 사전 요청을 안 해 못 잡았다. 두 API 에 메서드를 적고 사전 요청 시험(`app.setup.test.ts`)을 두었다
+- **바로 다음 할 일**: 인증 단계 6 — 지원자 화면 로그인(세션 만료를 발급자 세션으로·위험 차단 해제), 접근성 시험 다시. 인증(로컬 OIDC — 세션 만료·위험 차단 해제도 함께, ADR-0009) → 보안 통제 → …
 
 ## 2. 반드시 지킬 규칙
 
@@ -68,7 +70,7 @@
 | 중앙 DB 마이그레이션 | `infra/db/central/0001_init.sql`·`0002_vault.sql`·**`0003_summary_names.sql`**(2026-10-01) — `npm run db:migrate:central` 이 셋 다 적용한다 |
 | 로컬 발급자 | compose 프로필 `auth` 의 `keycloak` :18080(약 75초에 뜬다, 메모리 약 600MB). 렐름·시험 계정 [infra/auth/README.md](../infra/auth/README.md). 틀린 비밀번호·OTP 를 5번 넣으면 그 계정이 잠시 잠긴다 — 시험을 다시 돌리기 전에 `up -d --force-recreate keycloak` 로 초기화 |
 | 로컬 DB | compose: `postgres-univ-a` :5432 · `postgres-univ-b` :5442(`--profile multi`) · `postgres-central` :5434 · redis :6379 · minio :9000 |
-| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 352 · server-kit 72 · central-api 35 · event-relay 7 · document-service 8 · krds 5 (전체 479, CI 재현 DB 에서 실패 0·건너뜀 3, 2026-10-02). `app.module.boot.test` 는 실제 AppModule 로 DI 를 조립한다 — 서비스를 직접 `new` 하는 통합 시험이 못 잡는 "서버가 안 뜨는" 결함용. 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함). **DB 통합 시험 전에 kind univ-a 의 API·Relay 를 0 으로 줄인다** — 같은 로컬 `univ_a` DB 를 봐서 시험 행을 먼저 집어 간다(결제 재확인·Relay 시험이 실패하거나 멈춘다). event-relay 시험은 직렬로 돈다 |
+| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 356 · server-kit 72 · central-api 36 · event-relay 7 · document-service 8 · krds 5 (전체 484, CI 재현 DB 에서 실패 0·건너뜀 3, 2026-10-02). `app.module.boot.test` 는 실제 AppModule 로 DI 를 조립한다 — 서비스를 직접 `new` 하는 통합 시험이 못 잡는 "서버가 안 뜨는" 결함용. 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함). **DB 통합 시험 전에 kind univ-a 의 API·Relay 를 0 으로 줄인다** — 같은 로컬 `univ_a` DB 를 봐서 시험 행을 먼저 집어 간다(결제 재확인·Relay 시험이 실패하거나 멈춘다). event-relay 시험은 직렬로 돈다 |
 | 접근성 시험 | `npm run test:a11y:keyboard`(키보드 완주 — `--width=640`·`320`·`--text-zoom=2`·`--input=touch`·`--browser=edge`) · `test:a11y:focus -- applicant|admin`(전 화면 포커스·스크린리더 재료·가로 스크롤·대상 크기) · `test:a11y:deadline` · `test:a11y:session` · `test:a11y:rate-limit`. 화면 캡처와 같은 전용 DB·포트·서버(`shots-*`)를 쓴다 — 미리보기 서버 5개 한도 때문에 지원자 시험은 서류 워커, 콘솔 시험은 `shots-admin` 을 띄운다. 결과 `tests/a11y/results/`. **CI 에는 아직 없다**(서버 다섯이 필요) |
 | 검사 | `npm run db:verify`(DB 제약 20종) · `node scripts/check-deps.mjs`(의존성 선언) · `helm lint deploy/charts/k-admission` · `node scripts/render-runtime-attachment.mjs --check`(runtime 첨부 = 차트 렌더링) · `npm run check:ui-copy`(화면 문구에 설계 번호·개발 안내·구조 설명 금지, T-M5-50) · `npm run check:contracts`(OpenAPI `$ref`·operationId·대장 번호·직전 커밋 대비 호환성, CloudEvents 컴파일·이벤트 타입) |
 | 로컬 화면 확인 | kind 와 섞지 않으려면 로컬 프로세스를 CI 재현 DB 에 붙인다 — 중앙 :3100(`DATABASE_URL=…5499/central`)·대학 :3101(`…5499/univ_a`, `CENTRAL_SYNC_URL=http://localhost:3100`, `CORS_ORIGINS=http://localhost:4001`, `OTEL_METRICS_PORT` 를 9464 가 아닌 값으로)·지원자 웹 :4001(`NEXT_PUBLIC_ADMISSION_API`·`NEXT_PUBLIC_CENTRAL_API`). **:3000 은 쓰지 않는다** — kind 시험이 `ka-central` 을 거기 띄운다. 개발 시드 지원자: `44444444-4444-4444-4444-444444444444` / `subj-dev-0001` |
@@ -222,7 +224,7 @@ Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, s
 |---|---|
 | 지금 할 일 | [03-next-steps.md](03-next-steps.md) |
 | 단계별 태스크·인수기준 | [milestones/](milestones/) |
-| 설계와 구현이 다른 곳 64건 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) |
+| 설계와 구현이 다른 곳 66건 | [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md) |
 | 화면 캡처·다시 찍는 법 | [screenshots/README.md](screenshots/README.md) |
 | 화면 제품화 — 화면 결함·개발 흔적 전수 목록(U-1~U-59)·결정·문구 검사 | [08-ui-production-readiness.md](08-ui-production-readiness.md) |
 | 접근성 — 시험·찾은 결함·세션 만료·CAPTCHA 결정·지원 브라우저 | [09-accessibility.md](09-accessibility.md) · 시험 `tests/a11y/` · KRDS `LiveRegion`·`TableScroll`·`Alert focusKey`·`Card titleId/titleLevel` |
@@ -232,7 +234,7 @@ Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, s
 | 노션 문서 지도·동기화 규칙 | [01-notion-sync-protocol.md](01-notion-sync-protocol.md) |
 | 왜 이렇게 정했나 | [adr/](adr/) — 최신 ADR-0009 퍼즐형 CAPTCHA 를 두지 않는다(한도에 걸린 사람의 접근 가능한 길) · ADR-0008 노드 장애 흡수 |
 | 배포 | `deploy/` — 차트 `charts/k-admission`, 대학별 `universities/`, 로컬 `local/` |
-| API 계약 | `packages/contracts/openapi/k-admission.v1.yaml` (v1.6.0) — 컨트롤러와 다르면 계약 적합성 시험이, 계약 파일이 깨지거나 비호환이면 `check:contracts` 가 깨진다 |
+| API 계약 | `packages/contracts/openapi/k-admission.v1.yaml` (v1.7.0) — 컨트롤러와 다르면 계약 적합성 시험이, 계약 파일이 깨지거나 비호환이면 `check:contracts` 가 깨진다 |
 | 사람 말 사전(상태·행위·예외 등 화면 이름) | `packages/contracts/src/labels.ts` — 화면은 내부 코드를 그대로 보이지 않는다 (T-M5-51) |
 | 날짜·시각 표기·아이콘 | `packages/krds/src/format.ts`(언제나 한국 시간)·`icon.tsx`(SVG) — 화면은 `toLocaleString`·이모지를 직접 쓰지 않는다 (T-M5-54) |
 | 오류 문구표(오류 code → 화면 제목·설명) | `packages/contracts/src/problem-text.ts` — 화면은 서버 오류 문구를 그대로 보이지 않는다. 조사 함수 `josa.ts` (T-M5-52) |

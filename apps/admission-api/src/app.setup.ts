@@ -52,6 +52,9 @@ export function configureHttpApp(app: NestFastifyApplication): void {
   app.enableCors({
     origin: CORS_ORIGINS,
     credentials: true,
+    // 메서드를 적는다 — NestJS 11 의 CORS(@fastify/cors 11)는 기본이 GET·HEAD·POST 뿐이라, 적지 않으면 브라우저가
+    // 원서 저장(PATCH)·공통원서 저장(PUT)·서류 삭제(DELETE)를 사전 요청에서 거절당한다 (D-66)
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: [
       'content-type',
       'idempotency-key',

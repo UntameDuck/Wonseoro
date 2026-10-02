@@ -157,6 +157,18 @@ export const EXCEPTION_FACT_LABEL: Record<string, string> = {
   pgAmount: '결제사 금액',
 };
 
+/* ── 담당자 역할 ───────────────────────────────────────────────────────── */
+
+/** 담당자 렐름의 역할(노션 06). 콘솔 머리글이 로그인한 담당자의 역할을 이 이름으로 보인다 (T-M5-10) */
+export const STAFF_ROLE_LABEL: Record<string, string> = {
+  'admission-admin': '입학처 담당',
+  'security-auditor': '보안 감사',
+  'platform-viewer': '플랫폼 조회',
+  'sre-operator': '운영 지원',
+  'release-controller': '배포 관리',
+  'break-glass': '비상 접근',
+};
+
 /* ── 보존기간 ─────────────────────────────────────────────────────────── */
 
 /** 보존 정책 검사 문제의 분류. 데이터 종류 코드는 RETENTION_CATEGORIES 의 label 을 쓴다 — 이것은 그 밖의 분류다. */

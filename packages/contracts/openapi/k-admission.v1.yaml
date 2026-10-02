@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: K-Admission University Data Plane API
-  version: 1.6.0
+  version: 1.7.0
   description: >
     Reference contract for a university-local K-Admission data plane.
     The university DB is the source of truth; central sync is not in the applicant critical path.
@@ -34,6 +34,11 @@ info:
     1.6.0 completes the receipt and the payment-pending screen (T-M5-56): the receipt carries
     `admissionTypeName`, `departmentName` and `status` (the T-M2-11 receipt items), and the self-check
     payment carries `requestedAt`. Additive.
+
+
+    1.7.0 makes the catalog public (D-65): the current cycle, admission types and departments carry
+    `security: []`. They are the same for everyone, contain no personal data, and are shown before
+    sign-in (deadline, list of programmes) and by the staff console. Relaxing a requirement is compatible.
 
 
     Common rules:
@@ -124,6 +129,7 @@ paths:
     get:
       tags: [Catalog]
       operationId: getCurrentCycle
+      security: []
       responses:
         '200':
           description: Current admission cycle
@@ -142,6 +148,7 @@ paths:
     get:
       tags: [Catalog]
       operationId: listAdmissionTypes
+      security: []
       parameters:
         - in: query
           name: cycleId
@@ -159,6 +166,7 @@ paths:
     get:
       tags: [Catalog]
       operationId: listDepartments
+      security: []
       parameters:
         - in: query
           name: cycleId

@@ -9,6 +9,9 @@ npm run test:auth:issuer      # 로그인 길·토큰 내용 24개 확인
 npm run build -w @wonseoro/server-kit && npm run test:auth:verifier   # 검증기·JWKS 캐시, 발급자 정지 중 검증
 npm run build -w @wonseoro/contracts -w @wonseoro/server-kit -w @wonseoro/admission-api && npm run test:auth:api   # 대학 API(oidc) 끝에서 끝까지 — CI 재현 DB(:5499) 필요
 npm run build -w @wonseoro/central-api && npm run test:auth:central   # 중앙+대학(oidc) — 같은 토큰으로 공통원서 Snapshot 이 이어지는지
+# 운영 콘솔 로그인 — 미리보기 auth-admission(:3111)·auth-admin(:4100) 을 띄운 뒤
+npm run test:auth:console    # 콘솔 로그인(BFF)·갱신·재인증·로그아웃 21개
+node tests/a11y/focus-sweep.mjs admin-oidc   # 로그인 콘솔 접근성(키보드로 발급자 로그인)
 ```
 
 | 렐름 | 발급자 | 무엇 |
