@@ -35,6 +35,9 @@ export const PROBLEM_TEXT: Record<ProblemCodeValue, ProblemText> = {
   ILLEGAL_TRANSITION: { title: '지금 원서 상태에서는 할 수 없는 요청입니다', detail: '현재 상태를 다시 확인해 주십시오.' },
   RETRYABLE: { title: '잠시 처리할 수 없습니다', detail: '잠시 후 다시 시도해 주십시오. 작성하신 내용은 보관되어 있습니다.' },
   FORBIDDEN: { title: '이 요청을 처리할 수 없습니다', detail: '본인확인 정보가 맞지 않습니다. 접수 홈에서 다시 본인확인을 해 주십시오.' },
+  UNAUTHENTICATED: { title: '다시 로그인해 주십시오', detail: '로그인이 끝났거나 확인되지 않았습니다. 다시 로그인한 뒤 이어서 진행해 주십시오.' },
+  STEP_UP_REQUIRED: { title: '본인 확인을 한 번 더 해 주십시오', detail: '중요한 작업이라 방금 한 본인 확인이 필요합니다. 다시 로그인한 뒤 이어서 진행해 주십시오.' },
+  AUTH_UNAVAILABLE: { title: '지금 로그인을 확인할 수 없습니다', detail: '잠시 후 다시 시도해 주십시오. 계속되면 요청번호와 함께 문의해 주십시오.' },
   INTERNAL: { title: '처리 중 문제가 생겼습니다', detail: '잠시 후 다시 시도해 주십시오. 계속되면 요청번호와 함께 문의해 주십시오.' },
   NOT_FOUND: { title: '찾을 수 없습니다', detail: '주소를 다시 확인해 주십시오.' },
   // 버튼 동작은 저절로 다시 보내지 않는다 — "자동으로 다시 시도" 라고 하면 사실이 아니다. 자동저장은 따로 말한다 (T-M5-46)

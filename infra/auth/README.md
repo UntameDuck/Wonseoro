@@ -7,6 +7,7 @@ Keycloak 26.8.0(고정 digest)을 `start-dev` 로 띄우고, 이 폴더의 `*.re
 docker compose -f infra/compose/docker-compose.dev.yml --profile auth up -d keycloak   # 약 75초
 npm run test:auth:issuer      # 로그인 길·토큰 내용 24개 확인
 npm run build -w @wonseoro/server-kit && npm run test:auth:verifier   # 검증기·JWKS 캐시, 발급자 정지 중 검증
+npm run build -w @wonseoro/contracts -w @wonseoro/server-kit -w @wonseoro/admission-api && npm run test:auth:api   # 대학 API(oidc) 끝에서 끝까지 — CI 재현 DB(:5499) 필요
 ```
 
 | 렐름 | 발급자 | 무엇 |

@@ -2,6 +2,7 @@ import { Controller, Get, Header, Param, Query, Req, UseGuards } from '@nestjs/c
 import type { FastifyRequest } from 'fastify';
 import { CACHE_CONTROL_PII } from '@wonseoro/contracts';
 import { AdminGuard } from '../../common/identity/admin.guard';
+import { AdminScope, StepUp } from '../../common/identity/admin-scope';
 import { adminFrom } from '../../common/identity/identity';
 import { EvidenceService } from './evidence.service';
 
@@ -9,18 +10,21 @@ import { EvidenceService } from './evidence.service';
  * Evidence Package — canonical: k-admission-openapi.yaml
  *   getEvidencePackage, security: [{ oidc: [auditor] }]
  *
- * ⚠️ 인증은 M5 다. 그때까지 문은 AdminGuard 가 지키고, `x-admin-id` 는 열람자 기록용이다. (T-M5-10)
+ * oidc 모드: security-auditor 역할 + 비밀번호·OTP + **방금 한 인증**(Step-up)이어야 연다 (T-M5-10).
+ * 그 밖의 모드: AdminGuard 의 공유 비밀, `x-admin-id` 는 열람자 기록용이다.
  *
  * **조회 사유가 필수다.** (§8.3)
  * 증적 열람은 그 자체로 감사 대상이고, 누가 왜 봤는지가 남아야 한다.
  * 계약에는 사유 파라미터가 없으므로 추가했다. (불일치 대장 D-24)
  */
 @UseGuards(AdminGuard)
+@AdminScope('auditor')
 @Controller('admin/v1/evidence')
 export class EvidenceController {
   constructor(private readonly evidence: EvidenceService) {}
 
   @Get('applications/:applicationId')
+  @StepUp()
   @Header('cache-control', CACHE_CONTROL_PII)
   async get(
     @Param('applicationId') applicationId: string,

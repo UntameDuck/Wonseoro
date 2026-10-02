@@ -979,6 +979,19 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-64. 계약의 권한 범위 이름과 노션 06 의 역할 이름이 다르고, 계약에 인증 실패 응답이 없다 🟡
+
+| | |
+|---|---|
+| **발견** | 2026-10-03 (T-M5-02·10 단계 3 — 대학 API 에 OIDC 검증을 붙이며) |
+| **충돌** | ① OpenAPI 는 운영 경로를 `security: [{ oidc: [admin] }]`·`[operator]`·`[auditor]` **범위 이름**으로 나눈다. 노션 06 은 **역할 6종**(platform-viewer·sre-operator·admission-admin·security-auditor·release-controller·break-glass)을 정의한다. 범위와 역할을 잇는 표가 어디에도 없다. 특히 `operator`(대사 예외 목록·대사 실행)는 이름만 보면 sre-operator 같지만, 노션 06 은 sre-operator 를 "scale/restart/log" 로, admission-admin 을 "업무 Config API" 로 정의한다 ② 계약에는 401(토큰 없음·틀림)·재인증 요구(RFC 9470 `WWW-Authenticate: Bearer error="insufficient_user_authentication"`)·503(발급자 키를 쓸 수 없음) 응답이 없다 |
+| **판정** | ① **범위 → 역할**: `admin`·`operator` → admission-admin(대사도 입학처 업무), `auditor` → security-auditor. 나머지 넷은 업무 API 권한이 없다(K8s 전용). 코드 `apps/admission-api/src/common/identity/admin-scope.ts` `SCOPE_ROLES`, 경로마다 `@AdminScope` — `oidc-routes.test.ts` 가 계약 범위와 구조로 대조한다 ② 응답 code `UNAUTHENTICATED`(401)·`STEP_UP_REQUIRED`(401 + `WWW-Authenticate` 의 `acr_values`·`max_age`)·`AUTH_UNAVAILABLE`(503) 을 계약 패키지(`packages/contracts/src/problem.ts`)에 두었다. Problem 스키마는 code 를 열어 두어 지금 계약과 어긋나지 않는다 |
+| **저장소 반영** | ✅ (2026-10-03) 대학 API `AUTH_MODE=oidc` — [docs/12 §6](12-authentication-plan.md) |
+| **노션 반영** | ⬜ ① 노션 06 역할 절에 "계약 범위 → 역할" 표 ② OpenAPI 첨부에 공통 응답 `Unauthenticated`·`StepUpRequired`·`AuthUnavailable` 과 운영 경로의 401·403 — [06-notion-changeset.md](06-notion-changeset.md) 에 올릴 것 |
+| **상태** | 🟡 저장소 반영, 노션 반영 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 

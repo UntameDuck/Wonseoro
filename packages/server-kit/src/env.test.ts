@@ -9,6 +9,7 @@ import {
   envList,
   envOrDev,
   requireEnv,
+  requireIssuerUrl,
   resetConfigProblemsForTest,
   secretOrDev,
 } from './env';
@@ -115,5 +116,34 @@ describe('값 검증', () => {
   it('목록은 공백을 정리하고 빈 항목을 버린다', () => {
     setEnv('TEST_LIST', ' a , ,b ');
     assert.deepEqual(envList('TEST_LIST', [], '테스트'), ['a', 'b']);
+  });
+});
+
+describe('OIDC 발급자 주소 (T-M5-02 A12)', () => {
+  it('개발에서는 로컬 http 발급자를 받는다 — 끝의 / 는 뗀다', () => {
+    setEnv('TEST_ISSUER', 'http://localhost:18080/realms/wonseoro-staff/');
+    assert.equal(requireIssuerUrl('TEST_ISSUER', '테스트'), 'http://localhost:18080/realms/wonseoro-staff');
+  });
+
+  it('운영에서는 http·로컬 발급자로 기동하지 않는다 — 개발용 발급자가 운영에 섞이지 않게', () => {
+    setEnv('NODE_ENV', 'production');
+    for (const bad of ['http://id.univ-a.ac.kr/realms/staff', 'https://localhost/realms/x', 'https://127.0.0.1/realms/x', 'https://kc.localhost/realms/x']) {
+      setEnv('TEST_ISSUER', bad);
+      assert.equal(problemsOf(() => requireIssuerUrl('TEST_ISSUER', '테스트')).length, 1, bad);
+      resetConfigProblemsForTest();
+    }
+  });
+
+  it('운영의 https 발급자는 받는다', () => {
+    setEnv('NODE_ENV', 'production');
+    setEnv('TEST_ISSUER', 'https://id.univ-a.ac.kr/realms/staff');
+    assert.deepEqual(problemsOf(() => requireIssuerUrl('TEST_ISSUER', '테스트')), []);
+  });
+
+  it('없거나 주소 형식이 아니면 막는다', () => {
+    assert.equal(problemsOf(() => requireIssuerUrl('TEST_ISSUER_MISSING', '테스트')).length, 1);
+    resetConfigProblemsForTest();
+    setEnv('TEST_ISSUER', 'not a url');
+    assert.equal(problemsOf(() => requireIssuerUrl('TEST_ISSUER', '테스트')).length, 1);
   });
 });

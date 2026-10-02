@@ -43,6 +43,21 @@ const groups = [
     },
   },
   {
+    // T-M5-02·10 — 토큰 위조·알고리즘 혼동·발급자 장애, 계약 대비 경로 분류, 역할 6종 수직 권한, BOLA·2인 승인 신원(HTTP)
+    name: '인증·토큰 검증·수직 권한',
+    files: [
+      'packages/server-kit/dist/oidc/verifier.test.js',
+      'apps/admission-api/dist/common/identity/oidc-routes.test.js',
+      'apps/admission-api/dist/common/identity/admin.guard.oidc.test.js',
+      'apps/admission-api/dist/common/identity/oidc-auth.integration.test.js',
+    ],
+    env: {
+      DATABASE_URL: universityUrl,
+      DATABASE_ADMIN_URL: universityAdminUrl,
+      UNIVERSITY_ID: process.env.UNIVERSITY_ID ?? 'UNIV-A',
+    },
+  },
+  {
     name: '파일 검사 엔진 실패 폐쇄',
     files: ['apps/document-service/dist/engines.test.js'],
     env: {},

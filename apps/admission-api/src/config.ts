@@ -7,6 +7,7 @@ import {
   envList,
   envOrDev,
   requireEnv,
+  requireIssuerUrl,
   secretOrDev,
 } from '@wonseoro/server-kit';
 import { parsePeakModeActivation, parsePeakModeEnd } from './common/scheduling/peak-mode';
@@ -114,14 +115,16 @@ export const CLOCK = {
 /**
  * 인증 방식.
  *   dev-headers — x-applicant-id / x-admin-id 헤더를 그대로 신뢰한다. **개발 전용**
- *   gateway     — 앞단 인증 게이트웨이가 검증해 넣어준 신원을 쓴다 (T-M5-02)
+ *   gateway     — 앞단 인증 게이트웨이가 검증해 넣어준 신원을 쓴다
+ *   oidc        — 이 API 가 `Authorization: Bearer` 액세스 토큰을 직접 검증한다(발급자 공개키 캐시).
+ *                 지원자 렐름·담당자 렐름을 따로 둔다 (T-M5-02·10, docs/12-authentication-plan.md A3)
  *
  * 운영에서 dev-headers 면 기동하지 않는다. 헤더만 바꾸면 누구나 남의 원서를
  * 열람·수정할 수 있기 때문이다.
  */
 export const AUTH_MODE = envChoice(
   'AUTH_MODE',
-  ['dev-headers', 'gateway'] as const,
+  ['dev-headers', 'gateway', 'oidc'] as const,
   'dev-headers',
   '지원자·운영자 신원을 어디서 얻을지',
 );
@@ -132,14 +135,36 @@ if (AUTH_MODE === 'dev-headers') {
 }
 
 /**
- * 운영 화면(/admin/v1)은 인증 게이트웨이 뒤에 둔다.
- * 그 전까지는 공유 비밀로 최소한의 문을 만든다. 없으면 운영에서 기동하지 않는다.
+ * OIDC 검증 설정 (AUTH_MODE=oidc 일 때만).
+ *
+ *   applicantIssuer / staffIssuer — 렐름 둘. 지원자 토큰으로 운영 API 를, 담당자 토큰으로 지원자 API 를 쓸 수 없다
+ *   audience       — 토큰 aud 에 이 API 이름이 있어야 한다
+ *   staffAcr       — 담당자 토큰의 인증 수준. 비밀번호+OTP 가 아니면 운영 API 를 열지 않는다(T-M5-10)
+ *   stepUpMaxAgeSec — 민감 동작(승인·활성화·증적 열람 등)은 이 시간 안에 직접 인증했어야 한다
+ *   jwksSnapshotDir — 발급자 공개키를 남길 폴더. 발급자 장애 중에 Pod 가 다시 떠도 검증이 이어진다(T-M3-06)
+ *   jwksMaxStaleMs — 발급자에서 키를 못 받은 채 이 시간이 지나면 검증을 멈춘다(닫힌 실패)
  */
-export const ADMIN_API_TOKEN = secretOrDev(
-  'ADMIN_API_TOKEN',
-  '',
-  '/admin/v1 접근 비밀. 이 뒤에 마감시각 변경과 지원자 PII 열람이 있다',
-);
+export const OIDC =
+  AUTH_MODE === 'oidc'
+    ? {
+        applicantIssuer: requireIssuerUrl('OIDC_APPLICANT_ISSUER', '지원자 토큰 발급자(렐름) 주소'),
+        staffIssuer: requireIssuerUrl('OIDC_STAFF_ISSUER', '대학 담당자 토큰 발급자(렐름) 주소'),
+        audience: envOrDev('OIDC_AUDIENCE', 'wonseoro-admission-api', '토큰 aud 에 있어야 할 이 API 의 이름'),
+        staffAcr: envOrDev('OIDC_STAFF_ACR', 'mfa', '담당자 토큰에 요구할 인증 수준(acr) — 비밀번호+OTP'),
+        stepUpMaxAgeSec: envInt('OIDC_STEP_UP_MAX_AGE_SEC', 300, { min: 30, max: 3600 }),
+        jwksSnapshotDir: process.env.OIDC_JWKS_SNAPSHOT_DIR || null,
+        jwksMaxStaleMs: envInt('OIDC_JWKS_MAX_STALE_MS', 24 * 60 * 60_000, { min: 60_000, max: 7 * 24 * 60 * 60_000 }),
+      }
+    : null;
+
+/**
+ * 운영 화면(/admin/v1)의 공유 비밀 — dev-headers·gateway 모드의 임시 문.
+ * oidc 모드에서는 쓰지 않는다(담당자 토큰의 역할·인증 수준으로 막는다). 그 외 모드에서 없으면 운영에서 기동하지 않는다.
+ */
+export const ADMIN_API_TOKEN =
+  AUTH_MODE === 'oidc'
+    ? ''
+    : secretOrDev('ADMIN_API_TOKEN', '', '/admin/v1 접근 비밀. 이 뒤에 마감시각 변경과 지원자 PII 열람이 있다');
 
 /** 결제 대행사. Mock 은 운영에서 선택될 수 없다. */
 export const PAYMENT_PROVIDER = envChoice(

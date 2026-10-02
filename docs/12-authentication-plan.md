@@ -45,7 +45,7 @@
 |---|---|---|
 | 1 ✅ | 로컬 발급자 — compose `auth` 프로필, 렐름 파일 2개(`infra/auth/`), 시험 담당자 6역할·지원자 2명·TOTP 시험 비밀(로컬 전용 시드값) | 기동 후 discovery·JWKS·역할 클레임·ACR 확인 스크립트 통과 — `test:auth:issuer` 24개 |
 | 2 ✅ | `server-kit` OIDC 검증기 + JWKS 캐시 | 단위 시험: 서명·만료·발급자·대상(aud) 위조 거절, 키 회전, 발급자 차단 중 검증 지속, 모르는 kid 폭주 시 다시 받기 1회 |
-| 3 | 대학 API `AUTH_MODE=oidc` — 지원자(`sub`→applicant), 운영 API 역할·ACR·step-up 가드, 2인 승인 신원을 토큰 `sub` 로 | **수직 권한 시험**(역할×경로 전 조합, STRIDE E-03), 본인 승인 금지, 기존 소유권 시험(R10)·BOLA 시험 유지 |
+| 3 ✅ | 대학 API `AUTH_MODE=oidc` — 지원자(`sub`→applicant), 운영 API 역할·ACR·step-up 가드, 2인 승인 신원을 토큰의 담당자로 | **수직 권한 시험**(역할×경로 전 조합, STRIDE E-03), 본인 승인 금지, 기존 소유권 시험(R10)·BOLA 시험 유지 |
 | 4 | 중앙 API `AUTH_MODE=oidc` | 대시보드·프로필 금고가 토큰 가명으로만 동작 |
 | 5 | 콘솔 로그인(BFF)·MFA·민감 동작 재인증·목적·사유 | 브라우저 시험: 로그인→TOTP→승인, 5분 지난 증적 열람은 재인증, 다른 역할은 메뉴·API 모두 거절 |
 | 6 | 지원자 로그인·세션 만료를 발급자 세션으로·위험 차단 해제 | `test:a11y:session`·`test:a11y:rate-limit` 을 새 세션으로 다시 통과, 차단→재인증→해제 시험 |
@@ -87,6 +87,28 @@
   스냅숏도 없으면 503. 다른 렐름 토큰은 키 단계(`unknown-key`)에서, 다른 대상은 aud 에서 거절
 - `jose` 6 은 ESM 전용이라 Node 22.12 이상의 `require(esm)` 으로 읽는다 — `engines` 를 `>=22.12` 로 올렸다(CI·이미지는 Node 22 최신)
 
-### 다음 — 단계 3
+### 단계 3 ✅ (2026-10-03) — 대학 API `AUTH_MODE=oidc`
 
-대학 API `AUTH_MODE=oidc`: 지원자(`sub` → applicant 등록), 운영 API 역할·`acr=mfa`·재인증 가드, 2인 승인 신원을 토큰 `sub` 로. 범위↔역할 이름 차이(A5)는 이때 대장 D-N 으로 올린다.
+- **어디서 검증하나** — `app.setup.ts`(main 과 HTTP 시험이 같은 조립)가 요청마다 **요청 한도보다 먼저** 토큰을 검증해 `request.identity` 에 붙인다
+  (`common/identity/oidc-auth.ts`). 경로 분류: `/admin/v1/**` 담당자 렐름, `/api/v1/**` 지원자 렐름, 계약의 `security: []` 4개(시각·운영 상태·공개키·PG 콜백)만 토큰 없이.
+  소유권·요청 한도·감사는 이 신원만 본다 — 신원 헤더(`x-applicant-id`·`x-admin-id`·`x-authenticated-*`)는 oidc 에서 읽지 않는다
+- **지원자 등록(A9)** — 처음 온 지원자 렐름 주체(sub)로 `applicant` 행을 만든다. 개인정보 없음(`pii_key_version='none'`, 빈 암호문) — 본인확인 기관 연동·필드 암호화 때 채운다
+- **운영 API(A5·A6)** — 경로마다 `@AdminScope('admin'|'operator'|'auditor')`(계약 범위 그대로), 범위 → 역할 `SCOPE_ROLES`(admin·operator → admission-admin, auditor → security-auditor).
+  범위가 안 붙은 운영 경로는 닫는다. 모든 운영 경로가 `acr=mfa` 를 요구하고, **민감 동작 8개**(설정 승인·활성화·되돌리기, 마감 연장·승인·활성화, 대사 예외 해결, 증적 열람)는
+  `@StepUp` — 5분 안에 직접 인증했어야 한다. 아니면 401 `STEP_UP_REQUIRED` + `WWW-Authenticate: Bearer error="insufficient_user_authentication", acr_values="mfa", max_age=300`(RFC 9470).
+  증적 열람은 원래부터 사유 필수다(D-24) — T-M5-10 의 "목적·사유 입력"
+- **2인 승인·감사의 담당자** — 토큰의 `preferred_username`(없으면 sub). 작성자 본인 승인은 기존 업무 규칙이 막는다
+- **오류** — `UNAUTHENTICATED`(401)·`STEP_UP_REQUIRED`(401)·`AUTH_UNAVAILABLE`(503, 발급자 키 없음) — 계약 패키지와 화면 문구표. 계약 범위↔역할 표·401 응답이 계약에 없는 것은 **대장 D-64**
+- **운영 안전장치(A12)** — 발급자 주소는 운영에서 https·로컬 아님이어야 기동(`server-kit requireIssuerUrl`). oidc 모드에서는 `ADMIN_API_TOKEN` 을 쓰지 않는다
+- **시험**
+  - `oidc-routes.test.ts` 8개 — 실제 AppModule 컨트롤러를 훑어 경로 분류·권한 범위를 OpenAPI 와 구조로 대조, 재인증 경로 목록 고정
+  - `admin.guard.oidc.test.ts` 6개 — 역할 6종 × 범위 3종 표, acr, 재인증 시각·`WWW-Authenticate`
+  - `oidc-auth.integration.test.ts` 9개(실 PostgreSQL, 시험이 띄운 발급자) — 공개·보호 경로, 지원자 등록 한 번, **BOLA**(남의 원서·꾸민 헤더 404), 렐름 섞임 거절, 위조·만료·다른 대상 거절,
+    역할별 운영 API 표, 비밀번호만 로그인 거절, 2인 승인이 토큰 신원으로(꾸민 `x-admin-id` 무시·작성자 승인 불가·10분 전 인증 재인증), 발급자 정지 중 검증 지속
+  - **`npm run test:auth:api`** 19개 — 대학 API 를 oidc 로 띄우고 **실제 Keycloak 로그인 토큰**으로 끝에서 끝까지(지원자 등록·BOLA·역할별·2인 승인 기록 `admin-a`→`admin-b`)
+  - admission-api 전체 352개(CI 재현 DB, 실패 0·건너뜀 3), server-kit 72개
+- 렐름 시험 계정에 고정 id — Keycloak 을 다시 만들어도 sub 가 같다
+
+### 다음 — 단계 4
+
+중앙 API `AUTH_MODE=oidc`(대시보드·프로필 금고 — 지원자 토큰의 sub 를 가명 토큰으로, aud `wonseoro-central-api`). 그 뒤 단계 5 콘솔 로그인(BFF).

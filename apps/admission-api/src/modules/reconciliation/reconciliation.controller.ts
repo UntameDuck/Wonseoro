@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 import { AdminGuard } from '../../common/identity/admin.guard';
+import { AdminScope, StepUp } from '../../common/identity/admin-scope';
 import { adminFrom } from '../../common/identity/identity';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { ExceptionState, ReconciliationService } from './reconciliation.service';
@@ -35,6 +36,7 @@ export class ReconciliationController {
   constructor(private readonly reconciliation: ReconciliationService) {}
 
   @Get('exceptions')
+  @AdminScope('operator')
   @Header('cache-control', 'no-store')
   async list(@Query('state') state?: string) {
     const valid: Array<ExceptionState | 'ALL'> = [
@@ -52,6 +54,7 @@ export class ReconciliationController {
   }
 
   @Post('run')
+  @AdminScope('operator')
   @HttpCode(200)
   @Header('cache-control', 'no-store')
   async run(@Body() body: { sinceHours?: number }) {
@@ -67,6 +70,8 @@ export class ReconciliationController {
   }
 
   @Post(':exceptionId/resolve')
+  @AdminScope('admin')
+  @StepUp()
   @HttpCode(200)
   @Header('cache-control', 'no-store')
   async resolve(

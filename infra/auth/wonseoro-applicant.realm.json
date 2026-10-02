@@ -68,11 +68,11 @@
   ],
   "users": [
     {
-      "username": "applicant-1", "enabled": true, "email": "applicant-1@example.test", "emailVerified": true, "firstName": "지원", "lastName": "일",
+      "id": "7a1c0002-0000-4000-8000-00000000b001", "username": "applicant-1", "enabled": true, "email": "applicant-1@example.test", "emailVerified": true, "firstName": "지원", "lastName": "일",
       "credentials": [{ "type": "password", "value": "dev-applicant-1-pass", "temporary": false }]
     },
     {
-      "username": "applicant-2", "enabled": true, "email": "applicant-2@example.test", "emailVerified": true, "firstName": "지원", "lastName": "이",
+      "id": "7a1c0002-0000-4000-8000-00000000b002", "username": "applicant-2", "enabled": true, "email": "applicant-2@example.test", "emailVerified": true, "firstName": "지원", "lastName": "이",
       "credentials": [{ "type": "password", "value": "dev-applicant-2-pass", "temporary": false }]
     }
   ]

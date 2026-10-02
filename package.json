@@ -47,6 +47,7 @@
     "test:security": "node scripts/run-security-tests.mjs",
     "test:auth:issuer": "node tests/auth/local-issuer.mjs",
     "test:auth:verifier": "node tests/auth/verifier-live.mjs",
+    "test:auth:api": "node tests/auth/api-live.mjs",
     "test:a11y:keyboard": "node tests/a11y/keyboard-walk.mjs",
     "test:a11y:focus": "node tests/a11y/focus-sweep.mjs",
     "test:a11y:deadline": "node tests/a11y/deadline-announce.mjs",

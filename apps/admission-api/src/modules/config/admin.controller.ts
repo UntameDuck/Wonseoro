@@ -13,6 +13,7 @@ import {
 import type { FastifyRequest } from 'fastify';
 import { DeadlineMode } from '@wonseoro/contracts';
 import { AdminGuard } from '../../common/identity/admin.guard';
+import { AdminScope, StepUp } from '../../common/identity/admin-scope';
 import { adminFrom } from '../../common/identity/identity';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { ActivationRecorder } from '../activation/activation-recorder';
@@ -37,6 +38,7 @@ import { ConfigVersionService } from './config-version.service';
  * 서명된 기록에 함께 묶이므로 "한 사람이 혼자 바꿨다" 는 구별된다. (역할 분리는 T-M5-10)
  */
 @UseGuards(AdminGuard)
+@AdminScope('admin')
 @Controller('admin/v1')
 export class AdminController {
   constructor(
@@ -98,6 +100,7 @@ export class AdminController {
    * 승인자가 무엇이 바뀌는지 보지 못하면 두 명이 승인해도 사고를 막지 못한다.
    */
   @Post('config/versions/:configId/approve')
+  @StepUp()
   @HttpCode(200)
   @Header('cache-control', 'no-store')
   async approveConfig(
@@ -122,6 +125,7 @@ export class AdminController {
    * 마감 임박 잠금은 여기 걸지 않는다 — 잘못된 설정으로 마감을 맞는 쪽이 더 큰 사고다.
    */
   @Post('config/versions/:configId/rollback')
+  @StepUp()
   @HttpCode(200)
   @Header('cache-control', 'no-store')
   async rollbackConfig(
@@ -137,6 +141,7 @@ export class AdminController {
   }
 
   @Post('config/versions/:configId/activate')
+  @StepUp()
   @HttpCode(200)
   @Header('cache-control', 'no-store')
   async activateConfig(
@@ -179,6 +184,7 @@ export class AdminController {
    * 그 뒤는 일반 정책과 같다 — 작성자가 아닌 두 명이 승인해야 적용된다.
    */
   @Post('deadline-policies/extensions')
+  @StepUp()
   @HttpCode(201)
   @Header('cache-control', 'no-store')
   async createExtension(
@@ -196,6 +202,7 @@ export class AdminController {
   }
 
   @Post('deadline-policies/:policyId/approve')
+  @StepUp()
   @HttpCode(200)
   @Header('cache-control', 'no-store')
   async approvePolicy(@Param('policyId') policyId: string, @Req() req: FastifyRequest) {
@@ -205,6 +212,7 @@ export class AdminController {
 
   /** ⚠️ 계약에 없는 경로. Config 와 대칭을 맞추기 위해 추가했다. (D-22) */
   @Post('deadline-policies/:policyId/activate')
+  @StepUp()
   @HttpCode(200)
   @Header('cache-control', 'no-store')
   async activatePolicy(
@@ -253,7 +261,7 @@ export class AdminController {
     return v;
   }
 
-  /** 감사에 남길 담당자. 인증이 아니라 기록이다. (T-M5-10 에서 OIDC 신원으로 교체) */
+  /** 감사·2인 승인의 담당자. oidc 모드에서는 담당자 토큰의 신원, 그 밖의 모드에서는 기록용 헤더다 */
   private admin(req: FastifyRequest): string {
     return adminFrom(req).adminId;
   }

@@ -12,7 +12,7 @@
 | T-M5-23 SBOM | ✅ | SPDX 2.3, 패키지 266·관계 1,054. CI 산출물과 Release 자산 자동 첨부 |
 | T-M5-24 Container Image Scan | ✅ | 로컬·원격 5개 이미지 Critical 0 |
 | T-M5-25 IaC/K8s Manifest Scan | ✅ | 로컬·원격 Helm·Kubernetes·Dockerfile 19개 High/Critical 0 |
-| T-M5-26 Security Test | ✅ | 로컬·원격 실 PostgreSQL 선별 시험 123개 통과·건너뜀 0 |
+| T-M5-26 Security Test | ✅ | 로컬·원격 실 PostgreSQL 선별 시험 123개 통과·건너뜀 0 — 2026-10-03 인증 묶음을 더해 167개 |
 | T-M5-27 DAST | ✅ | 로컬·원격 ZAP OpenAPI active scan WARN 0·High 0·PASS 118 |
 | T-M5-28 Image Signing | ✅ | GHCR 운영 이미지 5종 digest 키리스 서명·신원 검증 |
 | T-M5-29 Admission Controller | ✅ | 임시 kind·Policy Controller 0.13.1 webhook 이 서명 digest 허용·미서명 digest 거부 |
@@ -55,16 +55,17 @@ Endpoints 직접 권한은 없고 `tests/m4/gitops-manifests.mjs`가 권한 범�
 ## 4. T-M5-26 선별 보안 시험
 
 `npm run test:security`는 전체 회귀시험과 별도로 보안 불변식이 드러나는 시험만 선별한다. 빌드 뒤
-`scripts/run-security-tests.mjs`가 다음 네 묶음을 직렬 실행하며 TAP의 시험·통과·건너뜀 수를 직접 검사한다.
+`scripts/run-security-tests.mjs`가 다음 다섯 묶음을 직렬 실행하며 TAP의 시험·통과·건너뜀 수를 직접 검사한다.
 
 | 묶음 | 확인 내용 | 로컬 결과 |
 |---|---|---:|
-| 공용 서버 | 운영 기본값 금지, 목적별 가명화, 개인정보·비밀 로그 마스킹 | 27/27 |
+| 공용 서버 | 운영 기본값 금지, 목적별 가명화, 개인정보·비밀 로그 마스킹, 운영 발급자 주소(https·로컬 아님) | 31/31 |
 | 대학 Data Plane | 소유권 누락, 남의 자원 차단, Adaptive Throttling, 감사 체인, 2인 승인, 파일 형식, PG 콜백 서명·멱등성 | 63/63 |
+| 인증·수직 권한 (2026-10-03, T-M5-02·10) | 토큰 위조·알고리즘 혼동·kid 폭주·발급자 장애, 경로 분류·운영 권한을 계약과 대조, 역할 6종 × 범위 표, 재인증, HTTP 수준 BOLA·렐름 섞임·2인 승인 신원 | 40/40 |
 | 문서 서비스 | ClamAV 프로토콜, 악성 판정, 해시 불일치·엔진 장애 때 실패 폐쇄 | 8/8 |
 | 중앙 Plane | 이벤트 중복·순서 역전·위장 발신, 중앙 개인정보 최소화, 동의 범위 | 25/25 |
 
-로컬은 E 드라이브 Docker 데이터의 개발 PostgreSQL 두 DB를 사용해 **총 123개·건너뜀 0**을 확인했다.
+로컬은 E 드라이브 Docker 데이터의 개발 PostgreSQL 두 DB를 사용해 **총 123개·건너뜀 0**을 확인했다. 인증 묶음을 더한 뒤(2026-10-03) CI 재현 DB(:5499)에서 **167개·건너뜀 0**.
 `.github/workflows/security.yml`의 전용 잡은 빈 PostgreSQL 16 DB에 canonical 대학 DDL과 중앙 마이그레이션을 적용한 뒤
 같은 명령을 실행한다. DB가 없어서 통합시험이 `skip`되면 성공으로 보지 않고 게이트를 실패시킨다.
 원격 Security 잡도 123개·건너뜀 0으로 통과했다(Actions run 36898652054).

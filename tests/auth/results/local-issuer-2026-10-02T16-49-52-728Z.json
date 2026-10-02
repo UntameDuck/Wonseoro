@@ -1,0 +1,104 @@
+{
+  "test": "로컬 OIDC 발급자 — 로그인 길·토큰 내용 (T-M5-02·10 단계 1)",
+  "environment": "축소 환경 — 로컬 Keycloak 26.8.0(start-dev, 내장 DB)",
+  "at": "2026-10-02T16:49:52.728Z",
+  "passed": true,
+  "steps": [
+    {
+      "ok": true,
+      "what": "wonseoro-staff: discovery·JWKS — 서명 키 RS256"
+    },
+    {
+      "ok": true,
+      "what": "wonseoro-staff: PKCE S256 지원"
+    },
+    {
+      "ok": true,
+      "what": "wonseoro-applicant: discovery·JWKS — 서명 키 RS256"
+    },
+    {
+      "ok": true,
+      "what": "wonseoro-applicant: PKCE S256 지원"
+    },
+    {
+      "ok": true,
+      "what": "담당자 로그인이 비밀번호 → OTP 를 거친다 (password > otp > redirect)"
+    },
+    {
+      "ok": true,
+      "what": "토큰 발급자(iss)가 담당자 렐름이다"
+    },
+    {
+      "ok": true,
+      "what": "대상(aud)에 대학 API — wonseoro-admission-api"
+    },
+    {
+      "ok": true,
+      "what": "역할 클레임(roles) — [\"admission-admin\"]"
+    },
+    {
+      "ok": true,
+      "what": "인증 수준(acr) mfa = 비밀번호+OTP — mfa"
+    },
+    {
+      "ok": true,
+      "what": "인증 시각(auth_time)이 있다 — step-up 판단에 쓴다"
+    },
+    {
+      "ok": true,
+      "what": "액세스 토큰 수명 5분 — 300초"
+    },
+    {
+      "ok": true,
+      "what": "주체(sub)가 있다 — 2인 승인·감사의 담당자 식별"
+    },
+    {
+      "ok": true,
+      "what": "5분 안 재요청은 화면 없이 통과하고 수준 mfa 유지 (redirect)"
+    },
+    {
+      "ok": true,
+      "what": "다시 인증(max_age=0)은 OTP 를 다시 묻고 인증 시각이 새로 찍힌다 (password > otp > redirect)"
+    },
+    {
+      "ok": true,
+      "what": "틀린 OTP 로는 토큰이 나오지 않는다 (otp 거절)"
+    },
+    {
+      "ok": true,
+      "what": "감사자 토큰의 역할은 security-auditor 하나다"
+    },
+    {
+      "ok": true,
+      "what": "비활성 break-glass 계정은 로그인되지 않는다 (password 거절)"
+    },
+    {
+      "ok": true,
+      "what": "시험용 직접 발급도 OTP 없이는 거절한다 (400)"
+    },
+    {
+      "ok": true,
+      "what": "시험용 직접 발급은 OTP 를 함께 주면 된다 (200)"
+    },
+    {
+      "ok": true,
+      "what": "지원자 로그인 (password > redirect)"
+    },
+    {
+      "ok": true,
+      "what": "지원자 토큰 대상 — wonseoro-central-api,wonseoro-admission-api"
+    },
+    {
+      "ok": true,
+      "what": "지원자 토큰에는 담당자 역할이 없다"
+    },
+    {
+      "ok": true,
+      "what": "지원자 주체(sub) — 가명 토큰으로 쓴다"
+    },
+    {
+      "ok": true,
+      "what": "지원자 토큰 발급자는 지원자 렐름 — 담당자 렐름과 섞이지 않는다"
+    }
+  ]
+}

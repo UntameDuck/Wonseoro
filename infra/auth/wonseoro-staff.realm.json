@@ -132,7 +132,7 @@
   ],
   "users": [
     {
-      "username": "admin-a", "enabled": true, "email": "admin-a@univ-a.test", "emailVerified": true, "firstName": "입학처", "lastName": "담당자A",
+      "id": "7a1c0001-0000-4000-8000-00000000a001", "username": "admin-a", "enabled": true, "email": "admin-a@univ-a.test", "emailVerified": true, "firstName": "입학처", "lastName": "담당자A",
       "realmRoles": ["admission-admin"],
       "credentials": [
         { "type": "password", "value": "dev-admin-a-pass", "temporary": false },
@@ -140,7 +140,7 @@
       ]
     },
     {
-      "username": "admin-b", "enabled": true, "email": "admin-b@univ-a.test", "emailVerified": true, "firstName": "입학처", "lastName": "담당자B",
+      "id": "7a1c0001-0000-4000-8000-00000000a002", "username": "admin-b", "enabled": true, "email": "admin-b@univ-a.test", "emailVerified": true, "firstName": "입학처", "lastName": "담당자B",
       "realmRoles": ["admission-admin"],
       "credentials": [
         { "type": "password", "value": "dev-admin-b-pass", "temporary": false },
@@ -148,7 +148,7 @@
       ]
     },
     {
-      "username": "auditor", "enabled": true, "email": "auditor@univ-a.test", "emailVerified": true, "firstName": "보안", "lastName": "감사자",
+      "id": "7a1c0001-0000-4000-8000-00000000a003", "username": "auditor", "enabled": true, "email": "auditor@univ-a.test", "emailVerified": true, "firstName": "보안", "lastName": "감사자",
       "realmRoles": ["security-auditor"],
       "credentials": [
         { "type": "password", "value": "dev-auditor-pass", "temporary": false },
@@ -156,7 +156,7 @@
       ]
     },
     {
-      "username": "viewer", "enabled": true, "email": "viewer@univ-a.test", "emailVerified": true, "firstName": "플랫폼", "lastName": "조회자",
+      "id": "7a1c0001-0000-4000-8000-00000000a004", "username": "viewer", "enabled": true, "email": "viewer@univ-a.test", "emailVerified": true, "firstName": "플랫폼", "lastName": "조회자",
       "realmRoles": ["platform-viewer"],
       "credentials": [
         { "type": "password", "value": "dev-viewer-pass", "temporary": false },
@@ -164,7 +164,7 @@
       ]
     },
     {
-      "username": "sre", "enabled": true, "email": "sre@univ-a.test", "emailVerified": true, "firstName": "운영", "lastName": "SRE",
+      "id": "7a1c0001-0000-4000-8000-00000000a005", "username": "sre", "enabled": true, "email": "sre@univ-a.test", "emailVerified": true, "firstName": "운영", "lastName": "SRE",
       "realmRoles": ["sre-operator"],
       "credentials": [
         { "type": "password", "value": "dev-sre-pass", "temporary": false },
@@ -172,7 +172,7 @@
       ]
     },
     {
-      "username": "release", "enabled": true, "email": "release@univ-a.test", "emailVerified": true, "firstName": "배포", "lastName": "관리자",
+      "id": "7a1c0001-0000-4000-8000-00000000a006", "username": "release", "enabled": true, "email": "release@univ-a.test", "emailVerified": true, "firstName": "배포", "lastName": "관리자",
       "realmRoles": ["release-controller"],
       "credentials": [
         { "type": "password", "value": "dev-release-pass", "temporary": false },
@@ -180,7 +180,7 @@
       ]
     },
     {
-      "username": "breakglass", "enabled": false, "email": "breakglass@univ-a.test", "emailVerified": true, "firstName": "비상", "lastName": "계정",
+      "id": "7a1c0001-0000-4000-8000-00000000a007", "username": "breakglass", "enabled": false, "email": "breakglass@univ-a.test", "emailVerified": true, "firstName": "비상", "lastName": "계정",
       "realmRoles": ["break-glass"],
       "credentials": [
         { "type": "password", "value": "dev-breakglass-pass", "temporary": false },

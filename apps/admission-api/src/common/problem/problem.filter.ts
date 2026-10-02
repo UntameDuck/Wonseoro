@@ -45,6 +45,9 @@ export class ProblemFilter implements ExceptionFilter {
       );
     }
 
+    if (exception instanceof ProblemException) {
+      for (const [name, value] of Object.entries(exception.headers)) reply.header(name, value);
+    }
     void reply
       .status(problem.status)
       .header('content-type', `${MEDIA_PROBLEM}; charset=utf-8`)

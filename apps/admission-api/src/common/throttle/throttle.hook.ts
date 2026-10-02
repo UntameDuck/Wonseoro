@@ -32,6 +32,8 @@ for (const cls of ['read', 'save', 'create', 'upload', 'payment', 'cancel', 'fin
 const SUBJECT_HEADER = AUTH_MODE === 'gateway' ? 'x-authenticated-applicant' : 'x-applicant-id';
 
 function subjectOf(request: FastifyRequest): string | null {
+  // oidc: 앞선 인증 훅이 토큰으로 확인한 지원자. 헤더는 아무나 쓸 수 있어 보지 않는다
+  if (AUTH_MODE === 'oidc') return request.identity?.kind === 'applicant' ? request.identity.applicantId : null;
   const value = request.headers[SUBJECT_HEADER];
   return typeof value === 'string' && value.length > 0 && value.length <= 200 ? value : null;
 }

@@ -1,6 +1,7 @@
 import { Controller, Get, Header, Module, Query, UseGuards } from '@nestjs/common';
 import { RETENTION_CATEGORIES } from '@wonseoro/contracts';
 import { AdminGuard } from '../../common/identity/admin.guard';
+import { AdminScope } from '../../common/identity/admin-scope';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { RetentionService } from './retention.service';
 
@@ -14,6 +15,7 @@ import { RetentionService } from './retention.service';
  * 계약: OpenAPI getRetentionMatrix · getRetentionPlan (D-38). 관리자 콘솔 `/retention` 이 보여 준다.
  */
 @UseGuards(AdminGuard)
+@AdminScope('admin')
 @Controller('admin/v1/retention')
 export class RetentionController {
   constructor(private readonly retention: RetentionService) {}

@@ -14,8 +14,10 @@ type ProblemInit = Omit<ProblemDetails, 'type' | 'code' | 'traceId'> & {
  */
 export class ProblemException extends HttpException {
   readonly problem: ProblemDetails;
+  /** 응답에 함께 실을 헤더 — 예: 401 의 `WWW-Authenticate` (RFC 6750·9470) */
+  readonly headers: Readonly<Record<string, string>>;
 
-  constructor(init: ProblemInit) {
+  constructor(init: ProblemInit, headers: Record<string, string> = {}) {
     const problem: ProblemDetails = {
       ...init,
       type: problemType(init.code),
@@ -23,6 +25,55 @@ export class ProblemException extends HttpException {
     };
     super(problem, init.status);
     this.problem = problem;
+    this.headers = headers;
+  }
+
+  /** 토큰이 없거나 틀렸다 — 다시 로그인. 무엇이 틀렸는지는 응답에 쓰지 않는다(위조 시도에 단서를 주지 않는다) */
+  static unauthenticated(): ProblemException {
+    return new ProblemException(
+      {
+        code: ProblemCode.UNAUTHENTICATED,
+        title: '로그인이 필요합니다',
+        status: 401,
+        detail: '로그인 정보가 없거나 확인되지 않았습니다. 다시 로그인해 주십시오.',
+      },
+      { 'www-authenticate': 'Bearer error="invalid_token"' },
+    );
+  }
+
+  /**
+   * 방금 한 인증이 필요하다 — RFC 9470 Step-up 형식. 화면은 `acr_values`·`max_age` 로 다시 로그인시킨다.
+   * @param maxAgeSec 직접 인증 후 허용 시간. 없으면 인증 수준만 모자란 것
+   */
+  static stepUpRequired(acr: string, maxAgeSec?: number): ProblemException {
+    const challenge = [
+      'Bearer error="insufficient_user_authentication"',
+      'error_description="A more recent or stronger authentication is required"',
+      `acr_values="${acr}"`,
+      ...(maxAgeSec !== undefined ? [`max_age=${maxAgeSec}`] : []),
+    ].join(', ');
+    return new ProblemException(
+      {
+        code: ProblemCode.STEP_UP_REQUIRED,
+        title: '본인 확인이 다시 필요합니다',
+        status: 401,
+        detail: '중요한 작업이라 방금 한 본인 확인이 필요합니다. 다시 로그인한 뒤 이어서 진행해 주십시오.',
+      },
+      { 'www-authenticate': challenge },
+    );
+  }
+
+  /** 발급자 공개키를 쓸 수 없어 판단하지 못했다 — 토큰 탓이 아니다 */
+  static authUnavailable(): ProblemException {
+    return new ProblemException(
+      {
+        code: ProblemCode.AUTH_UNAVAILABLE,
+        title: '지금 로그인을 확인할 수 없습니다',
+        status: 503,
+        detail: '잠시 후 다시 시도해 주십시오.',
+      },
+      { 'retry-after': '30' },
+    );
   }
 
   static validationFailed(detail: string): ProblemException {

@@ -10,6 +10,7 @@ import { ProblemException } from '../problem/problem.exception';
  *
  *   dev-headers — 헤더를 그대로 믿는다. 누구나 남을 사칭할 수 있다. 개발 전용
  *   gateway     — 앞단 게이트웨이가 검증해 넣어준 값만 받는다
+ *   oidc        — 이 API 가 토큰을 검증해 붙인 `request.identity` 만 본다(oidc-auth.ts). 헤더는 읽지 않는다
  *
  * 이 파일을 한 곳에 둔 이유는, 전에는 컨트롤러 네 곳이 각자 헤더를 읽고 있었기 때문이다.
  * 인증을 붙일 때 고쳐야 할 자리가 넷이면 하나는 빠뜨린다.
@@ -34,6 +35,13 @@ function header(req: FastifyRequest, name: string): string | undefined {
 }
 
 export function applicantFrom(req: FastifyRequest): ApplicantIdentity {
+  if (AUTH_MODE === 'oidc') {
+    const identity = req.identity;
+    // 훅이 이 경로에 지원자 토큰을 요구한다. 없으면 열지 않는다(경로 분류가 틀렸을 때의 마지막 문)
+    if (identity?.kind !== 'applicant') throw ProblemException.unauthenticated();
+    return { applicantId: identity.applicantId, subjectToken: identity.subjectToken };
+  }
+
   const id =
     AUTH_MODE === 'gateway'
       ? header(req, GATEWAY_APPLICANT)
@@ -48,6 +56,13 @@ export function applicantFrom(req: FastifyRequest): ApplicantIdentity {
 }
 
 export function adminFrom(req: FastifyRequest): AdminIdentity {
+  if (AUTH_MODE === 'oidc') {
+    const identity = req.identity;
+    if (identity?.kind !== 'staff') throw ProblemException.unauthenticated();
+    // 2인 승인의 "다른 사람" 판단·감사의 행위자 — 토큰의 담당자다. 화면이 보낸 이름은 쓰지 않는다
+    return { adminId: identity.adminId };
+  }
+
   const id =
     AUTH_MODE === 'gateway' ? header(req, GATEWAY_ADMIN) : header(req, 'x-admin-id');
 

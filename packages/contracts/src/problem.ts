@@ -44,6 +44,15 @@ export const ProblemCode = {
   ILLEGAL_TRANSITION: 'ILLEGAL_TRANSITION',
   RETRYABLE: 'RETRYABLE',
   FORBIDDEN: 'FORBIDDEN',
+  /** 로그인 정보(액세스 토큰)가 없거나 맞지 않는다 — 401. 다시 로그인하면 된다 (T-M5-02) */
+  UNAUTHENTICATED: 'UNAUTHENTICATED',
+  /**
+   * 이 작업은 방금 한 인증이 필요하다 — 401 + `WWW-Authenticate: Bearer error="insufficient_user_authentication"`
+   * (RFC 9470). 담당자는 다시 로그인(OTP 포함)하면 된다 (T-M5-10 Step-up)
+   */
+  STEP_UP_REQUIRED: 'STEP_UP_REQUIRED',
+  /** 로그인 확인에 쓸 발급자 키를 지금 쓸 수 없다 — 503. 토큰 탓이 아니다 (T-M3-06 JWKS 캐시가 비었거나 너무 오래됨) */
+  AUTH_UNAVAILABLE: 'AUTH_UNAVAILABLE',
   INTERNAL: 'INTERNAL',
   NOT_FOUND: 'NOT_FOUND',
   /**

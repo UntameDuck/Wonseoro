@@ -140,6 +140,31 @@ export function envBool(name: string, devValue: boolean): boolean {
   return raw === 'true';
 }
 
+/**
+ * OIDC 발급자 주소. 운영·개발 모두 필수다.
+ * 운영에서는 `https:` 이고 로컬 주소가 아니어야 한다 — 개발용 로컬 발급자(Keycloak start-dev)가
+ * 운영에 섞이면 시험 계정·시험 키로 운영 API 에 들어올 수 있다. (docs/12-authentication-plan.md A12)
+ */
+export function requireIssuerUrl(name: string, why: string): string {
+  const v = requireEnv(name, why);
+  if (!v) return v;
+  let url: URL;
+  try {
+    url = new URL(v);
+  } catch {
+    fail(`${name} 가 주소 형식이 아닙니다 (받은 값: ${v})`);
+    return '';
+  }
+  if (isProduction()) {
+    const local = ['localhost', '127.0.0.1', '[::1]', '::1'].includes(url.hostname) || url.hostname.endsWith('.localhost');
+    if (url.protocol !== 'https:' || local) {
+      fail(`${name} 는 운영에서 https 이고 로컬 주소가 아니어야 합니다 (받은 값: ${v}) — 개발용 발급자를 운영에 쓸 수 없습니다`);
+      return '';
+    }
+  }
+  return v.replace(/\/$/, '');
+}
+
 /** 쉼표로 구분된 목록. 빈 항목은 버린다. */
 export function envList(name: string, devValue: readonly string[], why: string): string[] {
   const raw = process.env[name];

@@ -249,7 +249,7 @@ Demo Gate 5 에서 **중앙을 내린 채 생성→저장→결제→제출이 �
 | Central Dependency Health Gate | ✅ 이번에 | 인증과 무관 |
 | Autonomous 운영 배너 · Sync Lag 표시 | ✅ 이번에 | 화면 어디에도 없었다 |
 | Offline Event Spool | ✅ T-M3-08 | 중앙 장애 중 Outbox 가 DEAD 로 떨어지지 않음 (D-33). 적체 경보 추가 |
-| Local JWKS Cache | 🟡 2026-10-03 | 캐시·검증기 구현(`server-kit` `JwksCache`) — 발급자 정지 중 검증·스냅숏으로 재기동 실증(`test:auth:verifier`). API 연결은 T-M5-02 단계 3, 2시간 단절 접수 실증은 단계 7 |
+| Local JWKS Cache | 🟡 2026-10-03 | 캐시·검증기 구현(`server-kit` `JwksCache`) — 발급자 정지 중 검증·스냅숏으로 재기동 실증(`test:auth:verifier`). **대학 API 연결 ✅**(oidc 모드, 발급자를 멈춘 채 지원자·담당자 요청 통과 — `oidc-auth.integration.test.ts`). 2시간 단절 접수 실증은 T-M5-02 단계 7 |
 | 서명된 Local Policy Snapshot | ✅ T-M3-15 | 공개키 + 서명된 활성화 기록으로 대학 밖에서 검증 |
 
 **판단이 바꾸는 것은 안내뿐이다.** AUTONOMOUS 라고 막히는 기능은 없다. 필요한 이유는 사람 쪽이다 —
