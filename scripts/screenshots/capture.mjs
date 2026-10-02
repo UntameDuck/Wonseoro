@@ -8,14 +8,14 @@
 // 전용 DB(ui-shots-pg :5497)와 전용 포트(중앙 3100 · 대학 3101 · 지원자 웹 4001 · 콘솔 4101)만 쓴다.
 // kind 시험·로컬 개발 DB(:5432)·ka-central(:3000)과 섞이지 않는다.
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
-import os from 'node:os';
 import path from 'node:path';
+import { workDir } from '../../tests/a11y/helpers/workdir.mjs';
 
-// 단계 사이에 이어 쓰는 상태(원서 ID)·Chrome 프로필·실패 화면은 저장소 밖에 둔다.
-const WORK = path.join(os.tmpdir(), 'wonseoro-shots');
-mkdirSync(WORK, { recursive: true });
+// 단계 사이에 이어 쓰는 상태(원서 ID)·Chrome 프로필·실패 화면은 저장소 안 `.cache/`(git 제외)에 둔다 —
+// 시스템 임시 폴더는 이 PC 에서 C 드라이브다. 프로필은 한 개를 다시 쓴다.
+const WORK = workDir('shots');
 const ARGS = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const CHECK_COPY = process.argv.includes('--check-copy');
 const PHASE = ARGS[0];

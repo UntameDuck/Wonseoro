@@ -22,3 +22,6 @@ npm-debug.log*
 infra/compose/.data/
 *.pem
 *.key
+
+# 시험·캡처 작업 폴더(브라우저 프로필 등) — tests/a11y/helpers/workdir.mjs
+.cache/

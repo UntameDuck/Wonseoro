@@ -1,7 +1,7 @@
 // 접근성 시험에 쓰는 샘플 파일
-import { mkdirSync, writeFileSync } from 'node:fs';
-import os from 'node:os';
+import { writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { workDir } from './workdir.mjs';
 
 /** 서류 단계에 올릴 한 쪽짜리 PDF (화면 캡처와 같다). 서버는 확장자가 아니라 파일 머리(%PDF-)를 본다. */
 export function samplePdf() {
@@ -23,8 +23,7 @@ export function samplePdf() {
   pdf += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`;
   pdf += offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('');
   pdf += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
-  const dir = path.join(os.tmpdir(), 'wonseoro-a11y');
-  mkdirSync(dir, { recursive: true });
+  const dir = workDir('a11y');
   const file = path.join(dir, 'school-record.pdf');
   writeFileSync(file, pdf);
   return file;

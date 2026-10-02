@@ -19,10 +19,10 @@
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { BROWSERS, FOCUS_INFO, focusInfo, launch, press, selectAll, sleep, tap, typeText } from './helpers/browser.mjs';
 import { samplePdf } from './helpers/sample.mjs';
+import { workDir } from './helpers/workdir.mjs';
 import { axAudit, axFocused } from './helpers/ax.mjs';
 
 const arg = (name, def) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split('=')[1] ?? def;
@@ -364,7 +364,7 @@ try {
   fatal = err.message;
   console.error('✘', err.message);
   const r = await b.send('Page.captureScreenshot', { format: 'png' }).catch(() => null);
-  if (r) writeFileSync(path.join(os.tmpdir(), 'wonseoro-a11y', `fail-keyboard-${WIDTH}.png`), Buffer.from(r.data, 'base64'));
+  if (r) writeFileSync(path.join(workDir('a11y'), `fail-keyboard-${WIDTH}.png`), Buffer.from(r.data, 'base64'));
 } finally {
   b.close();
 }

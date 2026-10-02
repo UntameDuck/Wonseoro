@@ -4,9 +4,9 @@
 // 요소를 찾아 click() 하지 않고, Tab·Enter·Space 키 이벤트를 보내 사람이 키보드로 하는 그대로 움직인다.
 //   CHROME=<실행 파일>  다른 Chromium 계열(Edge)로 돌린다 (T-M5-47)
 import { spawn } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
-import os from 'node:os';
+import { rmSync } from 'node:fs';
 import path from 'node:path';
+import { workDir } from './workdir.mjs';
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -20,16 +20,15 @@ export const BROWSERS = {
  * @param {{ width: number, height: number, port?: number, executable?: string, profile?: string }} o
  */
 export async function launch({ width, height, port = 9334, executable, profile = 'a11y', touch = false }) {
-  const work = path.join(os.tmpdir(), 'wonseoro-a11y');
-  mkdirSync(work, { recursive: true });
   const exe = executable ?? process.env.CHROME ?? BROWSERS.chrome;
+  // 실행마다 새 프로필 — 앞선 실행의 세션 저장소가 남지 않게. 브라우저가 끝나면 지운다
+  const profileDir = path.join(workDir('a11y'), `${profile}-${Date.now()}`);
   const proc = spawn(
     exe,
     [
       '--headless=new',
       `--remote-debugging-port=${port}`,
-      // 실행마다 새 프로필 — 앞선 실행의 세션 저장소가 남지 않게
-      `--user-data-dir=${path.join(work, `${profile}-${Date.now()}`)}`,
+      `--user-data-dir=${profileDir}`,
       '--no-first-run',
       '--no-default-browser-check',
       '--disable-extensions',
@@ -39,6 +38,14 @@ export async function launch({ width, height, port = 9334, executable, profile =
     ],
     { stdio: 'ignore' },
   );
+  // 브라우저 프로세스가 끝난 뒤에 지운다 — 살아 있는 동안은 Windows 가 파일을 잠근다
+  proc.once('exit', () => {
+    try {
+      rmSync(profileDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    } catch {
+      /* 다음 정리 때 지운다 */
+    }
+  });
 
   let targets = null;
   for (let i = 0; i < 75 && !targets; i++) {
