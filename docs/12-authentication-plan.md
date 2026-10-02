@@ -46,7 +46,7 @@
 | 1 ✅ | 로컬 발급자 — compose `auth` 프로필, 렐름 파일 2개(`infra/auth/`), 시험 담당자 6역할·지원자 2명·TOTP 시험 비밀(로컬 전용 시드값) | 기동 후 discovery·JWKS·역할 클레임·ACR 확인 스크립트 통과 — `test:auth:issuer` 24개 |
 | 2 ✅ | `server-kit` OIDC 검증기 + JWKS 캐시 | 단위 시험: 서명·만료·발급자·대상(aud) 위조 거절, 키 회전, 발급자 차단 중 검증 지속, 모르는 kid 폭주 시 다시 받기 1회 |
 | 3 ✅ | 대학 API `AUTH_MODE=oidc` — 지원자(`sub`→applicant), 운영 API 역할·ACR·step-up 가드, 2인 승인 신원을 토큰의 담당자로 | **수직 권한 시험**(역할×경로 전 조합, STRIDE E-03), 본인 승인 금지, 기존 소유권 시험(R10)·BOLA 시험 유지 |
-| 4 | 중앙 API `AUTH_MODE=oidc` | 대시보드·프로필 금고가 토큰 가명으로만 동작 |
+| 4 ✅ | 중앙 API `AUTH_MODE=oidc` | 대시보드·프로필 금고가 토큰 가명으로만 동작 |
 | 5 | 콘솔 로그인(BFF)·MFA·민감 동작 재인증·목적·사유 | 브라우저 시험: 로그인→TOTP→승인, 5분 지난 증적 열람은 재인증, 다른 역할은 메뉴·API 모두 거절 |
 | 6 | 지원자 로그인·세션 만료를 발급자 세션으로·위험 차단 해제 | `test:a11y:session`·`test:a11y:rate-limit` 을 새 세션으로 다시 통과, 차단→재인증→해제 시험 |
 | 7 | JWKS 캐시 실증(T-M3-06) | 발급자 컨테이너를 멈춘 채 이미 로그인한 지원자의 저장·결제확인·제출 성공 |
@@ -109,6 +109,18 @@
   - admission-api 전체 352개(CI 재현 DB, 실패 0·건너뜀 3), server-kit 72개
 - 렐름 시험 계정에 고정 id — Keycloak 을 다시 만들어도 sub 가 같다
 
-### 다음 — 단계 4
+### 단계 4 ✅ (2026-10-03) — 중앙 API `AUTH_MODE=oidc`
 
-중앙 API `AUTH_MODE=oidc`(대시보드·프로필 금고 — 지원자 토큰의 sub 를 가명 토큰으로, aud `wonseoro-central-api`). 그 뒤 단계 5 콘솔 로그인(BFF).
+- 중앙의 지원자 API 는 공통원서(`/api/v1/profile`)·"내 원서"(`/api/v1/dashboard/applications`) 둘이다. 요청마다 먼저 **지원자 렐름** 토큰을 검증하고(대상 `wonseoro-central-api`),
+  **토큰의 주체(sub)를 가명 토큰으로** 쓴다(`apps/central-api/src/oidc-auth.ts`, 조립은 `app.setup.ts`). 담당자 렐름 토큰·대학 전용 토큰은 401. 내부 경로(`/internal/**`, 대학 → 중앙)는 mTLS 몫(T-M5-05)
+- 대학 API 와 **같은 렐름·같은 sub** 라 대학이 만드는 "내 원서" 참조(HMAC)와 공통원서 Snapshot 요청이 그대로 이어진다
+- 시험
+  - `oidc-auth.integration.test.ts` 6개 — 컨트롤러 경로를 계약과 대조(지원자 경로만 토큰), 토큰 없음·다른 렐름·대학 전용 대상·위조 401, 공통원서는 토큰의 주체로만(꾸민 헤더 무시), "내 원서", 발급자 정지 중 검증 지속
+  - **`npm run test:auth:central`** 9개 — 중앙·대학을 oidc 로 띄우고 실제 Keycloak 로그인 한 번으로: 중앙에 공통원서 저장·이 대학 동의 → 대학에서 원서 생성 →
+    **원서에 중앙 공통원서의 출신 고교가 들어온다**(두 API 가 같은 sub 로 이어짐), 다른 지원자·담당자 토큰 거절
+  - central-api 전체 35개(실패 0), 보안 선별 시험 173개(건너뜀 0)
+
+### 다음 — 단계 5
+
+운영 콘솔 로그인(BFF) — Next.js 서버가 Authorization Code + PKCE 를 하고 토큰은 서버에만, 브라우저에는 HttpOnly 세션 쿠키. 개발용 담당자 입력칸을 로그인으로 바꾸고,
+민감 동작 전 재인증(`max_age=0`)·목적/사유 입력 화면. 화면을 바꾸므로 접근성 시험을 다시 돌린다.

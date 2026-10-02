@@ -64,7 +64,7 @@ const groups = [
   },
   {
     name: '중앙 재전송·위장 발신·개인정보 최소화',
-    files: ['apps/central-api/dist/integration.test.js'],
+    files: ['apps/central-api/dist/integration.test.js', 'apps/central-api/dist/oidc-auth.integration.test.js'],
     env: { DATABASE_URL: centralUrl },
   },
 ];

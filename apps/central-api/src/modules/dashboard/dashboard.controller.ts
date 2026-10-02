@@ -1,4 +1,5 @@
-import { Controller, Get, Header, Headers, HttpException, Query } from '@nestjs/common';
+import { Controller, Get, Header, Headers, HttpException, Query, Req } from '@nestjs/common';
+import type { FastifyRequest } from 'fastify';
 import { Db, purposeRef } from '@wonseoro/server-kit';
 import { HEARTBEAT_STALE_SECONDS, SUBJECT_REF_KEYS } from '../../config';
 import { subjectOf } from '../../identity';
@@ -27,6 +28,7 @@ export class DashboardController {
     @Headers('x-subject-token') devToken?: string,
     @Query('applicantToken') inQuery?: string,
     @Headers('x-authenticated-subject') gatewayToken?: string,
+    @Req() req?: FastifyRequest,
   ) {
     // 식별자를 URL 에 싣지 않는다. 프록시·접근 로그·브라우저 기록에 남는다. (§B8, D-39)
     if (inQuery) {
@@ -43,7 +45,7 @@ export class DashboardController {
       );
     }
     // 인증 방식에 맞는 헤더만 본다 (AUTH_MODE). 운영에서 개발 헤더는 기동 단계에서 막힌다.
-    const applicantToken = subjectOf({ dev: devToken, gateway: gatewayToken });
+    const applicantToken = subjectOf({ dev: devToken, gateway: gatewayToken, oidc: req?.applicantSubject });
 
     // 대학이 보낸 것과 같은 방식으로 참조를 만든다. 원문 토큰은 저장하지 않는다.
     // 키 목록 전부로 만든다 — 키를 바꾸는 동안 옛 키로 만든 참조도 찾아져야 한다.

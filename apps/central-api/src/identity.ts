@@ -7,11 +7,13 @@ export const DEV_SUBJECT_HEADER = 'x-subject-token';
 export const GATEWAY_SUBJECT_HEADER = 'x-authenticated-subject';
 
 /**
- * 요청의 지원자 가명 토큰. 인증 방식(AUTH_MODE)에 맞는 헤더만 본다 — 다른 헤더는 무시한다.
- * 없으면 400 (계약: APPLICANT_TOKEN_REQUIRED).
+ * 요청의 지원자 가명 토큰. 인증 방식(AUTH_MODE)에 맞는 값만 본다 — 다른 헤더는 무시한다.
+ *   dev-headers — `x-subject-token` · gateway — `x-authenticated-subject`
+ *   oidc        — 앞단 훅이 검증한 지원자 토큰의 주체(sub) (oidc-auth.ts). 헤더는 읽지 않는다
+ * 없으면 400 (계약: APPLICANT_TOKEN_REQUIRED). oidc 에서는 훅이 먼저 401 로 막아 여기까지 오지 않는다.
  */
-export function subjectOf(headers: { dev?: string | undefined; gateway?: string | undefined }): string {
-  const token = AUTH_MODE === 'gateway' ? headers.gateway : headers.dev;
+export function subjectOf(headers: { dev?: string | undefined; gateway?: string | undefined; oidc?: string | undefined }): string {
+  const token = AUTH_MODE === 'oidc' ? headers.oidc : AUTH_MODE === 'gateway' ? headers.gateway : headers.dev;
   if (typeof token === 'string' && token.length > 0 && token.length <= 160) return token;
   throw new HttpException(
     {

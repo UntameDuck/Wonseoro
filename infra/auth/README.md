@@ -8,6 +8,7 @@ docker compose -f infra/compose/docker-compose.dev.yml --profile auth up -d keyc
 npm run test:auth:issuer      # 로그인 길·토큰 내용 24개 확인
 npm run build -w @wonseoro/server-kit && npm run test:auth:verifier   # 검증기·JWKS 캐시, 발급자 정지 중 검증
 npm run build -w @wonseoro/contracts -w @wonseoro/server-kit -w @wonseoro/admission-api && npm run test:auth:api   # 대학 API(oidc) 끝에서 끝까지 — CI 재현 DB(:5499) 필요
+npm run build -w @wonseoro/central-api && npm run test:auth:central   # 중앙+대학(oidc) — 같은 토큰으로 공통원서 Snapshot 이 이어지는지
 ```
 
 | 렐름 | 발급자 | 무엇 |

@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Header, Headers, HttpCode, HttpException, Post, Put } from '@nestjs/common';
+import { Body, Controller, Get, Header, Headers, HttpCode, HttpException, Post, Put, Req } from '@nestjs/common';
+import type { FastifyRequest } from 'fastify';
 import { subjectOf } from '../../identity';
 import { ProfileRejection, ProfileVaultService, SnapshotRequest } from './profile-vault.service';
 
@@ -41,7 +42,7 @@ export class ProfileVaultController {
  * 입력 검사도 없이 본문의 토큰으로 누구의 공통원서든 덮어썼고, 화면은 그것을 부르지 않았다.
  * 지원자가 공통원서를 쓸 수 없으면 대학 원서의 "공통원서에서 가져온 정보" 는 늘 비어 있다.
  *
- * 신원은 인증 방식(AUTH_MODE)에 맞는 헤더에서만 얻는다. 본문의 토큰은 받지 않는다.
+ * 신원은 인증 방식(AUTH_MODE)에 맞는 곳에서만 얻는다(oidc 면 검증된 토큰의 주체). 본문의 토큰은 받지 않는다.
  * 저장은 통째로 바꾸는 PUT 이라 같은 요청을 다시 보내도 결과가 같다 — 멱등키가 필요 없다.
  */
 @Controller('api/v1/profile')
@@ -53,8 +54,9 @@ export class ApplicantProfileController {
   async get(
     @Headers('x-subject-token') devToken?: string,
     @Headers('x-authenticated-subject') gatewayToken?: string,
+    @Req() req?: FastifyRequest,
   ) {
-    return this.vault.profileOf(subjectOf({ dev: devToken, gateway: gatewayToken }));
+    return this.vault.profileOf(subjectOf({ dev: devToken, gateway: gatewayToken, oidc: req?.applicantSubject }));
   }
 
   @Put()
@@ -64,8 +66,9 @@ export class ApplicantProfileController {
     @Body() body: ProfileBody,
     @Headers('x-subject-token') devToken?: string,
     @Headers('x-authenticated-subject') gatewayToken?: string,
+    @Req() req?: FastifyRequest,
   ) {
-    const subjectToken = subjectOf({ dev: devToken, gateway: gatewayToken });
+    const subjectToken = subjectOf({ dev: devToken, gateway: gatewayToken, oidc: req?.applicantSubject });
     try {
       return await this.vault.replaceProfile(subjectToken, body?.fields ?? {}, body?.consents);
     } catch (err) {
