@@ -55,9 +55,7 @@
 
 | 항목 | 내용 |
 |---|---|
-| **C 드라이브** | **거의 꽉 찼다(2026-10-02 남은 공간 약 2.5GB).** 저장소·Docker 저장소(`E:\DockerData\DockerDesktopWSL`)는 E 다. C 를 쓰는 것은 ① npm 내려받기 캐시(기본 `%LOCALAPPDATA%
-pm-cache`, 약 9GB) ② 시스템 임시 폴더. 시험·캡처의 브라우저 프로필은 저장소 `.cache/`(git 제외, `tests/a11y/helpers/workdir.mjs`)에 두고 브라우저가 끝나면 지운다 — 전에는 C 임시 폴더에 실행마다 쌓였다(82개·3GB). 새 도구·임시 파일은 E 에 둔다(`E:\DockerData	ools\…`). npm 설치는 `--cache E:\DockerData
-pm-cache` |
+| **C 드라이브** | **거의 꽉 찼다(2026-10-02 남은 공간 약 2.5GB).** 저장소·Docker 저장소(`E:\DockerData\DockerDesktopWSL`)는 E 다. C 를 쓰는 것은 ① npm 내려받기 캐시(기본 `%LOCALAPPDATA%\npm-cache`, 약 9GB) ② 시스템 임시 폴더. 시험·캡처의 브라우저 프로필은 저장소 `.cache/`(git 제외, `tests/a11y/helpers/workdir.mjs`)에 두고 브라우저가 끝나면 지운다 — 전에는 C 임시 폴더에 실행마다 쌓였다(82개·3GB). 새 도구·임시 파일은 E 에 둔다(`E:\DockerData\tools\…`). npm 설치는 `--cache E:\DockerData\npm-cache` |
 | 셸 | Git Bash 에서 `docker run -v/--tmpfs /tmp` 처럼 `/` 로 시작하는 인자는 경로 변환된다 → `export MSYS_NO_PATHCONV=1` |
 | 도구 | kind 0.33 · Helm **4.3** · k6 2.2 · kubectl 1.34 (winget 설치). 새 터미널부터 PATH 에 잡힌다. 안 잡히면 `%LOCALAPPDATA%\Microsoft\WinGet\Packages\` 아래 `Helm.Helm_*\windows-amd64`, `Kubernetes.kind_*` 를 PATH 에 더한다. k6 는 `C:\Program Files\k6` |
 | Docker | Desktop, VM 메모리 **약 7.5GB.** 이미지 빌드와 kind 클러스터 2개를 **동시에 돌리면 엔진이 멈춘다**(실제로 멈췄다). 빌드 → 클러스터 순서로, 하나씩 |
