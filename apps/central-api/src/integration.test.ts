@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { after, before, describe, it } from 'node:test';
-import { Db, purposeRef } from '@wonseoro/server-kit';
+import { HttpException } from '@nestjs/common';
+import { Db, LocalKeyRing, purposeRef, useFieldKeyRing } from '@wonseoro/server-kit';
 import {
   IncomingEvent,
   SyncGatewayService,
@@ -519,5 +520,73 @@ describe('Common Profile Vault — 목적 최소화 (v1.0 §17, v1.1 §10 §3)',
       ['kadmission_central', 'kadmission_vault'],
       '공통원서 Vault 와 집계 DB 가 같은 스키마에 있으면 개인정보가 한곳에 집중된다',
     );
+  });
+});
+
+describe('공통원서 금고 암호화 (T-M5-06, 0004)', () => {
+  const token = () => `subj-test-${randomUUID().slice(0, 8)}`;
+  const k1 = { id: 'it-k1', key: randomBytes(32) };
+  const k2 = { id: 'it-k2', key: randomBytes(32) };
+  after(() => useFieldKeyRing(null));
+
+  it('저장한 공통원서는 DB 에 평문이 없고, 지원자·대학에는 그대로 나간다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    useFieldKeyRing(new LocalKeyRing([k1]));
+    const vault = new ProfileVaultService(db);
+    const subject = token();
+    await vault.replaceProfile(subject, { highSchool: '비밀고등학교', phone: '010-9999-0000' }, [{ universityId: UNIV, fieldCodes: ['phone'] }]);
+
+    const raw = await db.query<{ row: string; key_version: string }>(
+      `SELECT t::text AS row, key_version FROM kadmission_vault.applicant_profile t WHERE subject_token = $1`,
+      [subject],
+    );
+    assert.equal(raw.rows[0]?.key_version, 'it-k1');
+    assert.equal(raw.rows[0]?.row.includes('010-9999-0000'), false, '행 전체를 글자로 떠도 평문이 없다');
+    assert.equal(raw.rows[0]?.row.includes('비밀'), false);
+
+    assert.equal((await vault.profileOf(subject)).fields.highSchool, '비밀고등학교');
+    const snap = await vault.release({ subjectToken: subject, universityId: UNIV, requestedFields: ['phone', 'highSchool'] });
+    assert.deepEqual(snap.fields, { phone: '010-9999-0000' });
+  });
+
+  it('KEK 교체 뒤 옛 공통원서가 읽히고, rewrap 뒤 옛 KEK 없이도 읽힌다 · 키가 없으면 503', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    useFieldKeyRing(new LocalKeyRing([k1]));
+    const vault = new ProfileVaultService(db);
+    const subject = token();
+    await vault.replaceProfile(subject, { contactEmail: 'me@example.kr' }, []);
+
+    useFieldKeyRing(new LocalKeyRing([k2, k1]));
+    assert.equal((await vault.profileOf(subject)).fields.contactEmail, 'me@example.kr');
+    let moved = 0;
+    for (let n = -1; n !== 0; moved += n) n = await vault.rewrapKeys('it-k1');
+    assert.ok(moved >= 1);
+    useFieldKeyRing(new LocalKeyRing([k2]));
+    assert.equal((await vault.profileOf(subject)).fields.contactEmail, 'me@example.kr');
+
+    useFieldKeyRing(new LocalKeyRing([{ id: 'it-other', key: randomBytes(32) }]));
+    await assert.rejects(vault.profileOf(subject), (e: unknown) => e instanceof HttpException && e.getStatus() === 503);
+  });
+
+  it('0004 이전 평문 공통원서 — 읽히고, encrypt-legacy 가 옮긴다', async (t) => {
+    if (!available) return t.skip('DATABASE_URL 없음');
+    useFieldKeyRing(new LocalKeyRing([k2]));
+    const vault = new ProfileVaultService(db);
+    const subject = token();
+    await db.query(`INSERT INTO kadmission_vault.applicant_profile (subject_token, fields) VALUES ($1, $2)`, [
+      subject,
+      JSON.stringify({ highSchool: '옛평문고' }),
+    ]);
+    assert.equal((await vault.profileOf(subject)).fields.highSchool, '옛평문고');
+    let moved = 0;
+    for (let n = -1; n !== 0; moved += n) n = await vault.encryptLegacy();
+    assert.ok(moved >= 1);
+    const raw = await db.query<{ key_version: string; fields: unknown }>(
+      `SELECT key_version, fields FROM kadmission_vault.applicant_profile WHERE subject_token = $1`,
+      [subject],
+    );
+    assert.equal(raw.rows[0]?.key_version, 'it-k2');
+    assert.deepEqual(raw.rows[0]?.fields, {});
+    assert.equal((await vault.profileOf(subject)).fields.highSchool, '옛평문고');
   });
 });

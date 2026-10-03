@@ -6,6 +6,7 @@ import { Db } from '@wonseoro/server-kit';
 import { purposeRef } from '@wonseoro/server-kit';
 import { CENTRAL_SUBJECT_KEY, CENTRAL_SUBJECT_KEY_ID } from '../../config';
 import { ProblemException } from '../../common/problem/problem.exception';
+import { loadFields as loadApplicationFields } from '../../common/db/field-cipher';
 import { trackFinalize } from '../../common/telemetry/business-metrics';
 import { serverClock, serverNow } from '../../common/time/server-clock';
 import { finalizedEventData } from '../../common/central/central-events';
@@ -617,11 +618,7 @@ export class FinalizationService implements OnModuleInit {
   }
 
   private async loadFields(applicationId: string): Promise<Record<string, unknown>> {
-    const { rows } = await this.db.query<{ field_code: string; value_json: unknown }>(
-      `SELECT field_code, value_json FROM application_field_value WHERE application_id = $1`,
-      [applicationId],
-    );
-    return Object.fromEntries(rows.map((r) => [r.field_code, r.value_json]));
+    return loadApplicationFields(this.db, applicationId);
   }
 }
 

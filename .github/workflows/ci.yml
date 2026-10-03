@@ -83,6 +83,8 @@ jobs:
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0001_init.sql
       # 앱 최소권한 역할(D-41). 검증 SQL 이 SET ROLE kadmission_app 으로 권한을 시험한다
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0002_db_roles.sql
+      # 원서 항목 값 암호화(T-M5-06) — 첨부 DDL 밖, 저장소가 더한다(D-70)
+      - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0003_field_encryption.sql
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/dev-roles.sql
       # 제약이 실제로 막는지 먼저 확인한다
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/verify-constraints.sql
@@ -107,6 +109,7 @@ jobs:
       - run: psql "${DATABASE_URL%/*}/central" -v ON_ERROR_STOP=1 -f infra/db/central/0001_init.sql
       - run: psql "${DATABASE_URL%/*}/central" -v ON_ERROR_STOP=1 -f infra/db/central/0002_vault.sql
       - run: psql "${DATABASE_URL%/*}/central" -v ON_ERROR_STOP=1 -f infra/db/central/0003_summary_names.sql
+      - run: psql "${DATABASE_URL%/*}/central" -v ON_ERROR_STOP=1 -f infra/db/central/0004_vault_encryption.sql
       - run: npm run test -w @wonseoro/central-api
         env:
           DATABASE_URL: postgresql://wonseoro:wonseoro@localhost:5432/central

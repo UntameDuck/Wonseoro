@@ -52,6 +52,19 @@
   > 트래픽 전체에서 빼면 작성·저장까지 줄어든다. 접수 기록·감사에 offset·불확실성·상태를 남긴다. DB 서버 자체의 시각 동기 감시는 인프라 요구다.
 - **B4** 끝에 붙인다: "결제창은 원서마다 하나만 열린다 — 다시 누르면 같은 결제창, 확인 중·확정 결제가 있으면 새 결제를 거절한다. 결제창만 열린 채 콜백이 유실된 승인 결제는 PG 정산 목록 대조가 찾아 접수까지 잇는다 (D-55)"
 
+### §02 PostgreSQL ERD
+
+첨부 DDL(`0001_init.sql` v1.2)은 그대로 두고 본문 「정합성 규칙」 아래에 더한다 (D-70 — 저장소 마이그레이션 `0003_field_encryption.sql`, 중앙 `0004_vault_encryption.sql`):
+
+> 원서 항목 값은 **암호문으로만** 저장한다 — 원서마다 데이터 키(DEK), 값은 AES-256-GCM(`application_field_value.value_ciphertext`, 원서·항목에 묶음),
+> DEK 는 키 암호화 키(KEK)로 감싸 `application_data_key(application_id, kek_version, wrapped_dek)` 에 둔다. KEK 는 DB 밖(Vault Transit).
+> `value_json` 은 암호화 전 행 이전용으로 NULL 허용, 한 행은 평문·암호문 중 하나만. 감사 역할은 감싼 키를 읽지 않는다.
+> 중앙 공통원서 금고도 같다(`fields_ciphertext`·`wrapped_dek`, `key_version` = KEK ID). KEK 교체는 감싼 DEK 만 다시 감싼다(값은 그대로).
+
+v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
+
+> 대학이 설정으로 항목을 더하므로 "고위험" 을 고르지 않고 **원서 항목 값 전부**를 암호화한다. 키가 없으면 읽기를 멈춘다(빈 값·평문으로 대신하지 않는다).
+
 ### §03 OpenAPI 계약
 
 「첨부」 절 끝에 한 줄 더한다:

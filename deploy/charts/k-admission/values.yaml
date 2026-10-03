@@ -172,7 +172,8 @@ centralSync:
 
 # 비밀은 차트가 만들지 않는다 — Vault 등이 넣은 Secret 을 이름으로 참조한다 (§06).
 # 넣을 키: DATABASE_URL, AUDIT_IP_SALT, CENTRAL_ID_SALT, CENTRAL_SUBJECT_KEY, ADMIN_API_TOKEN,
-#          PG_CALLBACK_SECRET, POLICY_SIGNING_KEY, S3_ACCESS_KEY, S3_SECRET_KEY
+#          PG_CALLBACK_SECRET, POLICY_SIGNING_KEY, S3_ACCESS_KEY, S3_SECRET_KEY,
+#          FIELD_KEK_KEYS(원서 항목 암호화 KEK 묶음 id=base64,… — 첫 번째가 현재, T-M5-06)
 runtimeSecret:
   name: ""                         # 기본: <release>-runtime
   # local 환경에서만 허용. production 에서 true 면 렌더링이 실패한다

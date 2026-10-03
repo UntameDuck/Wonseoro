@@ -16,6 +16,7 @@ import {
   ProblemDetails,
   problemType,
 } from '@wonseoro/contracts';
+import { FieldKeyUnavailable } from '@wonseoro/server-kit';
 import { ProblemException } from './problem.exception';
 
 /**
@@ -85,6 +86,16 @@ export class ProblemFilter implements ExceptionFilter {
     if (isTransientDbSaturation(exception)) {
       return {
         ...ProblemException.retryable('접속이 몰려 잠시 처리하지 못했습니다. 잠시 후 다시 시도해 주십시오.').problem,
+        instance: request.url,
+        traceId,
+      };
+    }
+
+    // 필드 암호 키를 쓸 수 없다(KEK 저장소 장애·키 누락) — 원서 내용을 빈 값·평문으로 대신하지 않고 닫는다(T-M5-06).
+    // 키가 돌아오면 같은 요청이 된다
+    if (exception instanceof FieldKeyUnavailable) {
+      return {
+        ...ProblemException.retryable('지금은 원서 내용을 불러올 수 없습니다. 잠시 후 다시 시도해 주십시오.').problem,
         instance: request.url,
         traceId,
       };

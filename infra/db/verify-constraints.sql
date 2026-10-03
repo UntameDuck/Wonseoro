@@ -459,4 +459,28 @@ BEGIN
   ASSERT self_ok, '작성자가 자기 마감 정책을 승인했다';
 END $$;
 
+-- ── 21. 원서 항목 값은 평문이나 암호문 하나만 · 감사 역할은 감싼 키를 못 읽는다 (T-M5-06, 0003) ───
+DO $$
+DECLARE neither boolean := false; both_forms boolean := false; aud boolean := false;
+BEGIN
+  BEGIN
+    INSERT INTO application_field_value (id, application_id, field_code, schema_version, value_json, value_ciphertext)
+    VALUES (gen_random_uuid(), gen_random_uuid(), 'x', 'v', NULL, NULL);
+  EXCEPTION WHEN check_violation THEN neither := true;
+  END;
+  BEGIN
+    INSERT INTO application_field_value (id, application_id, field_code, schema_version, value_json, value_ciphertext)
+    VALUES (gen_random_uuid(), gen_random_uuid(), 'x', 'v', '"평문"'::jsonb, ''::bytea);
+  EXCEPTION WHEN check_violation THEN both_forms := true;
+  END;
+  SET LOCAL ROLE kadmission_auditor;
+  BEGIN PERFORM 1 FROM application_data_key LIMIT 1;
+  EXCEPTION WHEN insufficient_privilege THEN aud := true; END;
+  RESET ROLE;
+  RAISE NOTICE '21. 원서 항목 값 형식 하나만 · 감사 역할의 데이터 키 읽기 차단: %',
+    CASE WHEN neither AND both_forms AND aud THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT neither AND both_forms, '원서 항목 값이 평문·암호문 둘 다 없거나 둘 다 있다';
+  ASSERT aud, '감사 역할이 감싼 데이터 키를 읽는다';
+END $$;
+
 ROLLBACK;

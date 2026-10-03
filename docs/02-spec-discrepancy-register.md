@@ -1064,6 +1064,20 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-70. 원서 항목 값·공통원서가 DB 에 평문 jsonb 로 있었다 — 첨부 DDL 에 암호문 자리가 없다 🟡
+
+| | |
+|---|---|
+| **발견** | 2026-10-03 (보안 통제 단계 3 — [docs/13](13-security-controls-plan.md)) |
+| **충돌** | v1.0 §8.3 은 "고위험 필드 별도 암호화, KEK/DEK 분리" 를 요구한다. 노션 §02 첨부 DDL 의 `application_field_value.value_json` 은 `jsonb NOT NULL` 이라 지원자가 쓴 값(공통원서 Snapshot 의 연락처·학교, 자기소개 등)이 **평문**으로 들어갔다. 중앙 금고(`kadmission_vault.applicant_profile.fields`)도 평문 jsonb 에 `key_version='plaintext-dev'` 만 있었다. DB 덤프·백업·읽기 권한 하나로 전부 읽혔다 |
+| **판정** | **봉투 암호화**(docs/13 B7) — 레코드(대학 원서 하나·공통원서 하나)마다 DEK, 값은 AES-256-GCM, DEK 는 KEK 로 감싸 DB 에 둔다. 연결 데이터로 대학·원서·항목(공통원서는 가명 토큰)에 묶어 옮겨 붙이면 풀리지 않는다. **어느 항목이 고위험인지 고르지 않고 원서 항목 값 전부**를 암호화한다 — 대학이 설정으로 항목을 더하므로 분류가 빠지는 순간 평문이 생긴다. KEK 는 환경 키 묶음 `FIELD_KEK_KEYS`(첫 번째가 현재, 운영 필수·개발 KEK 거절) → 단계 4 Vault Transit. 키가 없으면 닫힌 실패(503, 빈 값·평문으로 대신하지 않는다). DDL 은 첨부(0001)를 그대로 두고 **저장소 마이그레이션** 대학 `0003_field_encryption.sql`(`application_data_key`·`value_ciphertext`·`value_json` NULL 허용·형식 하나만 CHECK·감사 역할 키 읽기 금지), 중앙 `0004_vault_encryption.sql`(`fields_ciphertext`·`wrapped_dek`·CHECK) |
+| **재현 시험** | admission-api `field-cipher.integration.test`(실제 DB 5개 — 행을 글자로 떠도 평문 없음, 다른 항목으로 옮겨 붙이기 거절, KEK 교체 뒤 읽힘·rewrap 뒤 옛 KEK 없이 읽힘, KEK 없음 닫힌 실패, 옛 평문 행 이전), central-api 통합 3개, server-kit 단위 4개, `db:verify` 21번 |
+| **저장소 반영** | ✅ (2026-10-03) `server-kit/src/field-crypto.ts`, 대학 `common/db/field-cipher.ts`·`tools/field-keys.ts`(status·encrypt-legacy·rewrap), 중앙 금고 서비스·`tools/field-keys.ts`, 마이그레이션 두 개(CI·보안 CI·로컬 명령·캡처·DAST 적용 목록) |
+| **노션 반영** | ⬜ §02 ERD 에 `application_data_key`·`value_ciphertext`(첨부 DDL 교체 또는 "저장소 마이그레이션 0003" 한 줄), v1.0 §8.3 의 "고위험 필드" 를 "원서 항목 값 전부" 로 — [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 저장소 반영, 노션 반영 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 

@@ -71,6 +71,16 @@ const groups = [
     env: { UNIVERSITY_ID: process.env.UNIVERSITY_ID ?? 'UNIV-A' },
   },
   {
+    // T-M5-06 — 봉투 암호화(DEK·KEK), 행을 글자로 떠도 평문 없음, 옮겨 붙이기 거절, KEK 교체·rewrap, 키 없으면 닫힌 실패 (D-70)
+    name: '필드 암호화',
+    files: ['packages/server-kit/dist/field-crypto.test.js', 'apps/admission-api/dist/common/db/field-cipher.integration.test.js'],
+    env: {
+      DATABASE_URL: universityUrl,
+      DATABASE_ADMIN_URL: universityAdminUrl,
+      UNIVERSITY_ID: process.env.UNIVERSITY_ID ?? 'UNIV-A',
+    },
+  },
+  {
     name: '파일 검사 엔진 실패 폐쇄',
     files: ['apps/document-service/dist/engines.test.js'],
     env: {},

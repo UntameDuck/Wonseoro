@@ -180,6 +180,7 @@ jobs:
           set -euo pipefail
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0001_init.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0002_db_roles.sql
+          psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0003_field_encryption.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/dev-roles.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/seed-dev.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/ci-seed-deadline.sql
@@ -191,6 +192,7 @@ jobs:
           psql "$CENTRAL_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/central/0001_init.sql
           psql "$CENTRAL_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/central/0002_vault.sql
           psql "$CENTRAL_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/central/0003_summary_names.sql
+          psql "$CENTRAL_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/central/0004_vault_encryption.sql
       - name: 선별 보안 시험 통과·건너뜀 0 강제
         run: npm run test:security
       - name: 서비스 간 상호 TLS 실증 — 실제 TLS·개발 PKI(openssl)·중앙·대학 API·Relay (T-M5-05, D-69)
@@ -247,6 +249,7 @@ jobs:
           set -euo pipefail
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0001_init.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0002_db_roles.sql
+          psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0003_field_encryption.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/dev-roles.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/seed-dev.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/ci-seed-deadline.sql

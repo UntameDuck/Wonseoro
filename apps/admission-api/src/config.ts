@@ -7,6 +7,7 @@ import {
   envInt,
   envList,
   envOrDev,
+  fieldKeyRing,
   internalAuthConfig,
   requireEnv,
   requireIssuerUrl,
@@ -32,6 +33,12 @@ export const UNIVERSITY_ID = requireEnv(
   'UNIVERSITY_ID',
   '이 프로세스가 어느 대학의 접수를 처리하는지. 공통원서 Snapshot 조회와 접수번호에 쓰인다',
 );
+
+/**
+ * 원서 항목 값 암호화의 키 암호화 키(KEK) 묶음 `FIELD_KEK_KEYS` (T-M5-06). 운영은 필수, 개발 KEK(dev)는 운영에서 기동 거부.
+ * 기동 때 읽어 빠진 것을 첫 저장이 아니라 지금 안다
+ */
+export const FIELD_KEYS = fieldKeyRing();
 
 export const PORT = envInt('PORT', 3001, { min: 1, max: 65535 });
 

@@ -5,6 +5,7 @@ import { CENTRAL_ID_SALT } from '../../config';
 import { ApplicationStatus, APPLICATION_STATUS_LABEL, labelOf } from '@wonseoro/contracts';
 import { Db } from '@wonseoro/server-kit';
 import type { Queryable } from '../../common/db/queryable';
+import { loadFields, sealField } from '../../common/db/field-cipher';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { AuditService } from '../audit/audit.service';
 import { ApplicationStateService, transitionApplication } from './application-state.service';
@@ -131,10 +132,10 @@ export class ApplicationRepository {
         for (const code of snapshot.releasedFields) {
           await client.query(
             `INSERT INTO application_field_value
-               (id, application_id, field_code, schema_version, value_json)
+               (id, application_id, field_code, schema_version, value_ciphertext)
              VALUES ($1,$2,$3,'profile-snapshot',$4)
              ON CONFLICT (application_id, field_code) DO NOTHING`,
-            [randomUUID(), row.id, code, JSON.stringify(snapshot.fields[code] ?? null)],
+            [randomUUID(), row.id, code, await sealField(client, row.id, code, snapshot.fields[code] ?? null)],
           );
         }
 
@@ -206,11 +207,7 @@ export class ApplicationRepository {
   }
 
   async fields(applicationId: string): Promise<Record<string, unknown>> {
-    const { rows } = await this.db.query<{ field_code: string; value_json: unknown }>(
-      `SELECT field_code, value_json FROM application_field_value WHERE application_id = $1`,
-      [applicationId],
-    );
-    return Object.fromEntries(rows.map((r) => [r.field_code, r.value_json]));
+    return loadFields(this.db, applicationId);
   }
 
   /**
@@ -287,11 +284,13 @@ export class ApplicationRepository {
 
       for (const [code, value] of Object.entries(input.fields ?? {})) {
         await client.query(
+          // 값은 원서의 데이터 키로 봉해 둔다(T-M5-06). 0003 이전 평문은 이 저장에서 지운다
           `INSERT INTO application_field_value
-             (id, application_id, field_code, schema_version, value_json)
+             (id, application_id, field_code, schema_version, value_ciphertext)
            VALUES ($1,$2,$3,$4,$5)
            ON CONFLICT (application_id, field_code)
-           DO UPDATE SET value_json = EXCLUDED.value_json,
+           DO UPDATE SET value_ciphertext = EXCLUDED.value_ciphertext,
+                         value_json = NULL,
                          schema_version = EXCLUDED.schema_version,
                          updated_at = now()`,
           [
@@ -299,7 +298,7 @@ export class ApplicationRepository {
             input.applicationId,
             code,
             input.schemaVersion,
-            JSON.stringify(value ?? null),
+            await sealField(client, input.applicationId, code, value ?? null),
           ],
         );
       }

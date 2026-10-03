@@ -1,4 +1,5 @@
 import {
+  fieldKeyRing,
   assertNotMockInProduction,
   configureEgress,
   envChoice,
@@ -85,3 +86,9 @@ export const HEARTBEAT_STALE_SECONDS = envInt('HEARTBEAT_STALE_SECONDS', 180, { 
 
 /** 출구 허용 목록 (T-M5-07) — 중앙이 부르는 곳은 지원자 로그인 서버(공개키)뿐이다. 더할 것은 EGRESS_ALLOWLIST */
 export const EGRESS = configureEgress([OIDC?.applicantIssuer]);
+
+/**
+ * 공통원서 금고 암호화의 키 암호화 키(KEK) 묶음 `FIELD_KEK_KEYS` (T-M5-06). 운영은 필수, 개발 KEK(dev)는 운영에서 기동 거부.
+ * 운영에서는 대학 API 와 다른 KEK 를 쓴다 — 금고는 별도 키(0002_vault.sql)
+ */
+export const FIELD_KEYS = fieldKeyRing();

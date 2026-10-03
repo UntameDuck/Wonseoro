@@ -15,7 +15,7 @@
 | T-M5-03 | break-glass 역할(Role 만, 평소 바인딩 없음, 켤 때 끝나는 시각·사유 필수 — D-68) | 끝나는 시각에 회수, 켜는 즉시 경보, DB 슈퍼유저 비상 접속 기록 |
 | T-M5-04 | 노션 첨부 `vault-policy.hcl`(대학별 경로) | Vault 자체·DB 동적 자격증명·짧은 인증서. 지금은 Kubernetes Secret 하나(`runtimeSecret`) |
 | T-M5-05 | 계약에 mutualTLS | **구현 없음 — 중앙 내부 경로·대학 API 내부 경로가 인증 없이 열려 있다(D-69)** |
-| T-M5-06 | 컬럼 이름만(`pii_ciphertext`·`key_version='plaintext-dev'`) | 중앙 공통원서 금고·대학 원서의 고위험 필드가 평문 jsonb |
+| T-M5-06 | 컬럼 이름만(`pii_ciphertext`·`key_version='plaintext-dev'`) | 중앙 공통원서 금고·대학 원서의 고위험 필드가 평문 jsonb — **단계 3 ✅ 봉투 암호화(D-70)** |
 | T-M5-07 | 출구 NetworkPolicy(egress-gateway 하나로) | 앱 수준 허용 목록. 서류 워커는 API 가 준 내려받기 주소를 그대로 부른다 |
 | T-M5-08 | magic-byte 검사, ClamAV(clamd INSTREAM) 어댑터·가짜 clamd 시험(D-58) | 실 clamd·서명 DB 로 확인, Zip Bomb·매크로 문서 판정 |
 | T-M5-09 | 지원자 간 BOLA 시험(소유권 404, 보안 선별 시험), 렐름 섞임 거절 | **대학 간 — 중앙이 이벤트·스냅숏 요청의 대학 식별자를 보낸 쪽이 적은 대로 믿는다(D-69)** |
@@ -82,3 +82,24 @@
     서류 워커는 자기 대학 API 만. 직접 DB 우회·다른 대학 DB·다른 대학 클러스터·인터넷·**메타데이터 주소**·쿠버네티스 API 는 막힘
   - 단위: 출구 정책 5(호스트·포트·와일드카드·사용자 정보로 호스트 속이기·스킴·메타데이터 숫자/IPv6 표기·DNS 재바인딩을 실제 연결로), 서류 워커 SSRF 1
   - 보안 선별 시험 **200개** 건너뜀 0, 상호 TLS 실증 25 그대로, admission-api 360·server-kit 92·document-service 9 통과
+
+### 단계 3 ✅ (2026-10-03) — 필드 암호화 (T-M5-06, D-70)
+
+- **`server-kit/src/field-crypto.ts`** — 봉투 암호화. 레코드마다 DEK(32바이트 난수), 값은 AES-256-GCM(형식 `0x01|iv|tag|암호문`), DEK 는 KEK 로 감싼다.
+  연결 데이터로 묶는다 — DEK 는 `univ:<대학>:application:<원서>`(중앙은 `central:vault:profile:<가명 토큰>`), 값은 `<원서>:<항목 코드>`(중앙은 `profile:<가명 토큰>`).
+  암호문을 다른 원서·항목·대학 DB 로 옮겨 붙이면 풀리지 않는다. KEK 는 `KekProvider` 모양(감싸기·풀기만, 키는 밖으로 안 나온다 — 단계 4 Vault Transit 이 그대로 들어온다).
+  지금은 환경 키 묶음 `FIELD_KEK_KEYS=id=base64,…`(첫 번째가 현재) — 운영 필수, 저장소의 개발 KEK(`dev`)는 운영 기동 거부. 실패는 `FieldKeyUnavailable`·지표 `field_crypto_failures{reason}`
+- **무엇을 암호화하나** — 대학 원서의 **항목 값 전부**(`application_field_value` — 공통원서 Snapshot·자기소개·성적 등), 중앙 공통원서 금고 전체.
+  "고위험" 을 고르지 않는다 — 대학이 설정으로 항목을 더하므로 분류가 빠지는 순간 평문이 생긴다
+- **대학** — 마이그레이션 `0003_field_encryption.sql`(`application_data_key`·`value_ciphertext`·`value_json` NULL 허용·한 행은 형식 하나만·감사 역할은 감싼 키를 못 읽음).
+  원서마다 DEK 하나, 푼 DEK 는 5분 메모리(Vault 호출을 줄인다). 저장은 언제나 암호문, 0003 이전 평문 행은 읽고(지표 `field_plaintext_reads`) 다음 저장에서 지운다
+- **중앙** — `0004_vault_encryption.sql`(`fields_ciphertext`·`wrapped_dek`·CHECK). 공통원서는 통째로 바꾸므로 저장마다 DEK 를 새로 만든다
+- **닫힌 실패** — 키가 없거나 풀리지 않으면 재시도 안내(503). 빈 값·평문으로 대신하지 않는다(빈 공통원서는 대학에 "동의 없음" 으로 잘못 나간다)
+- **운영 명령** `node dist/tools/field-keys.js status|encrypt-legacy|rewrap [KEK]`(대학·중앙 같은 이름) — 평문 행 수·KEK 별 DEK 수, 옛 평문 이전,
+  KEK 교체(새 KEK 를 맨 앞에 더한 뒤 rewrap → 감싼 DEK 만 다시 감싼다, 값은 그대로 → 옛 KEK 를 뺀다)
+- **시험**
+  - 대학 실제 DB 5개(`field-cipher.integration.test`) — 행 전체를 글자로 떠도 평문 없음, 다른 항목으로 옮겨 붙이기 거절, KEK 교체 뒤 읽힘·rewrap 뒤 옛 KEK 없이 읽힘,
+    KEK 없음 닫힌 실패, 옛 평문 행 이전. 중앙 통합 3개(평문 없음·지원자/대학엔 그대로, KEK 교체·503, 옛 평문 이전). server-kit 단위 4개(변조·옮겨 붙이기·다른 대학 범위)
+  - `db:verify` 21번(형식 하나만·감사 역할 키 읽기 차단)
+  - 보안 선별 시험 **212개**(필드 암호화 묶음 9 추가) 건너뜀 0, admission-api 365·central-api 41 통과
+- **남은 것** — KEK 를 Vault Transit 으로(단계 4). 로컬 compose DB·kind 가 보는 DB 에 0003·0004 적용(`npm run db:migrate`·`db:migrate:central` 이 포함한다), 노션 §02(D-70)
