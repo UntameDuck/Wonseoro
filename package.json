@@ -47,6 +47,7 @@
     "test:security:vault": "node tests/security/vault-live.mjs",
     "test:security:netpol": "node tests/security/netpol-kind.mjs",
     "test:security:break-glass": "node tests/security/break-glass-kind.mjs",
+    "test:security:clamd": "node tests/security/clamd-live.mjs",
     "pretest:security": "npm run build -w @wonseoro/contracts -w @wonseoro/server-kit -w @wonseoro/admission-api -w @wonseoro/document-service -w @wonseoro/central-api",
     "test:security": "node scripts/run-security-tests.mjs",
     "test:auth:issuer": "node tests/auth/local-issuer.mjs",

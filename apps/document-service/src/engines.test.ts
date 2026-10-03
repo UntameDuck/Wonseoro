@@ -5,7 +5,7 @@ import { createServer as createTcp, Server as TcpServer, Socket } from 'node:net
 import { AddressInfo } from 'node:net';
 import { after, before, describe, it } from 'node:test';
 import { configureEgress, EgressDenied } from '@wonseoro/server-kit';
-import { ClamAvEngine, EngineUnavailable, parseReply } from './engines';
+import { PdfActiveContent, ClamAvEngine, EngineUnavailable, parseReply } from './engines';
 
 /**
  * ClamAV 엔진 어댑터 — clamd INSTREAM 프로토콜 (T-M5-08, D-58)
@@ -166,5 +166,31 @@ describe('clamd 응답 해석', () => {
     assert.deepEqual(parseReply('stream: Win.Test.EICAR_HDB-1 FOUND'), { verdict: 'MALICIOUS', signature: 'Win.Test.EICAR_HDB-1' });
     assert.equal(parseReply('INSTREAM size limit exceeded. ERROR').verdict, 'ERROR');
     assert.equal(parseReply('').verdict, 'ERROR');
+  });
+});
+
+describe('PDF 능동 콘텐츠 (T-M5-08 매크로 차단)', () => {
+  const scan = (...parts: string[]) => {
+    const p = new PdfActiveContent();
+    for (const part of parts) p.feed(Buffer.from(part, 'latin1'));
+    return p.found();
+  };
+  it('자바스크립트·실행·첨부 파일·XFA 이름을 찾는다 — #xx 표기와 조각 경계도', () => {
+    assert.deepEqual(scan('1 0 obj << /OpenAction << /S /JavaScript /JS (app.alert(1)) >> >>'), ['JS', 'JavaScript']);
+    assert.deepEqual(scan('<< /S /Launch /F (cmd.exe) >>'), ['Launch']);
+    assert.deepEqual(scan('<< /Type /EmbeddedFile /Length 10 >>'), ['EmbeddedFile']);
+    assert.deepEqual(scan('<< /S /J#61va#53cript >>'), ['JavaScript']);
+    assert.deepEqual(scan('<< /S /Java', 'Script /JS (x) >>'), ['JS', 'JavaScript']);
+  });
+  it('보통 서류의 이름은 걸리지 않는다 — /JSON 같은 다른 이름과 글 속 단어도', () => {
+    assert.deepEqual(scan('%PDF-1.7\n1 0 obj << /Type /Catalog /Pages 2 0 R /OpenAction [3 0 R /Fit] >>\n/Font /F1 (JavaScript 강의 수료) Tj /JSON /JS', 'ON >>'), []);
+  });
+  it('clamd 가 깨끗하다고 해도 능동 PDF 는 MALICIOUS', async () => {
+    const pdf = Buffer.from('%PDF-1.7\n1 0 obj << /OpenAction << /S /JavaScript /JS (app.alert(1)) >> >>\n%%EOF\n');
+    files.set('active.pdf', pdf);
+    assert.deepEqual(await new ClamAvEngine('127.0.0.1', clamdPort, 5_000).scan(target('active.pdf', pdf)), {
+      verdict: 'MALICIOUS',
+      signature: 'Wonseoro.PDF.ActiveContent.JS+JavaScript',
+    });
   });
 });

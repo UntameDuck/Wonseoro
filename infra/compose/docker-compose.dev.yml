@@ -88,3 +88,14 @@ services:
       VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
     ports: ['8200:8200']
     extra_hosts: ['host.docker.internal:host-gateway']
+
+  # 서류 악성코드 검사 엔진 (T-M5-08, docs/13 단계 6) — 시작할 때 서명 DB 를 내려받는다(처음 몇 분, 메모리 약 1.3GB).
+  # 워커: SCANNER_ENGINE=clamav CLAMD_HOST=localhost
+  clamav:
+    image: clamav/clamav:1.4@sha256:57deb108fc4c72778aa83eafbca7bb7153e28c3f57c005afd38d31f16da86f23
+    profiles: ['av']
+    ports: ['3310:3310']
+    volumes: ['../clamav/clamd.conf:/etc/clamav/clamd.conf:ro', 'clamav-db:/var/lib/clamav']
+
+volumes:
+  clamav-db:

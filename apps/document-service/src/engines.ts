@@ -113,24 +113,45 @@ export class ClamAvEngine implements ScanEngine {
 
     const socket = await this.open();
     try {
+      // 응답을 먼저 기다리기 시작한다 — clamd 는 한도를 넘으면 다 받기 전에 답하고 연결을 닫는다(실 clamd 에서 확인).
+      // 그때 계속 쓰면 drain 을 영원히 기다린다
+      const replied = this.reply(socket);
+      let early: string | null = null;
+      replied.then((a) => (early = a), () => undefined);
       socket.write('zINSTREAM\0');
       const hash = createHash('sha256');
+      const active = target.mediaType === 'application/pdf' ? new PdfActiveContent() : null;
       let size = 0;
-      for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
-        hash.update(chunk);
-        size += chunk.length;
-        const header = Buffer.alloc(4);
-        header.writeUInt32BE(chunk.length, 0);
-        await write(socket, header);
-        await write(socket, Buffer.from(chunk));
+      try {
+        for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
+          if (early !== null) break;
+          hash.update(chunk);
+          active?.feed(chunk);
+          size += chunk.length;
+          const header = Buffer.alloc(4);
+          header.writeUInt32BE(chunk.length, 0);
+          await write(socket, header);
+          await write(socket, Buffer.from(chunk));
+        }
+        if (early === null) await write(socket, Buffer.alloc(4)); // 끝
+      } catch (err) {
+        // 쓰다가 연결이 닫혔다 — clamd 가 먼저 답했으면 그 답(한도 초과 등)을 쓴다
+        const answer = await replied.catch(() => null);
+        if (answer === null) throw err;
+        return incomplete(parseReply(answer));
       }
-      await write(socket, Buffer.alloc(4)); // 끝
-      const answer = await this.reply(socket);
+      const answer = await replied;
+      // 다 보내기 전에 답이 왔다 — 끝까지 검사하지 못한 파일이다(통과시키지 않는다)
+      if (size !== target.sizeBytes && early !== null) return incomplete(parseReply(answer));
 
       if (hash.digest('hex') !== target.sha256.toLowerCase() || size !== target.sizeBytes) {
         return { verdict: 'ERROR', signature: 'CONTENT_MISMATCH' };
       }
-      return parseReply(answer);
+      const verdict = parseReply(answer);
+      // clamd 가 깨끗하다고 해도 스스로 움직이는 PDF(자바스크립트·실행·첨부 파일)는 받지 않는다 — 서류에 필요 없는 기능이다
+      const found = active?.found();
+      if (verdict.verdict === 'CLEAN' && found?.length) return { verdict: 'MALICIOUS', signature: `Wonseoro.PDF.ActiveContent.${found.join('+')}` };
+      return verdict;
     } finally {
       socket.destroy();
     }
@@ -154,11 +175,38 @@ export class ClamAvEngine implements ScanEngine {
         const end = buf.indexOf('\0');
         if (end >= 0) resolve(buf.slice(0, end));
       });
-      socket.once('error', (err) => reject(new EngineUnavailable(`clamd 응답 오류: ${err.message}`)));
+      // 오류는 닫힘 앞에 온다 — 쓰기 오류(clamd 가 한도로 먼저 끊음)가 이미 받은 답을 덮지 않게 닫힐 때 판단한다
+      let failure: Error | null = null;
+      socket.on('error', (err) => (failure ??= err));
       socket.once('close', () => {
-        if (!buf.includes('\0')) reject(new EngineUnavailable('clamd 가 응답 없이 연결을 닫았다'));
+        if (!buf.includes('\0')) reject(new EngineUnavailable(`clamd 가 응답 없이 연결을 닫았다${failure ? `: ${failure.message}` : ''}`));
       });
     });
+  }
+}
+
+/**
+ * PDF 능동 콘텐츠 — 자바스크립트(/JavaScript·/JS)·외부 실행(/Launch)·첨부 파일(/EmbeddedFile·/EmbeddedFiles·/EF)·멀티미디어(/RichMedia)·XFA 양식.
+ * 입학 서류(성적 증명·추천서 스캔)에 필요 없는 기능이고, 매크로 문서와 같은 길(열면 실행)이다 — T-M5-08 "매크로 차단".
+ * Office 매크로 문서는 형식 허용 목록(PDF·JPG·PNG)과 magic-byte 검사가 먼저 막는다(접수 API file-inspector).
+ * 이름의 #xx 표기(/J#61vaScript)를 풀어 본다. 압축된 객체 스트림 안의 이름은 clamd 의 PDF 해석에 맡긴다.
+ */
+export class PdfActiveContent {
+  private static readonly NAMES = new Set(['JavaScript', 'JS', 'Launch', 'EmbeddedFile', 'EmbeddedFiles', 'EF', 'RichMedia', 'XFA']);
+  private tail = '';
+  private readonly hits = new Set<string>();
+
+  feed(chunk: Uint8Array): void {
+    const text = this.tail + Buffer.from(chunk).toString('latin1');
+    for (const m of text.matchAll(/\/((?:[A-Za-z0-9]|#[0-9A-Fa-f]{2}){1,40})(?=[\s/()<>[\]{}%])/g)) {
+      const name = (m[1] as string).replace(/#([0-9A-Fa-f]{2})/g, (_, h: string) => String.fromCharCode(parseInt(h, 16)));
+      if (PdfActiveContent.NAMES.has(name)) this.hits.add(name);
+    }
+    this.tail = text.slice(-128); // 조각 경계에 걸린 이름
+  }
+
+  found(): string[] {
+    return [...this.hits].sort();
   }
 }
 
@@ -172,10 +220,26 @@ export function parseReply(answer: string): EngineResult {
   return { verdict: 'ERROR', signature: text.replace(/\s*ERROR$/, '').slice(0, 200) || 'UNKNOWN' };
 }
 
+/** 끝까지 보내지 못한 검사 — "깨끗함" 은 믿지 않는다 */
+function incomplete(r: EngineResult): EngineResult {
+  return r.verdict === 'CLEAN' ? { verdict: 'ERROR', signature: 'INCOMPLETE_SCAN' } : r;
+}
+
 function write(socket: Socket, data: Buffer): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (socket.destroyed) return reject(new EngineUnavailable('clamd 가 연결을 닫았다'));
     const ok = socket.write(data, (err) => (err ? reject(new EngineUnavailable(err.message)) : undefined));
-    if (ok) resolve();
-    else socket.once('drain', () => resolve());
+    if (ok) return resolve();
+    // 쓰기 버퍼가 찼다 — 비워지거나, 연결이 닫히거나(clamd 가 먼저 답하고 끊음) 둘 중 하나를 기다린다
+    const onDrain = () => {
+      socket.off('close', onClose);
+      resolve();
+    };
+    const onClose = () => {
+      socket.off('drain', onDrain);
+      reject(new EngineUnavailable('clamd 가 연결을 닫았다'));
+    };
+    socket.once('drain', onDrain);
+    socket.once('close', onClose);
   });
 }

@@ -17,7 +17,7 @@
 | T-M5-05 | 계약에 mutualTLS | **구현 없음 — 중앙 내부 경로·대학 API 내부 경로가 인증 없이 열려 있다(D-69)** |
 | T-M5-06 | 컬럼 이름만(`pii_ciphertext`·`key_version='plaintext-dev'`) | 중앙 공통원서 금고·대학 원서의 고위험 필드가 평문 jsonb — **단계 3 ✅ 봉투 암호화(D-70)** |
 | T-M5-07 | 출구 NetworkPolicy(egress-gateway 하나로) | 앱 수준 허용 목록. 서류 워커는 API 가 준 내려받기 주소를 그대로 부른다 |
-| T-M5-08 | magic-byte 검사, ClamAV(clamd INSTREAM) 어댑터·가짜 clamd 시험(D-58) | 실 clamd·서명 DB 로 확인, Zip Bomb·매크로 문서 판정 |
+| T-M5-08 | magic-byte 검사, ClamAV(clamd INSTREAM) 어댑터·가짜 clamd 시험(D-58) | 실 clamd·서명 DB 로 확인, Zip Bomb·매크로 문서 판정 — **단계 6 ✅(D-73)** |
 | T-M5-09 | 지원자 간 BOLA 시험(소유권 404, 보안 선별 시험), 렐름 섞임 거절 | **대학 간 — 중앙이 이벤트·스냅숏 요청의 대학 식별자를 보낸 쪽이 적은 대로 믿는다(D-69)** |
 
 ## 2. 결정
@@ -138,3 +138,17 @@
   - `test:security:vault` 비상 DB 계정(대학 API·Relay 신원 403, 15분, 기록·문장 로그 설정, 읽기 됨·DDL·기록 지우기 안 됨) — Vault 실증 **23개**
   - `db:verify` 22번(기록 추가만·비상 역할 DDL·감사 수정 차단), 17번에 기록 표(앱 권한 없음)
 - **남은 것(운영 쪽)** — 운영 경보 웹훅 주소·API 서버 대역(`apiServerEgress`)을 클러스터 값으로. DB 서버의 문장 로그를 로그 수집으로 보낸다. 노션 §06·§02(D-72)
+
+### 단계 6 ✅ (2026-10-03) — 실 바이러스 검사 (T-M5-08, D-73)
+
+- **clamd** — compose 프로필 `av`(clamav/clamav 1.4, 시작할 때 공식 서명 DB 를 받는다, 메모리 약 1.3GB). 설정 `infra/clamav/clamd.conf`:
+  스트림 30MB, 압축 해제 한도(파일 25MB·총량 100MB·깊이 10·항목 1000)를 넘으면 경보(`AlertExceedsMax`), OLE2 매크로·암호화 문서·깨진 실행 파일 경보
+- **실 clamd 에서 찾은 결함(D-73)** — clamd 가 한도로 먼저 답하고 끊으면 워커가 쓰기 버퍼를 영원히 기다렸다(검사 전체가 멈춤). 응답을 먼저 기다리고, 답이 오면 보내기를 멈추고,
+  쓰기 오류가 받은 답을 덮지 않게 고쳤다. 끝까지 보내지 못한 검사는 "깨끗함" 을 믿지 않는다
+- **PDF 능동 콘텐츠** — `PdfActiveContent`: 자바스크립트·외부 실행·첨부 파일·멀티미디어·XFA 이름이 있으면 clamd 가 깨끗하다 해도 MALICIOUS. 매크로 문서와 같은 길(열면 실행)이다.
+  Office 매크로 문서·압축 파일은 형식 허용 목록·magic-byte 가 먼저 거절한다(접수 API, 시험 있음)
+- **ClamAV 의 한계(실측)** — 큰 항목 하나만 든 압축은 경보 없이 넘긴다. 서류가 압축을 받지 않으므로 압축 폭탄의 길은 PDF 안뿐이고, PDF 폭탄은 한도 경보가, 첨부는 능동 콘텐츠 판정이 막는다
+- **시험** `npm run test:security:clamd`(실 clamd, 약 30초 — 서명 DB 를 받은 뒤) **10개**: PING, 엔진·서명 DB 버전, 깨끗한 PDF, EICAR, 압축 안 EICAR, 여러 항목 Zip Bomb(`Limits.Exceeded.MaxScanSize`),
+  첨부 PDF, PDF 폭탄(`Limits.Exceeded.MaxFileSize`), 자바스크립트 PDF, 30MB 넘는 파일 ERROR. 서류 워커 단위 12개(능동 콘텐츠 3 추가)
+- **CI 에 넣지 않은 이유** — 서명 DB 내려받기(약 200MB)가 CI 주소에서 자주 막힌다(ClamAV CDN 속도 제한). 운영은 플랫폼의 clamd(서명 DB 미러)를 `documentService.clamav.host` 로 가리킨다
+- **보안 통제(T-M5-01·03~09) 끝** — 단계 1~6 모두 ✅

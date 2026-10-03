@@ -1106,6 +1106,20 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-73. 실 clamd 가 한도로 먼저 끊으면 서류 워커가 멈췄고, 스스로 움직이는 PDF 를 걸러 내지 않았다 🟡
+
+| | |
+|---|---|
+| **발견** | 2026-10-03 (보안 통제 단계 6 — T-M5-08, 실 clamd·공식 서명 DB 로 처음 돌리며) |
+| **충돌** | ① 엔진 어댑터(D-58)는 가짜 clamd 로만 시험했다. 실 clamd 는 `StreamMaxLength` 를 넘으면 **다 받기 전에** 답하고 연결을 닫는다 — 워커는 쓰기 버퍼가 비기를(drain) 영원히 기다렸다(그 서류와 그 뒤 검사가 모두 멈춤). 고친 뒤에도 쓰기 오류가 먼저 와 받은 답("size limit exceeded")을 덮었다 ② §09 "매크로 차단" — Office 매크로 문서는 형식 허용 목록(PDF·JPG·PNG)과 magic-byte 가 막지만, **PDF 의 자바스크립트·외부 실행·첨부 파일**은 clamd 서명에 없으면 깨끗함으로 통과했다 ③ ClamAV 1.4 는 큰 항목 하나만 든 압축을 경보 없이 넘긴다(실측) |
+| **판정** | ① 응답을 먼저 기다리기 시작하고, 답이 오면 보내기를 멈춘다. 쓰기는 drain·닫힘 둘 중 먼저 오는 것을 기다리고, 오류는 닫힐 때 판단해 받은 답을 쓴다. 끝까지 보내지 못한 검사의 "깨끗함" 은 믿지 않는다(`INCOMPLETE_SCAN`) ② **PDF 능동 콘텐츠 판정** — 이름 `/JavaScript`·`/JS`·`/Launch`·`/EmbeddedFile(s)`·`/EF`·`/RichMedia`·`/XFA`(#xx 표기 풀기, 조각 경계 처리)가 있으면 clamd 가 깨끗하다 해도 MALICIOUS `Wonseoro.PDF.ActiveContent.*` ③ 서류는 압축 형식을 받지 않는다 — 압축 폭탄이 들어올 길은 PDF 안(Flate 스트림·첨부)뿐이고, PDF 폭탄은 clamd 한도 경보(`AlertExceedsMax`)가, 첨부는 ②가 막는다. clamd 설정은 `infra/clamav/clamd.conf`(한도 초과·OLE2 매크로·암호화 경보) |
+| **재현 시험** | `npm run test:security:clamd`(실 clamd 1.4·공식 서명 DB, 10개) — 30MB 넘는 파일이 고치기 전 멈춤 → 고친 뒤 ERROR, EICAR·압축 안 EICAR MALICIOUS, 여러 항목 Zip Bomb `Limits.Exceeded.MaxScanSize`, PDF 폭탄 `Limits.Exceeded.MaxFileSize`, 자바스크립트 PDF·첨부 PDF MALICIOUS, 깨끗한 PDF CLEAN. 단위 3개(능동 이름·#xx·조각 경계·`/JSON` 같은 다른 이름은 통과) |
+| **저장소 반영** | ✅ (2026-10-03) `apps/document-service/src/engines.ts`, `infra/clamav/clamd.conf`, compose 프로필 `av` |
+| **노션 반영** | ⬜ §09 파일 업로드 위협 — PDF 능동 콘텐츠 거절·압축 폭탄의 길·clamd 한도 설정 — [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 저장소 반영(구현 결함 수정), 노션 반영 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 
