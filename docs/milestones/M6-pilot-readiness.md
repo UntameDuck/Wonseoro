@@ -38,7 +38,7 @@
 | T-M6-11 | 개인정보 처리흐름도 | 송리안 | v1.0 §17 | 위탁·Subprocessor 목록 — ✅ 2026-10-03 [15](../15-privacy-data-flow.md) |
 | T-M6-12 | 영향평가 체크리스트 | 송리안 | v1.0 §2.2 | 대상 여부 사전판정 |
 | T-M6-13 | Compliance Matrix 실증 | 공동 | v1.0 §19 | 10개 요구영역 대조표 |
-| T-M6-14 | 대학 Onboarding 문서 | 공동 | — | 입학처·정보화부서가 읽을 수 있는 수준 |
+| T-M6-14 | 대학 Onboarding 문서 | 공동 | — | 입학처·정보화부서가 읽을 수 있는 수준 — ✅ 2026-10-03 [16](../16-university-onboarding.md) |
 | T-M6-15 | Shadow Test 계획서 | 공동 | 개발보고서 3단계 | 비수기 Sandbox→Shadow→제한 Pilot |
 
 ## 상용화 협력 범위 (개발보고서 기준)
