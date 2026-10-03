@@ -1,0 +1,156 @@
+{
+  "test": "발급자 단절 중 접수 지속 — JWKS 캐시·스냅숏·단절 유예 (T-M3-06, T-M5-02 단계 7, D-67)",
+  "environment": "축소 환경 — 로컬 Keycloak 26.8.0(컨테이너 정지·재기동)·CI 재현 DB(:5499)·로컬 admission-api 프로세스. 2시간 단절 대신 액세스 토큰 1회 만료(약 6분)로 보인다",
+  "at": "2026-10-03T05:55:11.610Z",
+  "durationSec": 409,
+  "passed": true,
+  "timeline": [
+    {
+      "at": "2026-10-03T05:55:15.704Z",
+      "sinceStartSec": 4,
+      "event": "지원자 둘·담당자 로그인 — 지원자 B 토큰 만료 2026-10-03T06:00:15.000Z"
+    },
+    {
+      "at": "2026-10-03T05:55:21.475Z",
+      "sinceStartSec": 10,
+      "event": "발급자 정지"
+    },
+    {
+      "at": "2026-10-03T05:55:24.674Z",
+      "sinceStartSec": 13,
+      "event": "발급자 정지 중 API 재기동"
+    },
+    {
+      "at": "2026-10-03T05:55:24.675Z",
+      "sinceStartSec": 13,
+      "event": "토큰 만료 대기 365초"
+    },
+    {
+      "at": "2026-10-03T06:01:30.425Z",
+      "sinceStartSec": 379,
+      "event": "단절 유예로 접수"
+    },
+    {
+      "at": "2026-10-03T06:01:52.854Z",
+      "sinceStartSec": 401,
+      "event": "발급자 복구 (19초)"
+    },
+    {
+      "at": "2026-10-03T06:01:58.962Z",
+      "sinceStartSec": 407,
+      "event": "복구 뒤 갱신"
+    }
+  ],
+  "steps": [
+    {
+      "ok": true,
+      "what": "단절 전 — 두 지원자 토큰이 통과한다(남의 원서는 404)"
+    },
+    {
+      "ok": true,
+      "what": "단절 전 — 담당자 토큰이 통과한다"
+    },
+    {
+      "ok": true,
+      "what": "발급자 컨테이너를 멈췄다 — discovery 가 닿지 않는다"
+    },
+    {
+      "ok": true,
+      "what": "발급자 정지 중 — 지원자 A 가 원서 생성·저장·결제 확인·접수까지 한다(유효한 토큰, 키 캐시)",
+      "detail": {
+        "steps": {
+          "create": 201,
+          "save": 200,
+          "paymentIntent": 201,
+          "paymentVerify": 200,
+          "submission": 200
+        },
+        "applicationId": "3a6f4137-34a4-4ffa-8d62-ad47f4e71122",
+        "applicationNumber": "2027-UNIV-A-96S8NP8UAX",
+        "ms": 406,
+        "ok": true
+      }
+    },
+    {
+      "ok": true,
+      "what": "발급자 정지 중 API 재기동 — 스냅숏의 공개키로 지원자 A 의 접수증이 열린다",
+      "detail": {
+        "status": 200
+      }
+    },
+    {
+      "ok": true,
+      "what": "지원자 B 의 액세스 토큰이 끝난 지 1분이 넘었다",
+      "detail": {
+        "expiredForSec": 75
+      }
+    },
+    {
+      "ok": true,
+      "what": "만료 토큰(갱신할 발급자 없음)으로 지원자 B 가 처음부터 접수까지 한다 — 단절 유예",
+      "detail": {
+        "steps": {
+          "create": 201,
+          "save": 200,
+          "paymentIntent": 201,
+          "paymentVerify": 200,
+          "submission": 200
+        },
+        "applicationId": "39c5b21c-ca05-46d0-8b81-ba8e2dd2b36b",
+        "applicationNumber": "2027-UNIV-A-6C49JVPPLV",
+        "ms": 363,
+        "ok": true
+      }
+    },
+    {
+      "ok": true,
+      "what": "단절 유예로 받은 요청이 지표(auth_decisions result=grace)에 남는다",
+      "detail": {
+        "graced": 5
+      }
+    },
+    {
+      "ok": true,
+      "what": "단절 유예를 쓰는 동안 경고 로그를 남긴다(1분에 한 줄)"
+    },
+    {
+      "ok": true,
+      "what": "담당자 토큰에는 유예가 없다 — 만료되면 401",
+      "detail": {
+        "status": 401
+      }
+    },
+    {
+      "ok": true,
+      "what": "유예(축소 60초)를 넘긴 만료 토큰은 거절한다",
+      "detail": {
+        "status": 401
+      }
+    },
+    {
+      "ok": true,
+      "what": "같은 API 에서 지원자 A 의 토큰도 유예를 넘겼다 — 끝없이 받지 않는다",
+      "detail": {
+        "status": 401
+      }
+    },
+    {
+      "ok": true,
+      "what": "발급자 컨테이너를 다시 띄웠다"
+    },
+    {
+      "ok": true,
+      "what": "발급자가 돌아오면 만료 토큰은 다시 401 — 갱신하라는 뜻",
+      "detail": {
+        "afterSec": 24
+      }
+    },
+    {
+      "ok": true,
+      "what": "갱신 토큰으로 새 토큰을 받아 이어 간다 — 다시 로그인하지 않는다",
+      "detail": {
+        "status": 200
+      }
+    }
+  ]
+}

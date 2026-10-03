@@ -17,13 +17,13 @@
 | M0 기반 | 7/8 | 제출문서 정정(T-M0-08)만 남음 |
 | M1 접수 Core | **14/14** | ✅ |
 | M2 결제·Finalize·화면 | **24/24** | ✅ Demo Gate 1~5 통과 |
-| M3 운영 안전장치 | **13/15** (+🟡 2) | ✅ **종료 2026-09-27** — 🟡 T-M3-03 WORM·T-M3-06 JWKS 는 M5 |
+| M3 운영 안전장치 | **14/15** (+🟡 1) | ✅ **종료 2026-09-27** — 🟡 T-M3-03 WORM 은 M5. T-M3-06 JWKS 캐시 ✅(2026-10-03, 발급자 정지 실증·단절 유예 D-67) |
 | **M4 분산 실증** | **20/28** | ◀ 진행 중 — 차트·kind·Flux Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표·Peak Mode·계측·로그 마스킹·KPI 대시보드·NAT Adaptive Throttling·Redis 장애·중앙 2시간 단절·PG 지연 ✅, 노드 장애 🟡 |
 | M5 신뢰성·보안·접근성 | **24/42** | ◀ **보안 파이프라인 T-M5-20~29 ✅(2026-10-02)** — Git 전체 이력 비밀 0·CodeQL Critical 0·운영 의존성 Critical 0·SPDX SBOM·이미지 5종 Critical 0·IaC 19개 High/Critical 0·실 DB 보안 시험 123개 건너뜀 0·ZAP DAST High 0·운영 이미지 5종 OIDC 키리스 서명·미서명 이미지 admission 거부 원격 통과 · **접근성 T-M5-40~46 ✅·47 🟡(2026-10-01)** — 키보드 완주·전 화면 포커스·스크린리더 재료·200%·320px·세션 만료 경고·CAPTCHA 대체 경로, Chrome·Edge·휴대전화 흉내([09](09-accessibility.md)) · 화면 제품화 T-M5-50~56 추가 · **T-M5-53 개발 입력 가두기 ✅ · T-M5-50 설계 설명·문서 번호 걷어내기 ✅ · T-M5-51 내부 코드 대신 사람 말(계약 1.5.0) ✅ · T-M5-52 오류·검증 문구 ✅ · T-M5-54 표기 통일 ✅ · T-M5-55 상태·기본 화면 ✅ · T-M5-56 흐름·와이어프레임·27장 다시 찍기 ✅ — 화면 제품화 끝** (2026-10-01) |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 102/146 태스크** (✅ 만 센다. 🟡 4 — T-M3-03·T-M3-06·T-M4-39·T-M5-47). **486개 테스트**
-(admission-api 358 · server-kit 72 · central-api 36 · event-relay 7 · document-service 8 · krds 5, 2026-10-03). DB 포함(CI 재현 DB) 실패 0.
+**총 103/146 태스크** (✅ 만 센다. 🟡 3 — T-M3-03·T-M4-39·T-M5-47). **493개 테스트**
+(admission-api 358 · server-kit 79 · central-api 36 · event-relay 7 · document-service 8 · krds 5, 2026-10-03). DB 포함(CI 재현 DB) 실패 0.
 DB 포함 실행(CI 재현 DB)은 admission-api 3 skip(`ADMIN_API_TOKEN` 미설정) 외 전부 pass.
 배포 스크립트 시험 별도: Peak Mode 예약 계산 9건(`npm run test:m4:peak-schedule`), 대시보드·KPI 규칙 일관성(`npm run test:m4:observability`).
 DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`)·로그 우회 금지 검사(`scripts/check-logging.mjs`)·차트 lint·runtime 첨부 드리프트 검사(`scripts/render-runtime-attachment.mjs --check`)·**계약 검사(`scripts/check-contracts.mjs`)**·**화면 문구 검사(`scripts/check-ui-copy.mjs`, T-M5-50)** CI 포함. **보안 워크플로 T-M5-20~23 ✅**: Git 전체 이력 Gitleaks·CodeQL SAST·운영 의존성 Critical 0·SPDX SBOM이 로컬과 원격에서 통과(2026-10-02, Actions run 36887597976).
@@ -62,7 +62,7 @@ CI 와 같은 순서를 로컬 빈 PostgreSQL 컨테이너로 재현하면 CI �
 | T-M3-05 Exception Queue | ✅ | 불일치만 큐로, 보정은 사유·before/after 와 함께 |
 | T-M3-07 Evidence Package | ✅ | 한 원서의 접수 과정 재구성 + 체인 검증. **D-62 수정(2026-10-01)** — 원서 체인이 시각 역전·동시 기록에서 멀쩡한 기록을 "끊김"으로 판정하던 결함. 원서 행 잠금·시각 단조·연결을 따라가는 검증 |
 | T-M3-08 Dependency Circuit Breaker | ✅ | 중앙·PG·AV 보고 경로 차단. **PG 는 끊겨도 UNKNOWN** · 중앙 장애가 이벤트를 DEAD 로 만들지 않음 |
-| T-M3-06 Autonomous Mode | 🟡 | Health Gate · 자율 운영 배너 · Sync Lag 경보 · 서명된 Policy Snapshot. **JWKS 캐시만 T-M5-02 로** (D-34) |
+| T-M3-06 Autonomous Mode | ✅ | Health Gate · 자율 운영 배너 · Sync Lag 경보 · 서명된 Policy Snapshot. JWKS 캐시는 T-M5-02 단계 7 로 끝(2026-10-03, 발급자 정지 실증·단절 유예 D-67) |
 | T-M3-15 서명된 활성화 기록 | ✅ | 마감·설정의 모든 적용을 Ed25519 로 서명, **추가만 가능한 기록** + 운영자 감사 체인. 공개키로 대학 밖에서 검증 |
 | T-M3-09 Purpose-scoped Token | ✅ | 중앙 지원자 참조를 **목적 키 HMAC** 로 — Vault 접근만으로는 조인 불가, 키 교체 지원. 대학 내부 UUID 유출·URL 토큰 제거 |
 | T-M3-10 Retention Matrix | ✅ | 데이터 종류별 하한 — **법정 기간을 지어내지 않는다**. 근거 있는 2년만 박고 나머지는 대학이 명시. 설정 승인 절차를 탄다 |
@@ -136,13 +136,13 @@ T-M5-40~46 ✅·47 🟡 — **[09-accessibility.md](09-accessibility.md)**. 설�
 
 ## 완성까지 남은 단계 (2026-10-01 전수 점검)
 
-**146개 중 102개 완료, 44개 남음**(2026-10-02 보안 파이프라인 T-M5-20~29 완료. 🟡 부분 완료 4개 — T-M3-03·T-M3-06·T-M4-39·T-M5-47 — 는 남은 쪽에 센다).
+**146개 중 103개 완료, 43개 남음**(2026-10-03 T-M3-06 JWKS 캐시 완료. 🟡 부분 완료 3개 — T-M3-03·T-M4-39·T-M5-47 — 는 남은 쪽에 센다).
 코드에 TODO·FIXME 는 없다. 남은 일은 태스크 표와 아래 목록에 전부 있다. 흉내 구현(헤더 인증·관리자 공유 토큰·Mock PG·Mock 검사 엔진)은
 운영 모드에서 기동이 막혀 있다 — 그 넷을 실물로 바꾸는 것이 "제품" 과 "시연" 의 차이다.
 
 | 누가 할 수 있나 | 개수 | 태스크 |
 |---|---|---|
-| **A. AI 가 이 PC 에서 끝낼 수 있다** (코드·CI·kind) | **23** | ~~화면 제품화 T-M5-50~56~~ ✅ · ~~접근성 T-M5-40~46~~ ✅([09](09-accessibility.md))(개발 흔적 걷어내기·사람 말·오류 문구·개발 입력 가두기·표기·상태·와이어프레임 정합 — [08](08-ui-production-readiness.md)) · T-M3-03(WORM — MinIO Object Lock 으로), T-M3-06(JWKS 캐시 — 로컬 OIDC 와 함께) · T-M4-10(Outbox 파티션·보관) · T-M5-01~10 보안 통제(인증 T-M5-02·MFA T-M5-10 은 로컬 OIDC 발급자로 먼저) · ~~T-M5-20~29 보안 파이프라인(비밀·SAST·SCA·SBOM·이미지·IaC 스캔·보안 시험·DAST·서명·admission controller)~~ ✅([11](11-security-pipeline.md)) · T-M5-62·63·65(복구 검증 자동화·Writer fencing·만료 경보) · T-M6-01·02·03·06·07·11·14(온보딩 도구·호환 시험·CSP 사전 점검·상태 페이지·최소 정보 지원 화면·처리 흐름도·온보딩 문서) |
+| **A. AI 가 이 PC 에서 끝낼 수 있다** (코드·CI·kind) | **22** | ~~화면 제품화 T-M5-50~56~~ ✅ · ~~접근성 T-M5-40~46~~ ✅([09](09-accessibility.md))(개발 흔적 걷어내기·사람 말·오류 문구·개발 입력 가두기·표기·상태·와이어프레임 정합 — [08](08-ui-production-readiness.md)) · T-M3-03(WORM — MinIO Object Lock 으로), ~~T-M3-06(JWKS 캐시)~~ ✅ · T-M4-10(Outbox 파티션·보관) · T-M5-01~10 보안 통제(인증 T-M5-02·MFA T-M5-10 은 로컬 OIDC 발급자로 먼저) · ~~T-M5-20~29 보안 파이프라인(비밀·SAST·SCA·SBOM·이미지·IaC 스캔·보안 시험·DAST·서명·admission controller)~~ ✅([11](11-security-pipeline.md)) · T-M5-62·63·65(복구 검증 자동화·Writer fencing·만료 경보) · T-M6-01·02·03·06·07·11·14(온보딩 도구·호환 시험·CSP 사전 점검·상태 페이지·최소 정보 지원 화면·처리 흐름도·온보딩 문서) |
 | **B. 외부 환경이 있어야 한다** (K-PaaS·HA DB·PG 계약) | **12** | T-M4-06(DB HA 계층) · T-M4-30·31·32(부하 500·1,500·3,000 VU) · T-M4-36(부하 중 DB Failover) · T-M4-39 판정(Edge 재시도) · T-M4-41(6시간 Soak) · T-M5-60·61·64(Multi-AZ·PITR·DR 훈련) · T-M6-04·05(실 PG sandbox·정산 실계정) |
 | **C. 사람·기관이 해야 한다** | **9** | T-M0-08(제출 PDF 정정 — 문구 준비됨) · T-M5-47 나머지(실물 Firefox·Safari — 또는 시험용 브라우저 내려받기 승인) · T-M5-48(KWCAG 수동 검사 — 실제 스크린리더) · T-M6-08·09(런북·운영 캘린더 확정) · T-M6-10(War-room 훈련) · T-M6-12(영향평가) · T-M6-13(Compliance 실증) · T-M6-15(대학 Shadow Test) |
 
@@ -163,7 +163,7 @@ T-M5-40~46 ✅·47 🟡 — **[09-accessibility.md](09-accessibility.md)**. 설�
 0. ~~**D-62 증적 감사 체인**~~ — ✅ 2026-10-01 수정(재현 시험 3개)
 1. ~~**화면 제품화 T-M5-50~56**~~ ✅ + ~~접근성 T-M5-40~46~~ ✅·47 🟡 — **둘 다 끝(2026-10-01)**. 접근성 시험은 `tests/a11y/`, 결과·결정은 [09](09-accessibility.md). 47 의 실물 Firefox·Safari 는 C(사람)
 2. ~~**보안 파이프라인 T-M5-20~29**~~ ✅ **끝(2026-10-02)** — Gitleaks·CodeQL·운영 의존성 SCA·SPDX SBOM·이미지·IaC 검사·실 DB 보안 시험·ZAP DAST·운영 이미지 5종 키리스 서명(run 36903506905)·미서명 이미지 admission 거부(run 36906282615) 로컬·원격 통과([11](11-security-pipeline.md)). 운영 서명키·실 클러스터 적용만 운영 쪽
-3. 인증 — **진행 중(2026-10-03, [12](12-authentication-plan.md))**: 단계 1·2 ✅ 로컬 Keycloak(`--profile auth`, :18080)·`server-kit` 토큰 검증기·JWKS 캐시(`test:auth:issuer` 24·`test:auth:verifier` 11). **단계 3 ✅ 대학 API `AUTH_MODE=oidc`**(지원자 등록·운영 API 역할/MFA/재인증·2인 승인 신원, `test:auth:api` 19). **단계 4 ✅ 중앙 API**(같은 지원자 토큰·sub — `test:auth:central` 9). **단계 5 ✅ 운영 콘솔 관리자 로그인**(BFF·봉인 쿠키·재인증 안내, `test:auth:console` 21, 계약 1.7.0 D-65, CORS 결함 D-66 수정). **단계 6 ✅ 지원자 화면 본인확인**(PKCE·세션 만료 연결·위험 차단 본인확인 해제, 접근성 `applicant-oidc`). 다음은 단계 7 JWKS 캐시 실증·단계 8 K8s 역할. 로컬 OIDC 발급자(Keycloak 26.8.0)로 `AUTH_MODE=gateway`·RBAC 6역할·관리자 MFA·JWKS 캐시(T-M5-02·10, T-M3-06)
+3. 인증 — **진행 중(2026-10-03, [12](12-authentication-plan.md))**: 단계 1·2 ✅ 로컬 Keycloak(`--profile auth`, :18080)·`server-kit` 토큰 검증기·JWKS 캐시(`test:auth:issuer` 24·`test:auth:verifier` 11). **단계 3 ✅ 대학 API `AUTH_MODE=oidc`**(지원자 등록·운영 API 역할/MFA/재인증·2인 승인 신원, `test:auth:api` 19). **단계 4 ✅ 중앙 API**(같은 지원자 토큰·sub — `test:auth:central` 9). **단계 5 ✅ 운영 콘솔 관리자 로그인**(BFF·봉인 쿠키·재인증 안내, `test:auth:console` 21, 계약 1.7.0 D-65, CORS 결함 D-66 수정). **단계 6 ✅ 지원자 화면 본인확인**(PKCE·세션 만료 연결·위험 차단 본인확인 해제, 접근성 `applicant-oidc`). **단계 7 ✅ 발급자 정지 실증**(정지 중 접수·재기동·토큰 만료 뒤 단절 유예 D-67, `test:auth:offline` 15 — T-M3-06 끝). 다음은 단계 8 K8s 역할. 로컬 OIDC 발급자(Keycloak 26.8.0)로 `AUTH_MODE=gateway`·RBAC 6역할·관리자 MFA·JWKS 캐시(T-M5-02·10, T-M3-06)
 4. 보안 통제 T-M5-01·03~09 — 필드 암호화·SSRF 출구 허용 목록·실 clamd·Vault 경로 분리·mTLS
 5. T-M4-10 Outbox 파티션·보관 — DDL 변경이라 노션 §02 첨부 교체가 따른다
 6. 운영 자동화 T-M5-62·63·65·T-M3-03 — 복구 검증·Writer fencing·만료 경보·WORM
@@ -306,7 +306,7 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 
 G1 에서 한 것은 [05 문서 ② G1](05-m3-exit-m4-readiness.md).
 
-**M3 태스크 15개 중 14개가 끝났다.** 남은 T-M3-06 은 JWKS 캐시 하나이고 T-M5-02 와 함께 한다.
+**M3 태스크 15개 중 14개가 끝났다.** 남았던 T-M3-06 JWKS 캐시는 2026-10-03 T-M5-02 단계 7 로 끝났다(아래).
 
 - **노션 §01 을 다시 읽고 C 8종을 대조**한다. C4 **Admission Peak Mode** 는 M3 태스크에 없다 —
   M4(부하 시험)에서 할지 여기서 할지 정해야 한다
@@ -322,11 +322,11 @@ T-M3-10 은 **틀을 만들었고 숫자는 비어 있다.** 설계서가 숫자
 하한을 두지 않고 **대학이 반드시 명시**하게 했다. 개인정보 담당이 법정·기관 하한을 정해 주면
 `packages/contracts/src/retention.ts` 의 해당 항목을 `LEGAL` 로 바꾸기만 하면 된다.
 
-### 🟡 T-M3-06 에 남은 것
+### ✅ T-M3-06 — 남았던 것의 처리
 
 | 항목 | 언제 | 이유 |
 |---|---|---|
-| Local JWKS Cache | **T-M5-02 와 함께** | 검증할 토큰 형식·발급자가 아직 없다. 지금 만들면 추측으로 짓는 코드다 |
+| Local JWKS Cache | ✅ **2026-10-03** (T-M5-02 단계 7) | 발급자 컨테이너를 멈춘 채 저장·결제 확인·접수, 정지 중 API 재기동(스냅숏), 액세스 토큰 만료 뒤에는 단절 유예(D-67) — `test:auth:offline` |
 | Outbox 장기 적체 용량 | M4 (§B7) | 파티션·SENT 아카이브는 DDL 변경. 적체 **경보**는 붙였다 |
 | 2시간(§E)·24시간(§A1) 단절 시험 | M4 장애 시험 | 기능은 Demo Gate 5 로 확인됐다. 시간을 버티는지는 부하·장애 시험의 일 |
 

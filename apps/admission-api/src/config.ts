@@ -143,6 +143,9 @@ if (AUTH_MODE === 'dev-headers') {
  *   stepUpMaxAgeSec — 민감 동작(승인·활성화·증적 열람 등)은 이 시간 안에 직접 인증했어야 한다
  *   jwksSnapshotDir — 발급자 공개키를 남길 폴더. 발급자 장애 중에 Pod 가 다시 떠도 검증이 이어진다(T-M3-06)
  *   jwksMaxStaleMs — 발급자에서 키를 못 받은 채 이 시간이 지나면 검증을 멈춘다(닫힌 실패)
+ *   applicantOutageGraceMs — 발급자가 끊긴 동안 **지원자** 토큰이 만료돼도 이 시간까지 받는다(D-67). 단절 전에 끝난 토큰,
+ *                     발급자가 살아 있을 때의 만료 토큰은 받지 않는다. 담당자 토큰에는 두지 않는다 — 운영 동작은 기다려도 된다.
+ *                     기본 2시간 = 중앙 단절 인수기준(§01 A1). 0 이면 끈다
  */
 export const OIDC =
   AUTH_MODE === 'oidc'
@@ -154,6 +157,7 @@ export const OIDC =
         stepUpMaxAgeSec: envInt('OIDC_STEP_UP_MAX_AGE_SEC', 300, { min: 30, max: 3600 }),
         jwksSnapshotDir: process.env.OIDC_JWKS_SNAPSHOT_DIR || null,
         jwksMaxStaleMs: envInt('OIDC_JWKS_MAX_STALE_MS', 24 * 60 * 60_000, { min: 60_000, max: 7 * 24 * 60 * 60_000 }),
+        applicantOutageGraceMs: envInt('OIDC_APPLICANT_OUTAGE_GRACE_MS', 2 * 60 * 60_000, { min: 0, max: 12 * 60 * 60_000 }),
       }
     : null;
 

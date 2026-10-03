@@ -51,6 +51,8 @@ export interface JwksCacheStatus {
   expired: boolean;
   lastError: string | null;
   refreshes: number;
+  /** 마지막으로 발급자에 닿아 보려 한 결과 — 단절 유예(OidcVerifier `outageGraceMs`)가 본다 */
+  issuerReachable: boolean | null;
 }
 
 interface Snapshot {
@@ -90,6 +92,8 @@ export class JwksCache {
   private inFlight: Promise<boolean> | null = null;
   private started: Promise<void> | null = null;
   private refreshes = 0;
+  private lastAttemptAt = Number.NEGATIVE_INFINITY;
+  private lastAttemptOk: boolean | null = null;
 
   constructor(private readonly o: JwksCacheOptions) {
     this.fetchFn = o.fetch ?? fetch;
@@ -142,7 +146,18 @@ export class JwksCache {
       expired: this.isExpired(),
       lastError: this.lastError,
       refreshes: this.refreshes,
+      issuerReachable: this.lastAttemptOk,
     };
+  }
+
+  /**
+   * 발급자가 지금 닿는가 — 키를 다시 받아 본다. 쿨다운(`unknownKidCooldownMs`) 안이면 직전 결과를 쓴다.
+   * 만료 토큰을 단절 유예로 받을지 정할 때만 부른다 — 만료 토큰을 쏟아부어도 발급자를 쿨다운에 한 번만 두드린다
+   */
+  async issuerReachable(): Promise<boolean> {
+    await this.ensureStarted();
+    if (this.lastAttemptOk !== null && this.now() - this.lastAttemptAt < this.unknownKidCooldownMs) return this.lastAttemptOk;
+    return this.refresh();
   }
 
   private isExpired(): boolean {
@@ -159,6 +174,7 @@ export class JwksCache {
 
   private async doRefresh(): Promise<boolean> {
     this.refreshes += 1;
+    this.lastAttemptAt = this.now();
     try {
       const jwksUri = this.jwksUri ?? (await this.discover());
       const keys = publicSigningKeys(await this.getJson(jwksUri));
@@ -168,10 +184,12 @@ export class JwksCache {
       this.fetchedAt = this.now();
       this.source = 'issuer';
       this.lastError = null;
+      this.lastAttemptOk = true;
       this.saveSnapshot({ issuer: this.o.issuer, jwksUri, fetchedAt: this.fetchedAt, keys });
       return true;
     } catch (err) {
       this.lastError = err instanceof Error ? err.message : String(err);
+      this.lastAttemptOk = false;
       return false;
     }
   }

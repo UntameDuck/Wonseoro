@@ -10,7 +10,7 @@ const AUDIENCE = 'wonseoro-admission-api';
 type PrivateKey = Awaited<ReturnType<typeof generateKeyPair>>['privateKey'];
 
 /** 손으로 돌리는 시계와, 켜고 끌 수 있는 가짜 발급자 */
-async function harness(o: { snapshotFile?: string; maxStaleMs?: number } = {}) {
+async function harness(o: { snapshotFile?: string; maxStaleMs?: number; outageGraceMs?: number } = {}) {
   let t = Date.UTC(2026, 9, 2, 12, 0, 0);
   const keyPairs = new Map<string, { privateKey: PrivateKey; jwk: JWK }>();
   const addKey = async (kid: string) => {
@@ -41,6 +41,7 @@ async function harness(o: { snapshotFile?: string; maxStaleMs?: number } = {}) {
     unknownKidCooldownMs: 30_000,
     maxStaleMs: o.maxStaleMs ?? 24 * 60 * 60_000,
     snapshotFile: o.snapshotFile,
+    ...(o.outageGraceMs !== undefined ? { outageGraceMs: o.outageGraceMs } : {}),
   });
 
   const sign = (claims: Record<string, unknown> = {}, opt: { kid?: string; iss?: string; aud?: string | string[]; expSec?: number; alg?: string } = {}) => {
@@ -247,5 +248,83 @@ describe('JWKS 캐시 — 발급자가 끊겨도 (T-M3-06)', () => {
     });
     await assert.rejects(v.verify('eyJhbGciOiJSUzI1NiIsImtpZCI6ImxlYWsifQ.e30.c2ln'), OidcUnavailableError);
     assert.equal(v.status().keyCount, 0);
+  });
+});
+
+describe('발급자 단절 유예 — 만료 토큰 (D-67)', () => {
+  const GRACE = 2 * 60 * 60_000;
+
+  it('발급자가 끊긴 동안 만료된 토큰은 유예 안에서 받는다 — 단절 중 작성이 이어진다', async () => {
+    const h = await harness({ outageGraceMs: GRACE });
+    const token = await h.sign();
+    await h.verifier.verify(token);
+    h.setUp(false);
+    h.advance(90 * 60_000); // 만료 85분 뒤
+    const v = await h.verifier.verify(token);
+    assert.equal(v.subject, 'staff-admin-a');
+    assert.equal(v.outageGrace, true);
+    assert.equal(h.verifier.status().issuerReachable, false);
+  });
+
+  it('발급자가 살아 있으면 만료 토큰은 그대로 401 — 갱신하면 된다', async () => {
+    const h = await harness({ outageGraceMs: GRACE });
+    const token = await h.sign();
+    await h.verifier.verify(token);
+    h.advance(10 * 60_000);
+    await rejects(h.verifier.verify(token), 'expired');
+    assert.equal(h.verifier.status().issuerReachable, true);
+  });
+
+  it('유예를 넘기면 받지 않는다', async () => {
+    const h = await harness({ outageGraceMs: GRACE });
+    const token = await h.sign();
+    await h.verifier.verify(token);
+    h.setUp(false);
+    h.advance(300_000 + GRACE + 1);
+    await rejects(h.verifier.verify(token), 'expired');
+  });
+
+  it('단절 전에 이미 끝난 토큰은 발급자가 끊겨도 쓸 수 없다 — 훔친 옛 토큰', async () => {
+    const h = await harness({ outageGraceMs: GRACE });
+    const stolen = await h.sign(); // 5분 뒤 만료
+    await h.verifier.verify(stolen);
+    h.advance(20 * 60_000);
+    await h.verifier.verify(await h.sign()); // 키가 오래돼 뒤에서 다시 받는다 — 발급자에 마지막으로 닿은 시각
+    await new Promise((r) => setImmediate(r));
+    h.setUp(false);
+    h.advance(60_000);
+    await rejects(h.verifier.verify(stolen), 'expired');
+  });
+
+  it('유예 중에도 서명·대상은 그대로 검사한다', async () => {
+    const h = await harness({ outageGraceMs: GRACE });
+    const token = await h.sign();
+    const otherAud = await h.sign({}, { aud: 'other-api' });
+    await h.verifier.verify(token);
+    h.setUp(false);
+    h.advance(10 * 60_000);
+    const [head, body] = token.split('.');
+    await rejects(h.verifier.verify(`${head}.${body}.${Buffer.from('forged').toString('base64url')}`), 'invalid-signature');
+    await rejects(h.verifier.verify(otherAud), 'invalid-claims');
+  });
+
+  it('유예를 켜지 않으면(기본) 단절 중에도 만료 토큰을 받지 않는다', async () => {
+    const h = await harness();
+    const token = await h.sign();
+    await h.verifier.verify(token);
+    h.setUp(false);
+    h.advance(10 * 60_000);
+    await rejects(h.verifier.verify(token), 'expired');
+  });
+
+  it('만료 토큰을 쏟아부어도 발급자 확인은 쿨다운에 한 번이다', async () => {
+    const h = await harness({ outageGraceMs: GRACE });
+    const token = await h.sign();
+    await h.verifier.verify(token);
+    h.advance(10 * 60_000);
+    const before = h.verifier.status().refreshes;
+    await Promise.all(Array.from({ length: 50 }, () => h.verifier.verify(token).catch(() => null)));
+    // 키가 오래돼 뒤에서 다시 받는 것 1번 + 발급자 확인은 그 결과를 같이 쓴다
+    assert.ok(h.verifier.status().refreshes - before <= 2, `${h.verifier.status().refreshes - before}번`);
   });
 });

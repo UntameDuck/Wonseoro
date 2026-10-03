@@ -33,7 +33,7 @@
 |---|---|---|
 | C1 | Deadline Policy Engine | ✅ T-M3-01 · 연장 T-M3-14 |
 | C2 | Reconciliation Center | ✅ 대조·예외 큐 + **1시간 자동 실행** (G1, 2026-09-27) |
-| C3 | Autonomous Mode | 🟡 T-M3-06 — JWKS 캐시만 T-M5-02 |
+| C3 | Autonomous Mode | ✅ T-M3-06 — JWKS 캐시는 T-M5-02 단계 7 로 마무리(2026-10-03, D-67) |
 | C4 | Admission Peak Mode | ⏭ **T-M4-07** 로 이미 잡혀 있다 |
 | C5 | Configuration Governance | ✅ T-M3-02 · 서명 T-M3-15 |
 | C6 | Evidence Package | ✅ T-M3-07 · 콘솔 |

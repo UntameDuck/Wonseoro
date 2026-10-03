@@ -109,7 +109,7 @@ export class ApplicantDirectory {
 
 const meter = metrics.getMeter('k-admission.auth');
 const decisions = meter.createCounter('auth_decisions', {
-  description: '토큰 검증 판정 수 (audience=applicant|staff, result=ok|missing|invalid|unavailable)',
+  description: '토큰 검증 판정 수 (audience=applicant|staff, result=ok|grace|missing|invalid|unavailable). grace = 발급자 단절 중 만료 토큰을 유예로 받음(D-67)',
 });
 const jwksAge = meter.createObservableGauge('oidc_jwks_age_seconds', {
   description: '발급자 공개키를 마지막으로 받은 뒤 지난 시간(realm=applicant|staff). 커지면 발급자와 끊긴 것이다(T-M3-06)',
@@ -120,12 +120,18 @@ export class OidcAuthenticator {
   private readonly logger = new Logger('auth');
   readonly applicant: OidcVerifier;
   readonly staff: OidcVerifier;
+  private lastGraceLog = 0;
 
   constructor(private readonly applicants: ApplicantDirectory) {
     if (!OIDC) throw new Error('AUTH_MODE=oidc 가 아닌데 OIDC 인증기를 만들었다');
     const snapshot = (name: string) => (OIDC!.jwksSnapshotDir ? join(OIDC!.jwksSnapshotDir, `jwks-${name}.json`) : undefined);
     const common = { audience: OIDC.audience, maxStaleMs: OIDC.jwksMaxStaleMs };
-    this.applicant = new OidcVerifier({ ...common, issuer: OIDC.applicantIssuer, snapshotFile: snapshot('applicant') });
+    this.applicant = new OidcVerifier({
+      ...common,
+      issuer: OIDC.applicantIssuer,
+      snapshotFile: snapshot('applicant'),
+      outageGraceMs: OIDC.applicantOutageGraceMs,
+    });
     this.staff = new OidcVerifier({ ...common, issuer: OIDC.staffIssuer, snapshotFile: snapshot('staff') });
     jwksAge.addCallback((r) => {
       for (const [realm, v] of [['applicant', this.applicant], ['staff', this.staff]] as const) {
@@ -143,7 +149,12 @@ export class OidcAuthenticator {
       const token = OidcVerifier.bearer(request.headers.authorization);
       const verified = await (audience === 'staff' ? this.staff : this.applicant).verify(token);
       const identity = audience === 'staff' ? staffOf(verified) : await this.applicantOf(verified);
-      decisions.add(1, { audience, result: 'ok' });
+      decisions.add(1, { audience, result: verified.outageGrace ? 'grace' : 'ok' });
+      if (verified.outageGrace && Date.now() - this.lastGraceLog > 60_000) {
+        // 단절 중에는 요청마다 온다 — 1분에 한 줄만
+        this.lastGraceLog = Date.now();
+        this.logger.warn(`발급자에 닿지 않아 만료된 ${audience} 토큰을 단절 유예로 받는 중 (D-67)`);
+      }
       return identity;
     } catch (err) {
       if (err instanceof OidcUnavailableError) {

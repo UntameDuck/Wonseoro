@@ -171,12 +171,15 @@ export async function completeLogin(params: URLSearchParams): Promise<string> {
 }
 
 let refreshing: Promise<Tokens | null> | null = null;
+/** 발급자에 닿지 않았던 때 — 30초 동안은 요청마다 다시 두드리지 않는다 */
+let unreachableUntil = 0;
 
 /** 갱신 토큰으로 새 토큰을 받는다 — 발급자의 무활동 시간도 뒤로 민다. 안 되면 null(로그인이 끝났다) */
 export function refresh(): Promise<Tokens | null> {
   refreshing ??= (async () => {
     const cur = read<Tokens>(TOKENS_KEY);
     if (!cur?.refreshToken) return null;
+    if (Date.now() < unreachableUntil) return cur;
     try {
       const m = await meta();
       const res = await fetch(m.token_endpoint, {
@@ -191,7 +194,9 @@ export function refresh(): Promise<Tokens | null> {
       // 갱신은 사람이 다시 인증한 것이 아니다 — 인증 시각은 처음(또는 다시 본인확인한) 때의 것
       return store((await res.json()) as { access_token: string; refresh_token?: string; expires_in?: number }, cur.authTime);
     } catch {
-      return cur; // 발급자에 닿지 못했다 — 쓰던 토큰으로 계속(만료 전이면 API 가 받는다)
+      // 발급자에 닿지 못했다 — 쓰던 토큰으로 계속. 만료 뒤에도 대학 API 가 단절 유예로 받는다(D-67)
+      unreachableUntil = Date.now() + 30_000;
+      return cur;
     }
   })().finally(() => {
     refreshing = null;
@@ -205,7 +210,9 @@ export async function accessToken(): Promise<string | null> {
   if (!cur) return null;
   if (cur.expiresAt - Date.now() > 30_000) return cur.accessToken;
   const next = await refresh();
-  return next && next.expiresAt > Date.now() ? next.accessToken : null;
+  if (!next) return null;
+  // 갱신이 안 됐는데(발급자 단절) 토큰이 그대로면 만료됐어도 보낸다 — 받을지는 대학 API 가 정한다(단절 유예, D-67)
+  return next.expiresAt > Date.now() || next.accessToken === cur.accessToken ? next.accessToken : null;
 }
 
 export function signedIn(): boolean {

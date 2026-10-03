@@ -33,6 +33,7 @@ export function createApplicantVerifier(): OidcVerifier {
     audience: OIDC.audience,
     maxStaleMs: OIDC.jwksMaxStaleMs,
     snapshotFile: OIDC.jwksSnapshotDir ? join(OIDC.jwksSnapshotDir, 'jwks-applicant.json') : undefined,
+    outageGraceMs: OIDC.applicantOutageGraceMs,
   });
 }
 
@@ -48,12 +49,17 @@ function traceIdOf(request: FastifyRequest): string {
 /** 요청마다 가장 먼저 — 토큰을 검증해 `request.applicantSubject` 에 붙인다. 오류는 problem+json 으로 직접 쓴다 */
 export function installOidcAuthentication(fastify: FastifyInstance, verifier: OidcVerifier): void {
   const logger = new Logger('auth');
+  let lastGraceLog = 0;
   fastify.decorateRequest('applicantSubject', undefined);
   fastify.addHook('onRequest', async (request, reply) => {
     if (!needsApplicantToken(request.method, request.routeOptions?.url)) return;
     try {
       const verified = await verifier.verify(OidcVerifier.bearer(request.headers.authorization));
       request.applicantSubject = verified.subject;
+      if (verified.outageGrace && Date.now() - lastGraceLog > 60_000) {
+        lastGraceLog = Date.now();
+        logger.warn('발급자에 닿지 않아 만료된 지원자 토큰을 단절 유예로 받는 중 (D-67)');
+      }
     } catch (err) {
       let status: number;
       let code: string;

@@ -24,7 +24,8 @@
 | 구분 | 태스크 |
 |---|---|
 | ✅ 완료 | T-M3-01 Deadline Policy · T-M3-02 Config Governance · T-M3-04 Reconciliation · T-M3-05 Exception Queue · T-M3-07 Evidence Package · T-M3-08 Circuit Breaker · T-M3-15 서명된 활성화 기록 · T-M3-10 Retention Matrix · T-M3-09 Purpose-scoped Token · **T-M3-11~14 관리자 콘솔** |
-| 🟡 부분 | T-M3-03 hash-chain (물리 분리는 M5) · T-M3-06 Autonomous Mode (JWKS 캐시는 T-M5-02) |
+| 🟡 부분 | T-M3-03 hash-chain (물리 분리는 M5) |
+| ✅ M5 에서 마무리 | T-M3-06 Autonomous Mode — JWKS 캐시 발급자 정지 실증·단절 유예 (T-M5-02 단계 7, D-67, 2026-10-03) |
 | ✅ 종료 전 보강 | **G1 결제 자동 정합화 (D-40)** — PG 콜백 · 재확인 워커 · 대조 스케줄 (2026-09-27) |
 | ✅ 종료 전 보강 | **G2 감사 삭제 불가 (D-41)** — 앱 최소권한 역할 · 추가 전용 트리거 · `db:verify` 15~18 (2026-09-27) |
 | ✅ 노션 | 본문 1차 반영 (2026-09-27) — §01·§06·§09·v1.0, §02·§03 본문. 대장 13건 종결 |
@@ -239,7 +240,7 @@ relay 는 실패마다 재시도 횟수를 올려 10회에 DEAD 로 보냈고, B
 PG 쪽은 `payment-circuit.integration.test.ts` — 끊기면 UNKNOWN 과 원인(`ECONNREFUSED`/`CIRCUIT_OPEN`)이
 `payment_event` 와 감사에 남고, 열린 뒤에는 PG 호출 0, 복구되면 같은 결제가 CONFIRMED 로 확정된다.
 
-### Autonomous Mode — 무엇을 지금 하고 무엇을 미뤘나 (T-M3-06 🟡)
+### Autonomous Mode — 무엇을 지금 하고 무엇을 미뤘나 (T-M3-06 ✅ 2026-10-03)
 
 Demo Gate 5 에서 **중앙을 내린 채 생성→저장→결제→제출이 이미 통과**했다. 접수 경로는 원래
 중앙을 거치지 않는다. 그래서 이 태스크에서 남은 것은 두 종류였다.
@@ -249,7 +250,7 @@ Demo Gate 5 에서 **중앙을 내린 채 생성→저장→결제→제출이 �
 | Central Dependency Health Gate | ✅ 이번에 | 인증과 무관 |
 | Autonomous 운영 배너 · Sync Lag 표시 | ✅ 이번에 | 화면 어디에도 없었다 |
 | Offline Event Spool | ✅ T-M3-08 | 중앙 장애 중 Outbox 가 DEAD 로 떨어지지 않음 (D-33). 적체 경보 추가 |
-| Local JWKS Cache | 🟡 2026-10-03 | 캐시·검증기 구현(`server-kit` `JwksCache`) — 발급자 정지 중 검증·스냅숏으로 재기동 실증(`test:auth:verifier`). **대학 API 연결 ✅**(oidc 모드, 발급자를 멈춘 채 지원자·담당자 요청 통과 — `oidc-auth.integration.test.ts`). 2시간 단절 접수 실증은 T-M5-02 단계 7 |
+| Local JWKS Cache | ✅ 2026-10-03 | 캐시·검증기(`server-kit` `JwksCache`·`OidcVerifier`), 대학·중앙 API 연결. **발급자 컨테이너를 멈춘 채** 로그인해 둔 지원자가 원서 생성·저장·결제 확인·접수, 정지 중 API 재기동(디스크 스냅숏)도 이어진다. 5분짜리 액세스 토큰이 끝난 뒤에는 **단절 유예**(D-67 — 발급자에 닿지 않는 동안·만료 2시간 안·마지막 접촉 뒤 만료된 지원자 토큰만)로 다른 지원자가 처음부터 접수까지. 담당자 토큰은 유예 없음, 발급자 복구 뒤 만료 토큰 거절·갱신으로 이어 감 — `test:auth:offline` 15개(축소 환경, 409초), 브라우저로도 확인 |
 | 서명된 Local Policy Snapshot | ✅ T-M3-15 | 공개키 + 서명된 활성화 기록으로 대학 밖에서 검증 |
 
 **판단이 바꾸는 것은 안내뿐이다.** AUTONOMOUS 라고 막히는 기능은 없다. 필요한 이유는 사람 쪽이다 —
@@ -507,7 +508,7 @@ M3 종료 체크리스트를 코드로 확인하다 발견했다. 대조(T-M3-04
 | T-M3-03 | Audit hash-chain + 분리 저장소 | 송리안 | §01 A11, v1.0 §9 | hash-chain·변조 검출 ✅ / WORM 물리 분리는 M5 | 🟡 |
 | T-M3-04 | **Reconciliation Center (4-way)** | 송리안 | §01 A4·B18·C2 | Application/Payment/Submission/Central 대조 · 1시간 자동 실행(D-40) | ✅ |
 | T-M3-05 | Exception Queue + 수동 승인 복구 | 송리안 | §01 A4·B16 | 불일치만 큐로, 보정은 Admin Action API로만 | ✅ |
-| T-M3-06 | **Autonomous Mode** | 송리안 | §01 A1·C3 | Local Policy Snapshot·JWKS Cache·Offline Spool | 🟡 |
+| T-M3-06 | **Autonomous Mode** | 송리안 | §01 A1·C3 | Local Policy Snapshot·JWKS Cache·Offline Spool | ✅ |
 | T-M3-07 | **Evidence Package 생성** | 송리안 | §01 A11·C6 | 상태 Timeline·정책·결제증적·config·clock·hash 검증 | ✅ |
 | T-M3-08 | **Dependency Circuit Breaker** | 송리안 | §01 C8 | PG/중앙/문자/메일 장애 전파 차단 (문자·메일은 붙일 때) | ✅ |
 | T-M3-09 | Purpose-scoped Token | 송리안 | §01 A12 | 중앙 토큰으로 원본 재식별 불가, key rotation | ✅ |
@@ -583,4 +584,4 @@ Central ACK         수신
 - [x] 구현하며 바뀐 정책 구조를 노션에 반영 — 2026-09-27: §01·§02·§03·§04·§06·§07·§09·§10·v1.0 본문, **첨부 교체** §02 DDL v1.2 · §03 OpenAPI v1.2.0 · §04 CloudEvents + 중앙 DDL 2종
 - [x] 발견한 불일치를 D-N으로 등록·처리 — D-1 ~ D-42. 남은 것은 제출 PDF 정정(D-2·D-3)과 M4 첨부 배치(D-5)
 
-**M3 종료 (2026-09-27).** 남은 칸은 시간 시험 2건(T-M4-34·35)과 슈퍼유저 break-glass 통제(M5)뿐이고, 둘 다 해당 단계의 인수기준으로 넘겼다. T-M3-03(WORM)·T-M3-06(JWKS)도 같은 이유로 🟡 로 남는다.
+**M3 종료 (2026-09-27).** 남은 칸은 시간 시험 2건(T-M4-34·35)과 슈퍼유저 break-glass 통제(M5)뿐이고, 둘 다 해당 단계의 인수기준으로 넘겼다. T-M3-03(WORM)도 같은 이유로 🟡 로 남는다. T-M3-06(JWKS)은 2026-10-03 T-M5-02 단계 7 로 끝났다.

@@ -55,7 +55,8 @@ if (AUTH_MODE === 'dev-headers') assertNotMockInProduction('지원자 인증', '
 /**
  * OIDC 검증 설정 (AUTH_MODE=oidc 일 때만). 중앙은 지원자 API 뿐이라 지원자 렐름 하나다.
  * 중앙은 지원자 요청의 Critical Path 가 아니지만, 발급자 장애 중에도 "내 원서" 가 열리도록 대학과 같은
- * 공개키 캐시·스냅숏 규칙을 쓴다(T-M3-06).
+ * 공개키 캐시·스냅숏 규칙을 쓴다(T-M3-06). 발급자 단절 유예도 대학과 같다(D-67) — 중앙만 살아 있는 발급자 단절에서
+ * 중앙이 만료 토큰에 401 을 주면 화면이 로그인 끝으로 보고 작성 중인 지원자를 내보낸다.
  */
 export const OIDC =
   AUTH_MODE === 'oidc'
@@ -64,6 +65,7 @@ export const OIDC =
         audience: envOrDev('OIDC_AUDIENCE', 'wonseoro-central-api', '토큰 aud 에 있어야 할 이 API 의 이름'),
         jwksSnapshotDir: process.env.OIDC_JWKS_SNAPSHOT_DIR || null,
         jwksMaxStaleMs: envInt('OIDC_JWKS_MAX_STALE_MS', 24 * 60 * 60_000, { min: 60_000, max: 7 * 24 * 60 * 60_000 }),
+        applicantOutageGraceMs: envInt('OIDC_APPLICANT_OUTAGE_GRACE_MS', 2 * 60 * 60_000, { min: 0, max: 12 * 60 * 60_000 }),
       }
     : null;
 
