@@ -16,7 +16,9 @@ const BUCKET = `audit-worm-it-${Date.now()}`;
 const UNIV = `WORM-${randomUUID().slice(0, 6)}`;
 const client = new S3Client({ region: 'us-east-1', endpoint: ENDPOINT, forcePathStyle: true, credentials: { accessKeyId: 'wonseoro', secretAccessKey: 'wonseoro123' } });
 const store = new S3WormStore(client, BUCKET);
-const ids = [randomUUID(), randomUUID(), randomUUID()];
+const ids: string[] = [randomUUID(), randomUUID(), randomUUID()];
+const applicantId = randomUUID();
+const applicationId = randomUUID();
 let db: Db;
 let available = false;
 
@@ -30,18 +32,29 @@ before(async () => {
     return; // MinIO 없음
   }
   available = true;
+  // 이 시험만의 원서에 붙인다 — 원서 없는 기록(운영자 체인)에 가짜 해시를 넣으면 동시에 도는 체인 검사 시험이 깨진다
+  await db.query(`INSERT INTO applicant (id, subject_token, pii_ciphertext, pii_key_version) VALUES ($1, $2, '\\x00', 'none')`, [applicantId, `subj-worm-${applicantId.slice(0, 8)}`]);
+  await db.query(
+    `INSERT INTO application (id, cycle_id, applicant_id, admission_type_id, department_id, status)
+     VALUES ($1, '11111111-1111-1111-1111-111111111111', $2, '22222222-2222-2222-2222-222222222222', '33333333-3333-3333-3333-333333333333', 'CANCELLED')`,
+    [applicationId, applicantId],
+  );
   for (const [i, id] of ids.entries()) {
     await db.query(
-      `INSERT INTO audit_event (id, actor_type, actor_id, action, result, event_hash, details_redacted, occurred_at)
-       VALUES ($1, 'SYSTEM', 'worm-test', 'WORM_TEST', 'ACCEPTED', $2, '{"n":1}', now() - interval '10 minutes' + make_interval(secs => $3))`,
-      [id, `hash-${i}`, i],
+      `INSERT INTO audit_event (id, application_id, actor_type, actor_id, action, result, event_hash, details_redacted, occurred_at)
+       VALUES ($1, $4, 'SYSTEM', 'worm-test', 'WORM_TEST', 'ACCEPTED', $2, '{"n":1}', now() - interval '10 minutes' + make_interval(secs => $3))`,
+      [id, `hash-${i}`, i, applicationId],
     );
   }
 });
 
 after(async () => {
   if (!available) return;
-  await breakGlass((c) => c.query(`DELETE FROM audit_event WHERE id = ANY($1::uuid[])`, [ids]));
+  await breakGlass(async (c) => {
+    await c.query(`DELETE FROM audit_event WHERE application_id = $1`, [applicationId]);
+    await c.query(`DELETE FROM application WHERE id = $1`, [applicationId]);
+    await c.query(`DELETE FROM applicant WHERE id = $1`, [applicantId]);
+  });
   await db.onApplicationShutdown();
 });
 

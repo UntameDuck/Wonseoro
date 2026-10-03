@@ -343,7 +343,11 @@ BEGIN
    WHERE t.schemaname = 'kadmission'
      -- 파티션 자식(보관 표의 달)은 부모 권한으로 다룬다 — 따로 보지 않는다
      AND NOT EXISTS (SELECT 1 FROM pg_inherits i WHERE i.inhrelid = format('%I.%I', t.schemaname, t.tablename)::regclass)
-     AND CASE WHEN t.tablename = 'outbox_event_archive'
+     AND CASE WHEN t.tablename = 'writer_fence'
+              -- 쓰기 세대(0006) — 앱은 읽지도 바꾸지도 않는다(트리거가 본다)
+              THEN has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'SELECT')
+                   OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'UPDATE')
+              WHEN t.tablename = 'outbox_event_archive'
               -- Outbox 보관(0005) — 앱은 옮겨 넣고 읽기만. 지우는 것은 파티션째(함수)
               THEN NOT (has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'SELECT')
                     AND has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'INSERT'))

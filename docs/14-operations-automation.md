@@ -31,6 +31,15 @@
 - **시험** — 실제 MinIO 3개: 내보내기·이어서 겹치지 않음, 보관 중 지우기·보관 단축 거절(COMPLIANCE), 슈퍼유저가 트리거를 끄고 고친 기록·지운 기록을 찾음. MinIO 가 없으면 건너뛴다(CI 통합 잡에는 MinIO 가 없다)
 - **남은 것** — 대조를 정기 작업·경보로(지금은 함수·시험). 운영 버킷 IaC. 노션(D-75)
 
+### T-M5-63 ✅ (2026-10-03) — Writer fencing·승격 잠금 (D-76)
+
+- **문제** — 옛 Primary 가 쓰기 가능한 채로 돌아오면 주소가 늦게 바뀐 Pod 가 거기에 쓴다(split-brain). 옛 Primary 는 자기가 옛것인지 모른다
+- **마이그레이션 `0006_writer_fence.sql`** — `writer_fence`(세대·require_token), 업무 표 전부의 문장 단위 트리거 `writer_fence_check`(SECURITY DEFINER), 승격 함수 `promote_writer(새 세대, 누가)`(advisory lock·대기 DB 거절·하나씩만)
+- **앱** — `server-kit` Db 가 `WRITER_EPOCH` 를 트랜잭션마다 `SET LOCAL` 로 넘긴다(PgBouncer 트랜잭션 풀링). 트랜잭션 밖 쓰기 문장(INSERT·UPDATE·DELETE·WITH…)도 짧은 트랜잭션으로 감싼다. 거절되면 503 재시도 안내
+- **승격 순서** — `pg_promote()` → 새 Primary 에서 `promote_writer(세대+1)` → `WRITER_EPOCH` 배포. 그 사이 쓰기는 멈춘다(안전한 쪽). 운영은 `require_token` 을 켠다
+- **시험** — 실제 DB 5개(세대 일치 쓰기, 승격 뒤 옛 세대 거절·읽기 그대로, 돌아온 옛 Primary 거절, 승격 잠금·건너뛰기 거절·앱 역할 불가, require_token). require_token 시험은 커밋하지 않는 트랜잭션 안에서만 켠다(동시에 도는 다른 시험이 보지 않게)
+- **남은 것** — 차트 `database.writerEpoch` 값과 DR 런북(T-M6-08), 운영 `require_token` 켜기. 노션(D-76)
+
 ### T-M5-62 ✅ (2026-10-03) — 복구 검증 자동화
 
 - **`scripts/ops/restore-verify.mjs`**(`npm run ops:restore-verify`) — 원본에서 REPEATABLE READ 스냅숏을 내보내 **같은 시점**으로 덤프(`pg_dump --snapshot`)·체크섬을 잡고, 매번 새 PostgreSQL 컨테이너에 복구한 뒤 맞춘다

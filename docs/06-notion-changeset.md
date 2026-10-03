@@ -60,6 +60,14 @@ A11 대응에 더한다:
 > 보관 동안은 루트 계정도 지우지 못한다. 대조 작업이 조각과 DB 를 맞춰 지워진 기록·고쳐진 기록을 찾는다(DB 슈퍼유저 변조 대응).
 > values-m 에 `objectStorage.auditWormBucket` 을 더한다 — 운영은 필수다.
 
+### §01 운영 리스크 — A10 단일 Writer (D-76)
+
+A10 대응과 DR 런북의 승격 순서에 더한다:
+
+> 승격 순서: ① 대기 DB `pg_promote()` ② 새 Primary 에서 `SELECT kadmission.promote_writer(<지금 세대 + 1>, '<담당자>')` — 세대는 하나씩만 오르고, 동시에 둘이 승격하지 못한다
+> ③ 앱의 `WRITER_EPOCH` 를 새 세대로 배포(GitOps). 그 사이 쓰기는 503 재시도 안내로 멈춘다(안전한 쪽).
+> 옛 Primary 가 돌아와도 세대가 옛 값이라 새 세대를 아는 앱의 쓰기를 DB 트리거가 거절한다. 운영은 `writer_fence.require_token` 을 켠다.
+
 ### §02 PostgreSQL ERD
 
 첨부 DDL(`0001_init.sql` v1.2)은 그대로 두고 본문 「정합성 규칙」 아래에 더한다 (D-70 — 저장소 마이그레이션 `0003_field_encryption.sql`, 중앙 `0004_vault_encryption.sql`):

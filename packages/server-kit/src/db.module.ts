@@ -19,6 +19,11 @@ export class Db implements OnApplicationShutdown {
   private readonly logger = new Logger(Db.name);
   private current: Pool;
   private rotation: NodeJS.Timeout | null = null;
+  /**
+   * 쓰기 세대(T-M5-63, 0006_writer_fence.sql) — 트랜잭션마다 `SET LOCAL kadmission.writer_epoch` 로 넘긴다.
+   * DB 의 세대와 다르면 DB 가 쓰기를 거절한다(장애 전환 뒤 돌아온 옛 Primary 에 쓰지 않게). 비우면 넘기지 않는다(개발)
+   */
+  private readonly writerEpoch = process.env.WRITER_EPOCH?.trim() || null;
 
   /** 지금 쓰는 연결 풀 — DB 동적 자격증명을 쓰면 교체 때 바뀐다 */
   get pool(): Pool {
@@ -143,6 +148,8 @@ export class Db implements OnApplicationShutdown {
   }
 
   query<T extends Record<string, unknown>>(sql: string, params: unknown[] = []) {
+    // 쓰기 세대를 쓰면 트랜잭션 밖의 쓰기도 세대를 넘기는 짧은 트랜잭션으로 감싼다 — 세대 없이 쓰는 길을 남기지 않는다
+    if (this.writerEpoch && WRITE_SQL.test(sql)) return this.tx((c) => c.query<T>(sql, params));
     return this.pool.query<T>(sql, params);
   }
 
@@ -157,6 +164,7 @@ export class Db implements OnApplicationShutdown {
     const client = await this.checkout();
     try {
       await client.query('BEGIN');
+      if (this.writerEpoch) await client.query(`SELECT set_config('kadmission.writer_epoch', $1, true)`, [this.writerEpoch]);
       const result = await fn(client);
       await client.query('COMMIT');
       client.release();
@@ -187,6 +195,9 @@ export class Db implements OnApplicationShutdown {
     await this.pool.end().catch(() => undefined);
   }
 }
+
+/** 쓰는 문장 — 앞의 주석·공백을 건너뛰고 첫 낱말로 본다(WITH … INSERT/UPDATE/DELETE 포함) */
+const WRITE_SQL = /^(?:\s|--[^\n]*\n)*(?:INSERT|UPDATE|DELETE|MERGE|WITH\b[\s\S]*\b(?:INSERT|UPDATE|DELETE)\b)/i;
 
 /**
  * 연결 자체가 죽었다는 신호 — 쿼리 시간 초과·연결 종료. 업무 오류(제약 위반 등)와 달리 그 연결은 다시 쓰면 안 된다.

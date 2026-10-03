@@ -1148,6 +1148,20 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-76. 장애 전환 뒤 돌아온 옛 Primary 가 쓰기를 받을 수 있었다 — 단일 Writer 를 DB 가 보장하지 않았다 🟡
+
+| | |
+|---|---|
+| **발견** | 2026-10-03 (T-M5-63 — §01 A10 "Split-brain 방지, 단일 Writer") |
+| **충돌** | 장애 전환은 대기 DB 를 승격하고 서비스 주소를 바꾼다. 옛 Primary 가 네트워크 분할·잘못된 재기동으로 **쓰기 가능한 채로 돌아오면**, 주소가 늦게 바뀐 Pod 가 거기에 접수를 쓴다 — 두 DB 가 서로 다른 접수를 갖는다. 대기 DB 는 읽기 전용이라 막히지만 옛 Primary 는 자기가 옛것인지 모른다. 막는 장치가 없었다 |
+| **판정** | **쓰기 세대(epoch) 펜싱** — `writer_fence` 한 줄(세대·require_token). 승격은 새 Primary 에서 `promote_writer(새 세대, 누가)` 로만(SECURITY DEFINER, 승격 잠금 advisory lock, 대기 DB 거절, 세대는 하나씩만). 앱은 아는 세대(`WRITER_EPOCH`, GitOps)를 트랜잭션마다 `SET LOCAL kadmission.writer_epoch` 로 넘기고(PgBouncer 트랜잭션 풀링이라 세션 설정은 안 된다), 트랜잭션 밖 쓰기도 짧은 트랜잭션으로 감싼다(`server-kit` Db). 업무 표 전부의 **문장 단위 트리거**가 세대를 대조해 다르면 거절(`read_only_sql_transaction`, 앱은 503 재시도 안내). 운영은 `require_token` 을 켜서 세대 없는 쓰기도 막는다. 앱 역할은 세대 표를 읽지도 바꾸지도 못한다. 슈퍼유저의 replica 모드는 트리거를 건너뛴다 — 비상 접속(D-72)은 기록·문장 로그로 본다 |
+| **재현 시험** | admission-api `writer-fence.integration.test`(실제 DB 5개 — 세대가 맞으면 쓰기·트랜잭션 밖 쓰기도 세대를 넘김, 승격 뒤 옛 세대 앱의 쓰기·삭제 거절·읽기는 그대로·새 세대는 씀, 돌아온 옛 Primary(옛 세대 DB)는 새 세대 앱의 쓰기를 거절, 세대 건너뛰기·되돌리기 거절·앱 역할의 승격·세대 변경 불가, require_token 이면 세대 없는 쓰기 거절) |
+| **저장소 반영** | ✅ (2026-10-03) `infra/db/migrations/0006_writer_fence.sql`, `server-kit` Db(`WRITER_EPOCH`), 문제 응답 503 |
+| **노션 반영** | ⬜ §01 A10 대응·DR 런북의 승격 순서(pg_promote → promote_writer → WRITER_EPOCH 배포), §02 ERD(`writer_fence`) — [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 저장소 반영, 노션 반영 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 
