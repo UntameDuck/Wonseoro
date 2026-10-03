@@ -60,7 +60,8 @@
   운영(`global.environment=production`)은 끌 수 없다(렌더링 거부). 로컬 kind 는 단계 4(Vault PKI)까지 끈다. runtime 첨부 v1.4
 - **개발 PKI** `scripts/pki/dev-pki.mjs`(openssl — 플랫폼 CA·워크로드 인증서 24시간·거절 시험용 다른 CA)
 - **시험**
-  - `npm run test:security:mtls` — 실제 TLS 로 25개(인증서 없음·다른 CA 401, 다른 대학 사칭·다른 워크로드 403, 남의 영수증 404, 서류 검사 경로 보호, 실제 Relay 심장박동). CI 보안 시험 잡에서도 돈다
+  - `npm run test:security:mtls` — 실제 TLS 로 25개(인증서 없음·다른 CA 401, 다른 대학 사칭·다른 워크로드 403, 남의 영수증 404, 서류 검사 경로 보호, 실제 Relay 심장박동). CI 보안 시험 잡에서도 돈다(원격 Security run 37110144806 통과).
+    CI 의 OpenSSL 3.0 은 시간 단위 유효기간을 몰라 개발 PKI 가 일 단위로 내려가게 했다
   - 단위: server-kit 8(신원 URI·실제 TLS·다른 CA·인증서 교체), 계약 대조(계약의 mutualTLS 경로 = 코드의 경로 표) 대학 2·중앙 2
   - 보안 선별 시험 194개(상호 TLS 묶음 12 추가) 건너뜀 0, admission-api 360·central-api 38·server-kit 87 통과
 - **남은 것** — 계약 응답(401·403)·노션은 D-69. kind 실증과 인증서 자동 발급·교체는 단계 4(Vault PKI)
