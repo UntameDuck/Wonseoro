@@ -12,7 +12,7 @@
 | T-M5-23 SBOM | ✅ | SPDX 2.3, 패키지 266·관계 1,054. CI 산출물과 Release 자산 자동 첨부 |
 | T-M5-24 Container Image Scan | ✅ | 로컬·원격 5개 이미지 Critical 0 |
 | T-M5-25 IaC/K8s Manifest Scan | ✅ | 로컬·원격 Helm·Kubernetes·Dockerfile 19개 High/Critical 0 |
-| T-M5-26 Security Test | ✅ | 로컬·원격 실 PostgreSQL 선별 시험 123개 통과·건너뜀 0 — 2026-10-03 인증 묶음을 더해 175개 |
+| T-M5-26 Security Test | ✅ | 로컬·원격 실 PostgreSQL 선별 시험 123개 통과·건너뜀 0 — 2026-10-03 인증 묶음을 더해 175개, 상호 TLS 묶음을 더해 194개 + 실제 TLS 실증(`test:security:mtls`) |
 | T-M5-27 DAST | ✅ | 로컬·원격 ZAP OpenAPI active scan WARN 0·High 0·PASS 118 · 2026-10-03 부터 **토큰을 붙여** 인증 뒤까지(지원자·담당자 요청 4,272건) |
 | T-M5-28 Image Signing | ✅ | GHCR 운영 이미지 5종 digest 키리스 서명·신원 검증 |
 | T-M5-29 Admission Controller | ✅ | 임시 kind·Policy Controller 0.13.1 webhook 이 서명 digest 허용·미서명 digest 거부 |
@@ -62,10 +62,11 @@ Endpoints 직접 권한은 없고 `tests/m4/gitops-manifests.mjs`가 권한 범�
 | 공용 서버 | 운영 기본값 금지, 목적별 가명화, 개인정보·비밀 로그 마스킹, 운영 발급자 주소(https·로컬 아님) | 31/31 |
 | 대학 Data Plane | 소유권 누락, 남의 자원 차단, Adaptive Throttling, 감사 체인, 2인 승인, 파일 형식, PG 콜백 서명·멱등성 | 63/63 |
 | 인증·수직 권한 (2026-10-03, T-M5-02·10) | 토큰 위조·알고리즘 혼동·kid 폭주·발급자 장애, 경로 분류·운영 권한을 계약과 대조, 역할 6종 × 범위 표, 재인증, HTTP 수준 BOLA·렐름 섞임·2인 승인 신원 | 40/40 |
+| 서비스 간 상호 TLS (2026-10-03, T-M5-05·09) | 워크로드 신원(SAN URI)·다른 CA·신원 없음 거절·인증서 교체, 계약의 mutualTLS 경로 = 코드의 경로 표(대학·중앙), 같은 대학 서류 워커만, 이벤트 출처 해석 | 12/12 |
 | 문서 서비스 | ClamAV 프로토콜, 악성 판정, 해시 불일치·엔진 장애 때 실패 폐쇄 | 8/8 |
 | 중앙 Plane | 이벤트 중복·순서 역전·위장 발신, 중앙 개인정보 최소화, 동의 범위, 지원자 토큰(다른 렐름·대상·위조 거절, 토큰 주체로만 공통원서) | 31/31 |
 
-로컬은 E 드라이브 Docker 데이터의 개발 PostgreSQL 두 DB를 사용해 **총 123개·건너뜀 0**을 확인했다. 인증 묶음을 더한 뒤(2026-10-03) CI 재현 DB(:5499)에서 **175개·건너뜀 0**(중앙 인증 6개·위험 차단 본인확인 해제 2개 포함).
+로컬은 E 드라이브 Docker 데이터의 개발 PostgreSQL 두 DB를 사용해 **총 123개·건너뜀 0**을 확인했다. 인증 묶음을 더한 뒤(2026-10-03) CI 재현 DB(:5499)에서 **175개·건너뜀 0**(중앙 인증 6개·위험 차단 본인확인 해제 2개 포함). 상호 TLS 묶음(D-69, 2026-10-03)을 더해 **194개·건너뜀 0**. 같은 잡이 실제 TLS 실증(`npm run test:security:mtls` — 개발 PKI·중앙·대학 API·Relay, 25개)도 돈다.
 `.github/workflows/security.yml`의 전용 잡은 빈 PostgreSQL 16 DB에 canonical 대학 DDL과 중앙 마이그레이션을 적용한 뒤
 같은 명령을 실행한다. DB가 없어서 통합시험이 `skip`되면 성공으로 보지 않고 게이트를 실패시킨다.
 원격 Security 잡도 123개·건너뜀 0으로 통과했다(Actions run 36898652054).
@@ -103,7 +104,8 @@ DB 앞 쿼리 형식 차단, 현재 열린 모집 선택, 전 응답 `nosniff`�
 
 로컬 결과(축소 환경, `node scripts/security/dast-local.mjs`): **WARN 0·High 0·PASS 118**, 인증 뒤까지 닿은 요청 지원자 1,236·담당자 3,036(거절 0), 대학 API 오류 로그 0.
 원격 Security(run 37108004422)도 같은 수치로 통과했다.
-알림은 Informational 3종(공격 요청에 대한 4xx 210건·캐시 정책 설명 2종)뿐이다. 보고서 `E:\DockerData	ools\zap-2.17.0eports-auth\`.
+알림은 Informational 3종(공격 요청에 대한 4xx 210건·캐시 정책 설명 2종)뿐이다. 보고서 `E:\DockerData	ools\zap-2.17.0
+eports-auth\`.
 
 ## 6. T-M5-28 이미지 서명
 

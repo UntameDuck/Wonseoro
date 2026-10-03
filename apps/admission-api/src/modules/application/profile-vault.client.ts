@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { CircuitOpenError, describeFailure, httpServerError, traceHeaders } from '@wonseoro/server-kit';
+import { CircuitOpenError, describeFailure, httpServerError, internalHttp, traceHeaders } from '@wonseoro/server-kit';
 import { DependencyBreakers } from '../../common/resilience/dependency-breakers';
 import { CENTRAL_SYNC_URL, VAULT_TIMEOUT_MS } from '../../config';
 
@@ -58,7 +58,8 @@ export class ProfileVaultClient {
     try {
       const res = await this.breakers.centralVault.run(
         () =>
-          fetch(`${url}/internal/v1/profile-snapshots`, {
+          // 상호 TLS — 이 대학 API 의 인증서를 낸다. 중앙은 인증서의 대학과 요청의 대학이 같아야 준다 (T-M5-05, D-69)
+          internalHttp().fetch(`${url}/internal/v1/profile-snapshots`, {
             method: 'POST',
             headers: { 'content-type': 'application/json', ...traceHeaders() },
             body: JSON.stringify({

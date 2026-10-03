@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Header, Headers, HttpCode, HttpException, Post, Put, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 import { subjectOf } from '../../identity';
+import { sameUniversity } from '../../internal-auth';
 import { ProfileRejection, ProfileVaultService, SnapshotRequest } from './profile-vault.service';
 
 interface ProfileBody {
@@ -11,7 +12,8 @@ interface ProfileBody {
 /**
  * Common Profile Vault — 대학용 내부 API (계약: releaseProfileSnapshot, D-17)
  *
- * `/internal/v1/` 아래 둔다. 대학 Data Plane 이 mTLS 로 부르는 경로다. (M5 T-M5-05)
+ * `/internal/v1/` 아래 둔다. 대학 API 가 상호 TLS 로 부르는 경로다(T-M5-05) — 요청의 대학이 인증서의 대학과 같아야 한다.
+ * 다르면 403 — 다른 대학에 동의된 공통원서를 가져가지 못한다(D-69).
  * 지원자가 공통원서를 쓰는 API 는 아래 ApplicantProfileController 다.
  */
 @Controller('internal/v1')
@@ -25,7 +27,8 @@ export class ProfileVaultController {
   @Post('profile-snapshots')
   @HttpCode(200)
   @Header('cache-control', 'no-store')
-  async snapshot(@Body() body: SnapshotRequest) {
+  async snapshot(@Body() body: SnapshotRequest, @Req() req?: FastifyRequest) {
+    sameUniversity(req, body?.universityId, '스냅숏을 요청한 대학');
     return this.vault.release({
       subjectToken: body.subjectToken,
       universityId: body.universityId,

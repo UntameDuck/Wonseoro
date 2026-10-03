@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
-import { CircuitOpenError, Db, describeFailure, httpServerError } from '@wonseoro/server-kit';
+import { CircuitOpenError, Db, describeFailure, httpServerError, internalHttp } from '@wonseoro/server-kit';
 import { DependencyBreakers } from '../../common/resilience/dependency-breakers';
 import { CENTRAL_GATE, CENTRAL_SYNC_URL, VAULT_TIMEOUT_MS } from '../../config';
 
@@ -134,7 +134,8 @@ export class CentralHealthGate implements OnModuleInit, OnApplicationShutdown {
   }
 
   private httpProbe(): Promise<Response> {
-    return fetch(`${this.centralUrl}/readyz`, { signal: AbortSignal.timeout(VAULT_TIMEOUT_MS) });
+    // 중앙이 HTTPS(플랫폼 CA)면 같은 클라이언트로 — 상대 인증서를 플랫폼 CA 로 검증한다
+    return internalHttp().fetch(`${this.centralUrl}/readyz`, { signal: AbortSignal.timeout(VAULT_TIMEOUT_MS) });
   }
 
   /**

@@ -7,6 +7,7 @@ import {
   Db,
   describeFailure,
   httpServerError,
+  internalHttp,
   traceHeaders,
   withSpan,
 } from '@wonseoro/server-kit';
@@ -226,7 +227,8 @@ export class RelayService implements OnModuleInit, OnApplicationShutdown {
     try {
       res = await this.central.run(
         () =>
-          fetch(`${this.centralUrl()}/internal/v1/events`, {
+          // 상호 TLS — 중앙은 인증서의 대학과 이벤트의 대학이 같아야 받는다 (T-M5-05, D-69)
+          internalHttp().fetch(`${this.centralUrl()}/internal/v1/events`, {
             method: 'POST',
             headers: { 'content-type': 'application/cloudevents+json', ...traceHeaders() },
             body: JSON.stringify(envelope),

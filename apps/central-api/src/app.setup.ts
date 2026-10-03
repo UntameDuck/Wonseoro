@@ -1,6 +1,7 @@
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { installHttpTelemetry } from '@wonseoro/server-kit';
 import { AUTH_MODE, CORS_ORIGINS } from './config';
+import { installInternalAuth } from './internal-auth';
 import { createApplicantVerifier, installOidcAuthentication } from './oidc-auth';
 
 /** 잘못된 바이트를 U+FFFD 로 바꾸지 않고 실패한다. */
@@ -15,6 +16,8 @@ export function configureHttpApp(app: NestFastifyApplication): void {
   const fastify = app.getHttpAdapter().getInstance();
   // 대학 Relay 가 보낸 traceparent 를 이어 받는다 — Outbox 전송이 한 trace 로 보인다 (T-M4-20)
   installHttpTelemetry(fastify);
+  // 내부 경로 상호 TLS — 워크로드 신원·경로별 호출자 (T-M5-05, D-69)
+  installInternalAuth(fastify);
   // 지원자 토큰 검증 — 지원자 API(/api/v1) 앞에서 (T-M5-02 단계 4)
   if (AUTH_MODE === 'oidc') installOidcAuthentication(fastify, createApplicantVerifier());
   // 지원자가 공통원서를 쓰는 API 가 생겼다(D-57). 기본 JSON 파서는 깨진 UTF-8 을 U+FFFD 로 바꿔

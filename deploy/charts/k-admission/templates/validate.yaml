@@ -5,6 +5,9 @@
 {{- if not $v.global.universityId -}}
 {{- fail "global.universityId 가 필요하다 — 대학마다 하나씩 설치한다" -}}
 {{- end -}}
+{{- if and (eq $v.global.environment "production") (not $v.internalTls.enabled) -}}
+{{- fail "운영(global.environment=production)은 internalTls.enabled 를 끌 수 없다 — 내부 경로가 인증 없이 열린다 (T-M5-05, D-69)" -}}
+{{- end -}}
 {{- if not (has $v.global.environment (list "production" "staging" "local")) -}}
 {{- fail (printf "global.environment 는 production | staging | local 이어야 한다: %s" $v.global.environment) -}}
 {{- end -}}

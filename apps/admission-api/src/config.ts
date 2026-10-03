@@ -6,6 +6,7 @@ import {
   envInt,
   envList,
   envOrDev,
+  internalAuthConfig,
   requireEnv,
   requireIssuerUrl,
   secretOrDev,
@@ -20,6 +21,12 @@ import { parsePeakModeActivation, parsePeakModeEnd } from './common/scheduling/p
  */
 
 /** 이 프로세스가 어느 대학의 Data Plane 인가. 서비스의 정체성이다. */
+/**
+ * 내부 경로 상호 TLS (T-M5-05, D-69) — 서류 워커가 부르는 `/internal/v1/documents/**` 를 같은 대학의 서류 워커 인증서로만 받고,
+ * 중앙(공통원서 스냅숏·상태 확인)을 부를 때 이 워크로드의 인증서를 낸다. none 은 개발·단위 시험만 — 운영에서는 기동 거부
+ */
+export const INTERNAL = internalAuthConfig();
+
 export const UNIVERSITY_ID = requireEnv(
   'UNIVERSITY_ID',
   '이 프로세스가 어느 대학의 접수를 처리하는지. 공통원서 Snapshot 조회와 접수번호에 쓰인다',

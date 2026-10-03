@@ -103,6 +103,7 @@ spec:
               value: {{ $v.objectStorage.endpoint | quote }}
             - name: S3_BUCKET
               value: {{ $v.objectStorage.bucket | quote }}
+            {{- include "ka.mtlsEnv" (list . "api") | nindent 12 }}
             {{- include "ka.extraEnv" $v.api.env | nindent 12 }}
           envFrom:
             - secretRef:
@@ -111,24 +112,25 @@ spec:
           {{- include "ka.containerSecurity" . | nindent 10 }}
           # liveness 는 프로세스만 본다 — DB 장애에 Pod 를 죽이면 Failover 중 전부 재시작한다.
           # readiness 만 DB 를 본다. 중앙·PG 는 넣지 않는다 (D-32).
+          # 상호 TLS 면 API 가 HTTPS 로 듣는다 — 프로브도 HTTPS(공개 경로라 인증서는 필요 없다)
           startupProbe:
-            httpGet: { path: /healthz, port: http }
+            httpGet: { path: /healthz, port: http, scheme: {{ ternary "HTTPS" "HTTP" $v.internalTls.enabled }} }
             periodSeconds: 5
             failureThreshold: 30
           readinessProbe:
-            httpGet: { path: /readyz, port: http }
+            httpGet: { path: /readyz, port: http, scheme: {{ ternary "HTTPS" "HTTP" $v.internalTls.enabled }} }
             periodSeconds: 5
             timeoutSeconds: 2
           livenessProbe:
-            httpGet: { path: /healthz, port: http }
+            httpGet: { path: /healthz, port: http, scheme: {{ ternary "HTTPS" "HTTP" $v.internalTls.enabled }} }
             periodSeconds: 10
             timeoutSeconds: 2
           lifecycle:
             preStop:
               exec:
                 command: ["/bin/sh", "-c", "sleep 10"]
-          {{- include "ka.tmpMount" . | nindent 10 }}
-      {{- include "ka.tmpVolume" . | nindent 6 }}
+          {{- include "ka.workloadMounts" (list . "api") | nindent 10 }}
+      {{- include "ka.workloadVolumes" (list . "api") | nindent 6 }}
 ---
 apiVersion: v1
 kind: Service
@@ -141,8 +143,9 @@ spec:
     app: admission-api
     app.kubernetes.io/instance: {{ .Release.Name }}
   ports:
+    # 상호 TLS 면 443(HTTPS) — 앞단·서류 워커가 TLS 로 부른다
     - name: http
-      port: 80
+      port: {{ ternary 443 80 $v.internalTls.enabled }}
       targetPort: http
       {{- if and (eq $v.api.service.type "NodePort") $v.api.service.nodePort }}
       nodePort: {{ $v.api.service.nodePort }}

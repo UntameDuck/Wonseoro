@@ -4,12 +4,19 @@ import {
   envInt,
   envList,
   envOrDev,
+  internalAuthConfig,
   parseKeyRing,
   requireIssuerUrl,
   secretOrDev,
 } from '@wonseoro/server-kit';
 
 /** central-api 설정. */
+
+/**
+ * 내부 경로(`/internal/**` — 대학 Relay 이벤트·공통원서 스냅숏·관제)의 상호 TLS (T-M5-05, D-69).
+ * mtls 면 HTTPS 로 듣고 인증서의 워크로드 신원을 본다. none 은 개발·단위 시험만 — 운영에서는 기동 거부
+ */
+export const INTERNAL = internalAuthConfig();
 export const PORT = envInt('PORT', 3000, { min: 1, max: 65535 });
 
 export const CORS_ORIGINS = envList(

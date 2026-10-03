@@ -1,4 +1,10 @@
-import { envBool, envInt, envOrDev, requireEnv } from '@wonseoro/server-kit';
+import {
+  envBool,
+  envInt,
+  envOrDev,
+  internalAuthConfig,
+  requireEnv,
+} from '@wonseoro/server-kit';
 
 /**
  * event-relay 설정.
@@ -45,3 +51,9 @@ export const BREAKER = {
   failureThreshold: envInt('BREAKER_FAILURE_THRESHOLD', 5, { min: 1, max: 100 }),
   openMs: envInt('BREAKER_OPEN_MS', 30_000, { min: 1000, max: 600_000 }),
 } as const;
+
+/**
+ * 내부 호출 상호 TLS (T-M5-05, D-69) — 중앙 이벤트 수신(/internal/v1/events)에 이 대학 Relay 인증서를 낸다.
+ * none 은 개발·단위 시험만 — 운영에서는 기동 거부
+ */
+export const INTERNAL = internalAuthConfig();

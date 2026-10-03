@@ -193,6 +193,13 @@ jobs:
           psql "$CENTRAL_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/central/0003_summary_names.sql
       - name: 선별 보안 시험 통과·건너뜀 0 강제
         run: npm run test:security
+      - name: 서비스 간 상호 TLS 실증 — 실제 TLS·개발 PKI(openssl)·중앙·대학 API·Relay (T-M5-05, D-69)
+        env:
+          MTLS_LIVE_DB: postgresql://wonseoro:wonseoro@localhost:5432
+          MTLS_LIVE_UNIV_DB: postgresql://kadmission_app:kadmission_app_dev@localhost:5432/univ_a
+        run: |
+          npm run build -w @wonseoro/event-relay -w @wonseoro/document-service
+          npm run test:security:mtls
 
   dast:
     name: ZAP DAST · High 0

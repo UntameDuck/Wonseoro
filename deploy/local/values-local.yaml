@@ -5,6 +5,10 @@
 #
 # 네트워크: kind 노드(172.20.0.0/16)에서 Docker Desktop 호스트(192.168.65.254)의
 #   DB·MinIO·중앙 API 로 나간다. 다른 대학 클러스터로 가는 길은 열지 않는다.
+# 내부 경로 상호 TLS 는 kind 에서 아직 끈다 — 인증서는 Vault PKI(docs/13 단계 4)가 채운다. 끈 동안 앱은 INTERNAL_AUTH=none(개발)
+internalTls:
+  enabled: false
+
 global:
   environment: local
   imageRegistry: k-admission

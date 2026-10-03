@@ -8,3 +8,4 @@ export * from './telemetry/trace';
 export * from './telemetry/logger';
 export * from './oidc/jwks-cache';
 export * from './oidc/verifier';
+export * from './mtls';

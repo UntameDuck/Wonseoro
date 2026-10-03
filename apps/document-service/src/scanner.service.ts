@@ -5,6 +5,7 @@ import {
   CircuitOpenError,
   describeFailure,
   httpServerError,
+  internalHttp,
   traceHeaders,
   withSpan,
 } from '@wonseoro/server-kit';
@@ -159,7 +160,8 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
     try {
       const res = await this.admissionApi.run(
         () =>
-          fetch(`${this.apiUrl()}/internal/v1/documents/pending-scan?limit=25`, {
+          // 상호 TLS — 대학 API 는 같은 대학의 서류 워커 인증서만 받는다 (T-M5-05, D-69)
+          internalHttp().fetch(`${this.apiUrl()}/internal/v1/documents/pending-scan?limit=25`, {
             headers: traceHeaders(),
             signal: AbortSignal.timeout(SCANNER.timeoutMs),
           }),
@@ -185,7 +187,7 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
     try {
       const res = await this.admissionApi.run(
         () =>
-          fetch(`${this.apiUrl()}/internal/v1/documents/${documentId}/scan-result`, {
+          internalHttp().fetch(`${this.apiUrl()}/internal/v1/documents/${documentId}/scan-result`, {
             method: 'POST',
             headers: {
               'content-type': 'application/json',

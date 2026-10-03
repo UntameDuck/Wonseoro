@@ -662,8 +662,9 @@ spec:
     app: admission-api
     app.kubernetes.io/instance: univ-a
   ports:
+    # 상호 TLS 면 443(HTTPS) — 앞단·서류 워커가 TLS 로 부른다
     - name: http
-      port: 80
+      port: 443
       targetPort: http
     - name: metrics
       port: 9464
@@ -797,6 +798,15 @@ spec:
             - name: S3_BUCKET
               value: "kadmission-univ-a-prod"
 
+            - name: INTERNAL_AUTH
+              value: mtls
+            - name: MTLS_CERT_FILE
+              value: "/etc/wonseoro/mtls/tls.crt"
+            - name: MTLS_KEY_FILE
+              value: "/etc/wonseoro/mtls/tls.key"
+            - name: MTLS_CA_FILE
+              value: "/etc/wonseoro/mtls/ca.crt"
+
           envFrom:
             - secretRef:
                 name: kadmission-univ-a-runtime
@@ -817,16 +827,17 @@ spec:
               drop: ["ALL"]
           # liveness 는 프로세스만 본다 — DB 장애에 Pod 를 죽이면 Failover 중 전부 재시작한다.
           # readiness 만 DB 를 본다. 중앙·PG 는 넣지 않는다 (D-32).
+          # 상호 TLS 면 API 가 HTTPS 로 듣는다 — 프로브도 HTTPS(공개 경로라 인증서는 필요 없다)
           startupProbe:
-            httpGet: { path: /healthz, port: http }
+            httpGet: { path: /healthz, port: http, scheme: HTTPS }
             periodSeconds: 5
             failureThreshold: 30
           readinessProbe:
-            httpGet: { path: /readyz, port: http }
+            httpGet: { path: /readyz, port: http, scheme: HTTPS }
             periodSeconds: 5
             timeoutSeconds: 2
           livenessProbe:
-            httpGet: { path: /healthz, port: http }
+            httpGet: { path: /healthz, port: http, scheme: HTTPS }
             periodSeconds: 10
             timeoutSeconds: 2
           lifecycle:
@@ -836,10 +847,17 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            - name: mtls
+              mountPath: /etc/wonseoro/mtls
+              readOnly: true
       volumes:
         - name: tmp
           emptyDir:
             sizeLimit: 1Gi
+        - name: mtls
+          secret:
+            secretName: univ-a-api-mtls
+            defaultMode: 0440
 
 ---
 # Source: k-admission/templates/pgbouncer.yaml
@@ -1062,6 +1080,15 @@ spec:
             - name: DB_PROXY_SSLMODE
               value: "require"
 
+            - name: INTERNAL_AUTH
+              value: mtls
+            - name: MTLS_CERT_FILE
+              value: "/etc/wonseoro/mtls/tls.crt"
+            - name: MTLS_KEY_FILE
+              value: "/etc/wonseoro/mtls/tls.key"
+            - name: MTLS_CA_FILE
+              value: "/etc/wonseoro/mtls/ca.crt"
+
           envFrom:
             - secretRef:
                 name: kadmission-univ-a-runtime
@@ -1089,10 +1116,17 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            - name: mtls
+              mountPath: /etc/wonseoro/mtls
+              readOnly: true
       volumes:
         - name: tmp
           emptyDir:
             sizeLimit: 1Gi
+        - name: mtls
+          secret:
+            secretName: univ-a-event-relay-mtls
+            defaultMode: 0440
 
 ---
 # Source: k-admission/templates/workers.yaml
@@ -1169,7 +1203,16 @@ spec:
               value: "REPLACE_WITH_SCANNER_ENGINE"
             # 검사 결과는 DB 에 직접 쓰지 않고 접수 API 의 내부 경로로 보고한다 (ADR-0004)
             - name: ADMISSION_API_URL
-              value: "http://univ-a-api"
+              value: "https://univ-a-api"
+
+            - name: INTERNAL_AUTH
+              value: mtls
+            - name: MTLS_CERT_FILE
+              value: "/etc/wonseoro/mtls/tls.crt"
+            - name: MTLS_KEY_FILE
+              value: "/etc/wonseoro/mtls/tls.key"
+            - name: MTLS_CA_FILE
+              value: "/etc/wonseoro/mtls/ca.crt"
 
           resources:
             limits:
@@ -1195,10 +1238,17 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            - name: mtls
+              mountPath: /etc/wonseoro/mtls
+              readOnly: true
       volumes:
         - name: tmp
           emptyDir:
             sizeLimit: 1Gi
+        - name: mtls
+          secret:
+            secretName: univ-a-document-service-mtls
+            defaultMode: 0440
 
 ---
 # Source: k-admission/templates/api.yaml

@@ -13,7 +13,7 @@
 | [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.7.0) | 91,997 | `3f1f86040457a5ce2bb6bef9de7cc177cfecb3c9fc387420607eb837e30be6df` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 |
 | [§04 CloudEvents](https://app.notion.com/p/3df75ab5debe81d68e37fabd3678dcc4) | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | 6,104 | `3ed7ec8a340c50f6e7de25b2c3322ffd7c6b4914fd046afdc67a2efea699ca02` | D-47 · T-M5-51 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` (v1.2) | 4,036 | `1aaef0db712e1d9a15da41fb86b7832a3da8c6decfdcd5992a57bb071e5b1975` | D-44 · D-49 · D-52 |
-| [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` (v1.3, 차트 렌더링 — RBAC 6종) | 38,186 | `223418089627b7588afc880446aa1ef3bbe77dcddf03d427c6c8aa26bbdbadbc` | D-44 · D-52 · D-68 |
+| [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` (v1.4, 차트 렌더링 — RBAC 6종·내부 상호 TLS) | 40,013 | `0089844d6abfc72c234a94d4009406a78e2c33f5badc9d564ec93e0baf3292b9` | D-44 · D-52 · D-68 · D-69 |
 | [§07 KRDS](https://app.notion.com/p/3df75ab5debe812db3d1e06d0761e38e) | `k-admission-krds-wireframe.html` | `docs/spec-assets/krds-wireframe.html` (v1.2) | 8,548 | `698d3abda827340f3abd40fceeb8b7ae63d7e2a6ea8d0e707d3cf4308562995e` | D-43 |
 
 파일을 다시 고치면 이 표의 바이트·해시도 다시 적는다:
@@ -101,8 +101,9 @@
 
 「첨부」 절을 바꾼다:
 
-> `k-admission-values-m.yaml` — M Profile values (v1.2). `k-admission-runtime.yaml` — 차트 + values-m 의 **렌더링 결과**(v1.3).
+> `k-admission-values-m.yaml` — M Profile values (v1.2). `k-admission-runtime.yaml` — 차트 + values-m 의 **렌더링 결과**(v1.4).
 > 손으로 쓰지 않는다: 차트나 values-m 을 고치고 `scripts/render-runtime-attachment.mjs` 로 다시 만든다(CI 가 드리프트를 막는다).
+> v1.4(2026-10-03) — 내부 경로 상호 TLS: 워크로드별 인증서 Secret·HTTPS 프로브·대학 API 서비스 443(D-69).
 > v1.3(2026-10-03) — 역할 6종(security-auditor·break-glass 추가, D-68).
 > v1.2 에서 바뀐 것 — NODE_ENV·포트 3001·프로브 `/healthz`·`/readyz`, 대조는 앱 안 스케줄러, 마감·설정 버전을 배포값에서 제거(2인 승인 우회 차단),
 > Pod 당 커넥션 38(최대 391 ≤ 예산 400), Peak Mode 예약 시각은 비우고 `peak-schedule.yaml` 에서 온다(D-49), `nodeTaintsPolicy: Honor`·`matchLabelKeys`, PgBouncer 정상 종료(preStop·grace 60초).
@@ -122,6 +123,12 @@
 > security-auditor: Role·바인딩·NetworkPolicy·ServiceAccount·Pod·Deployment·PDB·이벤트 조회 — Secret·로그·exec 없음.
 > release-controller: 서명 검증된 GitOps 릴리스를 그 네임스페이스에만. break-glass: Role 만 두고 평소 바인딩 없음 — 켤 때는 끝나는 시각·사유를 함께,
 > 서명 커밋·리뷰를 거친다. RBAC 변경·exec 는 비상 역할에도 없다.
+
+「Secret」 절 아래에 더한다 (D-69):
+
+> 서비스 간 통신 — 내부 경로(`/internal/**`)는 상호 TLS 로만. **워크로드 신원은 인증서 SAN URI** `spiffe://wonseoro/university/<대학ID>/<워크로드>`·`spiffe://wonseoro/central/<워크로드>`.
+> 경로마다 부를 수 있는 워크로드를 정한다 — 중앙 이벤트 수신·영수증은 대학 Relay, 공통원서 스냅숏은 대학 API, 동기화 현황은 중앙, 대학 서류 검사 경로는 같은 대학 서류 워커.
+> **요청 안의 대학은 인증서의 대학과 같아야 한다**(다른 대학 이름의 이벤트·남의 공통원서 요청은 403). 인증서는 짧은 TTL(24시간)로 쓰고 재기동 없이 교체한다.
 
 「Edge」 또는 NetworkPolicy 설명에 한 줄 더한다 (첨부 `network-rbac.yaml` 은 K-PaaS Edge 확정 뒤 교체):
 

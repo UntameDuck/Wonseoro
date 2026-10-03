@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { EVENT_TYPE } from '@wonseoro/contracts';
-import { CircuitOpenError, Db, describeFailure, httpServerError, traceHeaders } from '@wonseoro/server-kit';
+import { CircuitOpenError, Db, describeFailure, httpServerError, internalHttp, traceHeaders } from '@wonseoro/server-kit';
 import { CENTRAL_SYNC_URL, PLATFORM_VERSION, RELAY, UNIVERSITY_ID } from './config';
 import { RelayService } from './relay.service';
 
@@ -95,7 +95,7 @@ export class HeartbeatService implements OnModuleInit, OnApplicationShutdown {
       };
       const res = await this.relay.central.run(
         () =>
-          fetch(`${CENTRAL_SYNC_URL}/internal/v1/events`, {
+          internalHttp().fetch(`${CENTRAL_SYNC_URL}/internal/v1/events`, {
             method: 'POST',
             headers: { 'content-type': 'application/cloudevents+json', ...traceHeaders() },
             body: JSON.stringify(envelope),

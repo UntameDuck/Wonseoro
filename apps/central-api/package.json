@@ -16,6 +16,7 @@
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.2.7",
     "@nestjs/platform-fastify": "^11.2.7",
+    "@opentelemetry/api": "^1.9.1",
     "@wonseoro/contracts": "*",
     "@wonseoro/server-kit": "*",
     "pg": "^8.13.0",

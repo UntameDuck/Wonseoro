@@ -5,8 +5,8 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
 import { configureHttpApp } from './app.setup';
-import { AUTH_MODE, OIDC, PORT } from './config';
-import { assertConfigured, StructuredLogger } from '@wonseoro/server-kit';
+import { AUTH_MODE, INTERNAL, OIDC, PORT } from './config';
+import { assertConfigured, serverTlsOptions, StructuredLogger, watchServerTls } from '@wonseoro/server-kit';
 
 /**
  * central-api — 중앙 Control + Convenience Plane
@@ -21,7 +21,8 @@ async function bootstrap(): Promise<void> {
 
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ trustProxy: true, bodyLimit: 1_048_576 }),
+    // 내부 경로가 상호 TLS 면 HTTPS 로 듣는다 — 클라이언트 인증서는 요청만 하고 내부 경로에서만 요구한다 (T-M5-05)
+    new FastifyAdapter({ trustProxy: true, bodyLimit: 1_048_576, ...(INTERNAL.files ? { https: serverTlsOptions(INTERNAL.files) } : {}) }),
     // 본문 파서는 아래에서 직접 등록한다 — Nest 가 자기 JSON 파서를 올리면 깨진 UTF-8 을 받아들인다(D-37)
     { bodyParser: false, logger: new StructuredLogger('central-api') },
   );
@@ -33,7 +34,11 @@ async function bootstrap(): Promise<void> {
 
   const port = PORT;
   await app.listen({ port, host: '0.0.0.0' });
-  new Logger('central-api').log(`listening on :${port} (auth=${AUTH_MODE}${OIDC ? `, 지원자 발급자 ${OIDC.applicantIssuer}` : ''})`);
+  // 짧은 인증서를 재기동 없이 교체한다
+  if (INTERNAL.files) watchServerTls(app.getHttpServer() as unknown as import('node:https').Server, INTERNAL.files);
+  new Logger('central-api').log(
+    `listening on :${port} (${INTERNAL.files ? 'https, 내부 경로 상호 TLS' : 'http, 내부 경로 인증 없음(개발)'}, auth=${AUTH_MODE}${OIDC ? `, 지원자 발급자 ${OIDC.applicantIssuer}` : ''})`,
+  );
 }
 
 void bootstrap();

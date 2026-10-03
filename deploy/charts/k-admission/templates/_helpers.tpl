@@ -143,3 +143,59 @@ annotations:
   value: {{ $v | toString | quote }}
 {{- end }}
 {{- end -}}
+
+{{- /*
+  서비스 간 상호 TLS (T-M5-05, D-69) — 워크로드마다 인증서 Secret(tls.crt·tls.key·ca.crt)을 붙인다.
+  인증서의 SAN URI 가 워크로드 신원이다: spiffe://wonseoro/university/<대학ID>/<admission-api|event-relay|document-service>.
+  Secret 은 짧은 TTL 로 바뀐다(Vault PKI, docs/13 단계 4) — 앱이 파일 변경을 보고 다시 읽는다. 운영은 끌 수 없다(validate.yaml)
+  사용: include "ka.mtlsEnv" (list . "api")
+*/ -}}
+{{- define "ka.mtlsSecret" -}}
+{{- $root := index . 0 -}}{{- $key := index . 1 -}}
+{{- $given := index $root.Values.internalTls.secrets $key -}}
+{{- $given | default (printf "%s-%s-mtls" (include "ka.fullname" $root) $key) -}}
+{{- end -}}
+
+{{- define "ka.mtlsEnv" -}}
+{{- $root := index . 0 -}}{{- $t := $root.Values.internalTls -}}
+{{- if $t.enabled }}
+- name: INTERNAL_AUTH
+  value: mtls
+- name: MTLS_CERT_FILE
+  value: {{ printf "%s/tls.crt" $t.mountPath | quote }}
+- name: MTLS_KEY_FILE
+  value: {{ printf "%s/tls.key" $t.mountPath | quote }}
+- name: MTLS_CA_FILE
+  value: {{ printf "%s/ca.crt" $t.mountPath | quote }}
+{{- else }}
+- name: INTERNAL_AUTH
+  value: none
+{{- end }}
+{{- end -}}
+
+{{- /* 쓰기 영역(/tmp)과 인증서 — 읽기 전용 루트 FS */ -}}
+{{- define "ka.workloadMounts" -}}
+{{- $root := index . 0 -}}{{- $t := $root.Values.internalTls -}}
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  {{- if $t.enabled }}
+  - name: mtls
+    mountPath: {{ $t.mountPath }}
+    readOnly: true
+  {{- end }}
+{{- end -}}
+
+{{- define "ka.workloadVolumes" -}}
+{{- $root := index . 0 -}}{{- $t := $root.Values.internalTls -}}
+volumes:
+  - name: tmp
+    emptyDir:
+      sizeLimit: 1Gi
+  {{- if $t.enabled }}
+  - name: mtls
+    secret:
+      secretName: {{ include "ka.mtlsSecret" . }}
+      defaultMode: 0440
+  {{- end }}
+{{- end -}}

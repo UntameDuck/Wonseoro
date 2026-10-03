@@ -5,6 +5,7 @@ import { installHttpTelemetry } from '@wonseoro/server-kit';
 import { AUTH_MODE, CORS_ORIGINS } from './config';
 import { IdempotencyInterceptor } from './common/idempotency/idempotency.interceptor';
 import { IdempotencyStore } from './common/idempotency/idempotency.store';
+import { installInternalAuth } from './common/identity/internal-auth';
 import { installOidcAuthentication, OidcAuthenticator } from './common/identity/oidc-auth';
 import { ProblemFilter } from './common/problem/problem.filter';
 import { installAdaptiveThrottle } from './common/throttle/throttle.hook';
@@ -29,6 +30,8 @@ export function configureHttpApp(app: NestFastifyApplication): void {
   fastify.removeContentTypeParser('application/json');
   fastify.addContentTypeParser('application/json', { parseAs: 'buffer' }, strictJsonParser);
   installHttpTelemetry(fastify);
+  // 내부 경로 상호 TLS — 같은 대학의 서류 워커만 (T-M5-05, D-69)
+  installInternalAuth(fastify);
   // 토큰 검증 — 요청 한도보다 먼저. 한도는 인증된 지원자 기준이다 (T-M5-02)
   if (AUTH_MODE === 'oidc') installOidcAuthentication(fastify, app.get(OidcAuthenticator));
   // 지원자 단위 Adaptive Throttling — IP 가 아니라 세션·원서 기준 (T-M4-40)

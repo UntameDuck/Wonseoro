@@ -228,6 +228,17 @@ networkPolicy:
         podSelector: { matchLabels: { app: egress-gateway } }
     ports: [8443]
 
+# 서비스 간 상호 TLS (T-M5-05, D-69) — 대학 API 는 HTTPS 로 듣고 내부 경로(/internal/**)는 같은 대학 서류 워커 인증서만,
+# Relay·서류 워커·대학 API 는 중앙·대학 API 를 부를 때 자기 인증서를 낸다. 운영은 끌 수 없다(validate.yaml)
+internalTls:
+  enabled: true
+  mountPath: /etc/wonseoro/mtls
+  # 워크로드별 Secret(tls.crt·tls.key·ca.crt). 비우면 <release>-<워크로드>-mtls. Vault PKI 가 짧은 TTL 로 채운다(docs/13 단계 4)
+  secrets:
+    api: ""
+    event-relay: ""
+    document-service: ""
+
 rbac:
   create: true
   # 첨부 §06 의 그룹 이름

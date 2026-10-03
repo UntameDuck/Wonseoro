@@ -64,6 +64,7 @@ spec:
             - name: DB_PROXY_SSLMODE
               value: {{ $v.database.pooler.clientTlsSslMode | quote }}
             {{- end }}
+            {{- include "ka.mtlsEnv" (list . "event-relay") | nindent 12 }}
             {{- include "ka.extraEnv" $v.eventRelay.env | nindent 12 }}
           envFrom:
             - secretRef:
@@ -76,8 +77,8 @@ spec:
           livenessProbe:
             httpGet: { path: /healthz, port: http }
             periodSeconds: 15
-          {{- include "ka.tmpMount" . | nindent 10 }}
-      {{- include "ka.tmpVolume" . | nindent 6 }}
+          {{- include "ka.workloadMounts" (list . "event-relay") | nindent 10 }}
+      {{- include "ka.workloadVolumes" (list . "event-relay") | nindent 6 }}
 {{- end }}
 {{- if $v.documentService.enabled }}
 {{- $name := printf "%s-document-service" (include "ka.fullname" .) }}
@@ -136,7 +137,8 @@ spec:
             {{- end }}
             # 검사 결과는 DB 에 직접 쓰지 않고 접수 API 의 내부 경로로 보고한다 (ADR-0004)
             - name: ADMISSION_API_URL
-              value: {{ printf "http://%s-api" (include "ka.fullname" .) | quote }}
+              value: {{ printf "%s://%s-api" (ternary "https" "http" $v.internalTls.enabled) (include "ka.fullname" .) | quote }}
+            {{- include "ka.mtlsEnv" (list . "document-service") | nindent 12 }}
             {{- include "ka.extraEnv" $v.documentService.env | nindent 12 }}
           resources: {{- toYaml $v.documentService.resources | nindent 12 }}
           {{- include "ka.containerSecurity" . | nindent 10 }}
@@ -146,6 +148,6 @@ spec:
           livenessProbe:
             httpGet: { path: /healthz, port: http }
             periodSeconds: 15
-          {{- include "ka.tmpMount" . | nindent 10 }}
-      {{- include "ka.tmpVolume" . | nindent 6 }}
+          {{- include "ka.workloadMounts" (list . "document-service") | nindent 10 }}
+      {{- include "ka.workloadVolumes" (list . "document-service") | nindent 6 }}
 {{- end }}
