@@ -13,7 +13,7 @@
 | T-M5-24 Container Image Scan | ✅ | 로컬·원격 5개 이미지 Critical 0 |
 | T-M5-25 IaC/K8s Manifest Scan | ✅ | 로컬·원격 Helm·Kubernetes·Dockerfile 19개 High/Critical 0 |
 | T-M5-26 Security Test | ✅ | 로컬·원격 실 PostgreSQL 선별 시험 123개 통과·건너뜀 0 — 2026-10-03 인증 묶음을 더해 175개 |
-| T-M5-27 DAST | ✅ | 로컬·원격 ZAP OpenAPI active scan WARN 0·High 0·PASS 118 |
+| T-M5-27 DAST | ✅ | 로컬·원격 ZAP OpenAPI active scan WARN 0·High 0·PASS 118 · 2026-10-03 부터 **토큰을 붙여** 인증 뒤까지(지원자·담당자 요청 4,272건) |
 | T-M5-28 Image Signing | ✅ | GHCR 운영 이미지 5종 digest 키리스 서명·신원 검증 |
 | T-M5-29 Admission Controller | ✅ | 임시 kind·Policy Controller 0.13.1 webhook 이 서명 digest 허용·미서명 digest 거부 |
 
@@ -87,6 +87,22 @@ DB 앞 쿼리 형식 차단, 현재 열린 모집 선택, 전 응답 `nosniff`�
 (Actions run 36902632192·36902632233). 로컬 보고서는
 `E:\DockerData\tools\zap-2.17.0\reports\zap-report.{json,html}`에 있다. JSON에는 공격 요청에 대한 4xx와
 캐시 정책을 설명하는 Informational 3종만 남았다.
+
+### 토큰을 붙인 DAST (2026-10-03, T-M5-02 단계 9)
+
+위 결과는 **신원 없이** 검사한 것이었다. 대학 API 의 지원자·운영 경로는 대부분 신원 확인에서 401·400 으로 멈춰, 그 뒤의 입력 처리·소유권 검사·업무 규칙은
+공격 요청을 받지 않았다. 이제 DAST 잡이 대학 API 를 `AUTH_MODE=oidc` 로 띄우고 토큰을 붙인다.
+
+- 시험 발급자 `scripts/security/dast-issuer.mjs` — 렐름 두 개의 discovery·JWKS 와 토큰 둘(지원자 `dast-applicant`, 담당자 `dast-admin` — 역할 admission-admin·security-auditor, acr=mfa).
+  토큰 모양은 실제 Keycloak 토큰과 같다(같은지는 `test:auth:api` 가 실제 Keycloak 으로 본다). 비밀 키는 메모리에만, 토큰은 보고서 산출물에 섞지 않는다
+- ZAP 시작 훅 `scripts/security/zap-auth-hook.py` — `/api/v1/**` 에 지원자 토큰, `/admin/v1/**` 에 담당자 토큰(Replacer API). `-z "-config replacer…"` 로 넘기면
+  ZAP 이 값을 공백에서 잘라 `Bearer` 만 남는다 — 로컬 첫 실행에서 모든 요청이 형식 오류로 거절됐다
+- **인증 도달 게이트** `scripts/security/check-dast-auth.mjs` — 대학 API 의 토큰 판정 지표에서 지원자·담당자 토큰이 각각 20건 이상 받아들여졌는지 본다.
+  토큰을 못 붙여도 보고서는 High 0 으로 "통과" 하기 때문이다
+- 요청 한도는 끈다(`THROTTLE_MODE=off`) — 한 토큰으로 공격 요청을 쏟아붓는다. 한도는 보안 시험·NAT 시험이 따로 본다
+
+로컬 결과(축소 환경, `node scripts/security/dast-local.mjs`): **WARN 0·High 0·PASS 118**, 인증 뒤까지 닿은 요청 지원자 1,236·담당자 3,036(거절 0), 대학 API 오류 로그 0.
+알림은 Informational 3종(공격 요청에 대한 4xx 210건·캐시 정책 설명 2종)뿐이다. 보고서 `E:\DockerData	ools\zap-2.17.0eports-auth\`.
 
 ## 6. T-M5-28 이미지 서명
 

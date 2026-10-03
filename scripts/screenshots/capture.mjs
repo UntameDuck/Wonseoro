@@ -2,8 +2,10 @@
 //
 // 사용: node scripts/screenshots/capture.mjs <단계> [출력 폴더=docs/screenshots] [--check-copy]
 //   --check-copy  찍는 화면마다 보이는 글을 검사한다 — 설계 번호·내부 코드·UUID·ISO 시각·영문 검증 문구 (T-M5-56)
-//   단계: applicant | central-down | admission-down | seed-recon | admin
+//   단계: applicant | central-down | admission-down | seed-recon | admin | auth
 //   순서·서버 준비는 docs/screenshots/README.md 「다시 찍기」.
+//   auth  로그인 모드(28~35) — 미리보기 `auth-admission`·`auth-central`·`auth-web`(:3001)·`auth-admin`(:4100)과 로컬 발급자(:18080).
+//         관리자 재인증 안내를 찍으려고 로그인 뒤 5분(재인증 창)을 실제로 기다린다 — 약 7분
 //
 // 전용 DB(ui-shots-pg :5497)와 전용 포트(중앙 3100 · 대학 3101 · 지원자 웹 4001 · 콘솔 4101)만 쓴다.
 // kind 시험·로컬 개발 DB(:5432)·ka-central(:3000)과 섞이지 않는다.
@@ -68,12 +70,15 @@ await new Promise((r) => ws.addEventListener('open', r, { once: true }));
 
 let seq = 0;
 const pending = new Map();
+const listeners = new Map();
 ws.addEventListener('message', (m) => {
   const msg = JSON.parse(m.data);
   if (msg.id && pending.has(msg.id)) {
     const { res, rej } = pending.get(msg.id);
     pending.delete(msg.id);
     msg.error ? rej(new Error(`${msg.error.message}`)) : res(msg.result);
+  } else if (msg.method && listeners.has(msg.method)) {
+    void listeners.get(msg.method)(msg.params);
   }
 });
 function send(method, params = {}) {
@@ -504,8 +509,110 @@ async function seedRecon() {
   console.log('✔ 두 번째 지원자 접수', state.reconApplicationId);
 }
 
+/* ── 로그인 모드 (T-M5-02 단계 9) ────────────────────────────────────── */
+
+async function auth() {
+  const WEB_OIDC = 'http://localhost:3001';
+  const ADMIN_OIDC = 'http://localhost:4100';
+  const { freshTotp } = await import('../../tests/auth/helpers/totp.mjs');
+  const realm = (name) => JSON.parse(readFileSync(`infra/auth/${name}.realm.json`, 'utf8'));
+  const secretOf = (r, username) => {
+    const u = r.users.find((x) => x.username === username);
+    const otp = u.credentials.find((c) => c.type === 'otp');
+    return { password: u.credentials.find((c) => c.type === 'password').value, otp: otp ? JSON.parse(otp.secretData).value : null };
+  };
+  const onIssuer = (what) =>
+    waitFor(`location.host === 'localhost:18080' && document.documentElement.getAttribute('data-wonseoro-a11y') === 'ready'`, `${what} — 로그인 서버`);
+  const signIn = async (username, secret) => {
+    await evaluate(`(() => {
+      const u = document.querySelector('#username'); if (u) u.value = ${JSON.stringify(username)};
+      document.querySelector('#password').value = ${JSON.stringify(secret)};
+      document.querySelector('form').submit();
+    })()`);
+  };
+  const otpIn = async (secret) => {
+    const code = await freshTotp(secret);
+    await evaluate(`(() => { document.querySelector('#otp').value = ${JSON.stringify(code)}; document.querySelector('form').submit(); })()`);
+  };
+  await send('Network.enable');
+  await send('Network.clearBrowserCookies');
+
+  // 지원자 — 본인확인
+  const applicantSecret = secretOf(realm('wonseoro-applicant'), 'applicant-2');
+  await goto(`${WEB_OIDC}/`, '원서를 작성하려면 본인확인이 필요합니다');
+  await evaluate('sessionStorage.clear()');
+  await goto(`${WEB_OIDC}/`, '원서를 작성하려면 본인확인이 필요합니다');
+  await shot('applicant/28-login-required', '본인확인 전 접수 홈 — 원서 작성 전에 본인확인');
+  await click('본인확인');
+  await onIssuer('지원자 본인확인');
+  await waitFor(`!!document.querySelector('#username')`, '본인확인 화면');
+  await sleep(400);
+  await shot('login/29-issuer-applicant', '로그인 서버 — 지원자 본인확인(원서로 로그인 테마)');
+  await signIn('applicant-2', applicantSecret.password);
+  await waitFor(`location.origin === ${JSON.stringify(WEB_OIDC)} && ${hasText('본인확인을 마쳤습니다')}`, '본인확인 뒤 홈', 60_000);
+  await sleep(600);
+  await shot('applicant/30-signed-in', '본인확인 뒤 접수 홈 — 로그아웃');
+  // 위험 차단 — 서버의 실제 응답 모양(429 + 다시 본인확인하면 풀린다)을 원서 시작 요청 하나에만 돌려준다(서버 쪽은 통합 시험이 본다)
+  await send('Fetch.enable', { patterns: [{ urlPattern: '*/api/v1/applications', requestStage: 'Request' }] });
+  let limited = false;
+  listeners.set('Fetch.requestPaused', async (e) => {
+    if (e.request.method === 'POST' && !limited) {
+      limited = true;
+      await send('Fetch.fulfillRequest', {
+        requestId: e.requestId,
+        responseCode: 429,
+        responseHeaders: [
+          { name: 'content-type', value: 'application/problem+json' },
+          { name: 'retry-after', value: '600' },
+          { name: 'www-authenticate', value: 'Bearer error="insufficient_user_authentication", max_age=0' },
+          { name: 'access-control-allow-origin', value: WEB_OIDC },
+          { name: 'access-control-expose-headers', value: 'retry-after, etag, www-authenticate' },
+        ],
+        body: Buffer.from(JSON.stringify({ type: 'about:blank', title: '요청이 많습니다', status: 429, code: 'RATE_LIMITED', traceId: '4bf92f3577b34da6a3ce929d0e0e4736' })).toString('base64'),
+      });
+    } else {
+      await send('Fetch.continueRequest', { requestId: e.requestId });
+    }
+  });
+  await click('원서 작성 시작');
+  await waitText('본인확인 다시 하기');
+  await send('Fetch.disable');
+  listeners.delete('Fetch.requestPaused');
+  await sleep(400);
+  await shot('applicant/31-ratelimit-reauth', '요청 한도(위험 차단) — 기다리거나 본인확인 다시 하기로 바로 풀기');
+
+  // 관리자 — 로그인·일회용 번호·재인증
+  const staff = realm('wonseoro-staff');
+  await goto(`${ADMIN_OIDC}/`, '관리자 로그인이 필요합니다');
+  await shot('admin/32-console-login-required', '콘솔 로그인 전 — 관리자 로그인');
+  await click('관리자 로그인');
+  await onIssuer('관리자 로그인');
+  await signIn('auditor', secretOf(staff, 'auditor').password);
+  await waitFor(`!!document.querySelector('#otp') && document.documentElement.getAttribute('data-wonseoro-a11y') === 'ready'`, '일회용 번호 화면');
+  await sleep(400);
+  await shot('login/33-issuer-staff-otp', '로그인 서버 — 담당자 일회용 번호(비밀번호 다음)');
+  await otpIn(secretOf(staff, 'auditor').otp);
+  const loggedInAt = Date.now();
+  await waitFor(`location.origin === ${JSON.stringify(ADMIN_OIDC)} && ${hasText('로그아웃')}`, '로그인 뒤 콘솔', 60_000);
+  await goto(`${ADMIN_OIDC}/evidence`, '이 조회는 기록됩니다');
+  await waitText('로그아웃');
+  await shot('admin/34-console-signed-in', '로그인 뒤 콘솔 — 담당자 이름·역할·로그아웃, 증적 조회(감사 담당)');
+  // 재인증 창(5분)이 지나기를 기다린다 — 그 뒤 증적 열람은 본인 확인을 한 번 더 요구한다
+  const wait = loggedInAt + 5 * 60_000 + 15_000 - Date.now();
+  console.log(`· 재인증 창이 지나기를 ${Math.round(wait / 1000)}초 기다린다`);
+  await sleep(Math.max(0, wait));
+  await goto(`${ADMIN_OIDC}/evidence`, '이 조회는 기록됩니다');
+  await fill('원서 ID', '00000000-0000-4000-8000-000000000000');
+  await fill('조회 사유', '지원자 문의 — 마감 직전 제출 여부 확인');
+  await click('증적 열기');
+  await waitText('본인 확인을 한 번 더 해 주십시오', 30_000);
+  await sleep(400);
+  await shot('admin/35-console-reauth', '민감 동작 재인증 — 5분이 지나 증적 열람 전에 본인 확인을 한 번 더');
+}
+
 try {
   if (PHASE === 'applicant') await applicant();
+  else if (PHASE === 'auth') await auth();
   else if (PHASE === 'central-down') await centralDown();
   else if (PHASE === 'admission-down') await admissionDown();
   else if (PHASE === 'admin') await admin();

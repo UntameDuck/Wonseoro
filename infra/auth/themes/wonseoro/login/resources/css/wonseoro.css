@@ -1,0 +1,38 @@
+/*
+ * 키보드 포커스 표시 — 기본 테마는 포커스를 테두리 색만 살짝 바꿔 보여 주어 거의 보이지 않는다(KWCAG 2.4.7·1.4.11).
+ * 원서로 화면(@wonseoro/krds :focus-visible)과 같은 3px 테두리, 배경과 3:1 이상.
+ */
+:root {
+  --wonseoro-focus: #256ef4;
+}
+:root.pf-v5-theme-dark {
+  --wonseoro-focus: #8fb4ff;
+}
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--wonseoro-focus) !important;
+  outline-offset: 2px !important;
+}
+
+/*
+ * "로그인 다시 시작" 말풍선 — 기본 테마는 버튼 오른쪽 바깥에 두어 좁은 화면(320px)에서 가로 스크롤을 만든다(KWCAG 1.4.10).
+ * 버튼 아래 오른쪽 끝에 맞추고, 마우스뿐 아니라 키보드 포커스에서도 보인다(1.4.13).
+ */
+.kc-login-tooltip .kc-tooltip-text {
+  top: calc(100% + 6px);
+  left: auto;
+  right: 0;
+  z-index: 10;
+}
+.kc-login-tooltip .kc-tooltip-text::after {
+  display: none;
+}
+.kc-login-tooltip:hover .kc-tooltip-text,
+.kc-login-tooltip:focus-visible .kc-tooltip-text {
+  visibility: visible;
+  opacity: 0.9;
+}

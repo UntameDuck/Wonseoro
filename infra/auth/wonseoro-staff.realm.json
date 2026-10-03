@@ -6,6 +6,7 @@
   "supportedLocales": ["ko", "en"],
   "defaultLocale": "ko",
   "sslRequired": "external",
+  "loginTheme": "wonseoro",
   "accessTokenLifespan": 300,
   "ssoSessionIdleTimeout": 1800,
   "ssoSessionMaxLifespan": 36000,

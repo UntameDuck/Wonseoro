@@ -74,4 +74,5 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: kcadmin-dev
       KC_HOSTNAME: http://localhost:18080
     ports: ['18080:8080']
-    volumes: ['../auth:/opt/keycloak/data/import:ro']
+    # 렐름 파일(가져오기)과 원서로 로그인 테마(접근성 보완, infra/auth/themes)
+    volumes: ['../auth:/opt/keycloak/data/import:ro', '../auth/themes:/opt/keycloak/themes:ro']

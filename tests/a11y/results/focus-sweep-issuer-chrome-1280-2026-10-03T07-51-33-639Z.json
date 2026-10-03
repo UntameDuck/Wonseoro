@@ -1,0 +1,196 @@
+{
+  "test": "T-M5-41 Visible Focus / Focus Order · T-M5-42 Screen Reader",
+  "environment": "축소 환경 — 로컬 전용 DB(ui-shots-pg)·개발 서버(next dev)",
+  "phase": "issuer",
+  "browser": "Chrome/154.0.8037.93",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "textZoom": 1,
+  "at": "2026-10-03T07:51:33.639Z",
+  "fatal": null,
+  "screens": 4,
+  "tabStops": 20,
+  "problems": [],
+  "detail": [
+    {
+      "name": "로그인 서버 — 지원자 본인확인",
+      "url": "/realms/wonseoro-applicant/protocol/openid-connect/auth",
+      "stops": [
+        {
+          "tag": "SELECT",
+          "name": "화면 언어",
+          "outline": 3,
+          "contrast": 5.75,
+          "say": "combobox \"화면 언어\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "사용자 이름 또는 이메일",
+          "outline": 3,
+          "contrast": 5.75,
+          "say": "textbox \"사용자 이름 또는 이메일\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "비밀번호",
+          "outline": 3,
+          "contrast": 5.75,
+          "say": "textbox \"비밀번호\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "비밀번호 표시",
+          "outline": 3,
+          "contrast": 7.05,
+          "say": "button \"비밀번호 표시\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "로그인",
+          "outline": 3,
+          "contrast": 7.05,
+          "say": "button \"로그인\""
+        }
+      ],
+      "problems": [],
+      "title": "원서로 지원자에 로그인",
+      "liveRegions": []
+    },
+    {
+      "name": "로그인 서버 — 지원자 본인확인 실패 안내",
+      "url": "/realms/wonseoro-applicant/login-actions/authenticate",
+      "stops": [
+        {
+          "tag": "SELECT",
+          "name": "화면 언어",
+          "outline": 3,
+          "contrast": 5.75,
+          "say": "combobox \"화면 언어\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "사용자 이름 또는 이메일",
+          "outline": 3,
+          "contrast": 5.75,
+          "say": "textbox \"사용자 이름 또는 이메일\" 올바르지 않음 — 잘못된 사용자 이름 또는 비밀번호입니다."
+        },
+        {
+          "tag": "INPUT",
+          "name": "비밀번호",
+          "outline": 3,
+          "contrast": 5.75,
+          "say": "textbox \"비밀번호\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "비밀번호 표시",
+          "outline": 3,
+          "contrast": 7.05,
+          "say": "button \"비밀번호 표시\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "로그인",
+          "outline": 3,
+          "contrast": 7.05,
+          "say": "button \"로그인\""
+        }
+      ],
+      "problems": [],
+      "title": "원서로 지원자에 로그인",
+      "liveRegions": [
+        "잘못된 사용자 이름 또는 비밀번호입니다."
+      ]
+    },
+    {
+      "name": "로그인 서버 — 관리자 로그인",
+      "url": "/realms/wonseoro-staff/protocol/openid-connect/auth",
+      "stops": [
+        {
+          "tag": "SELECT",
+          "name": "화면 언어",
+          "outline": 3,
+          "contrast": 5.75,
+          "say": "combobox \"화면 언어\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "사용자 이름 또는 이메일",
+          "outline": 3,
+          "contrast": 5.75,
+          "say": "textbox \"사용자 이름 또는 이메일\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "비밀번호",
+          "outline": 3,
+          "contrast": 5.75,
+          "say": "textbox \"비밀번호\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "비밀번호 표시",
+          "outline": 3,
+          "contrast": 7.05,
+          "say": "button \"비밀번호 표시\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "로그인",
+          "outline": 3,
+          "contrast": 7.05,
+          "say": "button \"로그인\""
+        }
+      ],
+      "problems": [],
+      "title": "원서로 담당자에 로그인",
+      "liveRegions": []
+    },
+    {
+      "name": "로그인 서버 — 관리자 일회용 번호",
+      "url": "/realms/wonseoro-staff/login-actions/authenticate",
+      "stops": [
+        {
+          "tag": "SELECT",
+          "name": "화면 언어",
+          "outline": 3,
+          "contrast": 5.75,
+          "say": "combobox \"화면 언어\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "사용자 이름 또는 이메일",
+          "outline": 3,
+          "contrast": 4.63,
+          "say": "textbox \"사용자 이름 또는 이메일\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "로그인 다시 시작",
+          "outline": 3,
+          "contrast": 7.05,
+          "say": "button \"로그인 다시 시작\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "일회용 코드",
+          "outline": 3,
+          "contrast": 5.75,
+          "say": "textbox \"일회용 코드\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "로그인",
+          "outline": 3,
+          "contrast": 7.05,
+          "say": "button \"로그인\""
+        }
+      ],
+      "problems": [],
+      "title": "원서로 담당자에 로그인",
+      "liveRegions": []
+    }
+  ]
+}

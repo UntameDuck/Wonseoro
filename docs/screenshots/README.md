@@ -1,8 +1,8 @@
 # 화면 캡처
 
-> 찍은 날: **2026-10-01**(화면 제품화 T-M5-50~56 이후 다시 찍음) · 로컬 **축소 환경**(한 PC, 로컬 프로세스) · 1280px 데스크톱 · 전체 페이지
-> 지원자 웹(`apps/frontend`) 19장 · 관리자 콘솔(`apps/admin-web`) 8장, 모두 27장.
-> 27장 모두 **렌더링 문구 검사**(`capture.mjs --check-copy`)를 통과했다. 검사 내용은 화면에 실제로 보이는 글에 설계 문서 번호·내부 상태 코드·ISO 시각 원문·영문 검증 문구·기호 아이콘이 없는지다. 지원자 화면은 UUID·내부 버전도 막는다.
+> 찍은 날: **2026-10-03**(접근성 T-M5-40~47·인증 T-M5-02·10 이후 다시 찍음. 앞 판은 2026-10-01) · 로컬 **축소 환경**(한 PC, 로컬 프로세스) · 1280px 데스크톱 · 전체 페이지
+> 개발 모드 — 지원자 웹(`apps/frontend`) 19장 · 관리자 콘솔(`apps/admin-web`) 8장. **로그인 모드**(본인확인·관리자 로그인) — 8장(28~35). 모두 35장.
+> 35장 모두 **렌더링 문구 검사**(`capture.mjs --check-copy`)를 통과했다. 검사 내용은 화면에 실제로 보이는 글에 설계 문서 번호·내부 상태 코드·ISO 시각 원문·영문 검증 문구·기호 아이콘이 없는지다. 지원자 화면은 UUID·내부 버전도 막는다.
 > 다시 찍는 방법은 아래 [「다시 찍기」](#다시-찍기)에 있다. 스크립트는 `scripts/screenshots/`에 있다.
 > 처음 찍은 판(2026-09-30)과 그때 찾은 결함 U-1~U-11 은 git 이력에 있다. 결함은 [08-ui-production-readiness.md](../08-ui-production-readiness.md) 의 U-1~U-59 로 옮겨 모두 고쳤다(U-51 은 선택 — T-M6-07).
 
@@ -71,6 +71,23 @@
 
 27번의 "보존 정책이 설정되지 않았습니다"는 결함이 아니다. 개발 시드 설정에 보존기간이 없어서 뜬 경고다. 대학이 설정 승인으로 넣어야 하는 값이다(D-38).
 
+## 로그인 모드 (2026-10-03, T-M5-02·10)
+
+지원자 화면은 `NEXT_PUBLIC_AUTH_MODE=oidc`, 콘솔은 `ADMIN_AUTH_MODE=oidc` 로 띄웠다(미리보기 `auth-web`·`auth-admin`·`auth-admission`·`auth-central`).
+로그인 서버는 로컬 Keycloak 26.8.0 에 원서로 로그인 테마(`infra/auth/themes/wonseoro` — 접근성 보완)를 입혔다. 로그인 서버 화면은 Keycloak 기본 틀이고, 이 PC 의 헤드리스 Chrome 이 어두운 화면 설정이라 어두운 판으로 찍혔다.
+개발용 본인확인 칸·담당자 ID 칸은 이 모드에 없다. 상단의 "통합 조회 반영이 지연되고 있습니다" 는 중계기를 띄우지 않아 나온 운영 배너다.
+
+| 파일 | 화면 | 보이는 것 |
+|---|---|---|
+| [28-login-required](applicant/28-login-required.png) | 본인확인 전 접수 홈 | 원서를 쓰려면 본인확인이 필요하다는 안내와 "본인확인" 버튼. 모집·전형은 로그인 전에도 보인다 |
+| [29-issuer-applicant](login/29-issuer-applicant.png) | 로그인 서버 — 지원자 | "원서로 지원자" · 한국어 · 화면 언어 선택 |
+| [30-signed-in](applicant/30-signed-in.png) | 본인확인 뒤 접수 홈 | "본인확인을 마쳤습니다" · 로그아웃 |
+| [31-ratelimit-reauth](applicant/31-ratelimit-reauth.png) | 위험 차단 | 기다릴 시각·요청번호와 함께 **본인확인 다시 하기**(ADR-0009). 차단 응답은 서버의 실제 모양을 요청 하나에만 돌려줬다 — 서버 쪽 해제는 통합 시험이 본다 |
+| [32-console-login-required](admin/32-console-login-required.png) | 콘솔 로그인 전 | 관리자 로그인 안내 — 비밀번호와 인증 앱의 일회용 번호 |
+| [33-issuer-staff-otp](login/33-issuer-staff-otp.png) | 로그인 서버 — 담당자 일회용 번호 | 비밀번호 다음 화면. 사용자 이름 칸에 이름이 붙어 있다(기본 테마 결함을 테마가 고친다) |
+| [34-console-signed-in](admin/34-console-signed-in.png) | 로그인 뒤 콘솔 | 담당자 이름·역할(보안 감사)·로그아웃 · 증적 조회 |
+| [35-console-reauth](admin/35-console-reauth.png) | 민감 동작 재인증 | 로그인 5분 뒤 증적 열람 — "본인 확인을 한 번 더 해 주십시오" 와 본인 확인 다시 하기. 처리된 것은 없다 |
+
 ## 다시 찍기
 
 Docker·Node 22+·Chrome이 필요하다. Chrome 경로가 다르면 `CHROME` 환경변수로 준다. 따로 설치할 것은 없다. 스크립트가 Chrome을 헤드리스로 띄워 DevTools 프로토콜로 조작한다.
@@ -90,8 +107,10 @@ Claude 데스크톱의 미리보기는 서버를 5개까지만 띄울 수 있다
 7. shots-relay 내림 → capture.mjs seed-recon → prepare.sh recon → prepare.sh config
 8. shots-scanner 내림 → shots-admin 띄움 → capture.mjs admin … (20~27)
 9. 모두 내리고 docker rm -f ui-shots-pg
+10. 로그인 모드(28~35): 로컬 발급자(--profile auth)·CI 재현 DB(:5499) → auth-admission · auth-central · auth-web · auth-admin 띄우기
+    → node scripts/screenshots/capture.mjs auth docs/screenshots --check-copy   # 재인증 창 5분을 실제로 기다린다(약 7분)
 ```
 
-단계 사이에 이어 쓰는 원서 ID와 실패 화면(`fail-<단계>.png`)은 `%TEMP%/wonseoro-shots/`에 남는다.
+단계 사이에 이어 쓰는 원서 ID와 실패 화면(`fail-<단계>.png`)은 저장소 `.cache/shots/`(git 제외)에 남는다.
 업로드한 샘플 PDF는 로컬 MinIO의 `ui-shots-documents` 버킷에 쌓인다.
 출력 폴더를 바꾸면(두 번째 인자) 저장소 캡처를 건드리지 않고 확인만 할 수 있다.

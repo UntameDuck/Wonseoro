@@ -215,6 +215,13 @@ jobs:
       DATABASE_ADMIN_URL: postgresql://wonseoro:wonseoro@localhost:5432/univ_a
       UNIVERSITY_ID: UNIV-A
       PORT: 3001
+      # 토큰을 붙여 인증 뒤까지 검사한다 — 시험 발급자(scripts/security/dast-issuer.mjs)의 토큰을 받는 oidc 모드 (T-M5-02 단계 9)
+      AUTH_MODE: oidc
+      OIDC_APPLICANT_ISSUER: http://127.0.0.1:18099/realms/applicant
+      OIDC_STAFF_ISSUER: http://127.0.0.1:18099/realms/staff
+      # 한 지원자 토큰으로 공격 요청을 쏟아붓는다 — 요청 한도는 끄고 검사한다(한도는 보안 시험·NAT 시험이 따로 본다)
+      THROTTLE_MODE: 'off'
+      OTEL_METRICS_PORT: 9464
       CENTRAL_GATE_AUTOSTART: 'false'
       CLOCK_AUTOSTART: 'false'
       PAYMENT_RECHECK_AUTOSTART: 'false'
@@ -236,11 +243,17 @@ jobs:
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/dev-roles.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/seed-dev.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/ci-seed-deadline.sql
-      - name: 원서 API 빌드·기동
+      - name: 원서 API 빌드·시험 발급자·기동
         shell: bash
         run: |
           set -euo pipefail
           npm run build -w @wonseoro/contracts -w @wonseoro/server-kit -w @wonseoro/admission-api
+          # 토큰은 보고서 산출물(dast-results)에 섞지 않는다
+          nohup node scripts/security/dast-issuer.mjs --port=18099 --out="$RUNNER_TEMP/dast-tokens" > "$RUNNER_TEMP/dast-issuer.log" 2>&1 &
+          for attempt in {1..30}; do
+            test -s "$RUNNER_TEMP/dast-tokens/staff.token" && curl --fail --silent http://127.0.0.1:18099/realms/staff/certs >/dev/null && break
+            sleep 1
+          done
           nohup npm run start -w @wonseoro/admission-api > "$RUNNER_TEMP/admission-api.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/admission-api.pid"
           for attempt in {1..30}; do
@@ -251,13 +264,17 @@ jobs:
           done
           cat "$RUNNER_TEMP/admission-api.log"
           exit 1
-      - name: ZAP 2.17.0 OpenAPI active scan
+      - name: ZAP 2.17.0 OpenAPI active scan — 경로에 맞는 토큰을 붙여서
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dast-results
           chmod 777 dast-results
+          # 토큰은 환경변수로 넘기고 ZAP 시작 훅이 경로별 치환 규칙을 등록한다 — -z 로 넘기면 값이 공백에서 잘린다
+          export ZAP_APPLICANT_TOKEN="$(cat "$RUNNER_TEMP/dast-tokens/applicant.token")"
+          export ZAP_STAFF_TOKEN="$(cat "$RUNNER_TEMP/dast-tokens/staff.token")"
           docker run --rm --network host \
+            -e ZAP_APPLICANT_TOKEN -e ZAP_STAFF_TOKEN \
             --volume "$GITHUB_WORKSPACE:/zap/wrk:rw" \
             ghcr.io/zaproxy/zaproxy@sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef \
             zap-api-scan.py \
@@ -266,9 +283,12 @@ jobs:
             -O http://127.0.0.1:3001 \
             -J dast-results/zap-report.json \
             -r dast-results/zap-report.html \
-            -I -T 5 -s
+            -I -T 5 -s \
+            --hook=/zap/wrk/scripts/security/zap-auth-hook.py
       - name: DAST High 취약점 차단
         run: npm run check:security:dast -- dast-results/zap-report.json
+      - name: DAST 가 인증 뒤까지 닿았나 — 지원자·담당자 토큰이 받아들여진 요청 수
+        run: node scripts/security/check-dast-auth.mjs http://127.0.0.1:9464/metrics
       - name: DAST 보고서 보관
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

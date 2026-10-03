@@ -42,7 +42,8 @@ case "${1:-}" in
     for f in 0001_init.sql 0002_vault.sql 0003_summary_names.sql; do $P -d central < "infra/db/central/$f" > /dev/null; done
     $P -d central -c "INSERT INTO kadmission_central.university_registry (id, name, status) VALUES ('UNIV-A', '원서로대학교', 'ACTIVE')"
     # 앞선 실행이 남긴 원서 ID 는 새 DB 에 없다
-    rm -f "$(node -p "require('os').tmpdir()")/wonseoro-shots/state.json"
+    # 캡처 작업 폴더는 저장소 .cache/shots (tests/a11y/helpers/workdir.mjs — C 드라이브 임시 폴더를 쓰지 않는다)
+    rm -f "${WONSEORO_WORK_DIR:-.cache}/shots/state.json"
     echo "DB 준비 완료 (ui-shots-pg :5497 — univ_a · central)"
     ;;
   policy)

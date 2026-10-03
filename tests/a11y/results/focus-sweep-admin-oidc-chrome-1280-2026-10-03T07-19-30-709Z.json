@@ -1,0 +1,276 @@
+{
+  "test": "T-M5-41 Visible Focus / Focus Order · T-M5-42 Screen Reader",
+  "environment": "축소 환경 — 로컬 전용 DB(ui-shots-pg)·개발 서버(next dev)",
+  "phase": "admin-oidc",
+  "browser": "Chrome/154.0.8037.93",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "textZoom": 1,
+  "at": "2026-10-03T07:19:30.709Z",
+  "fatal": null,
+  "screens": 3,
+  "tabStops": 33,
+  "problems": [],
+  "detail": [
+    {
+      "name": "콘솔 로그인 전 (관리자 로그인)",
+      "url": "/",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 입학처 콘솔\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "관리자 로그인",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"관리자 로그인\""
+        }
+      ],
+      "problems": [],
+      "title": "원서로 입학처 콘솔",
+      "liveRegions": []
+    },
+    {
+      "name": "콘솔 첫 화면 (관리자 로그인)",
+      "url": "/",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 입학처 콘솔\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "로그아웃",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"로그아웃\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        }
+      ],
+      "problems": [],
+      "title": "원서로 입학처 콘솔",
+      "liveRegions": []
+    },
+    {
+      "name": "설정 승인 (관리자 로그인)",
+      "url": "/config",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 입학처 콘솔\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "로그아웃",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"로그아웃\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "보기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"보기\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "지금 적용 중인 설정에서 시작",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"지금 적용 중인 설정에서 시작\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "초안 버전 이름",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"초안 버전 이름\" 필수 — 0 / 64자"
+        },
+        {
+          "tag": "TEXTAREA",
+          "name": "설정 내용 (고급 편집)",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"설정 내용 (고급 편집)\" 필수"
+        }
+      ],
+      "problems": [],
+      "title": "설정 승인 | 원서로 입학처 콘솔",
+      "liveRegions": []
+    }
+  ]
+}

@@ -1,12 +1,14 @@
 // T-M5-41 Visible Focus / Focus Order — 모든 화면을 Tab 으로 한 바퀴 돈다.
 //
-// 사용: node tests/a11y/focus-sweep.mjs <applicant|admin|admin-oidc|applicant-oidc> [--width=1280] [--browser=chrome|edge]
+// 사용: node tests/a11y/focus-sweep.mjs <applicant|admin|admin-oidc|applicant-oidc|issuer> [--width=1280] [--browser=chrome|edge]
 //   applicant  지원자 웹(:4001) — 접수 홈·공통원서·내 원서·원서 1~6단계·접수증·없는 화면·장애 안내
 //   admin      입학처 콘솔(:4101) — 첫 화면·설정 승인(검토 열기)·마감·대조·증적·보존기간·없는 화면
 //   admin-oidc 관리자 로그인 콘솔(:4100, 미리보기 `auth-admin`·`auth-admission`·로컬 발급자) — 로그인 전 화면, 키보드로
 //              발급자 로그인(비밀번호·일회용 번호), 로그인 뒤 첫 화면·설정 승인. 발급자 화면 자체는 돌지 않는다(우리 화면이 아니다)
 //   applicant-oidc 본인확인 지원자 화면(:3001, 미리보기 `auth-web`·`auth-admission`·`auth-central`) — 본인확인 전 홈, 키보드로 본인확인,
 //              본인확인 뒤 홈·공통원서 저장·원서 1단계 자동저장, 위험 차단 안내의 "본인확인 다시 하기"(응답 하나만 429 로 바꾼다) → 재본인확인 → 로그아웃
+//   issuer     로그인 서버(로컬 발급자 :18080) 화면 — 지원자 본인확인·관리자 로그인·일회용 번호·로그인 실패 안내. 우리가 만든 화면은 아니지만
+//              지원자·담당자가 반드시 지나는 화면이다(T-M5-02 단계 9). 웹 서버 없이 발급자만 있으면 된다
 //
 // 화면마다 문서 처음에서 Tab 을 눌러 끝을 지나 다시 처음으로 돌아올 때까지 간다. 각 자리에서 본다.
 //   - 포커스 표시가 보이는가 — 테두리 2px 이상, 키보드 포커스 표시(:focus-visible)
@@ -38,8 +40,8 @@ const API = 'http://localhost:3101';
 const ADMIN_OIDC = 'http://localhost:4100';
 const WEB_OIDC = 'http://localhost:3001';
 const PG = 'ui-shots-pg';
-if (!['applicant', 'admin', 'admin-oidc', 'applicant-oidc'].includes(PHASE ?? '')) {
-  console.error('사용: node tests/a11y/focus-sweep.mjs <applicant|admin|admin-oidc|applicant-oidc> [--width=1280] [--browser=chrome|edge]');
+if (!['applicant', 'admin', 'admin-oidc', 'applicant-oidc', 'issuer'].includes(PHASE ?? '')) {
+  console.error('사용: node tests/a11y/focus-sweep.mjs <applicant|admin|admin-oidc|applicant-oidc|issuer> [--width=1280] [--browser=chrome|edge]');
   process.exit(2);
 }
 
@@ -500,9 +502,58 @@ async function applicantOidc() {
   await sweep('접수 홈 (로그아웃 뒤)');
 }
 
+/* ── 로그인 서버 화면 (T-M5-02 단계 9) ─────────────────────────────────── */
+
+async function issuer() {
+  const { createHash, randomBytes } = await import('node:crypto');
+  const ISSUER = 'http://localhost:18080';
+  const authUrl = (realm, clientId, redirect) => {
+    const u = new URL(`${ISSUER}/realms/${realm}/protocol/openid-connect/auth`);
+    const verifier = randomBytes(32).toString('base64url');
+    for (const [k, v] of Object.entries({
+      client_id: clientId, redirect_uri: redirect, response_type: 'code', scope: 'openid', state: randomBytes(8).toString('hex'),
+      code_challenge: createHash('sha256').update(verifier).digest('base64url'), code_challenge_method: 'S256', ui_locales: 'ko',
+    })) u.searchParams.set(k, v);
+    return u.href;
+  };
+  const staff = JSON.parse(readFileSync(path.resolve('infra/auth/wonseoro-staff.realm.json'), 'utf8')).users.find((x) => x.username === 'admin-a');
+  const password = staff.credentials.find((c) => c.type === 'password').value;
+  const submit = async (fields) => {
+    for (const [sel, value] of fields) {
+      await b.evaluate(`document.querySelector(${JSON.stringify(sel)}).focus()`);
+      await typeText(b, value);
+    }
+    await press(b, 'Enter');
+  };
+  // 원서로 로그인 테마의 접근성 보완이 적용된 화면인가 — 아니면 기본 테마 화면을 재고 있는 것이다
+  const themed = (what) => b.waitFor(`document.documentElement.getAttribute('data-wonseoro-a11y') === 'ready'`, `${what} — 원서로 로그인 테마`, 15_000);
+
+  await b.send('Network.clearBrowserCookies').catch(() => {});
+  await go(authUrl('wonseoro-applicant', 'applicant-web', 'http://localhost:3001/auth/callback'));
+  await b.waitFor(`!!document.querySelector('#username')`, '지원자 본인확인 화면');
+  await themed('지원자 본인확인');
+  await sweep('로그인 서버 — 지원자 본인확인');
+  // 없는 사용자로 실패 — 잠금 정책(사용자별 실패 횟수)을 건드리지 않는다
+  await submit([['#username', `nobody-${Date.now()}`], ['#password', 'wrong-password']]);
+  await b.waitFor(`!!document.querySelector('#input-error') || document.body.innerText.includes('잘못')`, '로그인 실패 안내');
+  await themed('로그인 실패 안내');
+  await sweep('로그인 서버 — 지원자 본인확인 실패 안내');
+
+  await go(authUrl('wonseoro-staff', 'admin-web', 'http://localhost:4100/auth/callback'));
+  await b.waitFor(`!!document.querySelector('#username')`, '관리자 로그인 화면');
+  await themed('관리자 로그인');
+  await sweep('로그인 서버 — 관리자 로그인');
+  await submit([['#username', 'admin-a'], ['#password', password]]);
+  await b.waitFor(`!!document.querySelector('#otp')`, '일회용 번호 화면');
+  await themed('일회용 번호');
+  await sweep('로그인 서버 — 관리자 일회용 번호');
+  // 일회용 번호는 넣지 않는다 — 다른 시험과 같은 30초 창의 번호를 겹쳐 쓰면 발급자가 재사용으로 거절하고 실패로 센다(잠금 정책)
+}
+
 let fatal = null;
 try {
   if (PHASE === 'applicant') await applicant();
+  else if (PHASE === 'issuer') await issuer();
   else if (PHASE === 'applicant-oidc') await applicantOidc();
   else if (PHASE === 'admin-oidc') await adminOidc();
   else await admin();

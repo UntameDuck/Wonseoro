@@ -1,0 +1,361 @@
+{
+  "test": "T-M5-47 휴대전화(터치) 접수 완주 (+ 탭 대상 크기 · 가로 스크롤 · 스크린리더 재료)",
+  "input": "touch (Android Chrome 흉내)",
+  "environment": "축소 환경 — 로컬 전용 DB(ui-shots-pg)·개발 서버(next dev)·Mock PG·Mock 검사 엔진",
+  "browser": "Chrome/154.0.8037.93",
+  "viewport": {
+    "width": 375,
+    "height": 900
+  },
+  "textZoom": 1,
+  "at": "2026-10-03T07:16:38.956Z",
+  "seconds": 27,
+  "completed": true,
+  "applicationNumber": "2027-UNIV-A-3CZ64NPT2W",
+  "applicant": {
+    "applicantId": "1d9d8a6e-7284-464d-bbc7-0801133136f6",
+    "subjectToken": "subj-kbd-1791011797714"
+  },
+  "applicationId": "8ec57e72-7775-4493-8ea9-62b1c4c979ad",
+  "taps": 21,
+  "mouseEvents": 0,
+  "fatal": null,
+  "problems": [],
+  "screens": [
+    {
+      "name": "접수 홈",
+      "url": "/",
+      "stops": [],
+      "horizontalScroll": false,
+      "title": "원서로 — 대학입학 원서접수",
+      "taps": [
+        {
+          "name": "지원자 식별자*",
+          "w": 259,
+          "h": 45,
+          "inline": false
+        },
+        {
+          "name": "공통원서 가명 토큰*",
+          "w": 259,
+          "h": 45,
+          "inline": false
+        },
+        {
+          "name": "공통원서 작성·제공 동의",
+          "w": 132,
+          "h": 16,
+          "inline": true
+        }
+      ]
+    },
+    {
+      "name": "공통원서",
+      "url": "/profile",
+      "stops": [
+        {
+          "name": "입력을 확인해 주십시오 (1건) 이메일 형식이 올바르지 않습니다.",
+          "tag": "DIV",
+          "visible": false
+        },
+        {
+          "name": "이메일",
+          "tag": "INPUT",
+          "type": "email",
+          "visible": true
+        }
+      ],
+      "horizontalScroll": false,
+      "title": "공통원서 | 원서로",
+      "taps": [
+        {
+          "name": "출신 고등학교",
+          "w": 293,
+          "h": 45,
+          "inline": false
+        },
+        {
+          "name": "졸업(예정) 연도",
+          "w": 293,
+          "h": 45,
+          "inline": false
+        },
+        {
+          "name": "이메일",
+          "w": 293,
+          "h": 45,
+          "inline": false
+        },
+        {
+          "name": "휴대전화",
+          "w": 293,
+          "h": 45,
+          "inline": false
+        },
+        {
+          "name": "출신 고등학교",
+          "w": 293,
+          "h": 34,
+          "inline": false
+        },
+        {
+          "name": "졸업(예정) 연도",
+          "w": 293,
+          "h": 34,
+          "inline": false
+        },
+        {
+          "name": "저장",
+          "w": 76,
+          "h": 44,
+          "inline": false
+        },
+        {
+          "name": "이메일 형식이 올바르지 않습니다.",
+          "w": 183,
+          "h": 16,
+          "inline": true
+        },
+        {
+          "name": "저장",
+          "w": 76,
+          "h": 44,
+          "inline": false
+        },
+        {
+          "name": "홈",
+          "w": 24,
+          "h": 26,
+          "inline": false
+        }
+      ]
+    },
+    {
+      "name": "접수 홈 (본인확인 뒤)",
+      "url": "/",
+      "stops": [],
+      "horizontalScroll": false,
+      "title": "원서로 — 대학입학 원서접수",
+      "taps": [
+        {
+          "name": "원서 작성 시작",
+          "w": 138,
+          "h": 44,
+          "inline": false
+        }
+      ]
+    },
+    {
+      "name": "원서 1단계 공통정보",
+      "url": "/apply/8ec57e72-7775-4493-8ea9-62b1c4c979ad",
+      "stops": [
+        {
+          "name": "취소 사유",
+          "tag": "INPUT",
+          "type": "text",
+          "visible": true
+        },
+        {
+          "name": "이 원서 취소하기",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": false
+        },
+        {
+          "name": "2. 대학·전형",
+          "tag": "H2",
+          "visible": false
+        }
+      ],
+      "horizontalScroll": false,
+      "title": "공통정보 — 원서 작성 | 원서로",
+      "taps": [
+        {
+          "name": "이 원서 취소하기",
+          "w": 154,
+          "h": 44,
+          "inline": false
+        },
+        {
+          "name": "그만두기",
+          "w": 105,
+          "h": 44,
+          "inline": false
+        },
+        {
+          "name": "다음 단계",
+          "w": 107,
+          "h": 44,
+          "inline": false
+        }
+      ]
+    },
+    {
+      "name": "원서 2단계 대학·전형",
+      "url": "/apply/8ec57e72-7775-4493-8ea9-62b1c4c979ad",
+      "stops": [
+        {
+          "name": "3. 추가정보",
+          "tag": "H2",
+          "visible": false
+        }
+      ],
+      "horizontalScroll": false,
+      "title": "대학·전형 — 원서 작성 | 원서로",
+      "taps": [
+        {
+          "name": "다음 단계",
+          "w": 107,
+          "h": 44,
+          "inline": false
+        }
+      ]
+    },
+    {
+      "name": "원서 3단계 추가정보",
+      "url": "/apply/8ec57e72-7775-4493-8ea9-62b1c4c979ad",
+      "stops": [
+        {
+          "name": "4. 서류",
+          "tag": "H2",
+          "visible": false
+        }
+      ],
+      "horizontalScroll": false,
+      "title": "추가정보 — 원서 작성 | 원서로",
+      "taps": [
+        {
+          "name": "내신 성적",
+          "w": 293,
+          "h": 45,
+          "inline": false
+        },
+        {
+          "name": "다음 단계",
+          "w": 107,
+          "h": 44,
+          "inline": false
+        }
+      ]
+    },
+    {
+      "name": "원서 4단계 서류",
+      "url": "/apply/8ec57e72-7775-4493-8ea9-62b1c4c979ad",
+      "stops": [
+        {
+          "name": "입력을 확인해 주십시오 (1건) 자기소개를 입력해 주십시오.",
+          "tag": "DIV",
+          "visible": false
+        }
+      ],
+      "horizontalScroll": false,
+      "title": "서류 — 원서 작성 | 원서로",
+      "taps": [
+        {
+          "name": "파일 선택",
+          "w": 109,
+          "h": 44,
+          "inline": false
+        },
+        {
+          "name": "검토 단계로",
+          "w": 121,
+          "h": 44,
+          "inline": false
+        }
+      ]
+    },
+    {
+      "name": "검토 전 검증 오류",
+      "url": "/apply/8ec57e72-7775-4493-8ea9-62b1c4c979ad",
+      "stops": [
+        {
+          "name": "자기소개",
+          "tag": "TEXTAREA",
+          "visible": true
+        },
+        {
+          "name": "4. 서류",
+          "tag": "H2",
+          "visible": false
+        },
+        {
+          "name": "5. 검토·결제",
+          "tag": "H2",
+          "visible": false
+        }
+      ],
+      "horizontalScroll": false,
+      "title": "서류 — 원서 작성 | 원서로",
+      "taps": [
+        {
+          "name": "자기소개를 입력해 주십시오.",
+          "w": 156,
+          "h": 16,
+          "inline": true
+        },
+        {
+          "name": "다음 단계",
+          "w": 107,
+          "h": 44,
+          "inline": false
+        },
+        {
+          "name": "검토 단계로",
+          "w": 121,
+          "h": 44,
+          "inline": false
+        }
+      ]
+    },
+    {
+      "name": "원서 5단계 검토·결제",
+      "url": "/apply/8ec57e72-7775-4493-8ea9-62b1c4c979ad",
+      "stops": [
+        {
+          "name": "접수 완료",
+          "tag": "H2",
+          "visible": false
+        }
+      ],
+      "horizontalScroll": false,
+      "title": "검토·결제 — 원서 작성 | 원서로",
+      "taps": [
+        {
+          "name": "결제 후에는 원서를 수정하거나 취소할 수 없다는 것을 확인했습니다.",
+          "w": 293,
+          "h": 51,
+          "inline": false
+        },
+        {
+          "name": "전형료 결제하고 접수",
+          "w": 180,
+          "h": 44,
+          "inline": false
+        }
+      ]
+    },
+    {
+      "name": "접수 완료",
+      "url": "/apply/8ec57e72-7775-4493-8ea9-62b1c4c979ad",
+      "stops": [],
+      "horizontalScroll": false,
+      "title": "최종제출 — 원서 작성 | 원서로",
+      "taps": [
+        {
+          "name": "접수증 보기·인쇄",
+          "w": 105,
+          "h": 26,
+          "inline": false
+        }
+      ]
+    },
+    {
+      "name": "접수증",
+      "url": "/receipt/70794d42-9ea8-46d0-8945-2b4c677b1b30",
+      "stops": [],
+      "horizontalScroll": false,
+      "title": "접수증 | 원서로"
+    }
+  ]
+}

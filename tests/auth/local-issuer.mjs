@@ -67,7 +67,10 @@ try {
     check(again.tokens && again.steps.join('>') === 'redirect' && claims(again.tokens.access_token).acr === 'mfa',
       `5분 안 재요청은 화면 없이 통과하고 수준 mfa 유지 (${again.steps.join(' > ')})`);
 
-    // 4. 민감 동작 전 다시 인증 — max_age=0 이면 비밀번호·OTP 를 다시
+    // 4. 민감 동작 전 다시 인증 — max_age=0 이면 비밀번호·OTP 를 다시.
+    //    발급자는 초 단위로 "인증 뒤 지난 시간 > max_age" 를 본다 — 첫 로그인과 같은 초 안이면 0 > 0 이 아니라 다시 묻지 않는다.
+    //    사람은 같은 초에 다시 누르지 않는다. 시험이 너무 빨라 생기는 차이라 1초 넘게 기다린다
+    await new Promise((r) => setTimeout(r, 1100));
     const stepUp = await browserLogin({ ...STAFF, ...a, jar: first.jar, extra: { max_age: '0' } });
     const s = stepUp.tokens ? claims(stepUp.tokens.access_token) : {};
     check(stepUp.tokens && stepUp.steps.includes('otp') && s.acr === 'mfa' && s.auth_time >= c.auth_time,
