@@ -5,8 +5,12 @@ import { resolve } from 'node:path';
 import { describe, it } from 'node:test';
 import { parse } from 'yaml';
 import { parseWorkloadUri } from '@wonseoro/server-kit';
-import { UNIVERSITY_ID } from '../../config';
-import { INTERNAL_ROUTES, internalDecision } from './internal-auth';
+
+// 설정은 모듈을 불러올 때 읽힌다 — 대학 ID 를 먼저 정하고 불러온다(CI 의 단위 시험 단계에는 UNIVERSITY_ID 가 없다)
+process.env.UNIVERSITY_ID ??= 'UNIV-A';
+const UNIVERSITY_ID = process.env.UNIVERSITY_ID;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { INTERNAL_ROUTES, internalDecision } = require('./internal-auth') as typeof import('./internal-auth');
 
 /**
  * 내부 경로 상호 TLS — 대학 API (T-M5-05·09, D-69)
