@@ -136,13 +136,13 @@ T-M5-40~46 ✅·47 🟡 — **[09-accessibility.md](09-accessibility.md)**. 설�
 
 ## 완성까지 남은 단계 (2026-10-01 전수 점검)
 
-**146개 중 118개 완료, 28개 남음**(2026-10-03 인증 T-M5-02·10, T-M3-06 JWKS 캐시, 보안 통제 T-M5-01·03~09, Outbox 보관 T-M4-10, 만료 경보 T-M5-65, WORM T-M3-03, 복구 검증 T-M5-62, Writer fencing T-M5-63 완료. 🟡 부분 완료 2개 — T-M4-39·T-M5-47 — 는 남은 쪽에 센다).
+**146개 중 119개 완료, 27개 남음**(2026-10-03 인증 T-M5-02·10, T-M3-06 JWKS 캐시, 보안 통제 T-M5-01·03~09, Outbox 보관 T-M4-10, 만료 경보 T-M5-65, WORM T-M3-03, 복구 검증 T-M5-62, Writer fencing T-M5-63, CSP 사전 점검 T-M6-03 완료. 🟡 부분 완료 2개 — T-M4-39·T-M5-47 — 는 남은 쪽에 센다).
 코드에 TODO·FIXME 는 없다. 남은 일은 태스크 표와 아래 목록에 전부 있다. 흉내 구현(헤더 인증·관리자 공유 토큰·Mock PG·Mock 검사 엔진)은
 운영 모드에서 기동이 막혀 있다 — 그 넷을 실물로 바꾸는 것이 "제품" 과 "시연" 의 차이다.
 
 | 누가 할 수 있나 | 개수 | 태스크 |
 |---|---|---|
-| **A. AI 가 이 PC 에서 끝낼 수 있다** (코드·CI·kind) | **7**(처음 20) | ~~화면 제품화 T-M5-50~56~~ ✅ · ~~접근성 T-M5-40~46~~ ✅([09](09-accessibility.md))(개발 흔적 걷어내기·사람 말·오류 문구·개발 입력 가두기·표기·상태·와이어프레임 정합 — [08](08-ui-production-readiness.md)) · ~~T-M3-03(WORM — MinIO Object Lock 으로)~~ ✅, ~~T-M3-06(JWKS 캐시)~~ ✅ · ~~T-M4-10(Outbox 파티션·보관)~~ ✅ · ~~T-M5-01·03~09 보안 통제~~ ✅( [13](13-security-controls-plan.md) · ~~인증 T-M5-02·MFA T-M5-10~~ ✅ 로컬 OIDC, [12](12-authentication-plan.md)) · ~~T-M5-20~29 보안 파이프라인(비밀·SAST·SCA·SBOM·이미지·IaC 스캔·보안 시험·DAST·서명·admission controller)~~ ✅([11](11-security-pipeline.md)) · ~~T-M5-62 복구 검증 자동화~~ ✅ · ~~T-M5-63 Writer fencing~~ ✅ · ~~T-M5-65 만료 경보~~ ✅([14](14-operations-automation.md)) · T-M6-01·02·03·06·07·11·14(온보딩 도구·호환 시험·CSP 사전 점검·상태 페이지·최소 정보 지원 화면·처리 흐름도·온보딩 문서) |
+| **A. AI 가 이 PC 에서 끝낼 수 있다** (코드·CI·kind) | **6**(처음 20) | ~~화면 제품화 T-M5-50~56~~ ✅ · ~~접근성 T-M5-40~46~~ ✅([09](09-accessibility.md))(개발 흔적 걷어내기·사람 말·오류 문구·개발 입력 가두기·표기·상태·와이어프레임 정합 — [08](08-ui-production-readiness.md)) · ~~T-M3-03(WORM — MinIO Object Lock 으로)~~ ✅, ~~T-M3-06(JWKS 캐시)~~ ✅ · ~~T-M4-10(Outbox 파티션·보관)~~ ✅ · ~~T-M5-01·03~09 보안 통제~~ ✅( [13](13-security-controls-plan.md) · ~~인증 T-M5-02·MFA T-M5-10~~ ✅ 로컬 OIDC, [12](12-authentication-plan.md)) · ~~T-M5-20~29 보안 파이프라인(비밀·SAST·SCA·SBOM·이미지·IaC 스캔·보안 시험·DAST·서명·admission controller)~~ ✅([11](11-security-pipeline.md)) · ~~T-M5-62 복구 검증 자동화~~ ✅ · ~~T-M5-63 Writer fencing~~ ✅ · ~~T-M5-65 만료 경보~~ ✅([14](14-operations-automation.md)) · T-M6-01·02·06·07·11·14(온보딩 도구·호환 시험·상태 페이지·최소 정보 지원 화면·처리 흐름도·온보딩 문서) · ~~T-M6-03 CSP 사전 점검~~ ✅([14](14-operations-automation.md)) |
 | **B. 외부 환경이 있어야 한다** (K-PaaS·HA DB·PG 계약) | **12** | T-M4-06(DB HA 계층) · T-M4-30·31·32(부하 500·1,500·3,000 VU) · T-M4-36(부하 중 DB Failover) · T-M4-39 판정(Edge 재시도) · T-M4-41(6시간 Soak) · T-M5-60·61·64(Multi-AZ·PITR·DR 훈련) · T-M6-04·05(실 PG sandbox·정산 실계정) |
 | **C. 사람·기관이 해야 한다** | **9** | T-M0-08(제출 PDF 정정 — 문구 준비됨) · T-M5-47 나머지(실물 Firefox·Safari — 또는 시험용 브라우저 내려받기 승인) · T-M5-48(KWCAG 수동 검사 — 실제 스크린리더) · T-M6-08·09(런북·운영 캘린더 확정) · T-M6-10(War-room 훈련) · T-M6-12(영향평가) · T-M6-13(Compliance 실증) · T-M6-15(대학 Shadow Test) |
 
@@ -167,7 +167,7 @@ T-M5-40~46 ✅·47 🟡 — **[09-accessibility.md](09-accessibility.md)**. 설�
 4. ~~보안 통제 T-M5-01·03~09~~ ✅ **끝(2026-10-03, [13](13-security-controls-plan.md))**: 단계 1 ✅ 서비스 간 상호 TLS·대학 신원 묶기(내부 경로 여섯이 인증 없이 열려 있던 결함 D-69 수정 — 다른 대학 사칭·남의 공통원서·서류 검사 위조 차단, `test:security:mtls` 25). 단계 2 ✅ 출구 허용 목록(서버 호출은 의존 서비스 호스트만, 연결 순간 메타데이터 주소 거절, 서류 워커 서명 URL SSRF 차단)·NetworkPolicy 자동 시험(kind 72칸 `test:security:netpol`). 단계 3 ✅ 필드 암호화(원서 항목 값·공통원서 금고가 평문 jsonb 이던 것 D-70 — 봉투 암호화, KEK 교체·닫힌 실패, 마이그레이션 대학 0003·중앙 0004). 단계 4 ✅ Vault(첨부 정책 그대로 + 워크로드별 PKI 역할 D-71, Transit KEK·DB 동적 계정 무중단 교체·PKI 짧은 인증서, `test:security:vault` 22). 단계 5 ✅ break-glass(끝나는 시각 전에만 렌더링·매분 회수 작업·경보 이벤트, DB 비상 계정은 Vault 15분·기록·문장 로그 D-72, kind `test:security:break-glass` 9). 단계 6 ✅ 실 clamd(실 clamd 가 먼저 끊으면 워커가 멈추던 결함·PDF 능동 콘텐츠 D-73, `test:security:clamd` 10)
 5. ~~T-M4-10 Outbox 파티션·보관~~ ✅ **끝(2026-10-03, D-74)** — 보관 표만 월별 파티션(바로 쓰는 표는 유니크 키 때문에 그대로), 7일 지난 전송 완료를 영수증과 함께 옮기고 원서마다 마지막 순번은 남김, 13개월 지난 달은 파티션째 삭제(SECURITY DEFINER 함수), 마이그레이션 0005
 6. 운영 자동화 T-M5-62·63·65·T-M3-03 — **진행 중([14](14-operations-automation.md))**: T-M5-65 ✅ 만료 경보(지표 `credential_expiry_timestamp_seconds`, 30/14/7/3/1일·갱신 멈춤 경보 규칙). T-M3-03 ✅ WORM(감사 기록을 Object Lock COMPLIANCE 조각으로, 슈퍼유저 변조 대조 D-75). T-M5-62 ✅ 복구 검증(같은 시점 덤프·새 DB 복구·행 수·체크섬·불변식·제약, 매달 CI — 시험 정리 코드가 남긴 고아 행을 잡았다). T-M5-63 ✅ Writer fencing(쓰기 세대·문장 트리거·승격 잠금 D-76). **운영 자동화 끝**
-7. Pilot 도구·문서 T-M6-01·02·03·06·07·11·14
+7. Pilot 도구·문서 T-M6-01·02·03·06·07·11·14 — **진행 중**: T-M6-03 ✅ CSP 사전 점검(`npm run ops:csp-preflight`, kind 결과 zone·LB 없음)
 
 A 를 다 해도 **B·C 21개**가 남는다 — K-PaaS 시험 환경·실 PG sandbox·대학 협조가 있어야 끝난다.
 

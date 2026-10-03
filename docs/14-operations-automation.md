@@ -51,3 +51,14 @@
 - **찾은 것** — 처음 돌리자 복구가 외래키 위반으로 멈췄다. 시험 정리 코드(`breakGlass`)가 외래키 검사를 끈 채 원서를 지워 연쇄 삭제가 안 되고 데이터 키가 남았다. 정리 코드가 남은 자식 행을 치우게 고쳤다 — 복구 검증이 "백업이 복구되지 않는 DB" 를 실제로 잡는다
 - **운영** — 원본 대신 백업 저장소(PITR 기본 백업 + WAL, T-M5-61)에서 복구한 DB 를 같은 검사에 넣는다. 복구 시간도 결과에 남는다
 - 로컬 결과: 표 25개·행 118, 11개 통과(복구 3.9초)
+
+## 시범 운영 도구 (T-M6)
+
+### T-M6-03 ✅ (2026-10-03) — CSP 적합성 사전 점검
+
+- **`scripts/ops/csp-preflight.mjs`**(`npm run ops:csp-preflight -- --context=<컨텍스트>`) — 새 클러스터(K-PaaS·CSP)가 차트에 필요한 능력을 갖췄는지 **실제로 만들어 보고** 지운다(점검용 네임스페이스). 필수가 없으면 종료 코드 1
+  - 필수: Kubernetes ≥ 1.30 · ValidatingAdmissionPolicy API · 기본 StorageClass · 노드 zone 2개 이상 · Pod Security restricted 가 위반 Pod 거절 · **NetworkPolicy 가 실제로 막는다**(정책 전 열림 → 정책 뒤 막힘 — 정책을 모르는 CNI 는 조용히 통과시킨다) · LoadBalancer 주소 발급
+  - 권장: Gateway API(ingress-nginx 은퇴 D-53) · 메트릭 API(HPA) · 볼륨 확장
+  - 사람: 저장 데이터 암호화(KMS)·백업 소산·KCMVP·Object Lock 지원·노드 장애 판정 시간 — API 로 알 수 없어 질문으로 남긴다
+- **kind-univ-a 결과(축소 환경)** — 필수 7개 중 5개 충족. 없는 것: zone 2개(단일 노드), LoadBalancer(kind 에는 없다 — NodePort 로 대신). NetworkPolicy 는 정책 전 `open` → 정책 뒤 `timeout` 으로 실제로 막힘. 권장 셋 없음(Gateway API·메트릭 API·볼륨 확장)
+
