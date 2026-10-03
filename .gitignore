@@ -25,3 +25,6 @@ infra/compose/.data/
 
 # 시험·캡처 작업 폴더(브라우저 프로필 등) — tests/a11y/helpers/workdir.mjs
 .cache/
+
+# 다른 세션의 시험용 빌드 출력(간헐 실패 조사)
+.dist-*/
