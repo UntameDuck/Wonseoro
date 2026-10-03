@@ -22,8 +22,8 @@
 | M5 신뢰성·보안·접근성 | **24/42** | ◀ **보안 파이프라인 T-M5-20~29 ✅(2026-10-02)** — Git 전체 이력 비밀 0·CodeQL Critical 0·운영 의존성 Critical 0·SPDX SBOM·이미지 5종 Critical 0·IaC 19개 High/Critical 0·실 DB 보안 시험 123개 건너뜀 0·ZAP DAST High 0·운영 이미지 5종 OIDC 키리스 서명·미서명 이미지 admission 거부 원격 통과 · **접근성 T-M5-40~46 ✅·47 🟡(2026-10-01)** — 키보드 완주·전 화면 포커스·스크린리더 재료·200%·320px·세션 만료 경고·CAPTCHA 대체 경로, Chrome·Edge·휴대전화 흉내([09](09-accessibility.md)) · 화면 제품화 T-M5-50~56 추가 · **T-M5-53 개발 입력 가두기 ✅ · T-M5-50 설계 설명·문서 번호 걷어내기 ✅ · T-M5-51 내부 코드 대신 사람 말(계약 1.5.0) ✅ · T-M5-52 오류·검증 문구 ✅ · T-M5-54 표기 통일 ✅ · T-M5-55 상태·기본 화면 ✅ · T-M5-56 흐름·와이어프레임·27장 다시 찍기 ✅ — 화면 제품화 끝** (2026-10-01) |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 102/146 태스크** (✅ 만 센다. 🟡 4 — T-M3-03·T-M3-06·T-M4-39·T-M5-47). **484개 테스트**
-(admission-api 356 · server-kit 72 · central-api 36 · event-relay 7 · document-service 8 · krds 5, 2026-10-03). DB 포함(CI 재현 DB) 실패 0.
+**총 102/146 태스크** (✅ 만 센다. 🟡 4 — T-M3-03·T-M3-06·T-M4-39·T-M5-47). **486개 테스트**
+(admission-api 358 · server-kit 72 · central-api 36 · event-relay 7 · document-service 8 · krds 5, 2026-10-03). DB 포함(CI 재현 DB) 실패 0.
 DB 포함 실행(CI 재현 DB)은 admission-api 3 skip(`ADMIN_API_TOKEN` 미설정) 외 전부 pass.
 배포 스크립트 시험 별도: Peak Mode 예약 계산 9건(`npm run test:m4:peak-schedule`), 대시보드·KPI 규칙 일관성(`npm run test:m4:observability`).
 DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`)·로그 우회 금지 검사(`scripts/check-logging.mjs`)·차트 lint·runtime 첨부 드리프트 검사(`scripts/render-runtime-attachment.mjs --check`)·**계약 검사(`scripts/check-contracts.mjs`)**·**화면 문구 검사(`scripts/check-ui-copy.mjs`, T-M5-50)** CI 포함. **보안 워크플로 T-M5-20~23 ✅**: Git 전체 이력 Gitleaks·CodeQL SAST·운영 의존성 Critical 0·SPDX SBOM이 로컬과 원격에서 통과(2026-10-02, Actions run 36887597976).
@@ -163,7 +163,7 @@ T-M5-40~46 ✅·47 🟡 — **[09-accessibility.md](09-accessibility.md)**. 설�
 0. ~~**D-62 증적 감사 체인**~~ — ✅ 2026-10-01 수정(재현 시험 3개)
 1. ~~**화면 제품화 T-M5-50~56**~~ ✅ + ~~접근성 T-M5-40~46~~ ✅·47 🟡 — **둘 다 끝(2026-10-01)**. 접근성 시험은 `tests/a11y/`, 결과·결정은 [09](09-accessibility.md). 47 의 실물 Firefox·Safari 는 C(사람)
 2. ~~**보안 파이프라인 T-M5-20~29**~~ ✅ **끝(2026-10-02)** — Gitleaks·CodeQL·운영 의존성 SCA·SPDX SBOM·이미지·IaC 검사·실 DB 보안 시험·ZAP DAST·운영 이미지 5종 키리스 서명(run 36903506905)·미서명 이미지 admission 거부(run 36906282615) 로컬·원격 통과([11](11-security-pipeline.md)). 운영 서명키·실 클러스터 적용만 운영 쪽
-3. 인증 — **진행 중(2026-10-03, [12](12-authentication-plan.md))**: 단계 1·2 ✅ 로컬 Keycloak(`--profile auth`, :18080)·`server-kit` 토큰 검증기·JWKS 캐시(`test:auth:issuer` 24·`test:auth:verifier` 11). **단계 3 ✅ 대학 API `AUTH_MODE=oidc`**(지원자 등록·운영 API 역할/MFA/재인증·2인 승인 신원, `test:auth:api` 19). **단계 4 ✅ 중앙 API**(같은 지원자 토큰·sub — `test:auth:central` 9). **단계 5 ✅ 운영 콘솔 관리자 로그인**(BFF·봉인 쿠키·재인증 안내, `test:auth:console` 21, 계약 1.7.0 D-65, CORS 결함 D-66 수정). 다음은 단계 6 지원자 로그인. 로컬 OIDC 발급자(Keycloak 26.8.0)로 `AUTH_MODE=gateway`·RBAC 6역할·관리자 MFA·JWKS 캐시(T-M5-02·10, T-M3-06)
+3. 인증 — **진행 중(2026-10-03, [12](12-authentication-plan.md))**: 단계 1·2 ✅ 로컬 Keycloak(`--profile auth`, :18080)·`server-kit` 토큰 검증기·JWKS 캐시(`test:auth:issuer` 24·`test:auth:verifier` 11). **단계 3 ✅ 대학 API `AUTH_MODE=oidc`**(지원자 등록·운영 API 역할/MFA/재인증·2인 승인 신원, `test:auth:api` 19). **단계 4 ✅ 중앙 API**(같은 지원자 토큰·sub — `test:auth:central` 9). **단계 5 ✅ 운영 콘솔 관리자 로그인**(BFF·봉인 쿠키·재인증 안내, `test:auth:console` 21, 계약 1.7.0 D-65, CORS 결함 D-66 수정). **단계 6 ✅ 지원자 화면 본인확인**(PKCE·세션 만료 연결·위험 차단 본인확인 해제, 접근성 `applicant-oidc`). 다음은 단계 7 JWKS 캐시 실증·단계 8 K8s 역할. 로컬 OIDC 발급자(Keycloak 26.8.0)로 `AUTH_MODE=gateway`·RBAC 6역할·관리자 MFA·JWKS 캐시(T-M5-02·10, T-M3-06)
 4. 보안 통제 T-M5-01·03~09 — 필드 암호화·SSRF 출구 허용 목록·실 clamd·Vault 경로 분리·mTLS
 5. T-M4-10 Outbox 파티션·보관 — DDL 변경이라 노션 §02 첨부 교체가 따른다
 6. 운영 자동화 T-M5-62·63·65·T-M3-03 — 복구 검증·Writer fencing·만료 경보·WORM

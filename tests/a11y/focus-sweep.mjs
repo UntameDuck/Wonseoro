@@ -1,10 +1,12 @@
 // T-M5-41 Visible Focus / Focus Order — 모든 화면을 Tab 으로 한 바퀴 돈다.
 //
-// 사용: node tests/a11y/focus-sweep.mjs <applicant|admin|admin-oidc> [--width=1280] [--browser=chrome|edge]
+// 사용: node tests/a11y/focus-sweep.mjs <applicant|admin|admin-oidc|applicant-oidc> [--width=1280] [--browser=chrome|edge]
 //   applicant  지원자 웹(:4001) — 접수 홈·공통원서·내 원서·원서 1~6단계·접수증·없는 화면·장애 안내
 //   admin      입학처 콘솔(:4101) — 첫 화면·설정 승인(검토 열기)·마감·대조·증적·보존기간·없는 화면
 //   admin-oidc 관리자 로그인 콘솔(:4100, 미리보기 `auth-admin`·`auth-admission`·로컬 발급자) — 로그인 전 화면, 키보드로
 //              발급자 로그인(비밀번호·일회용 번호), 로그인 뒤 첫 화면·설정 승인. 발급자 화면 자체는 돌지 않는다(우리 화면이 아니다)
+//   applicant-oidc 본인확인 지원자 화면(:3001, 미리보기 `auth-web`·`auth-admission`·`auth-central`) — 본인확인 전 홈, 키보드로 본인확인,
+//              본인확인 뒤 홈·공통원서 저장·원서 1단계 자동저장, 위험 차단 안내의 "본인확인 다시 하기"(응답 하나만 429 로 바꾼다) → 재본인확인 → 로그아웃
 //
 // 화면마다 문서 처음에서 Tab 을 눌러 끝을 지나 다시 처음으로 돌아올 때까지 간다. 각 자리에서 본다.
 //   - 포커스 표시가 보이는가 — 테두리 2px 이상, 키보드 포커스 표시(:focus-visible)
@@ -34,9 +36,10 @@ const WEB = 'http://localhost:4001';
 const ADMIN = 'http://localhost:4101';
 const API = 'http://localhost:3101';
 const ADMIN_OIDC = 'http://localhost:4100';
+const WEB_OIDC = 'http://localhost:3001';
 const PG = 'ui-shots-pg';
-if (!['applicant', 'admin', 'admin-oidc'].includes(PHASE ?? '')) {
-  console.error('사용: node tests/a11y/focus-sweep.mjs <applicant|admin|admin-oidc> [--width=1280] [--browser=chrome|edge]');
+if (!['applicant', 'admin', 'admin-oidc', 'applicant-oidc'].includes(PHASE ?? '')) {
+  console.error('사용: node tests/a11y/focus-sweep.mjs <applicant|admin|admin-oidc|applicant-oidc> [--width=1280] [--browser=chrome|edge]');
   process.exit(2);
 }
 
@@ -413,9 +416,94 @@ async function adminOidc() {
   await sweep('설정 승인 (관리자 로그인)');
 }
 
+/* ── 본인확인 지원자 화면 (T-M5-02 단계 6) ─────────────────────────────── */
+
+async function applicantOidc() {
+  const realm = JSON.parse(readFileSync(path.resolve('infra/auth/wonseoro-applicant.realm.json'), 'utf8'));
+  const u = realm.users.find((x) => x.username === 'applicant-2');
+  const password = u.credentials.find((c) => c.type === 'password').value;
+  const signIn = async (username) => {
+    await b.waitFor(`location.host === 'localhost:18080' && !!document.querySelector('#password')`, '발급자 본인확인 화면');
+    const filled = await b.evaluate(`!!document.querySelector('#username') && document.querySelector('#username').type !== 'hidden'`);
+    if (filled) {
+      await b.evaluate(`document.querySelector('#username').focus()`);
+      await typeText(b, username);
+      await press(b, 'Tab');
+    } else {
+      await b.evaluate(`document.querySelector('#password').focus()`); // 다시 본인확인 — 이름은 발급자가 채워 둔다
+    }
+    await typeText(b, password);
+    await press(b, 'Enter');
+  };
+
+  await go(`${WEB_OIDC}/`, '원서를 작성하려면 본인확인이 필요합니다');
+  await sweep('접수 홈 (본인확인 전, 본인확인 모드)');
+  await keyTo('본인확인');
+  await signIn('applicant-2');
+  await b.waitFor(`location.origin === ${JSON.stringify(WEB_OIDC)} && document.body.innerText.includes('본인확인을 마쳤습니다')`, '본인확인 뒤 홈', 60_000);
+  await sweep('접수 홈 (본인확인 뒤, 본인확인 모드)');
+
+  await go(`${WEB_OIDC}/profile`, '기본 정보');
+  await sweep('공통원서 (본인확인 모드)');
+  await keyTo('저장');
+  await b.waitFor(`document.body.innerText.includes('입력을 확인해 주십시오') || document.body.innerText.includes('저장했습니다')`, '공통원서 저장 결과');
+
+  await go(`${WEB_OIDC}/`, '본인확인을 마쳤습니다');
+  await keyTo('원서 작성 시작');
+  await b.waitFor(`location.pathname.startsWith('/apply/') && document.body.innerText.includes('1. 공통정보')`, '원서 1단계', 60_000);
+  await sweep('원서 1단계 (본인확인 모드)');
+
+  // 위험점수 차단 — 검증 응답 한 번만 429 + "다시 본인확인하면 풀린다" 로 바꾼다(서버 쪽 해제는 admission-api 통합 시험이 본다)
+  let limited = false;
+  await b.send('Fetch.enable', { patterns: [{ urlPattern: '*/validate*', requestStage: 'Request' }] });
+  b.on('Fetch.requestPaused', async (e) => {
+    if (e.request.method === 'POST' && !limited) {
+      limited = true;
+      await b.send('Fetch.fulfillRequest', {
+        requestId: e.requestId,
+        responseCode: 429,
+        responseHeaders: [
+          { name: 'content-type', value: 'application/problem+json' },
+          { name: 'retry-after', value: '120' },
+          { name: 'www-authenticate', value: 'Bearer error="insufficient_user_authentication", max_age=0' },
+          { name: 'access-control-allow-origin', value: WEB_OIDC },
+          { name: 'access-control-expose-headers', value: 'retry-after, etag, www-authenticate' },
+        ],
+        body: Buffer.from(JSON.stringify({ type: 'about:blank', title: '요청이 많습니다', status: 429, code: 'RATE_LIMITED', traceId: 'reauth-proof' })).toString('base64'),
+      });
+    } else {
+      await b.send('Fetch.continueRequest', { requestId: e.requestId });
+    }
+  });
+  for (const title of ['2. 대학·전형', '3. 추가정보', '4. 서류']) {
+    await keyTo('다음 단계');
+    await b.waitFor(`document.body.innerText.includes(${JSON.stringify(title)})`, title);
+  }
+  await keyTo('검토 단계로');
+  await b.waitFor(`document.body.innerText.includes('요청이 많아 잠시 멈췄습니다') && !!document.getElementById('ratelimit-reauth')`, '위험 차단 안내');
+  await sweep('위험 차단 안내 (본인확인 다시 하기)');
+  await b.send('Fetch.disable');
+  await keyTo('본인확인 다시 하기');
+  await b.waitFor(`location.host === 'localhost:18080'`, '다시 본인확인 화면');
+  const maxAge = await b.evaluate(`new URL(location.href).searchParams.get('max_age')`);
+  if (maxAge !== '0') problems.push(`본인확인 다시 하기: 발급자 요청에 max_age=0 이 없다 (${maxAge})`);
+  await signIn('applicant-2');
+  await b.waitFor(`location.origin === ${JSON.stringify(WEB_OIDC)} && location.pathname.startsWith('/apply/')`, '원서로 돌아옴', 60_000);
+  await b.waitFor(`document.body.innerText.includes('원서 작성')`, '원서 화면');
+
+  // 로그아웃 — 발급자 로그인도 끝내고 홈으로
+  await go(`${WEB_OIDC}/`, '본인확인을 마쳤습니다');
+  await keyTo('로그아웃');
+  await b.waitFor(`location.origin === ${JSON.stringify(WEB_OIDC)} && document.body.innerText.includes('원서를 작성하려면 본인확인이 필요합니다')`, '로그아웃 뒤 홈', 60_000);
+  const left = await b.evaluate(`sessionStorage.getItem('wonseoro.auth.tokens')`);
+  if (left) problems.push('로그아웃 뒤에도 이 탭에 토큰이 남아 있다');
+  await sweep('접수 홈 (로그아웃 뒤)');
+}
+
 let fatal = null;
 try {
   if (PHASE === 'applicant') await applicant();
+  else if (PHASE === 'applicant-oidc') await applicantOidc();
   else if (PHASE === 'admin-oidc') await adminOidc();
   else await admin();
 } catch (err) {

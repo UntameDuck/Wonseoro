@@ -23,6 +23,17 @@
 
 세션(지원자 식별자·가명 토큰)은 브라우저에만 있다 — 렌더링 중이 아니라 마운트 뒤에 읽는다(서버 렌더링과 갈라지지 않게).
 
+### 본인확인(OIDC) 모드 — T-M5-02 단계 6
+
+빌드 때 `NEXT_PUBLIC_AUTH_MODE=oidc`·`NEXT_PUBLIC_OIDC_ISSUER`(지원자 렐름)·`NEXT_PUBLIC_OIDC_CLIENT_ID`(`applicant-web`) 를 주면 접수 홈의 본인확인이
+발급자 로그인(공개 클라이언트 + PKCE·state·nonce)이 된다(`lib/auth.ts`, 콜백 `/auth/callback`). 토큰은 **이 탭의 sessionStorage** 에만, 액세스 토큰 5분·갱신 토큰 회전.
+API 호출 계층이 `Authorization: Bearer` 를 붙이고 개발용 신원 헤더는 보내지 않는다. 401 이면 한 번 갱신해 같은 요청(같은 멱등 키)을 다시 보낸다.
+
+- **세션 만료(T-M5-45)** — 무활동 30분·5분 전 경고는 그대로(`lib/session.ts`). "계속 이용하기" 는 토큰 갱신도 해 발급자의 무활동 시간을 민다. 발급자가 세션을 끝내면
+  화면 세션을 지금 끝낸 것으로 보고 같은 종료 안내를 보인다. 끝나면 마지막 저장 뒤 갱신 토큰을 폐기해 발급자 세션까지 끝내고(공용 PC), 다음 본인확인은 비밀번호를 다시 묻는다
+- **위험 차단 해제(ADR-0009)** — 요청 한도 안내가 서버의 "다시 본인확인하면 풀린다" 신호를 받으면 "본인확인 다시 하기"(`max_age=0`)를 보인다. 다녀와서 같은 버튼을 다시 누른다
+- 로컬: `scripts/auth/env/web.env` + 미리보기 `auth-web`(:3001)·`auth-admission`(:3111)·`auth-central`(:3112), 접근성 `node tests/a11y/focus-sweep.mjs applicant-oidc`
+
 ## 화면 원칙 (타협 불가)
 
 - Breadcrumb + Step Indicator 상시 노출

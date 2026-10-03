@@ -50,6 +50,7 @@ const groups = [
       'apps/admission-api/dist/common/identity/oidc-routes.test.js',
       'apps/admission-api/dist/common/identity/admin.guard.oidc.test.js',
       'apps/admission-api/dist/common/identity/oidc-auth.integration.test.js',
+      'apps/admission-api/dist/common/throttle/throttle-reauth.integration.test.js',
     ],
     env: {
       DATABASE_URL: universityUrl,

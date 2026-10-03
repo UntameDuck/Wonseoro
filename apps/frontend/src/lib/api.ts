@@ -7,7 +7,8 @@
  *   - 오류는 problem+json 으로 온다
  */
 
-import { touchSession } from './session';
+import { OIDC_MODE, accessToken, refresh } from './auth';
+import { expireNow, touchSession } from './session';
 
 const ADMISSION = process.env.NEXT_PUBLIC_ADMISSION_API ?? 'http://localhost:3001';
 const CENTRAL = process.env.NEXT_PUBLIC_CENTRAL_API ?? 'http://localhost:3000';
@@ -30,6 +31,11 @@ export class ApiError extends Error {
     readonly httpStatus: number,
     /** 429 RATE_LIMITED 일 때 서버가 준 대기 시간(초). 이보다 먼저 다시 보내지 않는다 (D-51). */
     readonly retryAfterSeconds: number | null = null,
+    /**
+     * 본인확인을 다시 하면 풀린다 — 서버가 `WWW-Authenticate: Bearer error="insufficient_user_authentication"` 를 줬다.
+     * 위험점수로 막힌 요청(ADR-0009)이 이렇다. 화면은 기다림과 함께 "본인확인 다시 하기" 를 보인다
+     */
+    readonly reauth: boolean = false,
   ) {
     super(problem.detail ?? problem.title);
   }
@@ -87,7 +93,7 @@ interface CallOptions {
   ifMatch?: string;
   contentType?: string;
   base?: 'admission' | 'central';
-  /** 개발용 신원 헤더. M5 에서 세션/OIDC 로 교체된다. */
+  /** 개발용 신원 헤더. 본인확인(OIDC) 모드에서는 보내지 않는다 — 신원은 로그인 토큰이다 */
   applicantId?: string;
   subjectToken?: string;
 }
@@ -98,17 +104,20 @@ export interface ApiResponse<T> {
   status: number;
 }
 
-export async function call<T>(path: string, opts: CallOptions = {}): Promise<ApiResponse<T>> {
+export async function call<T>(path: string, opts: CallOptions = {}, retried = false): Promise<ApiResponse<T>> {
   const base = opts.base === 'central' ? CENTRAL : ADMISSION;
   const headers: Record<string, string> = {};
+  // 본인확인 모드: 로그인했으면 액세스 토큰을 붙인다(곧 끝나면 먼저 갱신). 공개 경로(모집 정보 등)는 없어도 된다
+  const bearer = OIDC_MODE ? await accessToken() : null;
+  if (bearer) headers.authorization = `Bearer ${bearer}`;
 
   if (opts.body !== undefined) {
     headers['content-type'] = opts.contentType ?? 'application/json';
   }
   if (opts.idempotencyKey) headers['idempotency-key'] = opts.idempotencyKey;
   if (opts.ifMatch) headers['if-match'] = opts.ifMatch;
-  if (opts.applicantId) headers['x-applicant-id'] = opts.applicantId;
-  if (opts.subjectToken) headers['x-subject-token'] = opts.subjectToken;
+  if (!OIDC_MODE && opts.applicantId) headers['x-applicant-id'] = opts.applicantId;
+  if (!OIDC_MODE && opts.subjectToken) headers['x-subject-token'] = opts.subjectToken;
   const trace = newTraceparent();
   headers.traceparent = trace.header;
   lastTraceId = trace.traceId;
@@ -128,11 +137,18 @@ export async function call<T>(path: string, opts: CallOptions = {}): Promise<Api
   const parsed: unknown = text ? JSON.parse(text) : null;
 
   if (!res.ok) {
+    const problem = parsed as Problem;
+    if (OIDC_MODE && bearer && res.status === 401 && problem?.code === 'UNAUTHENTICATED') {
+      // 토큰이 막 끝났을 수 있다 — 한 번 갱신해 같은 요청(같은 멱등 키)을 다시 보낸다. 그래도 안 되면 로그인이 끝난 것이다
+      if (!retried && (await refresh())) return call<T>(path, opts, true);
+      expireNow();
+    }
     const retryAfter = Number(res.headers.get('retry-after'));
-    throw new ApiError(parsed as Problem, res.status, Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null);
+    const reauth = OIDC_MODE && /insufficient_user_authentication/.test(res.headers.get('www-authenticate') ?? '');
+    throw new ApiError(problem, res.status, Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null, reauth);
   }
   // 신원을 실은 요청이 성공했다 — 지원자가 쓰고 있다. 세션 만료를 뒤로 민다 (T-M5-45)
-  if (opts.applicantId || opts.subjectToken) touchSession();
+  if (bearer || (!OIDC_MODE && (opts.applicantId || opts.subjectToken))) touchSession();
   return {
     data: parsed as T,
     etag: res.headers.get('etag'),

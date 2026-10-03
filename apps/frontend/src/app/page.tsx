@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, Select, cycleTitle, formatDateTime } from '@wonseoro/krds';
 import { ApiError, NetworkError, api } from '../lib/api';
-import { loadSession, saveSession } from '../lib/session';
+import { OIDC_MODE } from '../lib/auth';
+import { OIDC_SESSION, loadSession, saveSession } from '../lib/session';
 import { useOperatingMode } from '../lib/use-operating-mode';
 import { IdentitySection } from '../krds/identity';
 import { OperatingModeBanner, RateLimitNotice, SlowNotice } from '../krds/status';
@@ -66,7 +67,7 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /** 요청 한도 — 이 시각까지 "원서 작성 시작" 을 쉰다 (T-M5-46) */
-  const [rateLimit, setRateLimit] = useState<{ until: number; traceId?: string; over: boolean } | null>(null);
+  const [rateLimit, setRateLimit] = useState<{ until: number; traceId?: string; over: boolean; reauth: boolean } | null>(null);
   const endRateLimit = useCallback(() => setRateLimit((r) => (r ? { ...r, over: true } : r)), []);
 
   const loadCatalog = useCallback(async () => {
@@ -118,7 +119,7 @@ export default function Home() {
       if (err instanceof NetworkError) {
         setError('대학 접수 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주십시오.');
       } else if (err instanceof ApiError && err.httpStatus === 429) {
-        setRateLimit({ until: Date.now() + (err.retryAfterSeconds ?? 30) * 1000, traceId: err.problem.traceId, over: false });
+        setRateLimit({ until: Date.now() + (err.retryAfterSeconds ?? 30) * 1000, traceId: err.problem.traceId, over: false, reauth: err.reauth });
       } else if (err instanceof ApiError) {
         setError(problemText(err.problem).detail);
       } else {
@@ -207,10 +208,17 @@ export default function Home() {
           )}
 
           <SlowNotice busy={busy} />
-          {rateLimit && <RateLimitNotice until={rateLimit.until} traceId={rateLimit.traceId} onDone={endRateLimit} />}
+          {rateLimit && <RateLimitNotice until={rateLimit.until} traceId={rateLimit.traceId} onDone={endRateLimit} reauth={rateLimit.reauth} />}
           <Button
             onClick={() => void start()}
-            disabled={busy || (rateLimit !== null && !rateLimit.over) || applicantId.length < 8 || !subjectToken || !typeId || !departmentId}
+            disabled={
+              busy ||
+              (rateLimit !== null && !rateLimit.over) ||
+              // 본인확인 모드는 로그인했는지만, 개발 모드는 식별자·가명 토큰을 넣었는지 본다
+              (OIDC_MODE ? applicantId !== OIDC_SESSION : applicantId.length < 8 || !subjectToken) ||
+              !typeId ||
+              !departmentId
+            }
           >
             {busy ? '원서를 준비하는 중…' : '원서 작성 시작'}
           </Button>

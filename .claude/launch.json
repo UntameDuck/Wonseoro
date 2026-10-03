@@ -94,6 +94,18 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["--env-file=scripts/auth/env/admin.env", "node_modules/next/dist/bin/next", "dev", "apps/admin-web", "-p", "4100"],
       "port": 4100
+    },
+    {
+      "name": "auth-central",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--env-file=scripts/auth/env/central.env", "apps/central-api/dist/main.js"],
+      "port": 3112
+    },
+    {
+      "name": "auth-web",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--env-file=scripts/auth/env/web.env", "node_modules/next/dist/bin/next", "dev", "apps/frontend", "-p", "3001"],
+      "port": 3001
     }
   ]
 }

@@ -12,6 +12,8 @@ npm run build -w @wonseoro/central-api && npm run test:auth:central   # 중앙+�
 # 운영 콘솔 로그인 — 미리보기 auth-admission(:3111)·auth-admin(:4100) 을 띄운 뒤
 npm run test:auth:console    # 콘솔 로그인(BFF)·갱신·재인증·로그아웃 21개
 node tests/a11y/focus-sweep.mjs admin-oidc   # 로그인 콘솔 접근성(키보드로 발급자 로그인)
+# 지원자 화면 본인확인 — 미리보기 auth-admission(:3111)·auth-central(:3112)·auth-web(:3001) 을 띄운 뒤
+node tests/a11y/focus-sweep.mjs applicant-oidc   # 본인확인·공통원서·원서·위험 차단 "본인확인 다시 하기"·로그아웃
 ```
 
 | 렐름 | 발급자 | 무엇 |

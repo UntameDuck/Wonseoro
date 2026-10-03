@@ -7,6 +7,7 @@ import { formatKst, formatKstTime, formatRemaining } from '../lib/use-deadline';
 import { Alert, Button, Icon, LiveRegion, formatTime } from '@wonseoro/krds';
 import { useEffect, useRef, useState } from 'react';
 import { currentRequestId } from '../lib/api';
+import { login } from '../lib/auth';
 
 /**
  * 자동저장 상태 표시 — 기술설계서 v1.1 §07
@@ -323,8 +324,21 @@ export function FailureNotice({
  * 퍼즐(그림·소리·끌기)로 사람임을 증명하게 하지 않는다. 한도는 계정마다 걸리고 시간이 지나면 풀린다 —
  * 그 시각을 글로 알리고, 그때 버튼이 다시 열리며 "이제 다시 시도할 수 있습니다" 를 알린다. 화면을 장애 안내로 바꾸지
  * 않는다(작성 중인 내용과 단계가 그대로). 문의할 때 쓸 요청번호도 함께. 포커스를 받는다 — 누른 버튼이 잠시 비활성이 된다.
+ *
+ * `reauth` — 위험점수로 막혔고 서버가 "다시 본인확인하면 풀린다" 고 알렸다(본인확인 모드). 기다리지 않고
+ * "본인확인 다시 하기" 로 바로 풀 수 있다 — 본인확인 화면을 다녀와 같은 버튼을 다시 누른다 (ADR-0009)
  */
-export function RateLimitNotice({ until, traceId, onDone }: { until: number; traceId?: string | undefined; onDone: () => void }) {
+export function RateLimitNotice({
+  until,
+  traceId,
+  onDone,
+  reauth = false,
+}: {
+  until: number;
+  traceId?: string | undefined;
+  onDone: () => void;
+  reauth?: boolean;
+}) {
   const [done, setDone] = useState(Date.now() >= until);
   useEffect(() => {
     setDone(Date.now() >= until);
@@ -348,6 +362,18 @@ export function RateLimitNotice({ until, traceId, onDone }: { until: number; tra
           {' '}
           계속 같은 안내가 나오면 요청번호로 문의해 주십시오: <span style={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{traceId}</span>
         </>
+      )}
+      {reauth && !done && (
+        <span style={{ display: 'block', marginTop: 'var(--krds-space-3)' }}>
+          기다리지 않으려면 본인확인을 다시 하십시오. 본인확인 화면을 다녀오면 바로 다시 누를 수 있습니다.{' '}
+          <Button
+            id="ratelimit-reauth"
+            variant="secondary"
+            onClick={() => void login(`${window.location.pathname}${window.location.search}`, true)}
+          >
+            본인확인 다시 하기
+          </Button>
+        </span>
       )}
     </Alert>
   );

@@ -20,13 +20,13 @@ import { AdaptiveThrottle, classifyRoute, RequestClass } from './adaptive-thrott
  */
 const meter = metrics.getMeter('k-admission.throttle');
 const decisions = meter.createCounter('throttle_decisions', {
-  description: '지원자 단위 요청 한도 판정 수 (class·decision=allowed|burst|risk, mode)',
+  description: '지원자 단위 요청 한도 판정 수 (class·decision=allowed|burst|risk|released, mode)',
 });
 const tracked = meter.createObservableGauge('throttle_tracked_subjects', {
   description: '이 Pod 가 한도를 추적 중인 지원자 수',
 });
 for (const cls of ['read', 'save', 'create', 'upload', 'payment', 'cancel', 'finalize'] satisfies RequestClass[]) {
-  for (const decision of ['allowed', 'burst', 'risk']) decisions.add(0, { class: cls, decision });
+  for (const decision of ['allowed', 'burst', 'risk', 'released']) decisions.add(0, { class: cls, decision });
 }
 
 const SUBJECT_HEADER = AUTH_MODE === 'gateway' ? 'x-authenticated-applicant' : 'x-applicant-id';
@@ -57,7 +57,16 @@ export function installAdaptiveThrottle(
     const subject = cls ? subjectOf(request) : null;
     if (!cls || !subject) return;
 
-    const decision = throttle.check(subject, cls, applicationIdOf(request));
+    let decision = throttle.check(subject, cls, applicationIdOf(request));
+    // 위험 차단이라도 차단 뒤에 본인확인을 다시 한 토큰이면 푼다 (ADR-0009)
+    if (!decision.allowed && decision.reason === 'RISK' && AUTH_MODE === 'oidc') {
+      const authTime = request.identity?.kind === 'applicant' ? request.identity.authTime : null;
+      if (authTime && throttle.releaseRiskByReauth(subject, authTime * 1000)) {
+        decisions.add(1, { class: cls, decision: 'released' });
+        logger.log(`RISK released by re-authentication class=${cls}`);
+        decision = throttle.check(subject, cls, applicationIdOf(request));
+      }
+    }
     if (decision.allowed) {
       decisions.add(1, { class: cls, decision: 'allowed' });
       return;
@@ -75,6 +84,10 @@ export function installAdaptiveThrottle(
       instance: request.url,
       traceId: requestTraceId(request),
     };
+    if (decision.reason === 'RISK' && AUTH_MODE === 'oidc') {
+      // 기다리는 것 말고 바로 푸는 길 — 본인확인을 다시 하면 된다(RFC 9470 형식). 화면이 "본인확인 다시 하기" 를 보인다
+      reply.header('www-authenticate', 'Bearer error="insufficient_user_authentication", error_description="Re-authenticate to continue", max_age=0');
+    }
     return reply
       .status(429)
       .header('retry-after', String(decision.retryAfterSeconds))

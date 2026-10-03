@@ -1,0 +1,485 @@
+{
+  "test": "T-M5-41 Visible Focus / Focus Order · T-M5-42 Screen Reader",
+  "environment": "축소 환경 — 로컬 전용 DB(ui-shots-pg)·개발 서버(next dev)",
+  "phase": "applicant-oidc",
+  "browser": "Chrome/154.0.8037.93",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "textZoom": 1,
+  "at": "2026-10-03T02:36:13.437Z",
+  "fatal": null,
+  "screens": 6,
+  "tabStops": 57,
+  "problems": [],
+  "detail": [
+    {
+      "name": "접수 홈 (본인확인 전, 본인확인 모드)",
+      "url": "/",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "SELECT",
+          "name": "전형",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"전형\" — 전형에 따라 작성할 항목과 전형료가 달라집니다."
+        },
+        {
+          "tag": "SELECT",
+          "name": "모집단위",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"모집단위\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "본인확인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"본인확인\""
+        }
+      ],
+      "problems": [],
+      "title": "원서로 — 대학입학 원서접수",
+      "liveRegions": [
+        "통합 조회 서비스와 연결이 원활하지 않습니다 원서 작성·저장·서류·결제·최종제출은 이 대학 서버에서 정상 처리됩니다. 최종제출 후 접수번호가 표시되면 접수가 완료된 것입니다. ‘내 원서’ 통합 조회에는 늦게 나타날 수 있습니다. 다시 결제하거나 처음부터 다시 작성하지 마십시오."
+      ]
+    },
+    {
+      "name": "접수 홈 (본인확인 뒤, 본인확인 모드)",
+      "url": "/",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "SELECT",
+          "name": "전형",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"전형\" — 전형에 따라 작성할 항목과 전형료가 달라집니다."
+        },
+        {
+          "tag": "SELECT",
+          "name": "모집단위",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"모집단위\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "로그아웃",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"로그아웃\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서 작성·제공 동의",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서 작성·제공 동의\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "원서 작성 시작",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"원서 작성 시작\""
+        }
+      ],
+      "problems": [],
+      "title": "원서로 — 대학입학 원서접수",
+      "liveRegions": [
+        "통합 조회 서비스와 연결이 원활하지 않습니다 원서 작성·저장·서류·결제·최종제출은 이 대학 서버에서 정상 처리됩니다. 최종제출 후 접수번호가 표시되면 접수가 완료된 것입니다. ‘내 원서’ 통합 조회에는 늦게 나타날 수 있습니다. 다시 결제하거나 처음부터 다시 작성하지 마십시오."
+      ]
+    },
+    {
+      "name": "공통원서 (본인확인 모드)",
+      "url": "/profile",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "출신 고등학교",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"출신 고등학교\" — 11 / 100자"
+        },
+        {
+          "tag": "INPUT",
+          "name": "졸업(예정) 연도",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "spinbutton \"졸업(예정) 연도\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "이메일",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"이메일\" — 0 / 254자"
+        },
+        {
+          "tag": "INPUT",
+          "name": "휴대전화",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"휴대전화\" — 0 / 20자"
+        },
+        {
+          "tag": "INPUT",
+          "name": "출신 고등학교",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"출신 고등학교\" 선택됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "졸업(예정) 연도",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"졸업(예정) 연도\" 선택됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "이메일",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"이메일\" 선택 안 됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "휴대전화",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"휴대전화\" 선택 안 됨"
+        },
+        {
+          "tag": "BUTTON",
+          "name": "저장",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"저장\""
+        }
+      ],
+      "problems": [],
+      "title": "공통원서 | 원서로",
+      "liveRegions": []
+    },
+    {
+      "name": "원서 1단계 (본인확인 모드)",
+      "url": "/apply/e6739be3-5dab-4648-b557-7698b52ef43a",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "출신 고등학교",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"출신 고등학교\" 필수 — 2~100자 11 / 100자"
+        },
+        {
+          "tag": "INPUT",
+          "name": "이메일",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"이메일\" — 이메일 형식"
+        },
+        {
+          "tag": "INPUT",
+          "name": "졸업(예정) 연도",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "spinbutton \"졸업(예정) 연도\" 필수 — 1990 이상 2030 이하"
+        },
+        {
+          "tag": "BUTTON",
+          "name": "다음 단계",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"다음 단계\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이 원서 취소하기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"이 원서 취소하기\""
+        }
+      ],
+      "problems": [],
+      "title": "공통정보 — 원서 작성 | 원서로",
+      "liveRegions": [
+        "통합 조회 서비스와 연결이 원활하지 않습니다 원서 작성·저장·서류·결제·최종제출은 이 대학 서버에서 정상 처리됩니다. 최종제출 후 접수번호가 표시되면 접수가 완료된 것입니다. ‘내 원서’ 통합 조회에는 늦게 나타날 수 있습니다. 다시 결제하거나 처음부터 다시 작성하지 마십시오.",
+        "자동으로 저장됩니다"
+      ]
+    },
+    {
+      "name": "위험 차단 안내 (본인확인 다시 하기)",
+      "url": "/apply/e6739be3-5dab-4648-b557-7698b52ef43a",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "본인확인 다시 하기",
+          "outline": 3,
+          "contrast": 4.25,
+          "say": "button \"본인확인 다시 하기\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "파일 선택",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"파일 선택\" — 학교생활기록부 (선택) PDF 최대 10MB · JPG·PNG 최대 5MB. 올린 뒤 악성코드 검사를 거칩니다."
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이전",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"이전\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "검사 상태 새로고침",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"검사 상태 새로고침\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이 원서 취소하기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"이 원서 취소하기\""
+        }
+      ],
+      "problems": [],
+      "title": "서류 — 원서 작성 | 원서로",
+      "liveRegions": [
+        "통합 조회 서비스와 연결이 원활하지 않습니다 원서 작성·저장·서류·결제·최종제출은 이 대학 서버에서 정상 처리됩니다. 최종제출 후 접수번호가 표시되면 접수가 완료된 것입니다. ‘내 원서’ 통합 조회에는 늦게 나타날 수 있습니다. 다시 결제하거나 처음부터 다시 작성하지 마십시오.",
+        "자동으로 저장됩니다",
+        "요청이 많아 잠시 멈췄습니다 11:38:37부터 다시 누를 수 있습니다. 작성하신 내용은 보관되어 있습니다. 그때 이 안내가 바뀝니다. 계속 같은 안내가 나오면 요청번호로 문의해 주십시오: reauth-proof 기다리지 않으려면 본인확인을 다시 하십시오. 본인확인 화면을 다녀오면 바로 다시 누를 수 있습니다. 본인확인 다시 하기",
+        "선택된 파일이 없습니다."
+      ]
+    },
+    {
+      "name": "접수 홈 (로그아웃 뒤)",
+      "url": "/",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "SELECT",
+          "name": "전형",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"전형\" — 전형에 따라 작성할 항목과 전형료가 달라집니다."
+        },
+        {
+          "tag": "SELECT",
+          "name": "모집단위",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"모집단위\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "본인확인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"본인확인\""
+        }
+      ],
+      "problems": [],
+      "title": "원서로 — 대학입학 원서접수",
+      "liveRegions": [
+        "통합 조회 서비스와 연결이 원활하지 않습니다 원서 작성·저장·서류·결제·최종제출은 이 대학 서버에서 정상 처리됩니다. 최종제출 후 접수번호가 표시되면 접수가 완료된 것입니다. ‘내 원서’ 통합 조회에는 늦게 나타날 수 있습니다. 다시 결제하거나 처음부터 다시 작성하지 마십시오."
+      ]
+    }
+  ]
+}

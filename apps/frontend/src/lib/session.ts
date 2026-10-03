@@ -1,8 +1,15 @@
 'use client';
 
+import { OIDC_MODE, logout, refresh, signedIn } from './auth';
+
 /**
- * 개발용 세션.
- * 브라우저 저장소에 지원자 식별자와 중앙 가명 토큰을 둔다. M5 에서 서버 세션으로 교체한다. (T-M5-02)
+ * 화면 세션 — 무활동 만료·경고(T-M5-45)와, 지금 작성 중인 원서.
+ *
+ * 본인확인(OIDC, T-M5-02 단계 6) 모드 — 신원은 이 탭의 로그인 토큰(lib/auth.ts)이고 API 호출 계층이 붙인다. 화면 세션의
+ * 지원자 식별자·가명 토큰 자리에는 자리표시자(`OIDC_SESSION`)만 둔다 — 지원자 식별자는 서버가 토큰으로 정한다.
+ * 연장은 토큰 갱신도 함께 해 발급자의 무활동 시간을 뒤로 밀고, 세션이 끝나면 갱신 토큰을 폐기한다(공용 PC).
+ *
+ * 개발 모드 — 브라우저 저장소에 지원자 식별자와 중앙 가명 토큰을 둔다.
  *
  * 가명 토큰은 **지어내지 않는다.** 전에는 화면이 `subj-<식별자 앞 8자>` 를 만들어 썼는데, 대학 DB 에
  * 등록된 토큰과 달라 "내 원서" 가 늘 비어 있었고 공통원서도 엉뚱한 토큰으로 조회했다. 지금은
@@ -21,6 +28,9 @@ export interface Session {
 }
 
 const KEY = 'wonseoro.dev.session';
+
+/** 본인확인 모드의 자리표시자 — 화면이 "세션이 있다" 를 판단하는 데만 쓴다. API 에는 보내지 않는다 */
+export const OIDC_SESSION = 'oidc';
 
 /**
  * 세션 유지 시간 — 아무 동작(서버 요청) 없이 30분이 지나면 끝난다. 공용 PC 에 남은 개인정보를 지키려는 것이다.
@@ -46,7 +56,25 @@ export function saveSession(s: Session): void {
 /** 지원자가 "계속 이용하기" 를 눌렀다 — 만료를 뒤로 민다. 세션이 없거나 이미 끝났으면 아무것도 하지 않는다. */
 export function extendSession(): void {
   const s = loadSession();
-  if (s) saveSession(s);
+  if (!s) return;
+  saveSession(s);
+  // 본인확인 모드: 발급자의 무활동 시간도 함께 민다. 발급자가 세션을 끝냈으면(갱신 실패) 화면 세션도 끝낸다
+  if (OIDC_MODE) void refresh().then((t) => t === null && expireNow());
+}
+
+/**
+ * 서버가 로그인이 끝났다고 답했다(발급자 세션 만료·폐기) — 화면 세션의 끝을 지금으로 당긴다.
+ * 세션 경고 대화상자가 다음 틱에 끝난 것으로 보고 마지막 저장·종료 안내를 그대로 한다.
+ */
+export function expireNow(): void {
+  try {
+    const raw = sessionStorage.getItem(KEY);
+    if (!raw) return;
+    sessionStorage.setItem(KEY, JSON.stringify({ ...(JSON.parse(raw) as Session), expiresAt: new Date().toISOString() }));
+    window.dispatchEvent(new Event(SESSION_EVENT));
+  } catch {
+    /* 저장소를 쓸 수 없으면 세션도 없다 */
+  }
 }
 
 /**
@@ -59,7 +87,7 @@ export function touchSession(): void {
   if (at !== null && at - Date.now() > SESSION_WARN_MS) extendSession();
 }
 
-/** 세션을 끝낸다 — 시간이 다 됐거나 지원자가 "지금 종료" 를 눌렀다. */
+/** 세션을 끝낸다 — 시간이 다 됐거나 지원자가 "지금 종료" 를 눌렀다. 본인확인 모드면 로그인도 끝낸다(갱신 토큰 폐기) */
 export function endSession(): void {
   try {
     sessionStorage.removeItem(KEY);
@@ -67,6 +95,9 @@ export function endSession(): void {
   } catch {
     /* 저장소를 쓸 수 없으면 세션도 없다 */
   }
+  // 끝나는 순간 작성 화면이 마지막 저장을 보낸다(SESSION_EXPIRING_EVENT) — 그 요청이 토큰을 쓰고 끝날 시간을 두고 폐기한다.
+  // 화면 세션은 이미 지웠으므로 새 요청은 나가지 않는다
+  if (OIDC_MODE) setTimeout(() => void logout(false), 5_000);
 }
 
 /** 세션이 끝나는 시각(밀리초). 세션이 없으면 null. 만료 시각이 없는 옛 세션은 지금부터 센다. */
@@ -117,6 +148,8 @@ export function peekSession(): Session | null {
 
 /** 지금 세션. 만료 시각이 지났으면 없는 것으로 본다 — 끝난 세션의 신원으로 요청하지 않는다. */
 export function loadSession(): Session | null {
+  // 본인확인 모드: 이 탭에 로그인이 없으면 세션도 없다
+  if (OIDC_MODE && !signedIn()) return null;
   try {
     const raw = sessionStorage.getItem(KEY);
     if (!raw) return null;

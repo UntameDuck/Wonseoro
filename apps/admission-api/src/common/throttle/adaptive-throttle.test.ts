@@ -45,6 +45,30 @@ describe('Adaptive Throttling (T-M4-40, §01 B6)', () => {
     assert.equal(t.check('prober', 'save', 'own-app').allowed, true, 'Retry-After 뒤에는 다시 된다');
   });
 
+  it('위험 차단은 차단 뒤에 본인확인을 다시 한 토큰으로 바로 풀린다 — 같은 인증으로는 한 번만 (ADR-0009)', () => {
+    const c = clock();
+    const t = new AdaptiveThrottle({ now: c.now });
+    const before = c.now() - 60_000; // 차단 전에 로그인했던 인증
+    for (let i = 0; i < 8; i += 1) t.noteOwnershipMiss('student');
+    assert.equal(t.releaseRiskByReauth('student', before), false, '아직 막힌 적이 없으면 풀 것도 없다');
+    const blocked = t.check('student', 'save', 'own-app');
+    assert.ok(!blocked.allowed && blocked.reason === 'RISK');
+    assert.equal(t.releaseRiskByReauth('student', before), false, '차단 전의 인증으로는 풀리지 않는다');
+
+    c.advance(30_000);
+    const reauth = c.now();
+    assert.equal(t.releaseRiskByReauth('student', reauth), true, '차단 뒤 다시 본인확인 — 풀린다');
+    assert.equal(t.check('student', 'save', 'own-app').allowed, true);
+    assert.equal(t.riskOf('student'), 0);
+
+    // 풀린 뒤 다시 훑으면 또 막히고, 같은 인증으로는 다시 못 푼다
+    for (let i = 0; i < 8; i += 1) t.noteOwnershipMiss('student');
+    assert.equal(t.check('student', 'save', 'own-app').allowed, false);
+    assert.equal(t.releaseRiskByReauth('student', reauth), false, '같은 인증으로 두 번 풀지 않는다');
+    c.advance(10_000);
+    assert.equal(t.releaseRiskByReauth('student', c.now()), true, '새로 본인확인하면 다시 풀린다');
+  });
+
   it('위험이 높아도 최종제출은 넉넉한 별도 한도로 받는다 — 멱등이라 중복 접수는 없다', () => {
     const t = new AdaptiveThrottle({ now: clock().now });
     for (let i = 0; i < 8; i += 1) t.noteOwnershipMiss('prober');

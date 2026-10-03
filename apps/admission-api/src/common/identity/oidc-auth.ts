@@ -38,6 +38,8 @@ export interface ApplicantOidcIdentity {
   applicantId: string;
   /** 지원자 렐름의 가명 주체(sub). 중앙 동기화의 지원자 토큰으로 쓴다 */
   subjectToken: string;
+  /** 직접 인증한 시각(초) — 위험 차단을 본인확인 다시 하기로 풀 때 본다(ADR-0009) */
+  authTime: number | null;
 }
 
 export type OidcIdentity = StaffIdentity | ApplicantOidcIdentity;
@@ -160,7 +162,7 @@ export class OidcAuthenticator {
   }
 
   private async applicantOf(v: VerifiedToken): Promise<ApplicantOidcIdentity> {
-    return { kind: 'applicant', applicantId: await this.applicants.resolve(v.subject), subjectToken: v.subject };
+    return { kind: 'applicant', applicantId: await this.applicants.resolve(v.subject), subjectToken: v.subject, authTime: v.authTime };
   }
 }
 

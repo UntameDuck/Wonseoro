@@ -69,6 +69,10 @@ interface SubjectState {
   riskAt: number;
   applications: Map<string, number>;
   lastSeen: number;
+  /** 위험 차단이 시작된 시각 — 본인확인 다시 하기는 이보다 뒤의 인증이어야 차단을 푼다 */
+  riskBlockedAt?: number;
+  /** 이미 차단을 푸는 데 쓴 인증 시각 — 같은 인증으로 두 번 풀지 않는다 */
+  reauthUsed?: number;
 }
 
 export interface ThrottleOptions {
@@ -105,8 +109,10 @@ export class AdaptiveThrottle {
     if (risk >= RISK.high && cls !== 'read' && cls !== 'finalize') {
       // 점수가 high 아래로 내려오는 데 걸리는 시간 — 그때 다시 시도하면 된다
       const wait = RISK.halfLifeMs * Math.log2(risk / (RISK.high - 1));
+      state.riskBlockedAt ??= now;
       return { allowed: false, reason: 'RISK', retryAfterSeconds: Math.max(1, Math.ceil(wait / 1000)) };
     }
+    if (risk < RISK.high) state.riskBlockedAt = undefined;
 
     const spec = this.limits[cls];
     const refill = spec.refillPerSecond * (risk >= RISK.elevated ? 0.5 : 1);
@@ -130,6 +136,26 @@ export class AdaptiveThrottle {
   noteOwnershipMiss(subject: string): void {
     const now = this.now();
     this.raise(this.state(subject, now), RISK.ownershipMiss, now);
+  }
+
+  /**
+   * 본인확인 다시 하기로 위험 차단을 푼다 (ADR-0009, T-M5-02 단계 6).
+   *
+   * 사람이 차단이 시작된 **뒤에** 다시 직접 인증했다면(토큰의 auth_time) 자동화가 아니라고 본다 — 접근성 기준을 통과한
+   * 본인확인 수단이 퍼즐형 CAPTCHA 의 "사람 확인" 을 대신한다. 같은 인증으로는 한 번만 푼다: 풀린 뒤 다시 남용해 점수가
+   * 오르면 또 막히고, 그때는 새로 본인확인해야 한다.
+   * @returns 풀었으면 true
+   */
+  releaseRiskByReauth(subject: string, authTimeMs: number): boolean {
+    const state = this.subjects.get(subject);
+    if (!state || state.riskBlockedAt === undefined) return false;
+    if (authTimeMs <= state.riskBlockedAt || state.reauthUsed === authTimeMs) return false;
+    const now = this.now();
+    state.risk = 0;
+    state.riskAt = now;
+    state.riskBlockedAt = undefined;
+    state.reauthUsed = authTimeMs;
+    return true;
   }
 
   riskOf(subject: string): number {

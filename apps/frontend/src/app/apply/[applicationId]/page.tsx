@@ -56,7 +56,7 @@ export default function ApplyPage({
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [busy, setBusy] = useState(false);
   /** 요청 한도에 걸려 이 시각까지 버튼을 쉰다 (T-M5-46) */
-  const [rateLimit, setRateLimit] = useState<{ until: number; traceId?: string; over: boolean } | null>(null);
+  const [rateLimit, setRateLimit] = useState<{ until: number; traceId?: string; over: boolean; reauth: boolean } | null>(null);
   const rateLimited = rateLimit !== null && !rateLimit.over;
   // 시각이 지나면 버튼을 연다. 안내는 "이제 다시 시도할 수 있습니다" 로 남긴다
   const endRateLimit = useCallback(() => setRateLimit((r) => (r ? { ...r, over: true } : r)), []);
@@ -392,7 +392,7 @@ export default function ApplyPage({
     }
     if (err instanceof ApiError && err.httpStatus === 429) {
       // 요청 한도 — 화면을 장애 안내로 바꾸지 않는다. 언제 다시 누를 수 있는지 알리고 그때 버튼을 연다 (T-M5-46)
-      setRateLimit({ until: Date.now() + (err.retryAfterSeconds ?? 30) * 1000, traceId: err.problem.traceId, over: false });
+      setRateLimit({ until: Date.now() + (err.retryAfterSeconds ?? 30) * 1000, traceId: err.problem.traceId, over: false, reauth: err.reauth });
       return;
     }
     if (err instanceof ApiError) {
@@ -482,7 +482,7 @@ export default function ApplyPage({
       <ErrorSummary key={validationRun} issues={issues} onSelect={selectIssue} />
       <SlowNotice busy={busy} />
       {rateLimit && (
-        <RateLimitNotice until={rateLimit.until} traceId={rateLimit.traceId} onDone={endRateLimit} />
+        <RateLimitNotice until={rateLimit.until} traceId={rateLimit.traceId} onDone={endRateLimit} reauth={rateLimit.reauth} />
       )}
       {notice && <Alert tone={notice.tone} title={notice.title} focusKey={notice}>{notice.body}</Alert>}
 
