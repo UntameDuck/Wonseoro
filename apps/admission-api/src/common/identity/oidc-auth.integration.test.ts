@@ -145,7 +145,9 @@ const PROTECTED = `/api/v1/applications/00000000-0000-4000-8000-000000000000`;
 describe('OIDC 인증 — HTTP (T-M5-02·10 단계 3)', () => {
   it('계약의 공개 경로는 토큰 없이, 지원자 경로는 토큰이 있어야 한다', async (ctx) => {
     if (!available) return ctx.skip(SKIP);
-    assert.equal((await call('GET', '/api/v1/meta/time')).status, 200);
+    // 모집을 지정한다 — 지정하지 않으면 가장 최근에 연 OPEN 모집을 고르는데, 동시에 도는 시험(config-governance·
+    // deadline-extension)이 마감 정책 없는 OPEN 모집을 잠시 만들어 두면 그 모집이 뽑혀 503 이 된다
+    assert.equal((await call('GET', `/api/v1/meta/time?admissionCycleId=${CYCLE}`)).status, 200);
     // 모집·전형·모집단위는 공개다(계약 1.7.0, D-65) — 로그인 전 화면과 운영 콘솔이 보인다
     assert.equal((await call('GET', '/api/v1/admission-cycles/current')).status, 200);
     const anon = await call('GET', PROTECTED);

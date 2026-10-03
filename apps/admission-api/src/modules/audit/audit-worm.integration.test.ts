@@ -67,10 +67,17 @@ describe('감사 기록 WORM (T-M3-03)', () => {
     const first = await exportAuditSegment(db, store, opts);
     assert.ok(first.exported >= 3 && first.key);
     firstKey = first.key as string;
-    const again = await exportAuditSegment(db, store, opts);
-    assert.equal(again.exported, 0, '이미 내보낸 기록은 다시 내보내지 않는다(키 이름이 이어 내보낼 자리)');
     const body = (await store.get(firstKey)).toString('utf8');
     for (const id of ids) assert.ok(body.includes(id));
+    // 이어서 내보내면 겹치지 않는다(키 이름이 이어 내보낼 자리). 0건을 기대하지 않는다 — 동시에 도는 시험이 남긴
+    // 기록이 그사이 settleSeconds 를 넘겨 새 조각으로 나갈 수 있다
+    const again = await exportAuditSegment(db, store, opts);
+    if (again.key) {
+      const next = (await store.get(again.key)).toString('utf8');
+      const firstIds = body.trim().split('\n').map((l) => (JSON.parse(l) as { id: string }).id);
+      assert.deepEqual(firstIds.filter((id) => next.includes(id)), [], '이미 내보낸 기록은 다시 내보내지 않는다');
+      assert.ok(again.key > firstKey, '다음 조각은 앞 조각 뒤에 이어진다');
+    }
   });
 
   it('조각은 보관 기간 동안 지울 수도 보관을 줄일 수도 없다(COMPLIANCE)', async (t) => {
