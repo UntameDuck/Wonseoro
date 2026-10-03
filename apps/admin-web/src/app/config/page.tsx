@@ -12,8 +12,10 @@ import {
   activateBlock,
   approveBlock,
 } from '../../components/approval';
+import { ConfigOnboarding } from '../../components/config-onboarding';
 import { NeedsCycle, useConsole } from '../../components/console';
-import { ApiError, actionKey, adminGet, adminPost, describe, kst } from '../../lib/api';
+import { ApiError, actionKey, admissionTypes as loadAdmissionTypes, adminGet, adminPost, describe, kst, type AdmissionType } from '../../lib/api';
+import { emptyConfig, isObject } from '../../lib/config-onboarding';
 
 interface Version {
   id: string;
@@ -168,15 +170,47 @@ function DraftCreator({
   const [version, setVersion] = useState('');
   const [message, setMessage] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [types, setTypes] = useState<AdmissionType[]>([]);
+  const [builderConfig, setBuilderConfig] = useState<Record<string, unknown> | null>(null);
+  const [builderKey, setBuilderKey] = useState(0);
+
+  useEffect(() => {
+    void loadAdmissionTypes(cycleId)
+      .then(setTypes)
+      .catch((err) => setMessage({ tone: 'danger', text: describe(err) }));
+  }, [cycleId]);
 
   async function startFromActive() {
     try {
       const active = await adminGet<{ version: string; config: Record<string, unknown> }>('config/active', { cycleId });
       setText(JSON.stringify(active.config, null, 2));
       setVersion(`${active.version}-next`);
+      setBuilderConfig(active.config);
+      setBuilderKey((value) => value + 1);
       setMessage(null);
     } catch (err) {
       setMessage({ tone: 'danger', text: describe(err) });
+    }
+  }
+
+  function startEmpty() {
+    const config = emptyConfig(types);
+    setText(JSON.stringify(config, null, 2));
+    setVersion('cfg-v1');
+    setBuilderConfig(config);
+    setBuilderKey((value) => value + 1);
+    setMessage(null);
+  }
+
+  function reloadBuilder() {
+    try {
+      const parsed: unknown = JSON.parse(text);
+      if (!isObject(parsed)) throw new Error('object');
+      setBuilderConfig(parsed);
+      setBuilderKey((value) => value + 1);
+      setMessage(null);
+    } catch {
+      setMessage({ tone: 'danger', text: '고급 편집 내용이 올바른 설정 형식이 아닙니다. 먼저 형식 오류를 고쳐 주십시오.' });
     }
   }
 
@@ -211,9 +245,30 @@ function DraftCreator({
         전형 양식·제출 서류·서류 이름·보존기간을 고칠 수 있습니다. 지금 적용 중인 설정에서 시작해 필요한 곳만 고치십시오.
       </p>
       {message && <Alert tone={message.tone} title={message.text} focusKey={message} />}
-      <Button variant="secondary" onClick={() => void startFromActive()}>
-        지금 적용 중인 설정에서 시작
-      </Button>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--krds-space-2)' }}>
+        <Button variant="secondary" onClick={() => void startFromActive()}>
+          지금 적용 중인 설정에서 시작
+        </Button>
+        <Button variant="secondary" disabled={types.length === 0} onClick={startEmpty}>
+          빈 설정에서 시작
+        </Button>
+        {text.trim() && (
+          <Button variant="secondary" onClick={reloadBuilder}>
+            고급 편집 내용을 구성 화면에 불러오기
+          </Button>
+        )}
+      </div>
+      {builderConfig && (
+        <ConfigOnboarding
+          key={builderKey}
+          config={builderConfig}
+          types={types}
+          onApply={(config) => {
+            setBuilderConfig(config);
+            setText(JSON.stringify(config, null, 2));
+          }}
+        />
+      )}
       <Field label="초안 버전 이름" value={version} onChange={setVersion} required maxLength={64} />
       <Field label="설정 내용 (고급 편집)" value={text} onChange={setText} required multiline />
       <Button

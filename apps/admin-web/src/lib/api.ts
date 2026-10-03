@@ -144,8 +144,19 @@ export interface Cycle {
   closesAt: string;
 }
 
+export interface AdmissionType {
+  id: string;
+  code: string;
+  name: string;
+  feeAmount: number;
+}
+
 export function currentCycle(): Promise<Cycle> {
   return request<Cycle>('/api/public/cycle');
+}
+
+export function admissionTypes(cycleId: string): Promise<AdmissionType[]> {
+  return request<AdmissionType[]>(`/api/public/admission-types?cycleId=${encodeURIComponent(cycleId)}`);
 }
 
 /** 저장은 UTC, 표시만 한국 시간 "2026.12.31 18:00". 표기 규칙은 KRDS 한 곳에 있다 (T-M5-54). */
