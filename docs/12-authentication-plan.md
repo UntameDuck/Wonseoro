@@ -204,7 +204,7 @@
   시험 발급자(`scripts/security/dast-issuer.mjs` — 실제 Keycloak 토큰과 같은 모양, 비밀 키는 메모리에만)의 토큰을 ZAP 시작 훅(`zap-auth-hook.py`)이
   경로별로 붙인다(`/api/v1` 지원자, `/admin/v1` 담당자 — `-z` 로 넘기면 ZAP 이 값을 공백에서 잘라 "Bearer" 만 남았다).
   ZAP 이 토큰을 못 붙이면 보고서는 High 0 으로 "통과" 하므로 **인증 도달 확인**(`check-dast-auth.mjs` — 토큰 판정 지표)을 게이트에 더했다.
-  로컬 결과(축소 환경): **WARN 0·High 0·PASS 118**, 인증 뒤까지 닿은 요청 지원자 1,236·담당자 3,036, 서버 오류 로그 0. 로컬 실행 `node scripts/security/dast-local.mjs`
+  로컬·원격(Security run 37108004422) 같은 결과: **WARN 0·High 0·PASS 118**, 인증 뒤까지 닿은 요청 지원자 1,236·담당자 3,036, 서버 오류 로그 0. 로컬 실행 `node scripts/security/dast-local.mjs`
 - **함께** — 화면 캡처 준비 스크립트가 지우던 상태 파일 경로를 저장소 `.cache/shots` 로 맞췄다(전에는 C 드라이브 임시 폴더를 가리켰다)
 
 ### 인증 다음
