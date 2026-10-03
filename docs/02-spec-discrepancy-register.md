@@ -1035,6 +1035,20 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-68. Kubernetes 역할이 3종뿐이었고, sre-operator 의 "재시작" 권한이 Secret 원문을 꺼내는 길이었다 🟡
+
+| | |
+|---|---|
+| **발견** | 2026-10-03 (T-M5-02 단계 8 — 노션 06 역할 6종을 차트에 맞추며) |
+| **충돌** | ① 노션 06 은 역할 6종(platform-viewer·sre-operator·admission-admin·security-auditor·release-controller·break-glass)을 정의하지만 첨부 `network-rbac.yaml`·차트 `rbac.yaml` 에는 **3종**(viewer·sre·release)만 있었다. 감사 그룹(`kadmission-auditors`)은 platform-viewer 에 묶여 있어 보안 설정(Role·NetworkPolicy)을 볼 수 없었다 ② 노션은 sre-operator 를 "scale/restart/log, **Secret 원문 금지**" 로 정의한다. 재시작(`rollout restart`)은 Deployment 수정이라 RBAC 으로 Deployment patch 를 줬는데, RBAC 은 **어느 필드를** 고치는지 가르지 못한다 — sre 가 Secret 을 읽을 권한 없이 Pod 틀에 `secretKeyRef` 를 넣으면 Pod 가 대신 읽고, sre 는 로그(pods/log)로 볼 수 있다. kind 에서 재현했다 |
+| **판정** | ① **차트 역할 6종** — security-auditor(Role·바인딩 조회, NetworkPolicy·ServiceAccount·Pod·Deployment·PDB·이벤트 조회. Secret·로그·exec 없음, 감사 그룹은 첨부대로 platform-viewer 에 더해 이것도 받는다), break-glass(Role 만, **바인딩 없음 = 평소 비활성**. 켤 때는 `rbac.breakGlass.group` 과 끝나는 시각·사유가 함께여야 렌더링된다 — 서명 커밋·리뷰를 거친다. TTL 회수·사용 경보는 T-M5-03. RBAC·exec 없음), admission-admin(**Role 도 바인딩도 없다** — 업무는 운영 API 로만), 조회 그룹 `kadmission-viewers` 바인딩. 차트 Role 은 배포 계정(gitops release-controller) 권한의 부분집합이어야 Kubernetes 가 만들게 해 준다(권한 상승 방지) — break-glass 에 Pod 삭제·exec 가 없는 이유이기도 하다 ② **플랫폼 승인 정책** `deploy/platform/rbac/sre-operator-guard.yaml`(ValidatingAdmissionPolicy) — sre 그룹의 Deployment 수정은 Pod 틀이 그대로여야 하고, 허용하는 차이는 replicas 와 재시작 표시(`kubectl.kubernetes.io/restartedAt`)뿐이다. 클러스터 범위라 차트(네임스페이스 한정 배포 계정)가 아닌 플랫폼 관리자가 적용한다 |
+| **재현 시험** | `npm run test:auth:k8s`(kind) — 정책 바인딩을 뺀 상태에서 sre 가 Secret 참조를 넣는 patch **성공(재현)**, 정책을 둔 뒤 같은 patch·이미지 변경·라벨·다른 annotation **거절**, 재시작·scale·replicas patch 는 통과, 플랫폼 관리자에게는 걸리지 않음 |
+| **저장소 반영** | ✅ (2026-10-03) 차트 `templates/rbac.yaml`·`values.yaml` `rbac.*`, 승인 정책, runtime 첨부 다시 렌더링(RBAC 6종) — [docs/12 §6 단계 8](12-authentication-plan.md) |
+| **노션 반영** | ⬜ §06 RBAC 절에 역할별 Kubernetes 권한 한 줄씩·sre 수정 범위 승인 정책, §05 runtime 첨부 교체 — [06-notion-changeset.md](06-notion-changeset.md). 첨부 `network-rbac.yaml` 은 그대로 둔다(예시 3종 — 차트가 6종의 기준) |
+| **상태** | 🟡 저장소 반영, 노션 반영 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 

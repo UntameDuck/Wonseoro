@@ -41,7 +41,8 @@
 - **⚠️ D-66 (2026-10-03 수정)** — 10-02 NestJS 11 업그레이드 뒤 CORS 기본 메서드가 GET·HEAD·POST 로 줄어 **브라우저의 원서 저장(PATCH)·공통원서 저장(PUT)·서류 삭제(DELETE)가 막혀 있었다**. CI·DAST 는 사전 요청을 안 해 못 잡았다. 두 API 에 메서드를 적고 사전 요청 시험(`app.setup.test.ts`)을 두었다
 - **인증 단계 6 ✅ (2026-10-03)** — 지원자 화면 본인확인(`NEXT_PUBLIC_AUTH_MODE=oidc`, 공개 클라이언트 + PKCE, 토큰은 탭 sessionStorage). 세션 만료 경고는 그대로 두고 연장=토큰 갱신, 끝나면 갱신 토큰 폐기로 발급자 세션까지 끝냄. **위험 차단을 본인확인 다시 하기로 해제**(ADR-0009). 미리보기 `auth-web`(:3001)·`auth-central`(:3112). 접근성 `focus-sweep applicant-oidc`, 보안 선별 시험 175
 - **인증 단계 7 ✅ (2026-10-03)** — 발급자 정지 실증 `npm run test:auth:offline`(약 7분, Keycloak 컨테이너를 직접 멈췄다 다시 띄운다 — 시험 지원자는 관리 API 로 만들고 끝나면 지운다). 액세스 토큰(5분)이 끝나면 갱신할 길이 없어 **단절 유예**를 두었다(D-67): 발급자에 닿지 않는 동안만·만료 2시간 안·마지막 접촉 뒤 만료된 **지원자** 토큰만(`OIDC_APPLICANT_OUTAGE_GRACE_MS`, 대학·중앙 API). 화면은 갱신이 안 되면 쓰던 토큰을 계속 보낸다. T-M3-06 ✅
-- **바로 다음 할 일**: 인증 단계 8(K8s 역할 6종, kind `auth can-i`). 인증(로컬 OIDC — 세션 만료·위험 차단 해제도 함께, ADR-0009) → 보안 통제 → …
+- **인증 단계 8 ✅ (2026-10-03)** — 차트 역할 6종(security-auditor 추가, break-glass 는 Role 만·평소 바인딩 없음·켤 때 끝나는 시각·사유 필수, admission-admin 은 Kubernetes 권한 0). sre 의 재시작(Deployment patch)이 Secret 참조를 넣는 길이라 **플랫폼 승인 정책** `deploy/platform/rbac/sre-operator-guard.yaml` 로 replicas·재시작 표시만 허용(D-68, kind-univ-a 에 적용해 둠). `npm run test:auth:k8s`(kind, 1분 안쪽 — 시험 네임스페이스를 만들고 지운다). 차트 RBAC 을 고치면 `node scripts/render-runtime-attachment.mjs` 와 06 changeset 해시도
+- **바로 다음 할 일**: 인증 단계 9(화면 시험 다시 — 접근성 전부·화면 캡처·토큰 붙인 ZAP DAST). 인증(로컬 OIDC — 세션 만료·위험 차단 해제도 함께, ADR-0009) → 보안 통제 → …
 
 ## 2. 반드시 지킬 규칙
 

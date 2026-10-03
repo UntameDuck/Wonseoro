@@ -51,6 +51,7 @@
     "test:auth:central": "node tests/auth/central-live.mjs",
     "test:auth:console": "node tests/auth/console-live.mjs",
     "test:auth:offline": "node tests/auth/offline-live.mjs",
+    "test:auth:k8s": "node tests/auth/k8s-rbac-kind.mjs",
     "test:a11y:keyboard": "node tests/a11y/keyboard-walk.mjs",
     "test:a11y:focus": "node tests/a11y/focus-sweep.mjs",
     "test:a11y:deadline": "node tests/a11y/deadline-announce.mjs",

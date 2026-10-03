@@ -1,0 +1,119 @@
+{
+  "test": "Kubernetes 역할 6종 — 역할별 허용·거절 행렬·sre 수정 범위·break-glass 켜고 끄기 (T-M5-02 단계 8, D-68)",
+  "environment": "축소 환경 — 로컬 kind(kind-univ-a), 사람 역할은 kubectl 흉내(--as/--as-group)",
+  "at": "2026-10-03T06:40:52.070Z",
+  "durationSec": 58,
+  "cells": 110,
+  "passed": true,
+  "steps": [
+    {
+      "ok": true,
+      "what": "시험 네임스페이스 kadmission-rbac-test (kind-univ-a, v1.37.0)"
+    },
+    {
+      "ok": true,
+      "what": "차트 RBAC 적용 — Role 5개·RoleBinding 4개(break-glass 바인딩 없음)"
+    },
+    {
+      "ok": true,
+      "what": "역할 5개 + admission-admin 은 Role 없음(Kubernetes 권한 0) = 6종",
+      "detail": [
+        "break-glass",
+        "platform-viewer",
+        "release-controller",
+        "security-auditor",
+        "sre-operator"
+      ]
+    },
+    {
+      "ok": true,
+      "what": "재현: 승인 정책 없이는 sre-operator 가 Secret 참조를 Pod 에 넣을 수 있다(RBAC 의 Deployment patch 만으로)"
+    },
+    {
+      "ok": true,
+      "what": "플랫폼 승인 정책 sre-operator-guard 적용"
+    },
+    {
+      "ok": true,
+      "what": "platform-viewer — 16칸 (허용 5·거절 11)"
+    },
+    {
+      "ok": true,
+      "what": "sre-operator — 17칸 (허용 5·거절 12)"
+    },
+    {
+      "ok": true,
+      "what": "security-auditor — 18칸 (허용 7·거절 11)"
+    },
+    {
+      "ok": true,
+      "what": "admission-admin (Kubernetes 권한 없음) — 13칸 (허용 0·거절 13)"
+    },
+    {
+      "ok": true,
+      "what": "break-glass — 평소(바인딩 없음) — 9칸 (허용 0·거절 9)"
+    },
+    {
+      "ok": true,
+      "what": "sre-operator: Secret 참조를 환경변수로 넣는 수정은 승인 정책이 거절",
+      "detail": "Error from server (Forbidden): deployments.apps \"guard-probe\" is forbidden: ValidatingAdmissionPolicy 'kadmission-sre-operator-guard' with binding 'kadmission-s"
+    },
+    {
+      "ok": true,
+      "what": "sre-operator: 이미지 변경은 거절"
+    },
+    {
+      "ok": true,
+      "what": "sre-operator: Pod 라벨 변경은 거절"
+    },
+    {
+      "ok": true,
+      "what": "sre-operator: 재시작 표시 말고 다른 annotation 은 거절"
+    },
+    {
+      "ok": true,
+      "what": "sre-operator: 재시작(rollout restart)은 된다"
+    },
+    {
+      "ok": true,
+      "what": "sre-operator: 규모 조정(scale)은 된다"
+    },
+    {
+      "ok": true,
+      "what": "sre-operator: replicas 만 바꾸는 patch 는 된다"
+    },
+    {
+      "ok": true,
+      "what": "승인 정책은 sre 그룹에만 걸린다 — 플랫폼 관리자의 같은 수정은 된다"
+    },
+    {
+      "ok": true,
+      "what": "break-glass 는 끝나는 시각·사유 없이 켤 수 없다(렌더링 거부)"
+    },
+    {
+      "ok": true,
+      "what": "break-glass 켜기 — 바인딩에 끝나는 시각이 붙는다",
+      "detail": "2026-10-03T07:11:30.333Z"
+    },
+    {
+      "ok": true,
+      "what": "break-glass — 켠 동안 — 14칸 (허용 7·거절 7)"
+    },
+    {
+      "ok": true,
+      "what": "break-glass — 끈 뒤 — 9칸 (허용 0·거절 9)"
+    },
+    {
+      "ok": true,
+      "what": "배포 계정과 같은 권한으로 차트 RBAC(Role 5·바인딩 4)을 실제로 만든다 — 권한 상승 검사 통과"
+    },
+    {
+      "ok": true,
+      "what": "배포 계정 — 배포 네임스페이스 — 6칸 (허용 4·거절 2)"
+    },
+    {
+      "ok": true,
+      "what": "배포 계정 — 다른 네임스페이스·클러스터 범위 — 8칸 (허용 0·거절 8)"
+    }
+  ]
+}

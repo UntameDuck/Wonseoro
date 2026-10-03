@@ -232,7 +232,15 @@ rbac:
   create: true
   # 첨부 §06 의 그룹 이름
   sreGroup: kadmission-sre
+  # 감사 그룹은 첨부대로 platform-viewer 에 더해 security-auditor 도 받는다 (D-68)
   auditorGroup: kadmission-auditors
+  # 조회 전용 그룹 — 비우면 바인딩을 만들지 않는다
+  viewerGroup: kadmission-viewers
+  # 비상 역할 — 평소 비활성(바인딩 없음). 켤 때는 그룹·끝나는 시각·사유를 함께 (T-M5-03 이 TTL·경보를 맡는다)
+  breakGlass:
+    group: ""
+    expiresAt: ""
+    reason: ""
 
 nodePlacement:
   topologyKey: topology.kubernetes.io/zone

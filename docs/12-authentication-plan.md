@@ -50,7 +50,7 @@
 | 5 ✅ | 콘솔 로그인(BFF)·MFA·민감 동작 재인증·목적·사유 | 브라우저 시험: 로그인→TOTP→승인, 5분 지난 증적 열람은 재인증, 다른 역할은 메뉴·API 모두 거절 |
 | 6 ✅ | 지원자 로그인·세션 만료를 발급자 세션으로·위험 차단 해제 | `test:a11y:session`·`test:a11y:rate-limit` 을 새 세션으로 다시 통과, 차단→재인증→해제 시험 |
 | 7 ✅ | JWKS 캐시 실증(T-M3-06) | 발급자 컨테이너를 멈춘 채 이미 로그인한 지원자의 저장·결제확인·제출 성공 — 토큰 만료 뒤는 단절 유예(D-67) |
-| 8 | K8s 역할 6종 | kind 에서 `kubectl auth can-i` 행렬 시험(역할별 허용·거절) |
+| 8 ✅ | K8s 역할 6종 | kind 에서 `kubectl auth can-i` 행렬 시험(역할별 허용·거절) — sre 수정 범위 승인 정책(D-68) |
 | 9 | 화면 시험 다시 | 접근성 시험 전부(로그인 화면 추가), `check:ui-copy`, 화면 캡처 갱신, ZAP DAST(토큰 붙여서) |
 
 화면을 고치는 단계(5·6)는 AGENTS.md 규칙대로 접근성 시험을 다시 돌린다 — 로그인·재인증 화면은 포커스·오류 요약·
@@ -174,6 +174,23 @@
   접근성 `focus-sweep applicant-oidc` 1280 문제 0건 그대로
 - **시험** — server-kit 단위 시험 7개 추가(79), admission-api 358·central-api 36 통과
 
-### 다음 — 단계 8
+### 단계 8 ✅ (2026-10-03) — Kubernetes 역할 6종 (D-68)
 
-8. K8s 역할 6종 — 차트에 security-auditor·break-glass(바인딩 없음), kind 에서 `kubectl auth can-i` 행렬
+- **차트 `templates/rbac.yaml`** — 첨부의 3종(platform-viewer·sre-operator·release-controller)에 더해
+  - security-auditor — Role·바인딩·NetworkPolicy·ServiceAccount·Pod·Deployment·PDB·이벤트 조회. Secret·로그·exec 없음. 감사 그룹은 첨부대로 platform-viewer 도 받는다
+  - break-glass — Role 만, **바인딩 없음 = 평소 비활성**. `rbac.breakGlass.group` 으로 켜되 끝나는 시각·사유가 없으면 렌더링을 거부한다(바인딩 annotation 에 남는다).
+    TTL 회수·사용 경보는 T-M5-03. RBAC 변경·exec·Pod 삭제 없음
+  - admission-admin — Role·바인딩 없음(Kubernetes 권한 0). 조회 그룹 `kadmission-viewers` 바인딩 추가
+  - 차트 Role 은 배포 계정(gitops release-controller) 권한의 부분집합이어야 한다 — Kubernetes 가 자기 권한 밖의 Role·바인딩 생성을 막는다
+- **드러난 틈(D-68)** — sre-operator 의 재시작은 Deployment patch 인데, RBAC 은 필드를 가르지 못해 Secret 을 읽을 권한 없이 Pod 틀에 `secretKeyRef` 를
+  넣고 로그로 볼 수 있었다(kind 재현). **플랫폼 승인 정책** `deploy/platform/rbac/sre-operator-guard.yaml`(ValidatingAdmissionPolicy, k8s 1.30+) —
+  sre 그룹의 Deployment 수정은 replicas·재시작 표시만. 클러스터 범위라 플랫폼 관리자가 적용(kind-univ-a 에 적용해 둠)
+- **시험 `npm run test:auth:k8s`**(kind-univ-a, v1.37.0) — 25개 확인(행렬 110칸 포함) 통과, 58초
+  - 역할별 허용·거절: viewer 16·sre 17·auditor 18·admission-admin 13(전부 거절)·break-glass 평소 9(전부 거절)·켠 동안 14·끈 뒤 9, 모든 사람 역할에 클러스터 범위·RBAC 변경·exec 없음
+  - sre: 재현(정책 없이 Secret 참조 patch 성공) → 정책 뒤 Secret 참조·이미지·라벨·다른 annotation 거절, 재시작·scale·replicas patch 통과, 플랫폼 관리자는 걸리지 않음
+  - 배포 계정과 같은 Role 의 계정이 차트 RBAC(Role 5·바인딩 4)을 실제로 만든다(권한 상승 검사 통과), 실제 배포 계정은 다른 네임스페이스·클러스터 범위·승인 정책 변경 불가
+- **함께** — runtime 첨부 다시 렌더링(v1.3, 38,186바이트 — 06 changeset), IaC 검사(Trivy 0.75.0 High/Critical) 0건, `gitops-manifests` 통과
+
+### 다음 — 단계 9
+
+9. 화면 시험 다시 — 접근성 시험 전부(로그인 화면 포함)·`check:ui-copy`·화면 캡처 갱신·ZAP DAST(토큰 붙여서)

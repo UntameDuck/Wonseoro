@@ -497,6 +497,72 @@ rules:
 ---
 # Source: k-admission/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: univ-a-security-auditor
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+rules:
+  # 누가 무엇을 할 수 있나 · 무엇과 통신할 수 있나 · 무엇이 돌고 있나(이미지 digest·보안 설정) · 무슨 일이 있었나
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "rolebindings"]
+    verbs: ["get","list","watch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["get","list","watch"]
+  - apiGroups: [""]
+    resources: ["serviceaccounts", "pods", "services", "events"]
+    verbs: ["get","list","watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get","list","watch"]
+  - apiGroups: ["policy"]
+    resources: ["poddisruptionbudgets"]
+    verbs: ["get","list","watch"]
+
+---
+# Source: k-admission/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: univ-a-break-glass
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+rules:
+  # 장애 대응에 필요한 것 — Secret 교체 포함. exec·RBAC 변경은 없다(DB 비상 접속은 Vault 의 break-glass 경로)
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets", "services", "serviceaccounts"]
+    verbs: ["get","list","watch","create","update","patch","delete"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "events"]
+    verbs: ["get","list","watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "deployments/scale", "replicasets"]
+    verbs: ["get","list","watch","create","update","patch","delete"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get","list","watch","create","update","patch","delete"]
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get","list","watch","create","update","patch","delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["get","list","watch","create","update","patch","delete"]
+  - apiGroups: ["policy"]
+    resources: ["poddisruptionbudgets"]
+    verbs: ["get","list","watch","create","update","patch","delete"]
+
+---
+# Source: k-admission/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: univ-a-sre-operator
@@ -530,6 +596,48 @@ metadata:
 subjects:
   - kind: Group
     name: kadmission-auditors
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: univ-a-platform-viewer
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Source: k-admission/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: univ-a-security-auditor
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+subjects:
+  - kind: Group
+    name: kadmission-auditors
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: univ-a-security-auditor
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Source: k-admission/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: univ-a-platform-viewer
+  labels:
+    app.kubernetes.io/part-of: k-admission
+    app.kubernetes.io/instance: univ-a
+    app.kubernetes.io/version: "1.2.0"
+    helm.sh/chart: k-admission-0.1.0
+    kadmission.kr/university: "UNIV-A"
+subjects:
+  - kind: Group
+    name: kadmission-viewers
     apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: Role
