@@ -9,7 +9,11 @@ import { join, resolve } from 'node:path';
 const WORK = resolve(__dirname, '../../../.cache/test-mtls');
 mkdirSync(WORK, { recursive: true });
 import { after, before, describe, it } from 'node:test';
+import { EgressPolicy } from './egress';
 import { InternalHttpClient, parseWorkloadUri, peerIdentity, serverTlsOptions, watchServerTls, type MtlsFiles } from './mtls';
+
+// 시험 서버는 localhost — 출구 정책에 열어 둔다(개발 정책: 루프백 허용)
+const LOCAL = new EgressPolicy({ allow: ['localhost'], allowLoopback: true });
 
 describe('워크로드 신원 URI', () => {
   it('대학·중앙 신원을 읽는다', () => {
@@ -74,7 +78,7 @@ describe('실제 TLS — 상대 인증서의 신원 (openssl 필요)', { skip: o
   const ask = async (client: InternalHttpClient) => (await client.fetch(`${base}/`)).json() as Promise<ReturnType<typeof peerIdentity>>;
 
   it('플랫폼 CA 가 서명한 인증서 — 신원이 읽힌다', async () => {
-    const r = await ask(new InternalHttpClient(files('univ-a-event-relay')));
+    const r = await ask(new InternalHttpClient(files('univ-a-event-relay'), LOCAL));
     assert.equal(r.problem, null);
     assert.equal(r.identity?.universityId, 'UNIV-A');
     assert.equal(r.identity?.workload, 'event-relay');
@@ -91,7 +95,7 @@ describe('실제 TLS — 상대 인증서의 신원 (openssl 필요)', { skip: o
 
   it('다른 CA 가 서명한 같은 이름의 인증서는 믿지 않는다', async () => {
     const rogue = pki['rogue-univ-a-relay'] as { cert: string; key: string };
-    const r = await ask(new InternalHttpClient({ certFile: rogue.cert, keyFile: rogue.key, caFile: pki.ca as string }));
+    const r = await ask(new InternalHttpClient({ certFile: rogue.cert, keyFile: rogue.key, caFile: pki.ca as string }, LOCAL));
     assert.equal(r.problem, 'untrusted');
     assert.equal(r.identity, null);
   });
@@ -100,7 +104,7 @@ describe('실제 TLS — 상대 인증서의 신원 (openssl 필요)', { skip: o
     const rogue = pki['rogue-univ-a-relay'] as { cert: string; key: string };
     const fake = createServer({ key: readFileSync(rogue.key), cert: readFileSync(rogue.cert) }, (_q, s) => s.end('{}'));
     await new Promise<void>((r) => fake.listen(0, '127.0.0.1', r));
-    const client = new InternalHttpClient(files('univ-a-event-relay'));
+    const client = new InternalHttpClient(files('univ-a-event-relay'), LOCAL);
     await assert.rejects(client.fetch(`https://localhost:${(fake.address() as AddressInfo).port}/`));
     fake.close();
   });

@@ -1,5 +1,6 @@
 import {
   assertNotMockInProduction,
+  configureEgress,
   envBool,
   envChoice,
   envInt,
@@ -67,3 +68,22 @@ export const BREAKER = {
  * none 은 개발·단위 시험만 — 운영에서는 기동 거부
  */
 export const INTERNAL = internalAuthConfig();
+
+/**
+ * 서류를 내려받을 Object Storage — 접수 API 가 준 서명 URL 의 호스트가 여기여야 한다(T-M5-07). 서명 URL 은 남이 만든 주소라
+ * 워커가 그대로 부르면 SSRF 통로가 된다. 가상 호스트 방식(버킷.호스트)도 받는다
+ */
+export const OBJECT_STORAGE_URL = envOrDev('S3_ENDPOINT', 'http://localhost:9000', '서류를 내려받을 Object Storage 엔드포인트');
+
+/** 출구 허용 목록 (T-M5-07) — 자기 대학 API 와 Object Storage 만 */
+export const EGRESS = configureEgress([ADMISSION_API_URL, OBJECT_STORAGE_URL], [virtualHosted(OBJECT_STORAGE_URL)]);
+
+/** `http://minio:9000` → `*.minio:9000` — 버킷이 호스트 이름 앞에 붙는 서명 URL */
+function virtualHosted(url: string): string | null {
+  try {
+    const u = new URL(url);
+    return `*.${u.host}`;
+  } catch {
+    return null;
+  }
+}

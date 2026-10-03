@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import { Logger } from '@nestjs/common';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { CACHE_CONTROL_PII, MEDIA_PROBLEM, ProblemCode, problemType } from '@wonseoro/contracts';
-import { OidcTokenError, OidcUnavailableError, OidcVerifier } from '@wonseoro/server-kit';
+import { egressHttp, OidcTokenError, OidcUnavailableError, OidcVerifier } from '@wonseoro/server-kit';
 import { OIDC } from './config';
 
 /**
@@ -34,6 +34,8 @@ export function createApplicantVerifier(): OidcVerifier {
     maxStaleMs: OIDC.jwksMaxStaleMs,
     snapshotFile: OIDC.jwksSnapshotDir ? join(OIDC.jwksSnapshotDir, 'jwks-applicant.json') : undefined,
     outageGraceMs: OIDC.applicantOutageGraceMs,
+    // 공개키 조회도 출구 허용 목록을 거친다 (T-M5-07)
+    fetch: ((url: string | URL, init?: RequestInit) => egressHttp().fetch(String(url), init)) as typeof globalThis.fetch,
   });
 }
 

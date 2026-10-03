@@ -2,6 +2,7 @@ import { readFileSync, statSync } from 'node:fs';
 import type { TLSSocket } from 'node:tls';
 import { Logger } from '@nestjs/common';
 import { Agent, fetch as undiciFetch } from 'undici';
+import { egressPolicy, type EgressPolicy } from './egress';
 import { assertNotMockInProduction, envChoice, requireEnv } from './env';
 
 /**
@@ -154,34 +155,44 @@ export function watchServerTls(server: { setSecureContext(o: object): void }, fi
 /* ── 클라이언트 ────────────────────────────────────────────────────── */
 
 /**
- * 내부 호출용 fetch — mtls 면 이 워크로드의 인증서를 내밀고, 상대 서버 인증서를 플랫폼 CA 로 검증한다.
- * none 이면 보통 fetch. 인증서 파일이 바뀌면 다음 호출부터 새 연결 풀을 쓴다.
+ * 서버가 다른 서비스를 부르는 fetch — 모든 요청이 출구 허용 목록(T-M5-07)을 거친다: 허용된 호스트만, 연결 순간 막힌 주소(메타데이터 등) 거절.
+ * mtls 면 이 워크로드의 인증서를 내고 상대 서버 인증서를 플랫폼 CA 로 검증한다. 인증서 파일이 바뀌면 다음 호출부터 새 연결 풀을 쓴다.
+ * 정책을 주지 않으면 프로세스 정책(`configureEgress`)을 쓴다.
  */
 export class InternalHttpClient {
   private agent: Agent | null = null;
   private seen = '';
   private lastCheck = 0;
 
-  constructor(private readonly files: MtlsFiles | null, private readonly recheckMs = 30_000) {}
+  constructor(
+    private readonly files: MtlsFiles | null,
+    private readonly policy?: EgressPolicy,
+    private readonly recheckMs = 30_000,
+  ) {}
 
   get mode(): InternalAuthMode {
     return this.files ? 'mtls' : 'none';
   }
 
   fetch(url: string, init: RequestInit = {}): Promise<Response> {
-    if (!this.files) return fetch(url, init);
+    try {
+      (this.policy ?? egressPolicy()).check(url);
+    } catch (err) {
+      return Promise.reject(err);
+    }
     return undiciFetch(url, { ...(init as object), dispatcher: this.dispatcher() } as Parameters<typeof undiciFetch>[1]) as unknown as Promise<Response>;
   }
 
   private dispatcher(): Agent {
-    const files = this.files as MtlsFiles;
     const now = Date.now();
     if (this.agent && now - this.lastCheck < this.recheckMs) return this.agent;
     this.lastCheck = now;
-    const m = mtimes(files);
+    const m = this.files ? mtimes(this.files) : 'plain';
     if (this.agent && m === this.seen) return this.agent;
     const old = this.agent;
-    this.agent = new Agent({ connect: { ...readPem(files), minVersion: 'TLSv1.2' } });
+    // 연결 직전 DNS 조회에서 막힌 주소를 거른다 — 허용된 이름이 메타데이터 주소로 풀려도 연결하지 않는다
+    const lookup: EgressPolicy['lookup'] = (h, o, cb) => (this.policy ?? egressPolicy()).lookup(h, o, cb);
+    this.agent = new Agent({ connect: { ...(this.files ? readPem(this.files) : {}), minVersion: 'TLSv1.2', lookup } as never });
     this.seen = m;
     if (old) void old.close().catch(() => {});
     return this.agent;
@@ -193,4 +204,14 @@ let shared: InternalHttpClient | null = null;
 export function internalHttp(): InternalHttpClient {
   shared ??= new InternalHttpClient(internalAuthConfig().files);
   return shared;
+}
+
+let external: InternalHttpClient | null = null;
+/**
+ * 플랫폼 밖(로그인 서버·Object Storage 서명 URL 등)을 부르는 공용 클라이언트 — 인증서를 내지 않고 시스템 신뢰 저장소로 상대를 검증한다.
+ * 출구 허용 목록은 똑같이 거친다.
+ */
+export function egressHttp(): InternalHttpClient {
+  external ??= new InternalHttpClient(null);
+  return external;
 }

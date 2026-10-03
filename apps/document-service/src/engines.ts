@@ -1,3 +1,4 @@
+import { EgressDenied, egressHttp } from '@wonseoro/server-kit';
 import { createHash } from 'node:crypto';
 import { connect, Socket } from 'node:net';
 
@@ -97,8 +98,13 @@ export class ClamAvEngine implements ScanEngine {
 
     let res: Response;
     try {
-      res = await fetch(target.downloadUrl, { signal: AbortSignal.timeout(this.timeoutMs) });
+      // 서명 URL 은 남(접수 API)이 만든 주소다 — 출구 허용 목록(Object Storage 호스트만, 메타데이터 주소 거절)을 거친다 (T-M5-07)
+      res = await egressHttp().fetch(target.downloadUrl, { signal: AbortSignal.timeout(this.timeoutMs) });
     } catch (err) {
+      // 허용되지 않은 주소를 가리키는 서명 URL — 장애가 아니라 의심스러운 입력이다. 다시 시도하지 않고 검사 오류로 남겨 사람이 본다
+      if (err instanceof EgressDenied || (err as { cause?: unknown }).cause instanceof EgressDenied) {
+        return { verdict: 'ERROR', signature: 'DOWNLOAD_URL_NOT_ALLOWED' };
+      }
       throw new EngineUnavailable(`저장소에 닿지 못했다: ${(err as Error).message}`);
     }
     // 파일이 없다 — 검사할 수 없는 서류다. 서명이 만료됐거나(403) 저장소가 아프면(5xx) 다음 주기에 새 URL 로.

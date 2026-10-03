@@ -1,0 +1,146 @@
+{
+  "test": "서비스 간 상호 TLS·대학 신원 묶기 (T-M5-05·09, D-69)",
+  "environment": "축소 환경 — 로컬 프로세스·CI 재현 DB(:5499)·개발 PKI(openssl, 1시간 인증서)",
+  "at": "2026-10-03T09:03:46.534Z",
+  "passed": true,
+  "steps": [
+    {
+      "ok": true,
+      "what": "중앙 API 가 HTTPS 로 떴다(상호 TLS 모드)"
+    },
+    {
+      "ok": true,
+      "what": "대학 API 가 HTTPS 로 떴다(상호 TLS 모드)"
+    },
+    {
+      "ok": true,
+      "what": "평문 HTTP 로는 중앙에 닿지 않는다",
+      "detail": {
+        "status": 0
+      }
+    },
+    {
+      "ok": true,
+      "what": "공개 경로(/readyz)는 인증서와 상관없이 열린다"
+    },
+    {
+      "ok": true,
+      "what": "인증서 없이 이벤트를 보내면 401",
+      "detail": {
+        "status": 401
+      }
+    },
+    {
+      "ok": true,
+      "what": "플랫폼 CA 가 아닌 곳이 서명한 같은 이름의 인증서는 거절(401)",
+      "detail": {
+        "status": 401
+      }
+    },
+    {
+      "ok": true,
+      "what": "UNIV-B Relay 가 UNIV-A 이름으로 보낸 이벤트는 403 — 다른 대학 사칭",
+      "detail": {
+        "status": 403
+      }
+    },
+    {
+      "ok": true,
+      "what": "같은 대학이라도 Relay 가 아닌 워크로드(대학 API)는 이벤트를 보낼 수 없다(403)",
+      "detail": {
+        "status": 403
+      }
+    },
+    {
+      "ok": true,
+      "what": "UNIV-A Relay 가 자기 대학 이벤트를 보내면 202",
+      "detail": {
+        "status": 202
+      }
+    },
+    {
+      "ok": true,
+      "what": "UNIV-B Relay 는 자기 대학 이벤트를 보낸다(202)",
+      "detail": {
+        "status": 202
+      }
+    },
+    {
+      "ok": true,
+      "what": "UNIV-A Relay 의 접수 취소 이벤트(원장에 남는다) 202",
+      "detail": {
+        "status": 202
+      }
+    },
+    {
+      "ok": true,
+      "what": "자기 대학 이벤트의 영수증은 열린다"
+    },
+    {
+      "ok": true,
+      "what": "다른 대학 이벤트의 영수증은 없는 것처럼(404)"
+    },
+    {
+      "ok": true,
+      "what": "UNIV-B 대학 API 가 UNIV-A 에 동의된 공통원서를 요청하면 403",
+      "detail": {
+        "status": 403
+      }
+    },
+    {
+      "ok": true,
+      "what": "UNIV-A 대학 API 는 자기 대학 스냅숏을 받는다(200 — 동의가 없으면 빈 스냅숏)",
+      "detail": {
+        "status": 200
+      }
+    },
+    {
+      "ok": true,
+      "what": "Relay 인증서로는 공통원서를 받을 수 없다(403)",
+      "detail": {
+        "status": 403
+      }
+    },
+    {
+      "ok": true,
+      "what": "대학 워크로드는 중앙 관제 경로를 못 본다(403)"
+    },
+    {
+      "ok": true,
+      "what": "중앙 워크로드는 관제 경로를 본다"
+    },
+    {
+      "ok": true,
+      "what": "인증서 없이 서류 검사 대기 목록을 읽으면 401 — 지원자 서류 내려받기 주소가 들어 있다",
+      "detail": {
+        "status": 401
+      }
+    },
+    {
+      "ok": true,
+      "what": "같은 대학의 다른 워크로드(Relay)는 403"
+    },
+    {
+      "ok": true,
+      "what": "다른 대학 워크로드는 403"
+    },
+    {
+      "ok": true,
+      "what": "같은 대학 서류 워커는 읽는다"
+    },
+    {
+      "ok": true,
+      "what": "다른 대학 워크로드는 검사 결과를 보낼 수 없다(403 — 악성 파일을 깨끗함으로)",
+      "detail": {
+        "status": 403
+      }
+    },
+    {
+      "ok": true,
+      "what": "실제 Relay(UNIV-A 인증서)의 심장박동이 상호 TLS 로 중앙에 닿았다",
+      "detail": {
+        "lastHeartbeatAt": "2026-10-03T09:03:55.811Z"
+      }
+    }
+  ]
+}

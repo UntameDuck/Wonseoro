@@ -22,8 +22,8 @@
 | M5 신뢰성·보안·접근성 | **26/42** | ◀ **인증 T-M5-02·10 ✅(2026-10-03)** — 로컬 OIDC 발급자·토큰 직접 검증·JWKS 캐시·관리자 MFA·민감 동작 재인증·지원자 본인확인·Kubernetes 역할 6종·로그인 서버 접근성·토큰 붙인 DAST([12](12-authentication-plan.md)) · **보안 파이프라인 T-M5-20~29 ✅(2026-10-02)** — Git 전체 이력 비밀 0·CodeQL Critical 0·운영 의존성 Critical 0·SPDX SBOM·이미지 5종 Critical 0·IaC 19개 High/Critical 0·실 DB 보안 시험 123개 건너뜀 0·ZAP DAST High 0·운영 이미지 5종 OIDC 키리스 서명·미서명 이미지 admission 거부 원격 통과 · **접근성 T-M5-40~46 ✅·47 🟡(2026-10-01)** — 키보드 완주·전 화면 포커스·스크린리더 재료·200%·320px·세션 만료 경고·CAPTCHA 대체 경로, Chrome·Edge·휴대전화 흉내([09](09-accessibility.md)) · 화면 제품화 T-M5-50~56 추가 · **T-M5-53 개발 입력 가두기 ✅ · T-M5-50 설계 설명·문서 번호 걷어내기 ✅ · T-M5-51 내부 코드 대신 사람 말(계약 1.5.0) ✅ · T-M5-52 오류·검증 문구 ✅ · T-M5-54 표기 통일 ✅ · T-M5-55 상태·기본 화면 ✅ · T-M5-56 흐름·와이어프레임·27장 다시 찍기 ✅ — 화면 제품화 끝** (2026-10-01) |
 | M6 Pilot 준비 | 0/15 | |
 
-**총 105/146 태스크** (✅ 만 센다. 🟡 3 — T-M3-03·T-M4-39·T-M5-47). **505개 테스트**
-(admission-api 360 · server-kit 87 · central-api 38 · event-relay 7 · document-service 8 · krds 5, 2026-10-03). DB 포함(CI 재현 DB) 실패 0.
+**총 105/146 태스크** (✅ 만 센다. 🟡 3 — T-M3-03·T-M4-39·T-M5-47). **511개 테스트**
+(admission-api 360 · server-kit 92 · central-api 38 · event-relay 7 · document-service 9 · krds 5, 2026-10-03). DB 포함(CI 재현 DB) 실패 0.
 DB 포함 실행(CI 재현 DB)은 admission-api 3 skip(`ADMIN_API_TOKEN` 미설정) 외 전부 pass.
 배포 스크립트 시험 별도: Peak Mode 예약 계산 9건(`npm run test:m4:peak-schedule`), 대시보드·KPI 규칙 일관성(`npm run test:m4:observability`).
 DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`)·로그 우회 금지 검사(`scripts/check-logging.mjs`)·차트 lint·runtime 첨부 드리프트 검사(`scripts/render-runtime-attachment.mjs --check`)·**계약 검사(`scripts/check-contracts.mjs`)**·**화면 문구 검사(`scripts/check-ui-copy.mjs`, T-M5-50)** CI 포함. **보안 워크플로 T-M5-20~23 ✅**: Git 전체 이력 Gitleaks·CodeQL SAST·운영 의존성 Critical 0·SPDX SBOM이 로컬과 원격에서 통과(2026-10-02, Actions run 36887597976).
@@ -164,7 +164,7 @@ T-M5-40~46 ✅·47 🟡 — **[09-accessibility.md](09-accessibility.md)**. 설�
 1. ~~**화면 제품화 T-M5-50~56**~~ ✅ + ~~접근성 T-M5-40~46~~ ✅·47 🟡 — **둘 다 끝(2026-10-01)**. 접근성 시험은 `tests/a11y/`, 결과·결정은 [09](09-accessibility.md). 47 의 실물 Firefox·Safari 는 C(사람)
 2. ~~**보안 파이프라인 T-M5-20~29**~~ ✅ **끝(2026-10-02)** — Gitleaks·CodeQL·운영 의존성 SCA·SPDX SBOM·이미지·IaC 검사·실 DB 보안 시험·ZAP DAST·운영 이미지 5종 키리스 서명(run 36903506905)·미서명 이미지 admission 거부(run 36906282615) 로컬·원격 통과([11](11-security-pipeline.md)). 운영 서명키·실 클러스터 적용만 운영 쪽
 3. ~~**인증 T-M5-02·10**~~ ✅ **끝(2026-10-03, [12](12-authentication-plan.md))** — 단계 1~9: 로컬 Keycloak·`server-kit` 토큰 검증기·JWKS 캐시, 대학·중앙 API `AUTH_MODE=oidc`(역할·MFA·5분 재인증·2인 승인 신원), 운영 콘솔 관리자 로그인(BFF), 지원자 본인확인(세션 만료 연결·위험 차단 본인확인 해제), 발급자 정지 실증·단절 유예(D-67, T-M3-06), Kubernetes 역할 6종·sre 수정 범위 승인 정책(D-68), 로그인 서버 접근성 테마·접근성 전체 다시·화면 35장·토큰 붙인 ZAP DAST. 시험 `test:auth:issuer|verifier|api|central|console|offline|k8s`. 실 본인확인 기관 연동은 C(기관 계약)
-4. 보안 통제 T-M5-01·03~09 — **진행 중(2026-10-03, [13](13-security-controls-plan.md))**: 단계 1 ✅ 서비스 간 상호 TLS·대학 신원 묶기(내부 경로 여섯이 인증 없이 열려 있던 결함 D-69 수정 — 다른 대학 사칭·남의 공통원서·서류 검사 위조 차단, `test:security:mtls` 25). 다음 단계 2 출구 허용 목록·NetworkPolicy 자동 시험 → 3 필드 암호화 → 4 Vault → 5 break-glass → 6 실 clamd
+4. 보안 통제 T-M5-01·03~09 — **진행 중(2026-10-03, [13](13-security-controls-plan.md))**: 단계 1 ✅ 서비스 간 상호 TLS·대학 신원 묶기(내부 경로 여섯이 인증 없이 열려 있던 결함 D-69 수정 — 다른 대학 사칭·남의 공통원서·서류 검사 위조 차단, `test:security:mtls` 25). 단계 2 ✅ 출구 허용 목록(서버 호출은 의존 서비스 호스트만, 연결 순간 메타데이터 주소 거절, 서류 워커 서명 URL SSRF 차단)·NetworkPolicy 자동 시험(kind 72칸 `test:security:netpol`). 다음 단계 3 필드 암호화 → 4 Vault → 5 break-glass → 6 실 clamd
 5. T-M4-10 Outbox 파티션·보관 — DDL 변경이라 노션 §02 첨부 교체가 따른다
 6. 운영 자동화 T-M5-62·63·65·T-M3-03 — 복구 검증·Writer fencing·만료 경보·WORM
 7. Pilot 도구·문서 T-M6-01·02·03·06·07·11·14

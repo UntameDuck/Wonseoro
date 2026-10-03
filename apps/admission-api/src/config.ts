@@ -1,5 +1,6 @@
 import {
   assertNotMockInProduction,
+  configureEgress,
   devOnlyFlag,
   envBool,
   envChoice,
@@ -307,3 +308,9 @@ export const S3 = {
     '운영 버킷은 IaC 로 만든다. 애플리케이션에 생성 권한을 주면 최소권한에 어긋난다',
   ),
 } as const;
+
+/**
+ * 출구 허용 목록 (T-M5-07) — 이 서비스가 부르는 곳만: 중앙, 로그인 서버 두 렐름, Object Storage. 더할 것은 EGRESS_ALLOWLIST.
+ * 연결 순간 메타데이터·링크 로컬 주소(운영은 루프백도)는 어느 이름으로 풀려도 거절한다.
+ */
+export const EGRESS = configureEgress([CENTRAL_SYNC_URL, OIDC?.applicantIssuer, OIDC?.staffIssuer, S3.endpoint]);

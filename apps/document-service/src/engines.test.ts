@@ -4,6 +4,7 @@ import { createServer as createHttp, Server as HttpServer } from 'node:http';
 import { createServer as createTcp, Server as TcpServer, Socket } from 'node:net';
 import { AddressInfo } from 'node:net';
 import { after, before, describe, it } from 'node:test';
+import { configureEgress, EgressDenied } from '@wonseoro/server-kit';
 import { ClamAvEngine, EngineUnavailable, parseReply } from './engines';
 
 /**
@@ -92,6 +93,8 @@ before(async () => {
   });
   await new Promise<void>((r) => storage.listen(0, '127.0.0.1', () => r()));
   storageUrl = `http://127.0.0.1:${(storage.address() as AddressInfo).port}`;
+  // 가짜 저장소를 출구 허용 목록에 올린다 — 운영처럼 Object Storage 호스트만 부를 수 있다 (T-M5-07)
+  configureEgress([storageUrl]);
 });
 
 after(async () => {
@@ -139,6 +142,15 @@ describe('ClamAV 엔진 어댑터 (clamd INSTREAM)', () => {
     const pdf = Buffer.from('%PDF-1.7');
     files.set('ok.pdf', pdf);
     await assert.rejects(new ClamAvEngine('127.0.0.1', 1, 1_000).scan(target('ok.pdf', pdf)), EngineUnavailable);
+  });
+
+  it('서명 URL 이 Object Storage 밖(메타데이터 주소·다른 호스트)을 가리키면 내려받지 않고 검사 오류 — SSRF (T-M5-07)', async () => {
+    const pdf = Buffer.from('%PDF-1.7');
+    for (const url of ['http://169.254.169.254/latest/meta-data/iam/', 'http://internal-admin.local:8080/', 'file:///etc/passwd']) {
+      const r = await engine().scan({ ...target('ok.pdf', pdf), downloadUrl: url });
+      assert.deepEqual(r, { verdict: 'ERROR', signature: 'DOWNLOAD_URL_NOT_ALLOWED' }, url);
+    }
+    assert.ok(EgressDenied);
   });
 
   it('다운로드 URL 이 없으면(옛 접수 API) 판정하지 않는다', async () => {

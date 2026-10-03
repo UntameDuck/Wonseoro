@@ -1,4 +1,5 @@
 import {
+  configureEgress,
   envBool,
   envInt,
   envOrDev,
@@ -57,3 +58,6 @@ export const BREAKER = {
  * none 은 개발·단위 시험만 — 운영에서는 기동 거부
  */
 export const INTERNAL = internalAuthConfig();
+
+/** 출구 허용 목록 (T-M5-07) — Relay 는 중앙 이벤트 수신만 부른다 */
+export const EGRESS = configureEgress([CENTRAL_SYNC_URL]);

@@ -1,5 +1,6 @@
 import {
   assertNotMockInProduction,
+  configureEgress,
   envChoice,
   envInt,
   envList,
@@ -81,3 +82,6 @@ export const OIDC =
  * 대학 Relay 는 기본 60초마다 보낸다 — 세 번 연속 놓치면 끊긴 것이다.
  */
 export const HEARTBEAT_STALE_SECONDS = envInt('HEARTBEAT_STALE_SECONDS', 180, { min: 30, max: 86_400 });
+
+/** 출구 허용 목록 (T-M5-07) — 중앙이 부르는 곳은 지원자 로그인 서버(공개키)뿐이다. 더할 것은 EGRESS_ALLOWLIST */
+export const EGRESS = configureEgress([OIDC?.applicantIssuer]);

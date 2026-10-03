@@ -5,6 +5,17 @@
 {{- if not $v.global.universityId -}}
 {{- fail "global.universityId 가 필요하다 — 대학마다 하나씩 설치한다" -}}
 {{- end -}}
+{{- /* 출구 규칙에 전체 인터넷·클라우드 메타데이터 대역을 넣지 못한다 (T-M5-01·07). 한 줄 실수로 기본 차단이 무너진다 */ -}}
+{{- $egress := list $v.networkPolicy.databaseEgress $v.networkPolicy.cacheEgress $v.networkPolicy.controlledEgress $v.documentService.scannerEgress $v.observability.collectorEgress -}}
+{{- range $e := $egress -}}
+{{- range $to := (($e | default dict).to | default list) -}}
+{{- with $to.ipBlock -}}
+{{- if or (eq .cidr "0.0.0.0/0") (eq .cidr "::/0") (hasPrefix "169.254." .cidr) (hasPrefix "fe80:" (lower .cidr)) (hasPrefix "fd00:ec2:" (lower .cidr)) (eq .cidr "100.100.100.200/32") -}}
+{{- fail (printf "NetworkPolicy 출구에 %s 를 열 수 없다 — 전체 인터넷·클라우드 메타데이터 대역은 막혀 있어야 한다 (T-M5-01·07)" .cidr) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
 {{- if and (eq $v.global.environment "production") (not $v.internalTls.enabled) -}}
 {{- fail "운영(global.environment=production)은 internalTls.enabled 를 끌 수 없다 — 내부 경로가 인증 없이 열린다 (T-M5-05, D-69)" -}}
 {{- end -}}

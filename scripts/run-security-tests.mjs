@@ -60,9 +60,11 @@ const groups = [
   },
   {
     // T-M5-05·09 — 워크로드 신원(SAN URI)·다른 CA 거절·인증서 교체, 계약의 mutualTLS 경로 = 코드의 경로 표, 같은 대학 워커만 (D-69)
-    name: '서비스 간 상호 TLS·대학 신원',
+    // T-M5-07 — 출구 허용 목록(호스트·스킴·메타데이터 주소·DNS 재바인딩)
+    name: '서비스 간 상호 TLS·대학 신원·출구 허용 목록',
     files: [
       'packages/server-kit/dist/mtls.test.js',
+      'packages/server-kit/dist/egress.test.js',
       'apps/admission-api/dist/common/identity/internal-auth.test.js',
       'apps/central-api/dist/internal-auth.test.js',
     ],

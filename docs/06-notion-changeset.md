@@ -13,7 +13,7 @@
 | [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.7.0) | 91,997 | `3f1f86040457a5ce2bb6bef9de7cc177cfecb3c9fc387420607eb837e30be6df` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 |
 | [§04 CloudEvents](https://app.notion.com/p/3df75ab5debe81d68e37fabd3678dcc4) | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | 6,104 | `3ed7ec8a340c50f6e7de25b2c3322ffd7c6b4914fd046afdc67a2efea699ca02` | D-47 · T-M5-51 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` (v1.2) | 4,036 | `1aaef0db712e1d9a15da41fb86b7832a3da8c6decfdcd5992a57bb071e5b1975` | D-44 · D-49 · D-52 |
-| [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` (v1.4, 차트 렌더링 — RBAC 6종·내부 상호 TLS) | 40,013 | `0089844d6abfc72c234a94d4009406a78e2c33f5badc9d564ec93e0baf3292b9` | D-44 · D-52 · D-68 · D-69 |
+| [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` (v1.5, 차트 렌더링 — RBAC 6종·내부 상호 TLS·서류 워커 출구) | 40,216 | `28c54fbdb2e83edc849526c06c7158017110fa0e24a3b3cbfe8f525febf2b315` | D-44 · D-52 · D-68 · D-69 |
 | [§07 KRDS](https://app.notion.com/p/3df75ab5debe812db3d1e06d0761e38e) | `k-admission-krds-wireframe.html` | `docs/spec-assets/krds-wireframe.html` (v1.2) | 8,548 | `698d3abda827340f3abd40fceeb8b7ae63d7e2a6ea8d0e707d3cf4308562995e` | D-43 |
 
 파일을 다시 고치면 이 표의 바이트·해시도 다시 적는다:
@@ -101,8 +101,9 @@
 
 「첨부」 절을 바꾼다:
 
-> `k-admission-values-m.yaml` — M Profile values (v1.2). `k-admission-runtime.yaml` — 차트 + values-m 의 **렌더링 결과**(v1.4).
+> `k-admission-values-m.yaml` — M Profile values (v1.2). `k-admission-runtime.yaml` — 차트 + values-m 의 **렌더링 결과**(v1.5).
 > 손으로 쓰지 않는다: 차트나 values-m 을 고치고 `scripts/render-runtime-attachment.mjs` 로 다시 만든다(CI 가 드리프트를 막는다).
+> v1.5(2026-10-03) — 서류 워커가 Object Storage 주소(S3_ENDPOINT)를 받아 그 호스트만 내려받는다(출구 허용 목록, T-M5-07).
 > v1.4(2026-10-03) — 내부 경로 상호 TLS: 워크로드별 인증서 Secret·HTTPS 프로브·대학 API 서비스 443(D-69).
 > v1.3(2026-10-03) — 역할 6종(security-auditor·break-glass 추가, D-68).
 > v1.2 에서 바뀐 것 — NODE_ENV·포트 3001·프로브 `/healthz`·`/readyz`, 대조는 앱 안 스케줄러, 마감·설정 버전을 배포값에서 제거(2인 승인 우회 차단),

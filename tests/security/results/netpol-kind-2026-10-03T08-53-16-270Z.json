@@ -1,0 +1,117 @@
+{
+  "test": "NetworkPolicy 기본 차단 — 워크로드별 출구 행렬 (T-M5-01)",
+  "environment": "축소 환경 — 로컬 kind 두 클러스터(kindnet NetworkPolicy), 데이터 서비스는 Docker 호스트",
+  "at": "2026-10-03T08:53:16.270Z",
+  "cells": 72,
+  "passed": true,
+  "steps": [
+    {
+      "ok": true,
+      "what": "univ-a admission-api — 열림 4 · 막힘 8",
+      "detail": {
+        "pgbouncer": "connected",
+        "ownApi": "timeout",
+        "ownDbDirect": "timeout",
+        "otherDb": "timeout",
+        "redis": "connected",
+        "central": "ECONNREFUSED",
+        "objectStorage": "connected",
+        "otherHostPort": "timeout",
+        "otherUniversity": "timeout",
+        "internet": "timeout",
+        "metadata": "timeout",
+        "kubeApi": "timeout"
+      }
+    },
+    {
+      "ok": true,
+      "what": "univ-a event-relay — 열림 4 · 막힘 8",
+      "detail": {
+        "pgbouncer": "connected",
+        "ownApi": "timeout",
+        "ownDbDirect": "timeout",
+        "otherDb": "timeout",
+        "redis": "connected",
+        "central": "ECONNREFUSED",
+        "objectStorage": "connected",
+        "otherHostPort": "timeout",
+        "otherUniversity": "timeout",
+        "internet": "timeout",
+        "metadata": "timeout",
+        "kubeApi": "timeout"
+      }
+    },
+    {
+      "ok": true,
+      "what": "univ-a document-service — 열림 1 · 막힘 11",
+      "detail": {
+        "pgbouncer": "timeout",
+        "ownApi": "connected",
+        "ownDbDirect": "timeout",
+        "otherDb": "timeout",
+        "redis": "timeout",
+        "central": "timeout",
+        "objectStorage": "timeout",
+        "otherHostPort": "timeout",
+        "otherUniversity": "timeout",
+        "internet": "timeout",
+        "metadata": "timeout",
+        "kubeApi": "timeout"
+      }
+    },
+    {
+      "ok": true,
+      "what": "univ-b admission-api — 열림 4 · 막힘 8",
+      "detail": {
+        "pgbouncer": "connected",
+        "ownApi": "timeout",
+        "ownDbDirect": "timeout",
+        "otherDb": "timeout",
+        "redis": "connected",
+        "central": "ECONNREFUSED",
+        "objectStorage": "connected",
+        "otherHostPort": "timeout",
+        "otherUniversity": "timeout",
+        "internet": "timeout",
+        "metadata": "timeout",
+        "kubeApi": "timeout"
+      }
+    },
+    {
+      "ok": true,
+      "what": "univ-b event-relay — 열림 4 · 막힘 8",
+      "detail": {
+        "pgbouncer": "connected",
+        "ownApi": "timeout",
+        "ownDbDirect": "timeout",
+        "otherDb": "timeout",
+        "redis": "connected",
+        "central": "ECONNREFUSED",
+        "objectStorage": "connected",
+        "otherHostPort": "timeout",
+        "otherUniversity": "timeout",
+        "internet": "timeout",
+        "metadata": "timeout",
+        "kubeApi": "timeout"
+      }
+    },
+    {
+      "ok": true,
+      "what": "univ-b document-service — 열림 1 · 막힘 11",
+      "detail": {
+        "pgbouncer": "timeout",
+        "ownApi": "connected",
+        "ownDbDirect": "timeout",
+        "otherDb": "timeout",
+        "redis": "timeout",
+        "central": "timeout",
+        "objectStorage": "timeout",
+        "otherHostPort": "timeout",
+        "otherUniversity": "timeout",
+        "internet": "timeout",
+        "metadata": "timeout",
+        "kubeApi": "timeout"
+      }
+    }
+  ]
+}

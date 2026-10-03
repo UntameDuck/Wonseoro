@@ -17,7 +17,9 @@ import pg from 'pg';
 import { createDevPki } from '../../scripts/pki/dev-pki.mjs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
-const { InternalHttpClient } = await import(new URL('../../packages/server-kit/dist/index.js', import.meta.url).href);
+const { InternalHttpClient, EgressPolicy } = await import(new URL('../../packages/server-kit/dist/index.js', import.meta.url).href);
+// 시험 클라이언트의 출구 정책 — 로컬 시험 서버만(루프백 허용)
+const LOCAL = new EgressPolicy({ allow: ['localhost'], allowLoopback: true });
 const DB = process.env.MTLS_LIVE_DB ?? 'postgresql://wonseoro:wonseoro@localhost:5499';
 const UNIV_DB = process.env.MTLS_LIVE_UNIV_DB ?? 'postgresql://kadmission_app:kadmission_app_dev@localhost:5499/univ_a';
 const PKI = path.join(ROOT, '.cache/pki-mtls-live');
@@ -39,7 +41,7 @@ rmSync(PKI, { recursive: true, force: true });
 mkdirSync(LOGS, { recursive: true });
 const pki = createDevPki({ out: PKI, hours: 1 });
 const files = (name) => ({ certFile: pki[name].cert, keyFile: pki[name].key, caFile: pki.ca });
-const as = (name) => new InternalHttpClient(files(name));
+const as = (name) => new InternalHttpClient(files(name), LOCAL);
 
 const procs = [];
 function start(name, app, env) {
@@ -112,7 +114,7 @@ try {
   // 평문·공개 경로
   const plain = await fetch('http://localhost:3132/readyz').then((r) => r.status, () => 0);
   check(plain !== 200, '평문 HTTP 로는 중앙에 닿지 않는다', { status: plain });
-  check((await call(new InternalHttpClient({ ...files('univ-a-event-relay') }), 'GET', `${CENTRAL}/readyz`)).status === 200, '공개 경로(/readyz)는 인증서와 상관없이 열린다');
+  check((await call(new InternalHttpClient({ ...files('univ-a-event-relay') }, LOCAL), 'GET', `${CENTRAL}/readyz`)).status === 200, '공개 경로(/readyz)는 인증서와 상관없이 열린다');
 
   // 중앙 — 이벤트 수신
   const ev = `${CENTRAL}/internal/v1/events`;
@@ -122,7 +124,7 @@ try {
   const caOnly = new Agent({ connect: { ca: readFileSync(pki.ca) } });
   const bare = await uf(ev, { method: 'POST', dispatcher: caOnly, headers: { 'content-type': ce }, body: JSON.stringify(heartbeat('UNIV-A')) });
   check(bare.status === 401, '인증서 없이 이벤트를 보내면 401', { status: bare.status });
-  const rogue = await call(new InternalHttpClient({ certFile: pki['rogue-univ-a-relay'].cert, keyFile: pki['rogue-univ-a-relay'].key, caFile: pki.ca }), 'POST', ev, heartbeat('UNIV-A'), ce);
+  const rogue = await call(new InternalHttpClient({ certFile: pki['rogue-univ-a-relay'].cert, keyFile: pki['rogue-univ-a-relay'].key, caFile: pki.ca }, LOCAL), 'POST', ev, heartbeat('UNIV-A'), ce);
   check(rogue.status === 401 || rogue.status === 0, '플랫폼 CA 가 아닌 곳이 서명한 같은 이름의 인증서는 거절(401)', { status: rogue.status });
   const spoof = await call(as('univ-b-event-relay'), 'POST', ev, heartbeat('UNIV-A'), ce);
   check(spoof.status === 403, 'UNIV-B Relay 가 UNIV-A 이름으로 보낸 이벤트는 403 — 다른 대학 사칭', { status: spoof.status });

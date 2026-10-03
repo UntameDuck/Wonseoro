@@ -65,3 +65,20 @@
   - 단위: server-kit 8(신원 URI·실제 TLS·다른 CA·인증서 교체), 계약 대조(계약의 mutualTLS 경로 = 코드의 경로 표) 대학 2·중앙 2
   - 보안 선별 시험 194개(상호 TLS 묶음 12 추가) 건너뜀 0, admission-api 360·central-api 38·server-kit 87 통과
 - **남은 것** — 계약 응답(401·403)·노션은 D-69. kind 실증과 인증서 자동 발급·교체는 단계 4(Vault PKI)
+
+### 단계 2 ✅ (2026-10-03) — 출구 허용 목록(T-M5-07)·NetworkPolicy 자동 시험(T-M5-01)
+
+- **`server-kit/src/egress.ts`** — 서비스마다 **자기 의존 서비스 URL 의 호스트만** 부른다(`configureEgress` — 대학 API: 중앙·로그인 서버 두 렐름·Object Storage,
+  중앙: 로그인 서버, Relay: 중앙, 서류 워커: 자기 대학 API·Object Storage(가상 호스트 방식 `*.호스트` 포함), 더할 것은 `EGRESS_ALLOWLIST`).
+  http·https 만. **연결 순간의 주소 검사** — DNS 가 무엇을 돌려주든 메타데이터(169.254.0.0/16·100.100.100.200·192.0.0.192·fd00:ec2::254)·
+  미지정·멀티캐스트·링크 로컬은 연결하지 않는다(DNS 재바인딩, IPv4 를 품은 IPv6 도). 운영은 루프백도. 사설 대역은 클러스터 안 의존 서비스라 막지 않는다 — 이름 목록이 좁힌다.
+  거절은 지표 `egress_denied{reason}`·경고 로그
+- **모든 서버 쪽 호출이 거친다** — 내부 호출 클라이언트(`internalHttp` — 상호 TLS), 플랫폼 밖 호출(`egressHttp` — 로그인 서버 공개키·Object Storage 서명 URL, 시스템 신뢰 저장소)
+- **서류 워커의 서명 URL** — 접수 API 가 준 주소를 그대로 부르던 것이 SSRF 통로였다. 이제 Object Storage 호스트가 아니면 내려받지 않고
+  **검사 오류(`DOWNLOAD_URL_NOT_ALLOWED`)** 로 남겨 사람이 본다(장애처럼 다시 시도하지 않는다). 차트가 워커에 `S3_ENDPOINT` 를 넘긴다(runtime 첨부 v1.5)
+- **NetworkPolicy** — 차트가 출구 규칙에 전체 인터넷(0.0.0.0/0·::/0)·메타데이터 대역을 넣으면 렌더링을 거부한다
+- **시험**
+  - `npm run test:security:netpol`(kind 두 대학) — 워크로드 3종 × 목적지 12 = **72칸** 통과: 대학 API·Relay 는 PgBouncer·Redis·중앙·Object Storage 만,
+    서류 워커는 자기 대학 API 만. 직접 DB 우회·다른 대학 DB·다른 대학 클러스터·인터넷·**메타데이터 주소**·쿠버네티스 API 는 막힘
+  - 단위: 출구 정책 5(호스트·포트·와일드카드·사용자 정보로 호스트 속이기·스킴·메타데이터 숫자/IPv6 표기·DNS 재바인딩을 실제 연결로), 서류 워커 SSRF 1
+  - 보안 선별 시험 **200개** 건너뜀 0, 상호 TLS 실증 25 그대로, admission-api 360·server-kit 92·document-service 9 통과

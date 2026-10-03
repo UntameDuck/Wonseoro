@@ -44,6 +44,7 @@
     "test:security:sast-gate": "node --test scripts/check-codeql-sarif.test.mjs",
     "test:security:dast-gate": "node --test scripts/check-zap-report.test.mjs",
     "test:security:mtls": "node tests/security/mtls-live.mjs",
+    "test:security:netpol": "node tests/security/netpol-kind.mjs",
     "pretest:security": "npm run build -w @wonseoro/contracts -w @wonseoro/server-kit -w @wonseoro/admission-api -w @wonseoro/document-service -w @wonseoro/central-api",
     "test:security": "node scripts/run-security-tests.mjs",
     "test:auth:issuer": "node tests/auth/local-issuer.mjs",

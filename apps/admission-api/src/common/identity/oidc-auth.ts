@@ -4,7 +4,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { metrics } from '@opentelemetry/api';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { CACHE_CONTROL_PII, MEDIA_PROBLEM } from '@wonseoro/contracts';
-import { Db, OidcTokenError, OidcUnavailableError, OidcVerifier, type VerifiedToken } from '@wonseoro/server-kit';
+import { Db, egressHttp, OidcTokenError, OidcUnavailableError, OidcVerifier, type VerifiedToken } from '@wonseoro/server-kit';
 import { OIDC } from '../../config';
 import { ProblemException } from '../problem/problem.exception';
 import { requestTraceId } from '../problem/problem.filter';
@@ -125,7 +125,9 @@ export class OidcAuthenticator {
   constructor(private readonly applicants: ApplicantDirectory) {
     if (!OIDC) throw new Error('AUTH_MODE=oidc 가 아닌데 OIDC 인증기를 만들었다');
     const snapshot = (name: string) => (OIDC!.jwksSnapshotDir ? join(OIDC!.jwksSnapshotDir, `jwks-${name}.json`) : undefined);
-    const common = { audience: OIDC.audience, maxStaleMs: OIDC.jwksMaxStaleMs };
+    // 공개키 조회도 출구 허용 목록을 거친다(T-M5-07) — 발급자 이름이 막힌 주소로 풀리면 받지 않는다
+    const fetch = ((url: string | URL, init?: RequestInit) => egressHttp().fetch(String(url), init)) as typeof globalThis.fetch;
+    const common = { audience: OIDC.audience, maxStaleMs: OIDC.jwksMaxStaleMs, fetch };
     this.applicant = new OidcVerifier({
       ...common,
       issuer: OIDC.applicantIssuer,

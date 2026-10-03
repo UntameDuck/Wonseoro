@@ -1201,6 +1201,9 @@ spec:
               value: "3003"
             - name: SCANNER_ENGINE
               value: "REPLACE_WITH_SCANNER_ENGINE"
+            # 서명 URL 로 내려받을 Object Storage — 출구 허용 목록이 이 호스트만 부른다 (T-M5-07)
+            - name: S3_ENDPOINT
+              value: "https://object.example.kr"
             # 검사 결과는 DB 에 직접 쓰지 않고 접수 API 의 내부 경로로 보고한다 (ADR-0004)
             - name: ADMISSION_API_URL
               value: "https://univ-a-api"
