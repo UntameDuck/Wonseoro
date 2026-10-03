@@ -341,7 +341,15 @@ BEGIN
   SELECT string_agg(t.tablename, ', ') INTO missing
     FROM pg_tables t
    WHERE t.schemaname = 'kadmission'
-     AND CASE WHEN t.tablename = 'break_glass_access'
+     -- 파티션 자식(보관 표의 달)은 부모 권한으로 다룬다 — 따로 보지 않는다
+     AND NOT EXISTS (SELECT 1 FROM pg_inherits i WHERE i.inhrelid = format('%I.%I', t.schemaname, t.tablename)::regclass)
+     AND CASE WHEN t.tablename = 'outbox_event_archive'
+              -- Outbox 보관(0005) — 앱은 옮겨 넣고 읽기만. 지우는 것은 파티션째(함수)
+              THEN NOT (has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'SELECT')
+                    AND has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'INSERT'))
+                   OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'UPDATE')
+                   OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'DELETE')
+              WHEN t.tablename = 'break_glass_access'
               -- 비상 접속 기록(0004) — 앱은 읽지도 쓰지도 않는다
               THEN has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'SELECT')
                    OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'INSERT')

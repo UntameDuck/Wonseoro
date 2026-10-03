@@ -65,7 +65,7 @@
 | T-M4-07 | **Admission Peak Mode** | §01 B1·C4 | D-1 사전확장, minReplica 상향, 비핵심 Job 억제 |
 | T-M4-08 | HPA 커스텀 지표 | §05 | CPU뿐 아니라 RPS/Latency/Queue |
 | T-M4-09 | PgBouncer 계열 Pooler | §01 B2 | Connection Storm 차단, 전체 budget 고정 |
-| T-M4-10 | Outbox Partition/Archive | §01 B7 | 장기 장애 시 디스크 고갈 방지 |
+| T-M4-10 | Outbox Partition/Archive | §01 B7 | 장기 장애 시 디스크 고갈 방지 — ✅ 2026-10-03 보관 표 월별 파티션·마지막 순번 유지·13개월 파티션 삭제(D-74, `0005_outbox_archive.sql`) |
 
 ### 관측성 (권민준)
 

@@ -61,6 +61,8 @@
 > `value_json` 은 암호화 전 행 이전용으로 NULL 허용, 한 행은 평문·암호문 중 하나만. 감사 역할은 감싼 키를 읽지 않는다.
 > 중앙 공통원서 금고도 같다(`fields_ciphertext`·`wrapped_dek`, `key_version` = KEK ID). KEK 교체는 감싼 DEK 만 다시 감싼다(값은 그대로).
 > DB 비상 접속 기록 `break_glass_access(db_user, valid_until, issued_at)` — 추가만(트리거), 앱은 읽지도 쓰지도 않는다(저장소 마이그레이션 0004, D-72).
+> Outbox 보관 `outbox_event_archive` — `created_at` 월별 파티션, 영수증 열을 펼쳐 둔다. 전송·확인이 끝나고 7일 지난 이벤트를 옮기되 원서마다 마지막 순번은 남긴다(순번이 이어진다).
+> 13개월이 지난 달은 파티션째 지운다(§01 B7 디스크 고갈 방지). 바로 쓰는 `outbox_event` 는 유니크(aggregate_id, aggregate_sequence) 때문에 파티션하지 않는다(저장소 마이그레이션 0005, D-74).
 
 v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
 

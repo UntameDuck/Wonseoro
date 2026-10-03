@@ -1120,6 +1120,20 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-74. 전송이 끝난 Outbox 이벤트·영수증이 지워지지 않고 쌓였다 — 첨부 DDL 의 유니크 키로는 바로 파티션할 수 없다 🟡
+
+| | |
+|---|---|
+| **발견** | 2026-10-03 (T-M4-10 — §01 B7 "장기 장애 시 디스크 고갈 방지") |
+| **충돌** | ① `outbox_event`·`sync_receipt` 는 전송·확인이 끝나도 지우는 쪽이 없었다 — 해마다 원서 수 × 이벤트 수만큼 자란다 ② 첨부 DDL 의 `UNIQUE (aggregate_id, aggregate_sequence)` 는 파티션 표가 지킬 수 없다(PostgreSQL 은 파티션 키를 포함한 유니크만 허용) — `outbox_event` 를 시간으로 파티션하면 순번 중복 방지가 사라진다 ③ 다음 순번은 `MAX(aggregate_sequence)+1` 이라, 오래된 행을 그냥 지우면 순번이 되돌아갈 수 있다 |
+| **판정** | 바로 쓰는 `outbox_event` 는 그대로 두고 **보관 표 `outbox_event_archive` 만 월별 파티션**(`created_at`, 영수증 열을 펼쳐 한 행에). 앱의 보관 작업(매시간·리더 하나·Peak Mode 억제)이 전송·확인이 끝나고 7일 지난 이벤트를 영수증과 함께 한 트랜잭션으로 옮기되 **원서마다 가장 큰 순번은 남긴다**(순번이 이어진다). DEAD·미전송은 옮기지 않는다. 13개월이 지난 달은 **파티션째** 지운다. 앱 역할에는 DDL 이 없으므로 파티션을 만들고 지우는 일은 SECURITY DEFINER 함수 `outbox_archive_partitions(oldest, ahead, keep_months)` 하나로만 한다(이름·범위를 함수가 정한다). 앱은 보관 표에 넣기·읽기만. 마이그레이션 `0005_outbox_archive.sql`(첨부 밖). 장기 장애 중 쌓이는 미전송 이벤트는 Relay 오프라인 한도(`offlineSpool`)의 몫 |
+| **재현 시험** | admission-api `outbox-archive.integration.test`(실제 DB 3개 — 오래된 전송 완료만 영수증과 함께 이동·마지막 순번·DEAD·최근 것은 남음·다음 순번 그대로, 13개월 지난 파티션 삭제·석 달 뒤 파티션 미리 생성, 앱 역할은 보관 표 고치기·지우기·파티션 직접 만들기 불가). `db:verify` 17번(보관 표 넣기·읽기만, 파티션 자식 제외) |
+| **저장소 반영** | ✅ (2026-10-03) `infra/db/migrations/0005_outbox_archive.sql`, `apps/admission-api/src/common/outbox/outbox-archive.ts`, 설정 `OUTBOX_ARCHIVE_*`, 원서 자가 점검의 전송 수에 보관분 포함 |
+| **노션 반영** | ⬜ §02 ERD(보관 표·함수), §01 B7 대응 한 줄 — [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 저장소 반영, 노션 반영 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 

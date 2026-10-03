@@ -200,8 +200,10 @@ export class SelfCheckController {
    */
   private async centralSync(applicationId: string) {
     const { rows } = await this.db.query<Record<string, unknown>>(
+      // 보관 표로 옮긴 이벤트(T-M4-10)도 보낸 것으로 센다
       `SELECT count(*) FILTER (WHERE status IN ('PENDING','SENDING')) AS pending,
-              count(*) FILTER (WHERE status = 'SENT') AS sent,
+              count(*) FILTER (WHERE status = 'SENT')
+                + (SELECT count(*) FROM outbox_event_archive WHERE aggregate_id = $1) AS sent,
               max(sent_at) AS last_sent_at
          FROM outbox_event WHERE aggregate_id = $1`,
       [applicationId],

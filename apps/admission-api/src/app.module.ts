@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { IdempotencyModule } from './common/idempotency/idempotency.module';
+import { OutboxArchiveModule } from './common/outbox/outbox-archive';
 import { IdentityModule } from './common/identity/identity.module';
 import { ResilienceModule } from './common/resilience/dependency-breakers';
 import { DbModule } from '@wonseoro/server-kit';
@@ -27,6 +28,7 @@ import { ClockMonitor } from './common/time/server-clock';
     DbModule.forRoot('admission-api', 'kadmission'),
     ResilienceModule,
     IdempotencyModule,
+    OutboxArchiveModule,
     IdentityModule,
     AuditModule,
     ActivationModule,

@@ -241,6 +241,18 @@ export const IDEMPOTENCY_PURGE = {
 } as const;
 
 /**
+ * Outbox 보관 (T-M4-10, §01 B7, 0005_outbox_archive.sql) — 전송·확인이 끝나고 afterDays 지난 이벤트를 영수증과 함께 월별 파티션으로 옮기고,
+ * keepMonths 보다 오래된 달은 파티션째 지운다. 기본 보관 13개월 — 한 입시 주기와 이의 신청 기간을 넘긴다.
+ */
+export const OUTBOX_ARCHIVE = {
+  autostart: envBool('OUTBOX_ARCHIVE_AUTOSTART', true),
+  intervalMs: envInt('OUTBOX_ARCHIVE_INTERVAL_MS', 3_600_000, { min: 60_000, max: 86_400_000 }),
+  afterDays: envInt('OUTBOX_ARCHIVE_AFTER_DAYS', 7, { min: 1, max: 365 }),
+  keepMonths: envInt('OUTBOX_ARCHIVE_KEEP_MONTHS', 13, { min: 1, max: 120 }),
+  batch: envInt('OUTBOX_ARCHIVE_BATCH', 1000, { min: 1, max: 50_000 }),
+} as const;
+
+/**
  * Admission Peak Mode (§01 B1, T-M4-07).
  *
  * HPA 최소 replica 전환은 GitOps 예약 자동화가 담당한다(D-48, ADR-0006). 이 프로세스는 같은

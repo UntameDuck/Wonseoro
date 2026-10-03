@@ -87,6 +87,8 @@ jobs:
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0003_field_encryption.sql
       # DB 비상 접속 역할·기록(T-M5-03, D-72)
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0004_break_glass.sql
+      # Outbox 보관 월별 파티션(T-M4-10, D-74)
+      - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0005_outbox_archive.sql
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/dev-roles.sql
       # 제약이 실제로 막는지 먼저 확인한다
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/verify-constraints.sql
