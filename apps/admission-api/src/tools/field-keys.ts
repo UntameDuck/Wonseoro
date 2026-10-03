@@ -7,8 +7,11 @@
  *
  * 차트의 Job 이나 `kubectl exec` 로 부른다. 몇 번을 돌려도 결과가 같다.
  */
+import { Logger } from '@nestjs/common';
 import { Db, fieldKeyRing } from '@wonseoro/server-kit';
 import { encryptLegacy, rewrapDataKeys } from '../common/db/field-cipher';
+
+const logger = new Logger('field-keys');
 
 async function main(cmd: string | undefined, from: string | undefined): Promise<number> {
   const db = new Db('admission-api');
@@ -16,13 +19,13 @@ async function main(cmd: string | undefined, from: string | undefined): Promise<
     if (cmd === 'encrypt-legacy' || cmd === 'rewrap') {
       let total = 0;
       for (let n = -1; n !== 0; total += n) n = cmd === 'rewrap' ? await rewrapDataKeys(db, from) : await encryptLegacy(db);
-      console.log(JSON.stringify({ cmd, changed: total, activeKek: fieldKeyRing().activeId }));
+      logger.log(JSON.stringify({ cmd, changed: total, activeKek: fieldKeyRing().activeId }));
     }
     const plaintext = await db.query<{ n: string }>(`SELECT count(*)::text AS n FROM application_field_value WHERE value_ciphertext IS NULL`);
     const byKek = await db.query<{ kek_version: string; n: string }>(
       `SELECT kek_version, count(*)::text AS n FROM application_data_key GROUP BY kek_version ORDER BY kek_version`,
     );
-    console.log(
+    logger.log(
       JSON.stringify({
         activeKek: fieldKeyRing().activeId,
         plaintextFieldRows: Number(plaintext.rows[0]?.n ?? 0),
@@ -30,7 +33,7 @@ async function main(cmd: string | undefined, from: string | undefined): Promise<
       }),
     );
     if (cmd && !['status', 'encrypt-legacy', 'rewrap'].includes(cmd)) {
-      console.error('사용: field-keys status|encrypt-legacy|rewrap');
+      logger.error('사용: field-keys status|encrypt-legacy|rewrap');
       return 2;
     }
     return 0;
@@ -42,7 +45,7 @@ async function main(cmd: string | undefined, from: string | undefined): Promise<
 main(process.argv[2], process.argv[3]).then(
   (code) => process.exit(code),
   (err: Error) => {
-    console.error(`${err.name}: ${err.message}`);
+    logger.error(`${err.name}: ${err.message}`);
     process.exit(1);
   },
 );

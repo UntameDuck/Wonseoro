@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:
 import { Logger } from '@nestjs/common';
 import { metrics } from '@opentelemetry/api';
 import { isProduction, secretOrDev } from './env';
+import { VaultTransitKeyRing, vaultFromEnv } from './vault';
 
 /**
  * 필드 암호화 — 봉투 암호화 (T-M5-06, docs/13 B7, v1.0 §8.3 "고위험 필드 별도 암호화, KEK/DEK 분리")
@@ -127,6 +128,14 @@ let ring: KekProvider | null = null;
  */
 export function fieldKeyRing(): KekProvider {
   if (ring) return ring;
+  // 단계 4 — KEK 를 Vault Transit 에 둔다(대학별 키 `pii-<대학>`, 정책이 다른 대학 키를 막는다)
+  if (process.env.FIELD_KEK_PROVIDER === 'vault') {
+    const vault = vaultFromEnv();
+    const key = process.env.VAULT_TRANSIT_KEY;
+    if (!vault || !key) throw new Error('FIELD_KEK_PROVIDER=vault 이면 VAULT_ADDR·VAULT_TRANSIT_KEY 가 필요하다');
+    ring = new VaultTransitKeyRing(vault, key);
+    return ring;
+  }
   const spec = secretOrDev('FIELD_KEK_KEYS', `${DEV_KEK_ID}=${DEV_KEK.toString('base64')}`, '필드 암호화 키 암호화 키(KEK) 묶음');
   // 운영에서 빠졌으면 secretOrDev 가 설정 문제로 남겨 기동을 막는다 — 그때까지 쓸 일 없는 임시 키
   const local = spec ? LocalKeyRing.parse(spec) : new LocalKeyRing([{ id: 'unset', key: randomBytes(32) }]);

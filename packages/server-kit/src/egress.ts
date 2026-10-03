@@ -170,7 +170,8 @@ let configured: EgressPolicy | null = null;
  */
 export function configureEgress(urls: ReadonlyArray<string | null | undefined>, hosts: ReadonlyArray<string | null | undefined> = []): EgressPolicy {
   const extra = [...hosts.filter((h): h is string => !!h), ...envList('EGRESS_ALLOWLIST', [], '출구 허용 호스트 추가(host, host:port, *.suffix)')];
-  configured = EgressPolicy.fromUrls(urls, extra);
+  // 비밀 저장소(Vault, T-M5-04)는 모든 서비스가 부른다 — 설정돼 있으면 늘 허용
+  configured = EgressPolicy.fromUrls([...urls, process.env.VAULT_ADDR], extra);
   return configured;
 }
 

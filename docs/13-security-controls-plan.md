@@ -13,7 +13,7 @@
 |---|---|---|
 | T-M5-01 | 차트 NetworkPolicy — default deny, 허용 경로만(공개→API, 워커→API, API·Relay→PgBouncer·Redis·통제된 출구, DNS, 지표 수집). kind 실측(D-45, 2026-09-28): 자기 DB·Redis·중앙·MinIO 만, 다른 대학 DB·임의 외부 차단 | 다시 돌릴 수 있는 자동 시험. 클라우드 메타데이터 주소(169.254.169.254) 차단 확인 |
 | T-M5-03 | break-glass 역할(Role 만, 평소 바인딩 없음, 켤 때 끝나는 시각·사유 필수 — D-68) | 끝나는 시각에 회수, 켜는 즉시 경보, DB 슈퍼유저 비상 접속 기록 |
-| T-M5-04 | 노션 첨부 `vault-policy.hcl`(대학별 경로) | Vault 자체·DB 동적 자격증명·짧은 인증서. 지금은 Kubernetes Secret 하나(`runtimeSecret`) |
+| T-M5-04 | 노션 첨부 `vault-policy.hcl`(대학별 경로) | Vault 자체·DB 동적 자격증명·짧은 인증서. 지금은 Kubernetes Secret 하나(`runtimeSecret`) — **단계 4 ✅(D-71)** |
 | T-M5-05 | 계약에 mutualTLS | **구현 없음 — 중앙 내부 경로·대학 API 내부 경로가 인증 없이 열려 있다(D-69)** |
 | T-M5-06 | 컬럼 이름만(`pii_ciphertext`·`key_version='plaintext-dev'`) | 중앙 공통원서 금고·대학 원서의 고위험 필드가 평문 jsonb — **단계 3 ✅ 봉투 암호화(D-70)** |
 | T-M5-07 | 출구 NetworkPolicy(egress-gateway 하나로) | 앱 수준 허용 목록. 서류 워커는 API 가 준 내려받기 주소를 그대로 부른다 |
@@ -103,3 +103,22 @@
   - `db:verify` 21번(형식 하나만·감사 역할 키 읽기 차단)
   - 보안 선별 시험 **212개**(필드 암호화 묶음 9 추가) 건너뜀 0, admission-api 365·central-api 41 통과
 - **남은 것** — KEK 를 Vault Transit 으로(단계 4). 로컬 compose DB·kind 가 보는 DB 에 0003·0004 적용(`npm run db:migrate`·`db:migrate:central` 이 포함한다), 노션 §02(D-70)
+
+### 단계 4 ✅ (2026-10-03) — Vault 대학별 경로·짧은 자격증명 (T-M5-04, D-71)
+
+- **`server-kit/src/vault.ts`** — Vault 클라이언트(Kubernetes·AppRole·토큰 로그인, 토큰 수명 2/3 에 다시 로그인, 출구 허용 목록을 거침 — `VAULT_ADDR` 는 `configureEgress` 가 늘 허용)
+  - **Transit KEK** `VaultTransitKeyRing` — 단계 3 의 `KekProvider` 그대로. 연결 데이터는 Transit `associated_data`, KEK ID 는 `pii-<대학>:v<버전>`. 키 정보 읽기 권한 없이 감쌀 때 돌아온 버전으로 현재 버전을 안다. `FIELD_KEK_PROVIDER=vault`·`VAULT_TRANSIT_KEY`
+  - **DB 동적 자격증명** — `Db.startCredentialRotation` 이 `database/creds/<역할>` 로 계정을 받고 수명 2/3 마다 새 계정을 받는다. 새 계정으로 연결을 확인한 뒤 연결 풀을 바꾸고, 옛 풀은 빌려 간 연결이 돌아오는 대로 닫는다. `DATABASE_CREDENTIALS=vault`·`VAULT_DB_ROLE`, 지표 `db_credential_rotations`
+  - **PKI** `VaultCertRenewer` — SAN URI 워크로드 인증서를 받아 MTLS 파일 셋을 바꿔 쓴다(임시 파일 → rename, 인증서를 마지막에). 단계 1 의 서버·클라이언트가 재기동 없이 다시 읽는다. `MTLS_ISSUER=vault`·`VAULT_PKI_ROLE`·`WORKLOAD_URI`·`VAULT_PKI_ALT_NAMES`
+  - 네 서비스 main 이 맨 앞에서 `startVaultSecrets()` — 인증서를 먼저 받고, Transit 에 한 번 감싸 보아 정책·연결을 확인한다(안 되면 기동 실패)
+- **정책** — 노션 첨부 `vault-policy.hcl` 을 대학마다 그대로 적용했다(실제 Vault 에서 정확한 경로가 와일드카드 deny 보다 앞서 의도대로 동작). **PKI 역할·정책은 워크로드마다로 좁혔다(D-71)** — 대학 단위 역할이면 서류 워커가 Relay 인증서를 받아 이벤트를 위조할 수 있다
+- **개발 Vault** — compose 프로필 `vault`(1.21, 개발 모드), 구성 `node scripts/vault/dev-vault.mjs`(KV·Transit `pii-<대학>`·DB 역할·PKI 루트 CA·워크로드 PKI 역할·정책·AppRole, 중앙 `pii-central`·`kadmission-central-service`)
+- **차트** — `vault.enabled`·`vault.addr`. 켜면 워크로드별 Kubernetes 역할 `<대학>-<워크로드>`, 투사 ServiceAccount 토큰(audience vault, 10분), 인증서 볼륨은 메모리 emptyDir(워크로드가 쓴다), API·Relay 는 DB 동적 계정, API 는 Transit KEK. 끄면 지금처럼 runtimeSecret·인증서 Secret. 기본은 끔(runtime 첨부 그대로)
+- **시험** `npm run test:security:vault`(개발 Vault + CI 재현 DB, 약 1분 반) **22개** — CI 보안 시험 잡에 Vault 서비스 컨테이너로 붙였다
+  - 대학 경계: UNIV-A 신원으로 UNIV-B 의 KV·DB 계정·Transit·PKI·중앙 Transit·관리 경로 403, 자기 역할로 남의 대학 SAN URI 400. 같은 대학 안: 서류 워커의 Relay 인증서 403·400, DB·KEK 403, Relay 의 KEK 403
+  - Transit: 감싸기·풀기, 다른 원서의 연결 데이터 거절, UNIV-B 가 UNIV-A KEK 로 못 풂, 키를 돌리면 새 버전·옛 버전도 풀림, rewrap 뒤 최소 버전을 올리면 안 옮긴 것은 닫힌 실패
+  - DB: 수명 20초 계정 — 40초 동안 계정 3개로 바뀌는 사이 쿼리 192회 실패 0, 교체를 걸친 트랜잭션은 같은 계정으로 끝까지, 수명 끝난 계정은 지워짐, 동적 계정은 `kadmission_app` 권한만(슈퍼유저·역할 생성 없음)
+  - PKI: 30초짜리 인증서로 실제 상호 TLS, 다시 받은 인증서를 서버·클라이언트가 재기동 없이 씀
+  - **대학 API 를 Vault 만으로 기동** — DB 동적 계정·Transit KEK 확인·PKI 인증서(HTTPS)로 준비됨
+  - 이 시험에서 확인한 운영 조건: 수명이 끝난 DB 계정은 Vault 가 세션을 끊는다 → **트랜잭션이 쓸 수 있는 여유는 수명의 1/3**(운영 1시간 → 20분, 쿼리 시간 상한보다 훨씬 길다)
+- **남은 것(운영 쪽)** — 운영 Vault·Kubernetes 인증 역할을 플랫폼 관리자가 둔다. PgBouncer 는 동적 계정을 그대로 넘기도록 `auth_query` 로 둔다(지금 차트 PgBouncer 는 고정 계정). NetworkPolicy 의 Vault 출구도 플랫폼 값으로 연다. 중앙 API 배포(차트 밖)에도 같은 환경변수를 쓴다(`pii-central`·`kadmission-central-service`). 노션 §06(D-71)

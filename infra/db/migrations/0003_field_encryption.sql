@@ -15,8 +15,8 @@ CREATE TABLE IF NOT EXISTS application_data_key (
   application_id uuid PRIMARY KEY REFERENCES application(id) ON DELETE CASCADE,
   -- DEK 를 감싼 KEK 의 ID. KEK 교체 뒤 rewrap 이 바꾼다(값은 다시 암호화하지 않는다)
   kek_version varchar(64) NOT NULL,
-  -- iv(12) | tag(16) | 감싼 DEK(32) — 연결 데이터는 대학 ID·원서 ID 라 다른 대학 DB 로 옮기면 풀리지 않는다
-  wrapped_dek bytea NOT NULL CHECK (octet_length(wrapped_dek) = 60),
+  -- 로컬 KEK: iv(12) | tag(16) | 감싼 DEK(32) = 60바이트, Vault Transit: "vault:vN:…" 글자 — 연결 데이터는 대학 ID·원서 ID 라 다른 대학 DB 로 옮기면 풀리지 않는다
+  wrapped_dek bytea NOT NULL CHECK (octet_length(wrapped_dek) BETWEEN 60 AND 1024),
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_application_data_key_kek ON application_data_key(kek_version);

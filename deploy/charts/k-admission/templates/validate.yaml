@@ -53,6 +53,10 @@
   {{- end -}}
 {{- end -}}
 
+{{- if and $v.vault.enabled (not $v.vault.addr) -}}
+{{- fail "vault.enabled 이면 vault.addr 가 필요하다 (T-M5-04)" -}}
+{{- end -}}
+
 {{- if eq $v.global.environment "production" -}}
   {{- if $v.runtimeSecret.create -}}
   {{- fail "production 에서는 차트가 Secret 을 만들지 않는다 — Vault 가 넣은 Secret 을 runtimeSecret.name 으로 참조한다 (§06)" -}}

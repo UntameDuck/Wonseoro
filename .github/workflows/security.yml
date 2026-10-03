@@ -161,6 +161,14 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U wonseoro -d univ_a"
           --health-interval 5s --health-timeout 3s --health-retries 10
+      # 비밀 저장소 실증(T-M5-04) — 개발 모드(메모리·봉인 해제·루트 토큰 고정). 이미지 기본 명령이 개발 서버다
+      vault:
+        image: hashicorp/vault:1.21@sha256:4e33b126a59c0c333b76fb4e894722462659a6bec7c48c9ee8cea56fccfd2569
+        env:
+          VAULT_DEV_ROOT_TOKEN_ID: dev-root-token
+          VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+        ports: ['8200:8200']
+        options: --cap-add=IPC_LOCK
     env:
       ADMIN_DATABASE_URL: postgresql://wonseoro:wonseoro@localhost:5432/univ_a
       UNIVERSITY_DATABASE_URL: postgresql://kadmission_app:kadmission_app_dev@localhost:5432/univ_a
@@ -202,6 +210,14 @@ jobs:
         run: |
           npm run build -w @wonseoro/event-relay -w @wonseoro/document-service
           npm run test:security:mtls
+      - name: Vault 실증 — 첨부 정책의 대학 경계·Transit KEK·DB 동적 계정 교체·PKI 인증서·Vault 만으로 대학 API 기동 (T-M5-04)
+        env:
+          VAULT_ADDR: http://127.0.0.1:8200
+          VAULT_TOKEN: dev-root-token
+          VAULT_LIVE_DB: postgresql://wonseoro:wonseoro@localhost:5432/univ_a
+          # Vault 컨테이너에서 본 DB — 같은 잡의 서비스 컨테이너 이름
+          VAULT_DB_URL: postgresql://{{username}}:{{password}}@postgres:5432/univ_a?sslmode=disable
+        run: npm run test:security:vault
 
   dast:
     name: ZAP DAST · High 0

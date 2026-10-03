@@ -171,6 +171,51 @@ annotations:
 - name: INTERNAL_AUTH
   value: none
 {{- end }}
+{{- include "ka.vaultEnv" . }}
+{{- end -}}
+
+{{- /*
+  Vault (T-M5-04, docs/13 단계 4) — 켜면 워크로드가 기동 때 Vault 에서 받는다:
+  Kubernetes 인증(ServiceAccount 토큰, audience vault) · PKI 워크로드 인증서(SAN URI, 수명 2/3 마다 다시) ·
+  DB 동적 계정(API·Relay) · Transit KEK(API). 경로 이름은 노션 첨부 vault-policy.hcl 과 같다.
+*/ -}}
+{{- define "ka.workloadName" -}}
+{{- $key := . -}}{{- ternary "admission-api" $key (eq $key "api") -}}
+{{- end -}}
+
+{{- define "ka.vaultEnv" -}}
+{{- $root := index . 0 -}}{{- $key := index . 1 -}}{{- $vault := $root.Values.vault -}}
+{{- if $vault.enabled }}
+{{- $u := $root.Values.global.universityId -}}{{- $w := include "ka.workloadName" $key }}
+- name: VAULT_ADDR
+  value: {{ $vault.addr | quote }}
+- name: VAULT_K8S_ROLE
+  value: {{ printf "%s-%s" ($u | lower) $w | quote }}
+- name: VAULT_K8S_JWT_FILE
+  value: /var/run/secrets/vault/token
+{{- if $root.Values.internalTls.enabled }}
+- name: MTLS_ISSUER
+  value: vault
+- name: VAULT_PKI_ROLE
+  value: {{ printf "kadmission-%s-%s" ($u | lower) $w | quote }}
+- name: WORKLOAD_URI
+  value: {{ printf "spiffe://wonseoro/university/%s/%s" $u $w | quote }}
+- name: VAULT_PKI_ALT_NAMES
+  value: {{ printf "%s-%s,%s-%s.%s.svc" (include "ka.fullname" $root) $key (include "ka.fullname" $root) $key $root.Release.Namespace | quote }}
+{{- end }}
+{{- if or (eq $key "api") (eq $key "event-relay") }}
+- name: DATABASE_CREDENTIALS
+  value: vault
+- name: VAULT_DB_ROLE
+  value: {{ printf "admission-api-%s" $u | quote }}
+{{- end }}
+{{- if eq $key "api" }}
+- name: FIELD_KEK_PROVIDER
+  value: vault
+- name: VAULT_TRANSIT_KEY
+  value: {{ printf "pii-%s" $u | quote }}
+{{- end }}
+{{- end }}
 {{- end -}}
 
 {{- /* 쓰기 영역(/tmp)과 인증서 — 읽기 전용 루트 FS */ -}}
@@ -182,6 +227,12 @@ volumeMounts:
   {{- if $t.enabled }}
   - name: mtls
     mountPath: {{ $t.mountPath }}
+    {{- /* Vault 가 발급하면 워크로드가 인증서를 직접 써 넣는다 */}}
+    readOnly: {{ not $root.Values.vault.enabled }}
+  {{- end }}
+  {{- if $root.Values.vault.enabled }}
+  - name: vault-token
+    mountPath: /var/run/secrets/vault
     readOnly: true
   {{- end }}
 {{- end -}}
@@ -192,10 +243,24 @@ volumes:
   - name: tmp
     emptyDir:
       sizeLimit: 1Gi
-  {{- if $t.enabled }}
+  {{- if and $t.enabled $root.Values.vault.enabled }}
+  - name: mtls
+    emptyDir:
+      medium: Memory
+      sizeLimit: 1Mi
+  {{- else if $t.enabled }}
   - name: mtls
     secret:
       secretName: {{ include "ka.mtlsSecret" . }}
       defaultMode: 0440
+  {{- end }}
+  {{- if $root.Values.vault.enabled }}
+  - name: vault-token
+    projected:
+      sources:
+        - serviceAccountToken:
+            path: token
+            audience: vault
+            expirationSeconds: 600
   {{- end }}
 {{- end -}}

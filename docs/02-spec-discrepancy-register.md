@@ -1078,6 +1078,20 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-71. 첨부 Vault 정책의 PKI 역할이 대학 단위라, 같은 대학의 서류 워커가 Relay 인증서를 받아 이벤트를 위조할 수 있다 🟡
+
+| | |
+|---|---|
+| **발견** | 2026-10-03 (보안 통제 단계 4 — 첨부 `vault-policy.hcl` 을 실제 Vault 에 적용하며) |
+| **충돌** | 첨부 정책은 대학마다 PKI 역할 하나(`pki/issue/kadmission-univ-a-service`)만 준다. 단계 1(D-69)은 내부 경로마다 부를 수 있는 **워크로드**를 정했다(이벤트는 Relay 만, 서류 검사 결과는 서류 워커만). 대학 단위 역할은 그 대학의 어느 워크로드든 다른 워크로드의 SAN URI 를 받게 한다 — 신뢰하지 않는 파일을 다루는 서류 워커가 뚫리면 Relay 인증서를 받아 중앙에 자기 대학 이름의 접수·취소 이벤트를 위조할 수 있다. 첨부 정책은 하나라서 서류 워커도 DB 동적 계정·개인정보 KEK(Transit)를 받는다 |
+| **판정** | **PKI 역할·정책을 워크로드마다** — `pki/issue/kadmission-<대학>-<워크로드>`(SAN URI 는 그 워크로드 하나만), 정책 `univ-<대학>-<워크로드>`: 대학 API = 첨부 정책 그대로(PKI 줄만 워크로드 역할로), Relay = Relay KV·DB 계정·자기 인증서(KEK 없음), 서류 워커 = 자기 인증서만. Kubernetes 인증 역할은 `<대학>-<워크로드>`. 첨부의 나머지(대학 경계 deny·경로 이름)는 그대로 쓰고, 실제 Vault 에서 의도대로 동작함을 확인했다(정확한 경로가 와일드카드 deny 보다 앞선다) |
+| **재현 시험** | `npm run test:security:vault` — 서류 워커 신원으로 Relay 역할 발급 403, 자기 역할로 Relay SAN URI 발급 400, DB 계정·Transit 403, Relay 의 Transit 403. UNIV-A 신원으로 UNIV-B 의 KV·DB·Transit·PKI·관리 경로 403 |
+| **저장소 반영** | ✅ (2026-10-03) `scripts/vault/dev-vault.mjs`, 차트 `ka.vaultEnv`(워크로드별 PKI 역할·Kubernetes 역할) |
+| **노션 반영** | ⬜ §06 Vault 절·첨부 `vault-policy.hcl` 에 워크로드별 PKI 역할과 Relay·서류 워커 정책 — [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 저장소 반영, 노션 반영 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 

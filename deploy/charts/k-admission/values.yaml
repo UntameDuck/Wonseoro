@@ -240,6 +240,14 @@ internalTls:
     event-relay: ""
     document-service: ""
 
+# Vault (T-M5-04, docs/13 단계 4) — 켜면 워크로드가 Kubernetes 인증으로 Vault 에서 인증서(PKI)·DB 동적 계정·KEK(Transit)를 받는다.
+# 경로·역할 이름은 노션 첨부 vault-policy.hcl 을 따른다(대학별): database/creds/admission-api-<대학> · transit/{encrypt,decrypt}/pii-<대학>.
+# PKI 역할만 워크로드마다 pki/issue/kadmission-<대학>-<워크로드> — 자기 SAN URI 하나만 발급(D-71). Kubernetes 인증 역할 이름은 <대학 소문자>-<워크로드>. Vault 와 역할은 플랫폼 관리자가 둔다.
+# 끄면 runtimeSecret(DATABASE_URL·FIELD_KEK_KEYS)과 워크로드별 인증서 Secret 을 쓴다
+vault:
+  enabled: false
+  addr: ""
+
 rbac:
   create: true
   # 첨부 §06 의 그룹 이름

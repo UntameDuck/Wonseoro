@@ -76,3 +76,15 @@ services:
     ports: ['18080:8080']
     # 렐름 파일(가져오기)과 원서로 로그인 테마(접근성 보완, infra/auth/themes)
     volumes: ['../auth:/opt/keycloak/data/import:ro', '../auth/themes:/opt/keycloak/themes:ro']
+
+  # 비밀 저장소 (T-M5-04, docs/13 단계 4) — 개발 모드(메모리 저장, 봉인 해제됨, 루트 토큰 고정). 재시작하면 비어 있다.
+  # 구성: node scripts/vault/dev-vault.mjs — 노션 첨부 vault-policy.hcl 을 대학마다 적용
+  vault:
+    image: hashicorp/vault:1.21@sha256:4e33b126a59c0c333b76fb4e894722462659a6bec7c48c9ee8cea56fccfd2569
+    profiles: ['vault']
+    cap_add: ['IPC_LOCK']
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: dev-root-token
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    ports: ['8200:8200']
+    extra_hosts: ['host.docker.internal:host-gateway']

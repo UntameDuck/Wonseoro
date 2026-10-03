@@ -11,3 +11,4 @@ export * from './oidc/verifier';
 export * from './egress';
 export * from './mtls';
 export * from './field-crypto';
+export * from './vault';

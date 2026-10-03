@@ -6,7 +6,7 @@ import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify
 import { AppModule } from './app.module';
 import { configureHttpApp } from './app.setup';
 import { AUTH_MODE, INTERNAL, OIDC, PORT } from './config';
-import { assertConfigured, serverTlsOptions, StructuredLogger, watchServerTls } from '@wonseoro/server-kit';
+import { assertConfigured, startVaultSecrets, serverTlsOptions, StructuredLogger, watchServerTls } from '@wonseoro/server-kit';
 
 /**
  * central-api — 중앙 Control + Convenience Plane
@@ -18,6 +18,8 @@ import { assertConfigured, serverTlsOptions, StructuredLogger, watchServerTls } 
 async function bootstrap(): Promise<void> {
   // 설정을 먼저 확인한다. 잘못된 설정으로 뜨는 것보다 안 뜨는 것이 낫다.
   assertConfigured();
+  // Vault 를 쓰면 인증서·KEK 를 먼저 받는다(인증서 파일을 읽기 전에, T-M5-04)
+  await startVaultSecrets();
 
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,

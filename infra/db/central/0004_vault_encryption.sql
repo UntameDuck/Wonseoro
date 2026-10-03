@@ -16,7 +16,7 @@ BEGIN
     -- 평문 행(옛 형식) 아니면 암호문 + 감싼 DEK + 빈 평문 칸
     ALTER TABLE applicant_profile ADD CONSTRAINT applicant_profile_sealed_or_legacy CHECK (
       (key_version = 'plaintext-dev' AND fields_ciphertext IS NULL AND wrapped_dek IS NULL)
-      OR (key_version <> 'plaintext-dev' AND fields_ciphertext IS NOT NULL AND octet_length(wrapped_dek) = 60 AND fields = '{}'::jsonb)
+      OR (key_version <> 'plaintext-dev' AND fields_ciphertext IS NOT NULL AND octet_length(wrapped_dek) BETWEEN 60 AND 1024 AND fields = '{}'::jsonb)
     );
   END IF;
 END $$;

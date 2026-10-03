@@ -5,7 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
 import { ADMISSION_API_URL, PORT, SCANNER_ENGINE } from './config';
-import { assertConfigured, installHttpTelemetry, StructuredLogger } from '@wonseoro/server-kit';
+import { assertConfigured, startVaultSecrets, installHttpTelemetry, StructuredLogger } from '@wonseoro/server-kit';
 
 /**
  * document-service — 악성코드 검사 워커
@@ -16,6 +16,8 @@ import { assertConfigured, installHttpTelemetry, StructuredLogger } from '@wonse
 async function bootstrap(): Promise<void> {
   // 설정을 먼저 확인한다. 잘못된 설정으로 뜨는 것보다 안 뜨는 것이 낫다.
   assertConfigured();
+  // Vault 를 쓰면 인증서·KEK 를 먼저 받는다(인증서 파일을 읽기 전에, T-M5-04)
+  await startVaultSecrets();
 
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
