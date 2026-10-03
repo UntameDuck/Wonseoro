@@ -1,0 +1,139 @@
+{{- /*
+  비상 역할 회수·경보 (T-M5-03, docs/13 단계 5) — rbac.breakGlass.group 을 켰을 때만.
+  매분 회수 작업이 비상 역할 바인딩을 본다: 켜져 있으면 Warning 이벤트 BreakGlassActive(+ 경보 웹훅),
+  끝나는 시각이 지났으면 바인딩을 지우고 BreakGlassRevoked. 이 작업의 권한은 그 바인딩 하나를 읽고 지우는 것과 이벤트 쓰기뿐이다.
+*/ -}}
+{{- $bg := .Values.rbac.breakGlass -}}
+{{- if and .Values.rbac.create $bg.group }}
+{{- $name := printf "%s-break-glass-reaper" (include "ka.fullname" .) }}
+{{- $binding := printf "%s-break-glass" (include "ka.fullname" .) }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  labels: {{- include "ka.labels" . | nindent 4 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $name }}
+  labels: {{- include "ka.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["rolebindings"]
+    resourceNames: [{{ $binding | quote }}]
+    verbs: ["get", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $name }}
+  labels: {{- include "ka.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: {{ $name }}
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}
+  labels: {{- include "ka.labels" . | nindent 4 }}
+data:
+  reaper.mjs: |
+{{ .Files.Get "files/break-glass-reaper.mjs" | indent 4 }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ $name }}
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  schedule: "* * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 50
+      ttlSecondsAfterFinished: 600
+      template:
+        metadata:
+          labels:
+            {{- include "ka.labels" . | nindent 12 }}
+            app: break-glass-reaper
+            network-role: break-glass-reaper
+        spec:
+          serviceAccountName: {{ $name }}
+          automountServiceAccountToken: true
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: {{ .Values.securityContext.runAsUser }}
+            runAsGroup: {{ .Values.securityContext.runAsGroup }}
+            seccompProfile:
+              type: {{ .Values.securityContext.seccompProfile }}
+          containers:
+            - name: reaper
+              image: {{ $bg.reaperImage | quote }}
+              command: ["node", "/opt/reaper/reaper.mjs"]
+              env:
+                - name: BINDING
+                  value: {{ $binding | quote }}
+                - name: NAMESPACE
+                  value: {{ .Release.Namespace | quote }}
+                {{- with $bg.alertWebhookUrl }}
+                - name: ALERT_WEBHOOK_URL
+                  value: {{ . | quote }}
+                {{- end }}
+              resources:
+                requests: { cpu: 10m, memory: 32Mi }
+                limits: { memory: 96Mi }
+              {{- include "ka.containerSecurity" . | nindent 14 }}
+              volumeMounts:
+                - name: script
+                  mountPath: /opt/reaper
+                  readOnly: true
+          volumes:
+            - name: script
+              configMap:
+                name: {{ $name }}
+{{- if .Values.networkPolicy.defaultDeny }}
+---
+# 회수 작업 → Kubernetes API·DNS(·경보 웹훅) 만. default deny 아래 둔다
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $name }}
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      network-role: break-glass-reaper
+  policyTypes: [Ingress, Egress]
+  egress:
+    - ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+    - to: {{- toYaml $bg.apiServerEgress | nindent 8 }}
+      ports:
+        - { protocol: TCP, port: 443 }
+        - { protocol: TCP, port: 6443 }
+    {{- with $bg.alertEgress }}
+    - to: {{- toYaml .to | nindent 8 }}
+      ports: {{- range .ports }}
+        - { protocol: TCP, port: {{ . }} }
+      {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}

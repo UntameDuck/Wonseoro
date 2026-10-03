@@ -85,6 +85,8 @@ jobs:
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0002_db_roles.sql
       # 원서 항목 값 암호화(T-M5-06) — 첨부 DDL 밖, 저장소가 더한다(D-70)
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0003_field_encryption.sql
+      # DB 비상 접속 역할·기록(T-M5-03, D-72)
+      - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0004_break_glass.sql
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/dev-roles.sql
       # 제약이 실제로 막는지 먼저 확인한다
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/verify-constraints.sql

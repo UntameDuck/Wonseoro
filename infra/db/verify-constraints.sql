@@ -341,7 +341,11 @@ BEGIN
   SELECT string_agg(t.tablename, ', ') INTO missing
     FROM pg_tables t
    WHERE t.schemaname = 'kadmission'
-     AND CASE WHEN t.tablename IN ('audit_event', 'activation_record')
+     AND CASE WHEN t.tablename = 'break_glass_access'
+              -- 비상 접속 기록(0004) — 앱은 읽지도 쓰지도 않는다
+              THEN has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'SELECT')
+                   OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'INSERT')
+              WHEN t.tablename IN ('audit_event', 'activation_record')
               THEN NOT has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'INSERT')
                    OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'UPDATE')
                    OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'DELETE')
@@ -481,6 +485,30 @@ BEGIN
     CASE WHEN neither AND both_forms AND aud THEN 'PASS' ELSE 'FAIL' END;
   ASSERT neither AND both_forms, '원서 항목 값이 평문·암호문 둘 다 없거나 둘 다 있다';
   ASSERT aud, '감사 역할이 감싼 데이터 키를 읽는다';
+END $$;
+
+-- ── 22. DB 비상 접속 — 기록은 추가만 · 비상 역할은 DDL·감사 기록 수정 불가 (T-M5-03, 0004) ───
+DO $$
+DECLARE upd boolean := false; ddl boolean := false; aud boolean := false; bid bigint;
+BEGIN
+  INSERT INTO break_glass_access (db_user, valid_until) VALUES ('verify', now() + interval '15 minutes') RETURNING id INTO bid;
+  BEGIN UPDATE break_glass_access SET db_user = 'x' WHERE id = bid;
+  EXCEPTION WHEN insufficient_privilege THEN upd := true; END;
+  SET LOCAL ROLE kadmission_break_glass;
+  BEGIN EXECUTE 'CREATE TABLE kadmission.break_glass_ddl (x int)';
+  EXCEPTION WHEN insufficient_privilege THEN ddl := true; END;
+  BEGIN UPDATE audit_event SET result = 'X' WHERE false;
+    -- 행이 없어도 트리거는 행마다라 걸리지 않는다 — 한 줄 넣고 고쳐 본다
+    INSERT INTO audit_event (id, actor_type, action, result, event_hash, occurred_at)
+    VALUES (gen_random_uuid(), 'SYSTEM', 'BG_VERIFY', 'ACCEPTED', 'h', now());
+    UPDATE audit_event SET result = 'X' WHERE action = 'BG_VERIFY';
+  EXCEPTION WHEN insufficient_privilege THEN aud := true; END;
+  RESET ROLE;
+  RAISE NOTICE '22. 비상 접속 기록 추가만 · 비상 역할 DDL·감사 수정 차단: %',
+    CASE WHEN upd AND ddl AND aud THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT upd, '비상 접속 기록을 고칠 수 있다';
+  ASSERT ddl, '비상 역할이 DDL 을 한다';
+  ASSERT aud, '비상 역할이 감사 기록을 고친다';
 END $$;
 
 ROLLBACK;

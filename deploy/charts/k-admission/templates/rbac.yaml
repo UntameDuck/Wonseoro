@@ -173,7 +173,19 @@ roleRef:
   name: {{ include "ka.fullname" . }}-platform-viewer
   apiGroup: rbac.authorization.k8s.io
 {{- end }}
-{{- if .Values.rbac.breakGlass.group }}
+{{- /*
+  비상 역할 바인딩은 끝나는 시각 전에만 렌더링한다(T-M5-03) — 지나면 GitOps 가 다음 조정 때 지우고 되살리지 않는다.
+  그 사이는 회수 CronJob(break-glass.yaml)이 매분 지운다. 끝나는 시각은 렌더링 시점에서 12시간 안이어야 한다(짧은 TTL).
+*/ -}}
+{{- $bg := .Values.rbac.breakGlass -}}
+{{- $bgActive := false -}}
+{{- if $bg.group -}}
+  {{- $exp := toDate "2006-01-02T15:04:05Z07:00" (required "rbac.breakGlass.expiresAt 이 필요합니다(비상 역할은 끝나는 시각과 함께 켠다)" $bg.expiresAt) -}}
+  {{- $left := sub (unixEpoch $exp | int64) (unixEpoch now | int64) -}}
+  {{- if gt $left 43200 -}}{{- fail "rbac.breakGlass.expiresAt 은 지금부터 12시간 안이어야 한다 — 비상 역할은 짧게 켠다(T-M5-03)" -}}{{- end -}}
+  {{- $bgActive = gt $left 0 -}}
+{{- end }}
+{{- if $bgActive }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

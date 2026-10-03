@@ -33,7 +33,7 @@ case "${1:-}" in
     fi
     $P -d postgres -c "DROP DATABASE IF EXISTS univ_a WITH (FORCE)" -c "DROP DATABASE IF EXISTS central WITH (FORCE)" \
       -c "CREATE DATABASE univ_a" -c "CREATE DATABASE central"
-    for f in migrations/0001_init.sql migrations/0002_db_roles.sql migrations/0003_field_encryption.sql dev-roles.sql seed-dev.sql; do
+    for f in migrations/0001_init.sql migrations/0002_db_roles.sql migrations/0003_field_encryption.sql migrations/0004_break_glass.sql dev-roles.sql seed-dev.sql; do
       $P -d univ_a < "infra/db/$f" > /dev/null 2>&1 || { echo "실패: $f"; exit 1; }
     done
     # 두 번째 지원자 — 공통원서를 쓰지 않은 사람(검증 오류·취소·대조 예외 장면)

@@ -12,7 +12,7 @@
 | 태스크 | 있는 것 | 없는 것 |
 |---|---|---|
 | T-M5-01 | 차트 NetworkPolicy — default deny, 허용 경로만(공개→API, 워커→API, API·Relay→PgBouncer·Redis·통제된 출구, DNS, 지표 수집). kind 실측(D-45, 2026-09-28): 자기 DB·Redis·중앙·MinIO 만, 다른 대학 DB·임의 외부 차단 | 다시 돌릴 수 있는 자동 시험. 클라우드 메타데이터 주소(169.254.169.254) 차단 확인 |
-| T-M5-03 | break-glass 역할(Role 만, 평소 바인딩 없음, 켤 때 끝나는 시각·사유 필수 — D-68) | 끝나는 시각에 회수, 켜는 즉시 경보, DB 슈퍼유저 비상 접속 기록 |
+| T-M5-03 | break-glass 역할(Role 만, 평소 바인딩 없음, 켤 때 끝나는 시각·사유 필수 — D-68) | 끝나는 시각에 회수, 켜는 즉시 경보, DB 슈퍼유저 비상 접속 기록 — **단계 5 ✅(D-72)** |
 | T-M5-04 | 노션 첨부 `vault-policy.hcl`(대학별 경로) | Vault 자체·DB 동적 자격증명·짧은 인증서. 지금은 Kubernetes Secret 하나(`runtimeSecret`) — **단계 4 ✅(D-71)** |
 | T-M5-05 | 계약에 mutualTLS | **구현 없음 — 중앙 내부 경로·대학 API 내부 경로가 인증 없이 열려 있다(D-69)** |
 | T-M5-06 | 컬럼 이름만(`pii_ciphertext`·`key_version='plaintext-dev'`) | 중앙 공통원서 금고·대학 원서의 고위험 필드가 평문 jsonb — **단계 3 ✅ 봉투 암호화(D-70)** |
@@ -122,3 +122,19 @@
   - **대학 API 를 Vault 만으로 기동** — DB 동적 계정·Transit KEK 확인·PKI 인증서(HTTPS)로 준비됨
   - 이 시험에서 확인한 운영 조건: 수명이 끝난 DB 계정은 Vault 가 세션을 끊는다 → **트랜잭션이 쓸 수 있는 여유는 수명의 1/3**(운영 1시간 → 20분, 쿼리 시간 상한보다 훨씬 길다)
 - **남은 것(운영 쪽)** — 운영 Vault·Kubernetes 인증 역할을 플랫폼 관리자가 둔다. PgBouncer 는 동적 계정을 그대로 넘기도록 `auth_query` 로 둔다(지금 차트 PgBouncer 는 고정 계정). NetworkPolicy 의 Vault 출구도 플랫폼 값으로 연다. 중앙 API 배포(차트 밖)에도 같은 환경변수를 쓴다(`pii-central`·`kadmission-central-service`). 노션 §06(D-71)
+
+### 단계 5 ✅ (2026-10-03) — break-glass 회수·경보·DB 비상 접속 (T-M5-03, D-72)
+
+- **차트 렌더링 조건** — 비상 역할 바인딩은 `rbac.breakGlass.expiresAt` 전에만 렌더링한다(렌더링 시점 기준). 지금부터 12시간 넘는 시각은 렌더링 거부.
+  GitOps(Flux)가 다음 조정 때 바인딩을 지우고 되살리지 않는다
+- **회수 CronJob** `templates/break-glass.yaml`(비상 그룹을 켰을 때만) — 매분 `files/break-glass-reaper.mjs`(node 표준 라이브러리, 이미지 `node:22-alpine` digest 고정)를 돌린다.
+  켜져 있으면 Warning 이벤트 `BreakGlassActive` + 경보 웹훅(`alertWebhookUrl`, Alertmanager v2 형식, 선택) + 경고 로그, 끝나는 시각이 지났거나 시각을 읽을 수 없으면 바인딩을 지우고 `BreakGlassRevoked`.
+  권한은 그 바인딩 하나(resourceNames) 읽기·지우기와 이벤트 쓰기뿐, NetworkPolicy 로 출구는 API 서버·DNS(·경보 웹훅)만
+- **DB 비상 접속** — 마이그레이션 `0004_break_glass.sql`: 역할 `kadmission_break_glass`(업무 표 읽기·고치기, DDL·감사 기록 수정 불가), 기록 `break_glass_access`(추가만, 앱 권한 없음, 감사 역할 읽기).
+  Vault `database/creds/break-glass-<대학>` — 비상 그룹 정책만, 15분(최대 1시간). 생성문이 `log_statement=all` 을 걸고 기록에 한 줄 남긴다. 수명이 끝나면 세션을 끊고 지운다
+- **시험**
+  - `npm run test:security:break-glass`(kind-univ-a, 약 3분) **9개** — 12시간 넘게 거부, 90초짜리로 켜기, 회수 작업 권한 최소(다른 바인딩·바인딩 만들기·Secret 불가),
+    켜진 동안 비상 그룹 권한·경보 이벤트·경고 로그, **끝나는 시각 63초 뒤 예약된 회수 작업이 바인딩을 지움**, 회수 이벤트, 회수 뒤 비상 그룹 권한 없음, 다시 렌더링해도 바인딩 없음
+  - `test:security:vault` 비상 DB 계정(대학 API·Relay 신원 403, 15분, 기록·문장 로그 설정, 읽기 됨·DDL·기록 지우기 안 됨) — Vault 실증 **23개**
+  - `db:verify` 22번(기록 추가만·비상 역할 DDL·감사 수정 차단), 17번에 기록 표(앱 권한 없음)
+- **남은 것(운영 쪽)** — 운영 경보 웹훅 주소·API 서버 대역(`apiServerEgress`)을 클러스터 값으로. DB 서버의 문장 로그를 로그 수집으로 보낸다. 노션 §06·§02(D-72)

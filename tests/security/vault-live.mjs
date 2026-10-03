@@ -164,6 +164,28 @@ try {
   check(gone.rows[0].n === 0, '수명이 끝난 DB 계정은 Vault 가 지운다', { account: first.username.replace(/[^-]+$/, '…') });
   await db.onApplicationShutdown();
 
+  // ── 4b. DB 비상 접속(T-M5-03) ────────────────────────────────────
+  const bg = as('UNIV-A', 'break-glass');
+  const bgDenied = { admission: await status(a.read('database/creds/break-glass-UNIV-A')), relay: await status(relayA.read('database/creds/break-glass-UNIV-A')) };
+  const bgCred = await vaultDbCredential(bg, 'break-glass-UNIV-A');
+  const rec = await admin.query('SELECT db_user, valid_until FROM kadmission.break_glass_access WHERE db_user = $1', [bgCred.username]);
+  const setting = await admin.query(
+    `SELECT s.setconfig FROM pg_db_role_setting s JOIN pg_roles r ON r.oid = s.setrole WHERE r.rolname = $1`,
+    [bgCred.username],
+  );
+  const bgClient = new pg.Client({ connectionString: ADMIN_DB.replace(/\/\/[^@]+@/, `//${encodeURIComponent(bgCred.username)}:${encodeURIComponent(bgCred.password)}@`) });
+  await bgClient.connect();
+  const bgRead = await bgClient.query('SELECT count(*)::int AS n FROM kadmission.application').then(() => true, () => false);
+  const bgDdl = await bgClient.query('CREATE TABLE kadmission.bg_live_ddl (x int)').then(() => true, () => false);
+  const bgErase = await bgClient.query('DELETE FROM kadmission.break_glass_access').then(() => true, () => false);
+  await bgClient.end();
+  check(
+    bgDenied.admission === 403 && bgDenied.relay === 403 && bgCred.leaseSeconds <= 900 && rec.rows.length === 1 &&
+      JSON.stringify(setting.rows[0]?.setconfig ?? []).includes('log_statement=all') && bgRead && !bgDdl && !bgErase,
+    'DB 비상 접속 — 비상 그룹만 15분 계정, 발급이 DB 에 기록·모든 문장 로그, 읽기는 되고 DDL·기록 지우기는 안 된다',
+    { denied: bgDenied, lease: bgCred.leaseSeconds, recorded: rec.rows.length, logAll: JSON.stringify(setting.rows[0]?.setconfig ?? []).includes('log_statement=all'), read: bgRead, ddl: bgDdl, erase: bgErase },
+  );
+
   // ── 5. PKI 워크로드 인증서 ──────────────────────────────────────────
   const fileSet = (name) => ({ certFile: path.join(WORK, name, 'tls.crt'), keyFile: path.join(WORK, name, 'tls.key'), caFile: path.join(WORK, name, 'ca.crt') });
   const serverFiles = fileSet('api');

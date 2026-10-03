@@ -189,6 +189,7 @@ jobs:
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0001_init.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0002_db_roles.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0003_field_encryption.sql
+          psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0004_break_glass.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/dev-roles.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/seed-dev.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/ci-seed-deadline.sql
@@ -266,6 +267,7 @@ jobs:
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0001_init.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0002_db_roles.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0003_field_encryption.sql
+          psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0004_break_glass.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/dev-roles.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/seed-dev.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/ci-seed-deadline.sql

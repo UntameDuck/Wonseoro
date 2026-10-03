@@ -59,7 +59,7 @@ export async function setupDevVault({
     connection_url: dbUrl,
     username: dbUser,
     password: dbPassword,
-    allowed_roles: UNIVERSITIES.map((u) => `admission-api-${u}`),
+    allowed_roles: UNIVERSITIES.flatMap((u) => [`admission-api-${u}`, `break-glass-${u}`]),
     verify_connection: false,
   });
 
@@ -83,6 +83,24 @@ export async function setupDevVault({
       default_ttl: dbTtl,
       max_ttl: dbMaxTtl,
     });
+    // DB 비상 접속(T-M5-03, D-72) — 15분짜리 계정, 만들 때 DB 에 기록·모든 문장 로그. 비상 그룹 정책만 받는다
+    await call('POST', `database/roles/break-glass-${u}`, {
+      db_name: 'univ-db',
+      creation_statements: [
+        `CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}' IN ROLE kadmission_break_glass;`,
+        `ALTER ROLE "{{name}}" SET log_statement = 'all';`,
+        `INSERT INTO kadmission.break_glass_access (db_user, valid_until) VALUES ('{{name}}', '{{expiration}}');`,
+      ],
+      revocation_statements: [
+        `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE usename = '{{name}}';`,
+        `DROP ROLE IF EXISTS "{{name}}";`,
+      ],
+      default_ttl: '15m',
+      max_ttl: '1h',
+    });
+    await call('PUT', `sys/policies/acl/univ-${u}-break-glass`, { policy: `path "database/creds/break-glass-${u}" { capabilities = ["read"] }` });
+    await call('POST', `auth/approle/role/univ-${u}-break-glass`, { token_policies: [`univ-${u}-break-glass`], token_ttl: '15m', token_max_ttl: '1h' });
+
     // PKI 역할은 워크로드마다 — 자기 SAN URI 하나만 발급한다(D-71). 첨부의 대학 단위 역할(kadmission-<대학>-service)은
     // 같은 대학의 어느 워크로드든 다른 워크로드 신원을 받게 한다(서류 워커가 Relay 인증서로 이벤트를 위조)
     for (const w of WORKLOADS) {
@@ -123,6 +141,10 @@ export async function setupDevVault({
       const secretId = (await call('POST', `auth/approle/role/univ-${u}-${w}/secret-id`, {})).data.secret_id;
       out[u][w] = { roleId, secretId };
     }
+    out[u]['break-glass'] = {
+      roleId: (await call('GET', `auth/approle/role/univ-${u}-break-glass/role-id`)).data.role_id,
+      secretId: (await call('POST', `auth/approle/role/univ-${u}-break-glass/secret-id`, {})).data.secret_id,
+    };
   }
 
   // 중앙 — 첨부 밖(저장소 작성): 공통원서 금고 KEK·중앙 워크로드 인증서

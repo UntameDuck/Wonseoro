@@ -60,6 +60,7 @@
 > DEK 는 키 암호화 키(KEK)로 감싸 `application_data_key(application_id, kek_version, wrapped_dek)` 에 둔다. KEK 는 DB 밖(Vault Transit).
 > `value_json` 은 암호화 전 행 이전용으로 NULL 허용, 한 행은 평문·암호문 중 하나만. 감사 역할은 감싼 키를 읽지 않는다.
 > 중앙 공통원서 금고도 같다(`fields_ciphertext`·`wrapped_dek`, `key_version` = KEK ID). KEK 교체는 감싼 DEK 만 다시 감싼다(값은 그대로).
+> DB 비상 접속 기록 `break_glass_access(db_user, valid_until, issued_at)` — 추가만(트리거), 앱은 읽지도 쓰지도 않는다(저장소 마이그레이션 0004, D-72).
 
 v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
 
@@ -153,6 +154,13 @@ v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
 > 수명은 짧게 둔다 — 워크로드 인증서 24시간, DB 계정 1시간. 각각 수명의 2/3 이 지나면 새로 받는다. DB 계정을 바꿀 때는 새 계정으로 연결을 확인한 뒤 연결 풀을 바꾼다(무중단).
 > 수명이 끝난 계정은 Vault 가 세션을 끊고 지운다 — 트랜잭션이 쓸 수 있는 여유는 수명의 1/3 이다.
 > Transit 키를 돌리면 rewrap 으로 감싼 DEK 를 옮기고 `min_decryption_version` 을 올린다.
+
+「RBAC 역할」 break-glass 항목에 더한다 (T-M5-03, D-72):
+
+> 비상 역할은 끝나는 시각 전에만 배포된다 — 차트가 시각이 지난 바인딩을 렌더링하지 않아 GitOps 가 다음 조정 때 지우고, 그 사이는 매분 도는 회수 작업이 지운다.
+> 켜져 있는 동안 회수 작업이 매분 Warning 이벤트(`BreakGlassActive`)와 경보 웹훅을 낸다. 회수하면 `BreakGlassRevoked` 를 낸다. 12시간 넘게는 켤 수 없다.
+> DB 비상 접속은 Vault 의 `database/creds/break-glass-<대학>` 으로만 한다 — 비상 그룹만, 15분짜리 계정이다.
+> 그 계정은 업무 표 읽기·고치기만 할 수 있고, DDL·감사 기록 수정은 할 수 없다. 발급하면 DB 의 `break_glass_access`(추가만)에 남고, 그 계정의 모든 문장은 서버 로그에 남는다.
 
 「Edge」 또는 NetworkPolicy 설명에 한 줄 더한다 (첨부 `network-rbac.yaml` 은 K-PaaS Edge 확정 뒤 교체):
 

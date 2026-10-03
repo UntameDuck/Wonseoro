@@ -1092,6 +1092,20 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-72. 비상 역할이 켤 때 끝나는 시각만 적고 회수·경보가 없었고, DB 비상 접속은 길도 기록도 없었다 🟡
+
+| | |
+|---|---|
+| **발견** | 2026-10-03 (보안 통제 단계 5 — T-M5-03) |
+| **충돌** | 노션 06·§01 A7 은 break-glass 를 "평시 disable, 짧은 TTL, 사용 즉시 경보" 로 정의한다. 차트(D-68)는 바인딩에 끝나는 시각·사유를 붙여 렌더링할 뿐, **시각이 지나도 바인딩이 남았고**(GitOps 가 오히려 되살린다) 켜도 아무도 몰랐다. DB 비상 접속은 정해진 길이 없어 장애 때 소유자·슈퍼유저 비밀번호를 쓰게 된다 — 누가 언제 들어왔는지 남지 않는다 |
+| **판정** | ① **차트가 끝나는 시각 전에만 바인딩을 렌더링**한다(렌더링 시점 기준, 12시간 넘게는 거부) — GitOps 가 다음 조정 때 지우고 되살리지 않는다 ② **회수 CronJob**(매분, `files/break-glass-reaper.mjs`, node 표준 라이브러리) — 켜져 있으면 Warning 이벤트 `BreakGlassActive`(+ 경보 웹훅), 시각이 지나면 바인딩을 지우고 `BreakGlassRevoked`. 권한은 그 바인딩 하나 읽기·지우기와 이벤트 쓰기뿐, 출구는 API 서버·DNS 만 ③ **DB 비상 접속은 Vault 로만** — `database/creds/break-glass-<대학>`(15분, 비상 그룹 정책만), 계정은 `kadmission_break_glass`(업무 표 읽기·고치기, DDL·감사 수정 불가)를 물려받고, 만들 때 Vault 가 `break_glass_access`(추가만)에 기록하고 그 계정에 `log_statement=all` 을 건다. 마이그레이션 `0004_break_glass.sql`(첨부 DDL 밖) |
+| **재현 시험** | `npm run test:security:break-glass`(kind 9개 — 90초짜리로 켜면 경보 이벤트, 시각이 지나고 63초 뒤 예약 작업이 회수, 회수 뒤 비상 그룹 권한 없음, 다시 렌더링해도 바인딩 없음, 12시간 넘게 거부, 회수 작업 권한 최소). `test:security:vault` 비상 DB 계정 1개(대학 API·Relay 신원 403, 15분, 기록·문장 로그, DDL·기록 지우기 불가). `db:verify` 22번 |
+| **저장소 반영** | ✅ (2026-10-03) 차트 `rbac.yaml`·`break-glass.yaml`·`files/break-glass-reaper.mjs`·`values.yaml rbac.breakGlass.*`, `infra/db/migrations/0004_break_glass.sql`, `scripts/vault/dev-vault.mjs` |
+| **노션 반영** | ⬜ §06 break-glass 절(렌더링 시각 조건·회수 작업·경보 이벤트·DB 비상 계정), §02 ERD(`break_glass_access`) — [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 저장소 반영, 노션 반영 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 

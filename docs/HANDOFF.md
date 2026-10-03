@@ -10,7 +10,7 @@
 ## 1. 30초 요약
 
 - **제품**: 원서로(K-Admission) — 대학 입학 원서접수를 대학별 Data Plane 으로 분산하는 플랫폼. 2026 GovTech 공모전 출품작
-- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 20/28 진행 중**. 전체 **111/146** 태스크(✅ 만 셈, 2026-10-03 보안 통제 T-M5-01·04·05·06·07·09 까지). **CI 네 잡과 Security 기본 열한 잡·서명 다섯 잡·admission 실증 잡 모두 초록**(Actions run 36906282615·36906280555)
+- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 20/28 진행 중**. 전체 **112/146** 태스크(✅ 만 셈, 2026-10-03 보안 통제 T-M5-01·03~07·09 까지). **CI 네 잡과 Security 기본 열한 잡·서명 다섯 잡·admission 실증 잡 모두 초록**(Actions run 36906282615·36906280555)
 - **완료한 핵심 증명**: 로컬 kind 2클러스터 축소 환경에서 **대학 간 장애 격리 T-M4-42 통과**. A대 전면 정지 중 B대 접수·중앙 반영, A대 복구 후 접수까지 확인
 - **최근 완료**: T-M4-07 Peak Mode(ADR-0006) · T-M4-20 전 서비스 계측·로그 상관관계 · T-M4-24 로그 마스킹 강제 · **T-M4-21~23 업무 KPI·대시보드 3종** · **D-50 취소 이벤트 계약 위반 수정** · CI 복구 · **T-M4-40 NAT Adaptive Throttling(ADR-0007)** · 과부하 중 API 프로세스가 죽던 결함 수정 · **T-M4-37 Redis 장애 무영향** · T-M4-39 다중 노드 시험(drain 무중단·노드 장애 때 전체가 멈추던 DB 연결 결함 수정, D-52) · **맡겨진 결정 정리(2026-09-30)** — D-44 ⑦(Pod 당 38)·D-47·D-51(OpenAPI v1.3.0 429)·D-52(ADR-0008)·D-53(ingress-nginx 은퇴) 결정·저장소 반영. §05 runtime 첨부를 차트 렌더링으로 바꿔 CI 가 드리프트를 막는다. **노션 반영은 AI 쓰기가 막혀 [06-notion-changeset.md](06-notion-changeset.md) 로 대기**
 - **T-M4-35 ✅** 중앙 2시간 실제 단절 통과 — 원서 24건 처리·DEAD 0·event loss 0·복구 10초 뒤 전량 전송·재시작 0 (`central-outage-realtime-2026-09-30T01-59-27-784Z.json`)
@@ -47,7 +47,8 @@
 - **보안 통제 단계 2 ✅ (2026-10-03)** — 출구 허용 목록(`server-kit/src/egress.ts`): 서비스마다 config 의 `configureEgress([의존 서비스 URL])` 로 그 호스트만, 연결 순간 메타데이터·링크 로컬 주소 거절(운영은 루프백도). **새 외부 의존을 붙이면 그 URL 을 configureEgress 에 넣거나 `EGRESS_ALLOWLIST` 에** — 안 넣으면 요청이 `EgressDenied` 로 막힌다. 시험 코드가 가짜 서버를 부르면 `configureEgress([가짜 URL])` 또는 `new InternalHttpClient(null, new EgressPolicy({ allow: ['localhost'], allowLoopback: true }))`. NetworkPolicy 행렬 `npm run test:security:netpol`(kind 두 대학·로컬 DB/Redis 컨테이너 — 약 1분)
 - **보안 통제 단계 3 ✅ (2026-10-03)** — 필드 암호화(D-70, `server-kit/src/field-crypto.ts`). 원서 항목 값 전부와 중앙 공통원서를 봉투 암호화(레코드별 DEK·KEK `FIELD_KEK_KEYS`). **DB 를 새로 만들 때 대학 `infra/db/migrations/0003_field_encryption.sql`·중앙 `infra/db/central/0004_vault_encryption.sql` 을 꼭 적용**(CI·`db:migrate`·캡처·DAST 목록에는 넣었다. **로컬 compose DB·kind 가 보는 DB 에는 아직 안 했다** — 다음에 compose 를 켜면 `npm run db:migrate`·`db:migrate:central`). 시험이 `application_field_value.value_json` 을 직접 읽으면 이제 NULL 이다 — 앱의 `loadFields` 로 읽는다. KEK 교체·옛 평문 이전은 `node apps/*/dist/tools/field-keys.js status|encrypt-legacy|rewrap`
 - **보안 통제 단계 4 ✅ (2026-10-03)** — Vault(`server-kit/src/vault.ts`). 개발 Vault: `docker compose -f infra/compose/docker-compose.dev.yml --profile vault up -d vault` → `node scripts/vault/dev-vault.mjs`(개발 모드라 **Vault 를 재시작하면 비어 있다** — 다시 구성). 실증 `npm run test:security:vault`(CI 재현 DB :5499 필요, Vault 컨테이너가 `host.docker.internal:5499` 로 DB 에 닿는다). 앱은 환경변수로 켠다 — `FIELD_KEK_PROVIDER=vault`·`DATABASE_CREDENTIALS=vault`·`MTLS_ISSUER=vault`(+`VAULT_ADDR`·로그인 수단). 끄면(기본) 지금까지와 같다. 첨부 정책의 PKI 역할이 대학 단위라 워크로드별로 좁혔다(D-71)
-- **바로 다음 할 일**: 보안 통제 단계 5 break-glass(T-M5-03) → 6 실 clamd → T-M4-10 → 운영 자동화 → Pilot 도구
+- **보안 통제 단계 5 ✅ (2026-10-03)** — break-glass(D-72). 차트는 끝나는 시각 전에만 바인딩을 렌더링하고(12시간 상한), 켜면 매분 회수 CronJob 이 경보 이벤트를 내고 시각이 지나면 지운다. DB 비상 접속은 Vault `database/creds/break-glass-<대학>`(15분)만 — **대학 DB 마이그레이션 `0004_break_glass.sql` 도 적용 목록에 넣었다**(로컬 compose·kind DB 는 아직). 시험 `npm run test:security:break-glass`(kind-univ-a, 시험 네임스페이스를 만들고 지운다)
+- **바로 다음 할 일**: 보안 통제 단계 6 실 clamd(T-M5-08) → T-M4-10 → 운영 자동화 → Pilot 도구
 
 ## 2. 반드시 지킬 규칙
 
