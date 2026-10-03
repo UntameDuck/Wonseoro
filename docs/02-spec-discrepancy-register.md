@@ -1162,6 +1162,20 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-77. 새 전형 설정이 진행 중인 원서와 맞는지 보지 않았다 — 결제까지 마친 원서가 접수 확정에서 막힐 수 있었다 🟡
+
+| | |
+|---|---|
+| **발견** | 2026-10-03 (T-M6-02 — §01 A5 "Config Linter · Compatibility Test") |
+| **충돌** | Config Linter(설정 자체 — 컴파일·항목 이름·서류 코드)와 위험도 Diff 는 있었지만, **이미 쓰고 있는 원서**와의 호환은 보지 않았다. 최대 글자 수를 줄이거나 형식을 바꾸면 저장된 값이 새 양식에 어긋나고, 필수 항목을 더하면 검증·결제를 마친 원서가 접수 확정에서 막힌다 — 결제 뒤에는 원서를 고칠 수 없다 |
+| **판정** | **적용(activate) 직전 호환 시험** — 이 주기의 진행 중 원서(DRAFT·READY·PAYMENT_PENDING·PAID)를 새 양식(런타임과 같은 Ajv)으로 검사. 작성 중은 저장된 값만(빈 필수는 지원자가 채운다), 검증 끝·결제 중·결제 완료는 필수까지. 하나라도 깨지면 **적용 거절**(422, 사람 말 문구). 승인 화면(Diff)에도 미리 경고. 값은 원서마다 풀어 검사하고 남기지 않는다 |
+| **재현 시험** | admission-api `config-compat.integration.test`(실제 DB 4개 — 맞는 설정 통과, 최대 글자 수 축소·형식 변경은 두 원서 모두 불일치, 새 필수 항목은 검증 끝 원서만 불일치) |
+| **저장소 반영** | ✅ (2026-10-03) `modules/config/config-compat.ts`, `config-version.service.ts`(activate·diff) |
+| **노션 반영** | ⬜ §01 A5 대응에 "진행 중 원서 호환 시험 — 깨지면 적용 거절" — [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 저장소 반영, 노션 반영 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 

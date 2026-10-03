@@ -8,6 +8,7 @@ import { ActivationRecorder, ActivationView } from '../activation/activation-rec
 import { DeadlineService } from '../deadline/deadline.service';
 import { ConfigDiff, diffConfig } from './config-diff';
 import { lintConfig } from './config-lint';
+import { checkInFlightCompatibility, describeCompat } from './config-compat';
 import { addApproval, assertActivationTime, assertApproved } from './two-person-rule';
 
 export interface ConfigVersionRow {
@@ -172,6 +173,14 @@ export class ConfigVersionService {
       [configId],
     );
     await this.assertNotFrozen(String(cyc[0]?.cycle_id), activateAt ?? new Date());
+    // 진행 중 원서와 맞는가(T-M6-02, D-77) — 저장된 값이 새 양식에 어긋나거나, 결제까지 마친 원서에 새 필수 항목이 생기면 적용하지 않는다
+    const compat = await checkInFlightCompatibility(this.db, String(cyc[0]?.cycle_id), await this.configJson(configId));
+    if (compat.broken.length > 0) {
+      this.logger.warn(`config ${row.version} 적용 거절 — 진행 중 원서 ${compat.broken.length}건 불일치: ${describeCompat(compat)}`);
+      throw ProblemException.unprocessable(
+        `진행 중인 원서 ${compat.broken.length}건이 새 설정과 맞지 않아 적용하지 않았습니다. 설정 비교 화면에서 맞지 않는 항목을 확인해 주십시오.`,
+      );
+    }
 
     const activation = await this.db.tx(async (client) => {
       const { rows } = await client.query<{ cycle_id: string }>(
@@ -246,7 +255,12 @@ export class ConfigVersionService {
     // 설정 검사 경고를 함께 보인다 — 동작은 하지만 의도와 다를 수 있는 것을 승인자가 보고 판단한다.
     const types = await this.types(target.cycle_id);
     const lint = lintConfig(target.config_json, Object.keys(types));
-    return { ...diffConfig(base[0]?.config_json ?? {}, target.config_json, types), warnings: lint.warnings };
+    // 승인하는 사람이 적용 전에 본다 — 적용하면 거절될 설정(진행 중 원서와 불일치)
+    const compat = await checkInFlightCompatibility(this.db, String(target.cycle_id), target.config_json);
+    const compatWarnings = compat.broken.length
+      ? [`진행 중 원서 ${compat.broken.length}건이 이 설정과 맞지 않아 적용할 수 없습니다: ${describeCompat(compat)}`]
+      : [];
+    return { ...diffConfig(base[0]?.config_json ?? {}, target.config_json, types), warnings: [...lint.warnings, ...compatWarnings] };
   }
 
   /** 이 모집의 전형 코드 → 이름. 설정 검사가 모르는 전형 코드를 찾고, Diff 요약이 전형 이름을 쓴다. */

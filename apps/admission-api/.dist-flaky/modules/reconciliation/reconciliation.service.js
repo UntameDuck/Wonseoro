@@ -1,0 +1,397 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var ReconciliationService_1;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ReconciliationService = void 0;
+const common_1 = require("@nestjs/common");
+const node_crypto_1 = require("node:crypto");
+const server_kit_1 = require("@wonseoro/server-kit");
+const problem_exception_1 = require("../../common/problem/problem.exception");
+const dependency_breakers_1 = require("../../common/resilience/dependency-breakers");
+const audit_service_1 = require("../audit/audit.service");
+const payment_provider_1 = require("../payment/payment.provider");
+const payment_service_1 = require("../payment/payment.service");
+/** 중앙 ACK 를 기다려 주는 시간. 이 안에 안 오면 정상 지연이 아니라 문제로 본다. */
+const CENTRAL_ACK_GRACE_MINUTES = 30;
+/** 결제 UNKNOWN 을 방치할 수 있는 시간. */
+const PAYMENT_UNKNOWN_GRACE_MINUTES = 30;
+/**
+ * Reconciliation Center — 기술설계서 v1.1 §A4·§B18·§C2 (T-M3-04)
+ *
+ * **Application · Payment · Submission · Central ACK 를 4-way 로 대조한다.**
+ * Payment 는 우리 기록만이 아니라 **PG 정산 목록**과도 맞춘다(9번) — "payment provider reference" (§A11).
+ *
+ * 왜 필요한가
+ * Payment 와 Application 은 별도 Aggregate 다. (§A4)
+ * 분리했기 때문에 정합성이 자동으로 맞지 않는다 — 그게 분리의 대가다.
+ * PG callback 이 유실되거나 늦게 오면 "돈은 나갔는데 접수는 안 된" 상태가 생긴다.
+ * 그 상태를 **사람이 발견하기 전에 시스템이 먼저 찾아내는 것**이 이 서비스의 일이다.
+ *
+ * 원칙
+ *   1. **불일치만 큐로 보낸다.** (§B18) 정상 건을 목록에 올리면 신호가 묻힌다
+ *   2. 자동으로 고치지 않는다. 발견하고 사람에게 넘긴다.
+ *      돈과 접수 기회가 걸린 상태를 코드가 임의로 바꾸면 안 된다
+ *   3. 해소된 건은 AUTO_RESOLVED 로 닫는다. 큐에 남겨두면 실제 문제가 묻힌다
+ *   4. 보정은 Admin Action API 로만. reason·before/after 를 감사에 남긴다 (§B16)
+ *
+ * ⚠️ `(application_id, exception_type)` UNIQUE 가 DDL 에 없어 중복을 코드로 막는다.
+ * 동시 실행에서는 여전히 중복이 가능하다. (불일치 대장 D-25)
+ */
+let ReconciliationService = ReconciliationService_1 = class ReconciliationService {
+    db;
+    audit;
+    provider;
+    payments;
+    breakers;
+    logger = new common_1.Logger(ReconciliationService_1.name);
+    constructor(db, audit, provider, payments, breakers) {
+        this.db = db;
+        this.audit = audit;
+        this.provider = provider;
+        this.payments = payments;
+        this.breakers = breakers;
+    }
+    /**
+     * 대조 1회 실행. D+1 배치와 수동 트리거가 같은 경로를 쓴다.
+     * @param sinceHours 최근 몇 시간 내 원서를 볼 것인가. 전체 재검은 비싸다.
+     */
+    async reconcile(sinceHours = 48) {
+        const findings = await this.detect(sinceHours);
+        const byKey = new Set(findings.map((f) => `${f.applicationId}::${f.type}`));
+        let opened = 0;
+        let skipped = 0;
+        for (const f of findings) {
+            // 한 건이 실패해도 대조 전체를 멈추지 않는다.
+            // 배치가 통째로 죽으면 나머지 불일치는 아무도 못 본다 —
+            // 그게 원래 이 배치가 막으려던 상황이다.
+            try {
+                if (await this.openIfNew(f))
+                    opened += 1;
+            }
+            catch (err) {
+                skipped += 1;
+                this.logger.error(`대조 항목 등록 실패 (계속 진행): ${f.type} application=${f.applicationId} ` +
+                    `- ${err.name}`);
+            }
+        }
+        if (skipped > 0) {
+            this.logger.warn(`대조 중 ${skipped}건을 등록하지 못했다. 다음 실행에서 다시 시도한다.`);
+        }
+        // 더 이상 성립하지 않는 미해결 건을 닫는다.
+        const autoResolved = await this.autoResolveStale(byKey, sinceHours);
+        const stillOpen = await this.countOpen();
+        const result = { checked: findings.length, opened, autoResolved, stillOpen };
+        if (opened > 0 || autoResolved > 0) {
+            this.logger.warn(`reconcile: opened=${opened} autoResolved=${autoResolved} stillOpen=${stillOpen}`);
+        }
+        return result;
+    }
+    /** 4-way 대조. 각 검사는 "무엇이 어긋났는가" 를 facts 에 담는다. */
+    async detect(sinceHours) {
+        const since = `${sinceHours} hours`;
+        const findings = [];
+        // 1. 결제는 확인됐는데 접수 기록이 없다.
+        //    **가장 심각하다.** 지원자는 돈을 냈고 접수됐다고 믿는다.
+        findings.push(...(await this.query(`SELECT p.application_id, p.id AS payment_id, p.amount, p.verified_at
+           FROM payment p
+           LEFT JOIN submission s ON s.application_id = p.application_id
+          WHERE p.status = 'CONFIRMED'
+            AND s.id IS NULL
+            AND p.verified_at > now() - $1::interval`, [since], 'PAYMENT_CONFIRMED_WITHOUT_SUBMISSION', 'CRITICAL')));
+        // 2. 접수됐는데 확인된 결제가 없다. 무상 접수이거나 결제 기록이 사라진 것이다.
+        findings.push(...(await this.query(`SELECT s.application_id, s.application_number, s.finalized_at
+           FROM submission s
+          WHERE s.finalized_at > now() - $1::interval
+            AND NOT EXISTS (
+              SELECT 1 FROM payment p
+               WHERE p.application_id = s.application_id AND p.status = 'CONFIRMED'
+            )`, [since], 'SUBMISSION_WITHOUT_CONFIRMED_PAYMENT', 'CRITICAL')));
+        // 3. 상태는 FINALIZED 인데 Submission 행이 없다.
+        //    같은 트랜잭션에서 쓰므로 정상적으로는 불가능하다. 나오면 DB 손상이다.
+        findings.push(...(await this.query(`SELECT a.id AS application_id, a.status, a.updated_at
+           FROM application a
+           LEFT JOIN submission s ON s.application_id = a.id
+          WHERE a.status = 'FINALIZED'
+            AND s.id IS NULL
+            AND a.updated_at > now() - $1::interval`, [since], 'FINALIZED_WITHOUT_SUBMISSION', 'CRITICAL')));
+        // 4. Submission 은 있는데 상태가 FINALIZED 가 아니다.
+        findings.push(...(await this.query(`SELECT s.application_id, a.status, s.application_number
+           FROM submission s
+           JOIN application a ON a.id = s.application_id
+          WHERE a.status <> 'FINALIZED'
+            AND s.finalized_at > now() - $1::interval`, [since], 'SUBMISSION_WITHOUT_FINALIZED_STATUS', 'CRITICAL')));
+        // 5. 중앙 ACK 가 오지 않았다.
+        //    **접수 실패가 아니다.** 통합 조회 반영만 늦는다. 그래서 HIGH 지 CRITICAL 이 아니다.
+        findings.push(...(await this.query(`SELECT o.aggregate_id AS application_id, o.status, o.attempt_count, o.created_at
+           FROM outbox_event o
+          WHERE o.status IN ('PENDING','SENDING')
+            AND o.created_at < now() - ($1 || ' minutes')::interval
+            AND o.created_at > now() - $2::interval`, [String(CENTRAL_ACK_GRACE_MINUTES), since], 'CENTRAL_ACK_MISSING', 'HIGH')));
+        // 6. 재시도 한도를 넘겨 버려진 이벤트. 사람이 봐야 한다.
+        findings.push(...(await this.query(`SELECT o.aggregate_id AS application_id, o.event_type, o.attempt_count
+           FROM outbox_event o
+          WHERE o.status = 'DEAD' AND o.created_at > now() - $1::interval`, [since], 'OUTBOX_DEAD_LETTER', 'HIGH')));
+        // 7. 결제 상태를 확인하지 못한 채 방치됐다.
+        //    사용자에게는 "확인 중" 으로 보인다. 오래 두면 재결제 문의가 몰린다. (§B4)
+        findings.push(...(await this.query(`SELECT p.application_id, p.id AS payment_id, p.updated_at
+           FROM payment p
+          WHERE p.status = 'UNKNOWN'
+            AND p.updated_at < now() - ($1 || ' minutes')::interval
+            AND p.updated_at > now() - $2::interval`, [String(PAYMENT_UNKNOWN_GRACE_MINUTES), since], 'PAYMENT_STATE_UNKNOWN_STALE', 'HIGH')));
+        // 8. 취소됐는데 확정 결제가 환불되지 않았다. (D-7)
+        //    취소 시점에도 큐에 올리지만, 그게 실패했을 때를 위한 그물이다.
+        //    지원자 돈이 대학에 남아 있는 상태라 오래 두면 민원이 아니라 분쟁이 된다.
+        findings.push(...(await this.query(`SELECT a.id AS application_id, p.id AS payment_id, p.amount, a.updated_at
+           FROM application a
+           JOIN payment p ON p.application_id = a.id
+          WHERE a.status = 'CANCELLED'
+            AND p.status = 'CONFIRMED'
+            AND a.updated_at > now() - $1::interval`, [since], 'REFUND_REQUIRED_AFTER_CANCEL', 'HIGH')));
+        // 9. PG 정산과 우리 기록 — 우리가 모르는 승인·PG 가 모르는 확정 (§A4·§B18)
+        findings.push(...(await this.settlementFindings(sinceHours)));
+        return findings;
+    }
+    /**
+     * PG 정산 대조.
+     *
+     * 재확인 워커는 PENDING·UNKNOWN 만 묻는다. 결제창만 연(CREATED) 결제는 대부분 결제하지 않고
+     * 끝나므로 묻지 않는데, 그중 실제로 결제되고 콜백까지 유실된 건은 **아무도 찾지 못한다** —
+     * 지원자는 돈을 냈고 원서는 접수되지 않은 채 마감이 지난다. PG 장부가 그 건을 알려준다.
+     *
+     *   PG 승인 · 우리 CREATED/PENDING/UNKNOWN → PG 에 다시 묻는다(verify). 재확인 워커·콜백과 같은
+     *     경로라 확정되면 자동 접수까지 간다(D-42). 상태를 지어내지 않는다 — PG 의 답을 반영할 뿐이다.
+     *     그래도 확정되지 않으면 PG_CONFIRMED_NOT_RECORDED (CRITICAL)
+     *   우리 CONFIRMED · PG 승인 아님 → PAYMENT_NOT_SETTLED_AT_PG (CRITICAL). 돈을 안 받고 접수했을 수 있다
+     *   금액이 다르다 → PAYMENT_AMOUNT_MISMATCH_AT_PG (CRITICAL)
+     * PG 에만 있는 거래는 원서를 알 수 없어 예외 큐(원서 단위)에 올리지 못한다 — 로그로 남긴다.
+     * PG 가 끊겼으면 이번 대조에서 이 검사만 건너뛴다. 다른 여덟 가지 대조를 막지 않는다.
+     */
+    async settlementFindings(sinceHours) {
+        const provider = this.provider;
+        if (!provider || !this.payments)
+            return [];
+        const to = new Date();
+        const from = new Date(to.getTime() - sinceHours * 3_600_000);
+        let settled;
+        try {
+            settled = this.breakers
+                ? await this.breakers.paymentGateway.run(() => provider.reconcile(from, to))
+                : await provider.reconcile(from, to);
+        }
+        catch (err) {
+            this.logger.warn(`PG 정산 목록을 받지 못해 정산 대조를 건너뛴다 (${(0, server_kit_1.describeFailure)(err)})`);
+            return [];
+        }
+        if (settled.length === 0)
+            return [];
+        const { rows } = await this.db.query(`SELECT id, application_id, provider_tx_id, status, amount
+         FROM payment
+        WHERE provider = $1 AND provider_tx_id = ANY($2::text[])`, [provider.name, settled.map((e) => e.providerTxId)]);
+        const ours = new Map(rows.map((r) => [r.provider_tx_id, r]));
+        const findings = [];
+        let unknownAtUs = 0;
+        for (const entry of settled) {
+            const mine = ours.get(entry.providerTxId);
+            if (!mine) {
+                unknownAtUs += 1;
+                continue;
+            }
+            const facts = {
+                paymentId: mine.id,
+                providerTxId: entry.providerTxId,
+                ourStatus: mine.status,
+                pgStatus: entry.status,
+            };
+            if (entry.status === 'CONFIRMED' && ['CREATED', 'PENDING', 'UNKNOWN'].includes(mine.status)) {
+                const after = await this.payments.verify(mine.id).catch(() => null);
+                if (after?.status === 'CONFIRMED') {
+                    this.logger.warn(`PG 정산에서 확인한 결제를 반영했다 payment=${mine.id} (was ${mine.status})`);
+                    continue;
+                }
+                findings.push({
+                    applicationId: mine.application_id,
+                    type: 'PG_CONFIRMED_NOT_RECORDED',
+                    severity: 'CRITICAL',
+                    facts: { ...facts, afterVerify: after?.status ?? 'VERIFY_FAILED' },
+                });
+                continue;
+            }
+            if (mine.status === 'CONFIRMED' && entry.status !== 'CONFIRMED') {
+                findings.push({
+                    applicationId: mine.application_id,
+                    type: 'PAYMENT_NOT_SETTLED_AT_PG',
+                    severity: 'CRITICAL',
+                    facts,
+                });
+                continue;
+            }
+            if (mine.status === 'CONFIRMED' &&
+                entry.amount !== undefined &&
+                Number(entry.amount) !== Number(mine.amount)) {
+                findings.push({
+                    applicationId: mine.application_id,
+                    type: 'PAYMENT_AMOUNT_MISMATCH_AT_PG',
+                    severity: 'CRITICAL',
+                    facts: { ...facts, ourAmount: Number(mine.amount), pgAmount: Number(entry.amount) },
+                });
+            }
+        }
+        if (unknownAtUs > 0) {
+            this.logger.warn(`PG 정산에만 있고 우리 기록에 없는 거래 ${unknownAtUs}건 — PG 사와 대조가 필요하다`);
+        }
+        return findings;
+    }
+    async list(state = 'OPEN') {
+        // 값을 SQL 문자열에 끼우지 않는다. 컨트롤러가 거르지만, 거르는 곳이 하나 빠지면 그대로 주입이다.
+        const { rows } = await this.db.query(`SELECT id, application_id, exception_type, severity, state, facts, detected_at
+         FROM reconciliation_exception
+        WHERE $1::text = 'ALL' OR state = $1::text
+        ORDER BY
+          CASE severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'WARN' THEN 2 ELSE 3 END,
+          detected_at DESC
+        LIMIT 200`, [state]);
+        return rows.map((r) => ({
+            id: String(r.id),
+            applicationId: String(r.application_id),
+            exceptionType: String(r.exception_type),
+            severity: r.severity,
+            state: r.state,
+            facts: r.facts,
+            detectedAt: r.detected_at.toISOString(),
+        }));
+    }
+    /**
+     * 수동 해소. (§B16)
+     * **사유가 필수다.** 누가 왜 닫았는지가 남지 않으면 보정 자체가 증적이 안 된다.
+     * 여기서 상태를 고치지는 않는다 — 판단만 기록한다.
+     */
+    async resolve(exceptionId, resolvedBy, resolutionCode, reason) {
+        if (!resolutionCode.trim() || !reason.trim()) {
+            throw problem_exception_1.ProblemException.validationFailed('처리 코드와 사유를 모두 입력해야 합니다.');
+        }
+        const { rows } = await this.db.query(`SELECT application_id, exception_type, severity, state
+         FROM reconciliation_exception WHERE id = $1`, [exceptionId]);
+        const r = rows[0];
+        if (!r)
+            throw problem_exception_1.ProblemException.validationFailed('존재하지 않는 예외 항목입니다.');
+        const before = String(r.state);
+        if (before === 'RESOLVED' || before === 'AUTO_RESOLVED') {
+            throw problem_exception_1.ProblemException.validationFailed(`이미 처리된 항목입니다. (${before})`);
+        }
+        await this.db.tx(async (client) => {
+            await client.query(`UPDATE reconciliation_exception
+            SET state = 'RESOLVED', resolved_at = now(),
+                resolution_code = $2, resolved_by = $3
+          WHERE id = $1`, [exceptionId, resolutionCode, resolvedBy]);
+            // before/after 를 함께 남긴다. (§B16)
+            await this.audit.record(client, {
+                applicationId: String(r.application_id),
+                actorType: 'ADMIN',
+                actorId: resolvedBy,
+                action: 'ADMIN_CHANGED_CONFIG',
+                result: 'ACCEPTED',
+                details: {
+                    purpose: 'RECONCILIATION_RESOLVE',
+                    exceptionId,
+                    exceptionType: String(r.exception_type),
+                    before,
+                    after: 'RESOLVED',
+                    resolutionCode,
+                    reason,
+                },
+            });
+        });
+        this.logger.log(`exception ${exceptionId} resolved by ${resolvedBy} (${resolutionCode})`);
+        return { id: exceptionId, state: 'RESOLVED' };
+    }
+    /* ── 내부 ────────────────────────────────────────────────────────── */
+    async query(sql, params, type, severity) {
+        const { rows } = await this.db.query(sql, params);
+        return rows.map((r) => {
+            const { application_id: applicationId, ...facts } = r;
+            return {
+                applicationId: String(applicationId),
+                type,
+                severity,
+                facts: normalize(facts),
+            };
+        });
+    }
+    /** 이미 열려 있는 같은 종류의 건이면 새로 만들지 않는다. (D-25 우회) */
+    /**
+     * 이미 열려 있는 같은 불일치는 다시 열지 않는다. 대조는 주기적으로 도는데
+     * 실행할 때마다 쌓이면 큐를 읽을 수 없고, 읽을 수 없는 큐는 없는 큐다.
+     *
+     * 조회한 뒤 없으면 넣는 방식은 쓰지 않는다. 그 사이에 다른 실행이 끼어든다.
+     * 판정은 부분 유니크 인덱스에 맡기고 한 번에 밀어 넣는다. (D-25 / 0002 마이그레이션)
+     */
+    async openIfNew(f) {
+        const { rowCount } = await this.db.query(`INSERT INTO reconciliation_exception
+         (id, application_id, exception_type, severity, state, facts)
+       VALUES ($1,$2,$3,$4,'OPEN',$5)
+       ON CONFLICT (application_id, exception_type)
+         WHERE state IN ('OPEN','MANUAL_REVIEW')
+       DO NOTHING`, [(0, node_crypto_1.randomUUID)(), f.applicationId, f.type, f.severity, JSON.stringify(f.facts)]);
+        if (!rowCount)
+            return false;
+        this.logger.warn(`${f.severity} ${f.type} application=${f.applicationId}`);
+        return true;
+    }
+    /**
+     * 더 이상 성립하지 않는 미해결 건을 닫는다.
+     * 늦게 도착한 PG callback 이나 중앙 ACK 로 저절로 풀리는 경우가 실제로 많다.
+     */
+    async autoResolveStale(currentKeys, sinceHours) {
+        const { rows } = await this.db.query(`SELECT id, application_id, exception_type
+         FROM reconciliation_exception
+        WHERE state = 'OPEN' AND detected_at > now() - ($1 || ' hours')::interval`, [String(sinceHours)]);
+        let closed = 0;
+        for (const r of rows) {
+            if (currentKeys.has(`${r.application_id}::${r.exception_type}`))
+                continue;
+            await this.db.query(`UPDATE reconciliation_exception
+            SET state = 'AUTO_RESOLVED', resolved_at = now(),
+                resolution_code = 'SELF_HEALED'
+          WHERE id = $1 AND state = 'OPEN'`, [r.id]);
+            closed += 1;
+        }
+        return closed;
+    }
+    async countOpen() {
+        const { rows } = await this.db.query(`SELECT count(*) AS n FROM reconciliation_exception
+        WHERE state IN ('OPEN','MANUAL_REVIEW')`);
+        return Number(rows[0]?.n ?? 0);
+    }
+};
+exports.ReconciliationService = ReconciliationService;
+exports.ReconciliationService = ReconciliationService = ReconciliationService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __param(2, (0, common_1.Optional)()),
+    __param(3, (0, common_1.Optional)()),
+    __param(4, (0, common_1.Optional)()),
+    __metadata("design:paramtypes", [server_kit_1.Db,
+        audit_service_1.AuditService,
+        payment_provider_1.PaymentProviderPort,
+        payment_service_1.PaymentService,
+        dependency_breakers_1.DependencyBreakers])
+], ReconciliationService);
+/** Date 를 ISO 로 바꿔 facts 를 JSON 으로 안전하게 만든다. */
+function normalize(o) {
+    const out = {};
+    for (const [k, v] of Object.entries(o)) {
+        out[k] = v instanceof Date ? v.toISOString() : v;
+    }
+    return out;
+}
+//# sourceMappingURL=reconciliation.service.js.map

@@ -1,0 +1,101 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var ProfileVaultClient_1;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ProfileVaultClient = void 0;
+const common_1 = require("@nestjs/common");
+const server_kit_1 = require("@wonseoro/server-kit");
+const dependency_breakers_1 = require("../../common/resilience/dependency-breakers");
+const config_1 = require("../../config");
+/**
+ * Common Profile Vault 클라이언트 — 기술설계서 v1.1 §10 §3
+ *
+ * **Snapshot 은 best-effort 다.** (불일치 대장 D-18)
+ *
+ * §10 §1 은 "Snapshot 생성 후 작성·제출은 중앙과 무관"이라고 적는다.
+ * 생성 시점에는 중앙이 필요하다는 뜻인데, 같은 표가 "중앙 검색 장애여도
+ * 대학 직접 URL 접수 가능"이라고도 적는다. 둘을 모두 만족하려면
+ * **중앙이 없을 때 빈 원서로라도 만들 수 있어야 한다.**
+ *
+ * 중앙은 편의 계층이다. 편의가 없다고 접수 기회를 잃으면 이 제품의 전제가 무너진다.
+ * 그래서 여기서는 실패를 삼키고 빈 Snapshot 을 돌려준다. 예외를 올리지 않는다.
+ *
+ * **Circuit Breaker 는 이 성질을 바꾸지 않는다.** (v1.1 §01 C8)
+ * 바꾸는 것은 대기 시간뿐이다. 중앙이 죽은 것이 확인되면 매 원서 생성이
+ * VAULT_TIMEOUT_MS 를 기다렸다 빈 원서로 가는 대신, 바로 빈 원서로 간다.
+ */
+let ProfileVaultClient = ProfileVaultClient_1 = class ProfileVaultClient {
+    breakers;
+    logger = new common_1.Logger(ProfileVaultClient_1.name);
+    constructor(breakers) {
+        this.breakers = breakers;
+    }
+    /**
+     * @param requestedFields 전형 양식이 공통원서에서 가져오겠다고 표시한 항목(`x-profile`).
+     *   전에는 세 항목을 코드에 박아 두어, 양식에 없는 항목까지 Vault 에 요청했다(목적 최소화 위반).
+     */
+    async fetchSnapshot(args) {
+        const empty = {
+            fields: {},
+            releasedFields: [],
+            withheldFields: [],
+            available: false,
+        };
+        const url = config_1.CENTRAL_SYNC_URL;
+        // 요청할 항목이 없으면 중앙에 묻지 않는다. 묻는 것만으로 "이 사람이 이 대학에 원서를 만들었다" 가 남는다.
+        if (!url || args.requestedFields.length === 0)
+            return empty;
+        try {
+            const res = await this.breakers.centralVault.run(() => 
+            // 상호 TLS — 이 대학 API 의 인증서를 낸다. 중앙은 인증서의 대학과 요청의 대학이 같아야 준다 (T-M5-05, D-69)
+            (0, server_kit_1.internalHttp)().fetch(`${url}/internal/v1/profile-snapshots`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json', ...(0, server_kit_1.traceHeaders)() },
+                body: JSON.stringify({
+                    subjectToken: args.subjectToken,
+                    universityId: args.universityId,
+                    requestedFields: args.requestedFields,
+                    applicationRef: args.applicationRef,
+                }),
+                // 짧게 끊는다. 중앙이 느리다고 원서 생성이 느려지면 안 된다.
+                signal: AbortSignal.timeout(config_1.VAULT_TIMEOUT_MS),
+            }), 
+            // 4xx 는 중앙이 살아서 거절한 것이다. 5xx·연결 실패만 장애로 센다.
+            { isFailure: server_kit_1.httpServerError });
+            if (!res.ok) {
+                this.logger.warn(`profile snapshot unavailable (${res.status}) — 빈 원서로 진행`);
+                return empty;
+            }
+            const body = (await res.json());
+            return {
+                fields: body.fields ?? {},
+                releasedFields: body.releasedFields ?? [],
+                withheldFields: body.withheldFields ?? [],
+                available: true,
+            };
+        }
+        catch (err) {
+            // 이미 끊긴 것을 아는 상태다. 원서마다 같은 경고를 남기면 로그가 묻힌다.
+            // 열림·닫힘은 DependencyBreakers 가 한 번씩 남긴다.
+            if (err instanceof server_kit_1.CircuitOpenError)
+                return empty;
+            // 중앙이 꺼져 있다. 정상 상황이다. 사용자는 직접 입력하면 된다.
+            this.logger.warn(`profile snapshot failed (${(0, server_kit_1.describeFailure)(err)}) — 빈 원서로 진행`);
+            return empty;
+        }
+    }
+};
+exports.ProfileVaultClient = ProfileVaultClient;
+exports.ProfileVaultClient = ProfileVaultClient = ProfileVaultClient_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [dependency_breakers_1.DependencyBreakers])
+], ProfileVaultClient);
+//# sourceMappingURL=profile-vault.client.js.map

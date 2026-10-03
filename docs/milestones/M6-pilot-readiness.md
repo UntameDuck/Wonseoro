@@ -26,7 +26,7 @@
 | ID | 태스크 | 담당 | 근거 노션 | 인수기준 |
 |---|---|---|---|---|
 | T-M6-01 | 전형 Schema 온보딩 도구 | 송리안 | §01 A5 | 신규 대학 추가가 Config만으로 가능 |
-| T-M6-02 | Config Linter + Compatibility Test | 송리안 | §01 A5 | 잘못된 Config가 Production 반영 불가 |
+| T-M6-02 | Config Linter + Compatibility Test | 송리안 | §01 A5 | 잘못된 Config가 Production 반영 불가 — ✅ 2026-10-03 진행 중 원서 호환 시험·적용 거절(D-77) |
 | T-M6-03 | CSP Conformance Preflight | 송리안 | §01 A8 | StorageClass·IngressClass·KMS·LB capability 검사 — ✅ 2026-10-03 `scripts/ops/csp-preflight.mjs`([14](../14-operations-automation.md)) |
 | T-M6-04 | 실 PG Sandbox 연동 | 송리안 | v1.0 §5.5 | Mock Provider를 Adapter 교체만으로 대체 |
 | T-M6-05 | PG Reconciliation 실계정 검증 | 송리안 | §01 B4 | 정산 대조 |

@@ -1,0 +1,18 @@
+import { Client } from 'pg';
+/**
+ * **시험 전용** — 감사 기록을 고치거나 지우는 유일한 경로. 운영 코드에서 import 하지 않는다.
+ *
+ * 0004 이후 감사 기록(audit_event · activation_record)은 두 겹으로 막혀 있다 (D-41).
+ *   1. 앱 역할(`DATABASE_URL`)에는 UPDATE·DELETE 권한이 없다
+ *   2. 트리거가 소유자·슈퍼유저의 평소 경로도 막는다
+ *
+ * 시험은 두 가지 때문에 이것을 넘어야 한다 — 끝나고 원서를 지우려면 감사 기록이 먼저
+ * 없어야 하고(FK), 변조 검출 시험은 변조를 재현해야 한다. 그래서 **슈퍼유저 연결**
+ * (`DATABASE_ADMIN_URL`)로 트리거를 일부러 끈다(`session_replication_role = replica`).
+ * 운영에서 이 경로가 남는 것이 WORM(M5)이 필요한 이유다.
+ *
+ * ⚠️ replica 모드는 외래키 검사도 끈다. 지우는 순서를 자식 → 부모로 지킨다.
+ */
+export declare function breakGlass<T>(fn: (client: Client) => Promise<T>): Promise<T>;
+/** 슈퍼유저 연결로 한 문장 — 트리거는 **켠 채로.** "소유자라도 막히는가" 를 확인할 때 쓴다. */
+export declare function asAdmin(sql: string, params?: unknown[]): Promise<void>;
