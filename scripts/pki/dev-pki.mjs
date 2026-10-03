@@ -50,12 +50,16 @@ function issue(out, ca, w, hours) {
   ].join('\n'));
   openssl(['ecparam', '-name', 'prime256v1', '-genkey', '-noout', '-out', key]);
   openssl(['req', '-new', '-key', key, '-subj', `/CN=${w.name}`, '-out', csr]);
-  // openssl x509 -days 는 일 단위 — 시간 단위는 -not_after 대신 시작·끝을 직접 준다
+  // 시간 단위 유효기간(-not_before·-not_after)은 OpenSSL 3.4 부터다. 없으면 일 단위(-days)로 — Ubuntu 24.04 는 3.0
   const start = new Date(Date.now() - 5 * 60_000);
   const end = new Date(Date.now() + hours * 3600_000);
   const fmt = (d) => d.toISOString().replace(/[-:T]/g, '').slice(0, 14) + 'Z';
-  openssl(['x509', '-req', '-in', csr, '-CA', ca.crt, '-CAkey', ca.key, '-CAcreateserial', '-sha256',
-    '-not_before', fmt(start), '-not_after', fmt(end), '-extfile', ext, '-out', crt]);
+  const base = ['x509', '-req', '-in', csr, '-CA', ca.crt, '-CAkey', ca.key, '-CAcreateserial', '-sha256', '-extfile', ext, '-out', crt];
+  try {
+    openssl([...base, '-not_before', fmt(start), '-not_after', fmt(end)]);
+  } catch {
+    openssl([...base, '-days', String(Math.max(1, Math.ceil(hours / 24)))]);
+  }
   return { cert: crt, key };
 }
 
