@@ -1176,6 +1176,20 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-78. 장애 공지의 소유권·저장 위치·발행 권한이 정해져 있지 않았다 🟡
+
+| | |
+|---|---|
+| **발견** | 2026-10-03 (T-M6-06 — §01 B11 "Status Page + 대학별 장애 배너") |
+| **충돌** | 노션은 대학별 장애 배너와 Status Page 를 요구하지만, 공지를 중앙이 만드는지 대학이 만드는지, 중앙이 끊겼을 때도 보이는지, 누가 발행·해제하는지, 어떤 내용을 공개할지 정하지 않았다. 중앙에만 두면 자율 운영이 필요한 바로 그 장애 때 공지가 사라지고, 자유 형식 내부 장애 정보를 그대로 공개하면 개인정보·공격 단서가 노출될 수 있다 |
+| **판정** | **대학 Data Plane 의 공개 장애 원장** — 대학 DB `service_incident` 에 공지 제목·지원자 안내·영향 수준(`NOTICE`·`DEGRADED`·`OUTAGE`)·시작/예상 해제 시각·발행/해제 담당자를 둔다. 공개 `GET /api/v1/meta/service-status` 는 대학 이름·전체 상태·활성 공지만 주고 내부 원인·구성·개인정보는 싣지 않는다. 지원자 웹은 모든 화면의 대학별 배너와 `/status` 에서 이를 읽는다. 운영자 `operator` 역할은 `/admin/v1/incidents` 에 발행·해제하고, 변경 요청은 멱등 키·방금 한 본인확인(Step-up)·시스템 감사 체인을 거친다. 삭제·본문 덮어쓰기는 없고 해제만 한다. 중앙 장애와 별개로 이 대학 API 가 살아 있는 동안 공지도 살아 있다 |
+| **재현 시험** | admission-api 통합 시험(발행 → 공개 상태 DEGRADED/OUTAGE → 해제 → 정상, DB 담당자·감사 체인), 계약 검사, 지원자·운영자 1280/320 키보드 포커스 순회 |
+| **저장소 반영** | ✅ (2026-10-04) `0007_service_incident.sql`, admission-api Incident 모듈, 지원자 `/status`·전역 배너, 운영자 `/status`, OpenAPI 1.8.0. DB 제약 22종 PASS, admission-api 382개 중 379 pass·3 skip·0 fail, 두 앱 빌드·문구 검사, 상태/관리자 1280·320 접근성 문제 0 |
+| **노션 반영** | ⬜ §01 B11 에 위 소유권·공개 범위·권한·감사 규칙, §02 ERD(`service_incident`), §03 OpenAPI v1.8.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 저장소 반영 완료, 노션 반영 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 

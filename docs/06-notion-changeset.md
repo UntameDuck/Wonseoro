@@ -10,7 +10,7 @@
 
 | 노션 문서 | 첨부 이름 | 저장소 파일 | 바이트 | SHA-256 | 근거 |
 |---|---|---|---|---|---|
-| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.7.0) | 91,997 | `3f1f86040457a5ce2bb6bef9de7cc177cfecb3c9fc387420607eb837e30be6df` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 |
+| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.8.0) | 97,219 | `60ec63269f7e8dcce7c544885fa30b96a445f6fdf53431507e434223df4616b4` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 · D-78 |
 | [§04 CloudEvents](https://app.notion.com/p/3df75ab5debe81d68e37fabd3678dcc4) | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | 6,104 | `3ed7ec8a340c50f6e7de25b2c3322ffd7c6b4914fd046afdc67a2efea699ca02` | D-47 · T-M5-51 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` (v1.2) | 4,036 | `1aaef0db712e1d9a15da41fb86b7832a3da8c6decfdcd5992a57bb071e5b1975` | D-44 · D-49 · D-52 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` (v1.5, 차트 렌더링 — RBAC 6종·내부 상호 TLS·서류 워커 출구) | 40,216 | `28c54fbdb2e83edc849526c06c7158017110fa0e24a3b3cbfe8f525febf2b315` | D-44 · D-52 · D-68 · D-69 |
@@ -75,6 +75,13 @@ A5 대응에 더한다:
 > 새 설정은 적용 직전에 이 주기의 진행 중 원서를 새 양식으로 검사한다(작성 중은 저장된 값만, 검증 끝·결제 중·결제 완료는 필수까지).
 > 하나라도 깨지면 적용하지 않는다. 승인 화면에도 미리 경고한다.
 
+### §01 운영 리스크 — B11 대학별 장애 안내 (D-78)
+
+B11 대응에 더한다:
+
+> 장애 공지는 중앙이 아니라 **각 대학 Data Plane**이 소유한다. 대학 DB의 추가 전용 `service_incident` 원장에 지원자용 제목·안내, 영향 수준(`NOTICE`·`DEGRADED`·`OUTAGE`), 시작/예상 해제 시각, 발행·해제 담당자를 남긴다. 공개 상태 API는 대학 이름·전체 상태·활성 공지만 반환하며 내부 원인·구성·개인정보는 반환하지 않는다. 따라서 중앙이 끊겨도 대학 API가 살아 있는 동안 대학별 안내는 유지된다.
+> 운영자 `operator`만 공지를 발행·해제할 수 있고, 변경 요청은 멱등 키·5분 이내 Step-up·감사 체인을 거친다. 공지 삭제나 본문 덮어쓰기는 허용하지 않고 해제만 한다. 지원자 웹은 모든 화면의 전역 배너와 `/status`에서 같은 공개 상태를 보여 준다.
+
 ### §02 PostgreSQL ERD
 
 첨부 DDL(`0001_init.sql` v1.2)은 그대로 두고 본문 「정합성 규칙」 아래에 더한다 (D-70 — 저장소 마이그레이션 `0003_field_encryption.sql`, 중앙 `0004_vault_encryption.sql`):
@@ -86,6 +93,7 @@ A5 대응에 더한다:
 > DB 비상 접속 기록 `break_glass_access(db_user, valid_until, issued_at)` — 추가만(트리거), 앱은 읽지도 쓰지도 않는다(저장소 마이그레이션 0004, D-72).
 > Outbox 보관 `outbox_event_archive` — `created_at` 월별 파티션, 영수증 열을 펼쳐 둔다. 전송·확인이 끝나고 7일 지난 이벤트를 옮기되 원서마다 마지막 순번은 남긴다(순번이 이어진다).
 > 13개월이 지난 달은 파티션째 지운다(§01 B7 디스크 고갈 방지). 바로 쓰는 `outbox_event` 는 유니크(aggregate_id, aggregate_sequence) 때문에 파티션하지 않는다(저장소 마이그레이션 0005, D-74).
+> 장애 공지 원장 `service_incident` 는 대학 Data Plane에 둔다(저장소 마이그레이션 `0007_service_incident.sql`, D-78). 상태는 `ACTIVE`에서 `RESOLVED`로만 바뀌고 제목·안내·수준·시각·발행자는 수정하지 못한다. 앱 역할에는 조회·추가·해제용 UPDATE만 주며 DELETE·TRUNCATE 권한은 주지 않는다.
 
 v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
 
@@ -109,6 +117,8 @@ v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
 > **2026-10-01 v1.6.0** — 접수증 응답에 `admissionTypeName`·`departmentName`·`status`(T-M2-11 접수증 항목), Self-check 결제에 `requestedAt`(결제 확인 중 화면). 추가만이라 호환 변경이다(§A16). (T-M5-56)
 
 > **2026-10-03 v1.7.0** — 지금 모집·전형·모집단위 조회를 공개(`security: []`)로. 누구에게나 같은 공개 정보이고 로그인 전 화면·운영 콘솔이 보인다. 요구를 푸는 변경이라 호환이다(§A16). (D-65)
+
+> **2026-10-04 v1.8.0** — 대학 공개 상태 조회 `GET /api/v1/meta/service-status`와 운영자 장애 공지 목록·발행·해제 경로를 더했다. 공개 응답은 지원자용 정보만 포함하고, 운영 변경은 operator 범위·Step-up·멱등 키를 요구한다. 새 경로와 스키마 추가라 호환 변경이다(§A16). (D-78)
 
 ### §04 CloudEvents Schema
 
@@ -227,4 +237,3 @@ v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
 | 10. API Node 강제 종료 | 제어 1 + 워커 2(zone 2개), 노드 판정 grace 16초, 부하는 클러스터 안. drain 0/666, 정비 뒤 재분산 0/1,139. 강제 정지는 첫 시도 6.1%·재시도 3회 뒤 체감 1.4% — 실패는 거의 다 NotReady(22초) 전 죽은 Pod 로 간 연결 시간 초과(Edge 재시도 대상). 대체 Pod 10초 뒤 살아 있는 zone 에 Ready | `node-failure-kind-2026-09-30T15-46-21-045Z.json` |
 | 11. 학교 NAT + 봇 | 정상 사용자 429 = 0, 봇 78~85% 거절, 재시작 0 | `nat-bot-kind-2026-09-29T17-13-42-873Z.json` |
 | 13. 대학 간 장애 격리 | A 전면 정지 중 B 접수·중앙 반영, A 복구 후 접수 | `isolation-2026-09-27T16-42-39-057Z.json` |
-

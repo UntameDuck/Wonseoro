@@ -18,6 +18,7 @@
 | 10 | **[06-notion-changeset.md](06-notion-changeset.md)** | 노션에 아직 못 올린 첨부 5종·본문 문구 (승인 대기) |
 | 11 | [07-submission-errata.md](07-submission-errata.md) | 제출 PDF 정정 문구 (D-2·D-3) |
 | 12 | [08-ui-production-readiness.md](08-ui-production-readiness.md) | 화면 제품화 — 개발 흔적·화면 결함 전수 목록(U-1~U-59)·결정·문구 검사 (T-M5-50~56) |
+| 13 | **[17-pilot-support-tools.md](17-pilot-support-tools.md)** | Pilot 지원 도구 T-M6-01·06 구현 기록과 미착수 T-M6-07 인계 |
 
 ## 마일스톤 (총 7단계)
 
@@ -31,16 +32,16 @@
 | M5 | [신뢰성·보안·접근성](milestones/M5-reliability-security.md) | 42 | 대학에 넣을 수 있는 수준 (화면 제품화 포함) |
 | M6 | [Pilot 준비](milestones/M6-pilot-readiness.md) | 15 | 대학 1곳 Shadow Test |
 
-총 **146개 태스크, 85개 완료 (2026-10-01)** — 남은 61개를 누가 할 수 있는지는 [03 「완성까지 남은 단계」](03-next-steps.md#완성까지-남은-단계-2026-10-01-전수-점검). 각 태스크에 담당·근거 노션 절·인수기준이 붙어 있다.
+총 **146개 태스크, 124개 완료 (2026-10-04)** — 남은 22개를 누가 할 수 있는지는 [03 「완성까지 남은 단계」](03-next-steps.md#완성까지-남은-단계-2026-10-01-전수-점검). 각 태스크에 담당·근거 노션 절·인수기준이 붙어 있다.
 
 | 단계 | 진행 |
 |---|---|
 | M0 기반 | 7/8 |
 | M1 접수 Core | 14/14 ✅ |
 | M2 결제·Finalize·화면 | 24/24 ✅ |
-| M3 운영 안전장치 | 13/15 ✅ 종료 (2026-09-27, 🟡 2) |
-| M4 분산 실증 | 20/28 ◀ 차트·kind·Flux Pull·격리·동시 Finalize·PgBouncer·Object Storage·HPA 커스텀 지표·예약 Peak Mode·계측·로그 마스킹·KPI 대시보드·NAT Adaptive Throttling·Redis 장애·중앙 2시간 단절 ✅ ·PG 지연 ✅ — 로컬 M4 시험 끝, 남은 M4 는 K-PaaS |
-| M5~M6 | 7/57 ◀ 화면 제품화 T-M5-50~56 ✅ |
+| M3 운영 안전장치 | 15/15 ✅ 종료 |
+| M4 분산 실증 | 21/28 ◀ 차트·kind·Flux Pull·격리·동시 Finalize·PgBouncer·Object Storage·HPA 커스텀 지표·예약 Peak Mode·계측·로그 마스킹·KPI 대시보드·NAT Adaptive Throttling·Redis 장애·중앙 2시간 단절·PG 지연·Outbox 보관 ✅ — 로컬 M4 시험 끝, 남은 M4는 외부 환경 검증 |
+| M5~M6 | 43/57 ◀ M5 37개·M6 6개 완료, Pilot의 AI 로컬 작업은 T-M6-07 하나 남음 |
 
 진행 현황과 다음 착수 순서는 **[03-next-steps.md](03-next-steps.md)** 를 본다.
 

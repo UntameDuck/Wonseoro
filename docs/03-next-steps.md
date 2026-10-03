@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: **2026-10-03** — 보안 통제 T-M5-01·03~09 끝([13](13-security-controls-plan.md)), 운영 자동화 T-M5-62·63·65·T-M3-03 끝·Outbox 보관 T-M4-10·Pilot 도구 T-M6-02·03·11·14([14](14-operations-automation.md)·[15](15-privacy-data-flow.md)·[16](16-university-onboarding.md)). **AI 가 이 PC 에서 할 남은 일은 T-M6-01·06·07 세 개** — 아래 「완성까지 남은 단계」. (이전: 2026-10-01 **M4 진행 20/28** — T-M4-35 중앙 2시간·**T-M4-34 PG 1~30분 지연 실제 시간 통과**, 리더 잠금 결함 D-54 수정, T-M4-39 다중 노드 재측정(ADR-0008·측정 도구 결함 수정), 미완결 기능 전수 점검 D-55 ~ D-61. **화면 제품화 태스크 T-M5-50~56 추가·증적 감사 체인 결함 D-62 발견·수정**(2026-10-01). **접근성 T-M5-40~46 ✅·47 🟡**(2026-10-01, [09](09-accessibility.md)). **제품 완성까지 남은 것은 아래 「완성까지 남은 단계」**)
+> 최종 갱신: **2026-10-04** — Pilot 도구 T-M6-01(구조화 전형 Schema 온보딩)·T-M6-06(대학별 상태 페이지/장애 배너, D-78)까지 완료했다. **AI가 이 PC에서 할 남은 일은 T-M6-07 하나**다. 사용자 요청에 따라 사용량 11%가 남은 시점에 새 구현을 멈췄으며, 정확한 인계 상태는 [17-pilot-support-tools.md](17-pilot-support-tools.md)에 있다. (이전 작업: 보안 통제 T-M5-01·03~09, 운영 자동화 T-M5-62·63·65·T-M3-03, Outbox 보관 T-M4-10, Pilot 도구 T-M6-02·03·11·14)
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -10,7 +10,7 @@
 
 ## 현재 지점
 
-**M0·M1·M2·M3 완료, M4 진행 중** (20/28). MVP가 화면에서 끝까지 동작하고, 로컬 축소 환경에서 대학 간 장애 격리·동시 Finalize·DB 연결 상한·Object Storage 장애 격리·HPA 커스텀 지표·signed GitOps Pull·예약 Peak Mode 전환·전 서비스 관측성(지표·Trace·구조화 로그)·업무 KPI 대시보드·학교 NAT 뒤 정상 사용자 보호·**중앙 2시간 단절 중 접수 지속과 event loss 0**·**PG 확정 1~30분 지연에도 사람 손 없이 한 번만 접수**를 증명했다.
+**M0·M1·M2·M3 완료, M4 진행 중** (21/28). MVP가 화면에서 끝까지 동작하고, 로컬 축소 환경에서 대학 간 장애 격리·동시 Finalize·DB 연결 상한·Object Storage 장애 격리·HPA 커스텀 지표·signed GitOps Pull·예약 Peak Mode 전환·전 서비스 관측성(지표·Trace·구조화 로그)·업무 KPI 대시보드·학교 NAT 뒤 정상 사용자 보호·**중앙 2시간 단절 중 접수 지속과 event loss 0**·**PG 확정 1~30분 지연에도 사람 손 없이 한 번만 접수**를 증명했다.
 
 | 단계 | 진행 | 비고 |
 |---|---|---|
@@ -18,15 +18,15 @@
 | M1 접수 Core | **14/14** | ✅ |
 | M2 결제·Finalize·화면 | **24/24** | ✅ Demo Gate 1~5 통과 |
 | M3 운영 안전장치 | **15/15** | ✅ **종료 2026-09-27** — T-M3-03 WORM ✅(2026-10-03, D-75). T-M3-06 JWKS 캐시 ✅(2026-10-03, 발급자 정지 실증·단절 유예 D-67) |
-| **M4 분산 실증** | **20/28** | ◀ 진행 중 — 차트·kind·Flux Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표·Peak Mode·계측·로그 마스킹·KPI 대시보드·NAT Adaptive Throttling·Redis 장애·중앙 2시간 단절·PG 지연 ✅, 노드 장애 🟡 |
-| M5 신뢰성·보안·접근성 | **26/42** | ◀ **인증 T-M5-02·10 ✅(2026-10-03)** — 로컬 OIDC 발급자·토큰 직접 검증·JWKS 캐시·관리자 MFA·민감 동작 재인증·지원자 본인확인·Kubernetes 역할 6종·로그인 서버 접근성·토큰 붙인 DAST([12](12-authentication-plan.md)) · **보안 파이프라인 T-M5-20~29 ✅(2026-10-02)** — Git 전체 이력 비밀 0·CodeQL Critical 0·운영 의존성 Critical 0·SPDX SBOM·이미지 5종 Critical 0·IaC 19개 High/Critical 0·실 DB 보안 시험 123개 건너뜀 0·ZAP DAST High 0·운영 이미지 5종 OIDC 키리스 서명·미서명 이미지 admission 거부 원격 통과 · **접근성 T-M5-40~46 ✅·47 🟡(2026-10-01)** — 키보드 완주·전 화면 포커스·스크린리더 재료·200%·320px·세션 만료 경고·CAPTCHA 대체 경로, Chrome·Edge·휴대전화 흉내([09](09-accessibility.md)) · 화면 제품화 T-M5-50~56 추가 · **T-M5-53 개발 입력 가두기 ✅ · T-M5-50 설계 설명·문서 번호 걷어내기 ✅ · T-M5-51 내부 코드 대신 사람 말(계약 1.5.0) ✅ · T-M5-52 오류·검증 문구 ✅ · T-M5-54 표기 통일 ✅ · T-M5-55 상태·기본 화면 ✅ · T-M5-56 흐름·와이어프레임·27장 다시 찍기 ✅ — 화면 제품화 끝** (2026-10-01) |
-| M6 Pilot 준비 | 0/15 | |
+| **M4 분산 실증** | **21/28** | ◀ 진행 중 — 차트·kind·Flux Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표·Peak Mode·계측·로그 마스킹·KPI 대시보드·NAT Adaptive Throttling·Redis 장애·중앙 2시간 단절·PG 지연·Outbox 보관 ✅, 노드 장애 🟡 |
+| M5 신뢰성·보안·접근성 | **37/42** | ◀ 보안 통제 T-M5-01~10, 보안 파이프라인 T-M5-20~29, 접근성 T-M5-40~46, 화면 제품화 T-M5-50~56, 운영 자동화 T-M5-62·63·65 완료. T-M5-47은 실물 Firefox·Safari만 남아 🟡 |
+| M6 Pilot 준비 | **6/15** | T-M6-01·02·03·06·11·14 ✅ |
 
-**총 122/146 태스크** (2026-10-03, ✅ 만 센다. 🟡 2 — T-M4-39·T-M5-47). **511개 테스트**
-(admission-api 360 · server-kit 92 · central-api 38 · event-relay 7 · document-service 9 · krds 5, 2026-10-03). DB 포함(CI 재현 DB) 실패 0.
+**총 124/146 태스크** (2026-10-04, ✅ 만 센다. 🟡 2 — T-M4-39·T-M5-47). **533개 테스트**
+(admission-api 382 · server-kit 92 · central-api 38 · event-relay 7 · document-service 9 · krds 5). T-M6-06까지 DB 포함 로컬 실행 실패 0.
 DB 포함 실행(CI 재현 DB)은 admission-api 3 skip(`ADMIN_API_TOKEN` 미설정) 외 전부 pass.
 배포 스크립트 시험 별도: Peak Mode 예약 계산 9건(`npm run test:m4:peak-schedule`), 대시보드·KPI 규칙 일관성(`npm run test:m4:observability`).
-DB 정합성·권한 검증 20종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`)·로그 우회 금지 검사(`scripts/check-logging.mjs`)·차트 lint·runtime 첨부 드리프트 검사(`scripts/render-runtime-attachment.mjs --check`)·**계약 검사(`scripts/check-contracts.mjs`)**·**화면 문구 검사(`scripts/check-ui-copy.mjs`, T-M5-50)** CI 포함. **보안 워크플로 T-M5-20~23 ✅**: Git 전체 이력 Gitleaks·CodeQL SAST·운영 의존성 Critical 0·SPDX SBOM이 로컬과 원격에서 통과(2026-10-02, Actions run 36887597976).
+DB 정합성·권한 검증 22종 PASS. 의존성 선언 검사(`scripts/check-deps.mjs`)·로그 우회 금지 검사(`scripts/check-logging.mjs`)·차트 lint·runtime 첨부 드리프트 검사(`scripts/render-runtime-attachment.mjs --check`)·**계약 검사(`scripts/check-contracts.mjs`)**·**화면 문구 검사(`scripts/check-ui-copy.mjs`, T-M5-50)** CI 포함. **보안 워크플로 T-M5-20~23 ✅**: Git 전체 이력 Gitleaks·CodeQL SAST·운영 의존성 Critical 0·SPDX SBOM이 로컬과 원격에서 통과(2026-10-02, Actions run 36887597976).
 
 **CI 복구 (2026-09-30)** — 확인한 범위(`c232294` 이후)에서 통합 잡이 계속 실패하고 있었다. 원인은 CI 가 역할 마이그레이션·개발 시드·활성 마감정책 없이
 빈 DB 에서 시험을 돌린 것, 그리고 타이밍에 따라 갈리던 경합 두 건(마감정책 승인 400/409, 자동 접수와 화면 제출)이다.
@@ -136,13 +136,13 @@ T-M5-40~46 ✅·47 🟡 — **[09-accessibility.md](09-accessibility.md)**. 설�
 
 ## 완성까지 남은 단계 (2026-10-01 전수 점검)
 
-**146개 중 122개 완료, 24개 남음**(2026-10-03 인증 T-M5-02·10, T-M3-06 JWKS 캐시, 보안 통제 T-M5-01·03~09, Outbox 보관 T-M4-10, 만료 경보 T-M5-65, WORM T-M3-03, 복구 검증 T-M5-62, Writer fencing T-M5-63, CSP 사전 점검 T-M6-03, 개인정보 처리흐름도 T-M6-11, 대학 온보딩 문서 T-M6-14, Config 호환 시험 T-M6-02 완료. 🟡 부분 완료 2개 — T-M4-39·T-M5-47 — 는 남은 쪽에 센다).
+**146개 중 124개 완료, 22개 남음**(2026-10-04 T-M6-06 완료. 인증 T-M5-02·10, T-M3-06 JWKS 캐시, 보안 통제 T-M5-01·03~09, Outbox 보관 T-M4-10, 만료 경보 T-M5-65, WORM T-M3-03, 복구 검증 T-M5-62, Writer fencing T-M5-63, CSP 사전 점검 T-M6-03, 개인정보 처리흐름도 T-M6-11, 대학 온보딩 문서 T-M6-14, Config 호환 시험 T-M6-02, 전형 Schema 온보딩 T-M6-01 완료. 🟡 부분 완료 2개 — T-M4-39·T-M5-47 — 는 남은 쪽에 센다).
 코드에 TODO·FIXME 는 없다. 남은 일은 태스크 표와 아래 목록에 전부 있다. 흉내 구현(헤더 인증·관리자 공유 토큰·Mock PG·Mock 검사 엔진)은
 운영 모드에서 기동이 막혀 있다 — 그 넷을 실물로 바꾸는 것이 "제품" 과 "시연" 의 차이다.
 
 | 누가 할 수 있나 | 개수 | 태스크 |
 |---|---|---|
-| **A. AI 가 이 PC 에서 끝낼 수 있다** (코드·CI·kind) | **3**(처음 20) | ~~화면 제품화 T-M5-50~56~~ ✅ · ~~접근성 T-M5-40~46~~ ✅([09](09-accessibility.md))(개발 흔적 걷어내기·사람 말·오류 문구·개발 입력 가두기·표기·상태·와이어프레임 정합 — [08](08-ui-production-readiness.md)) · ~~T-M3-03(WORM — MinIO Object Lock 으로)~~ ✅, ~~T-M3-06(JWKS 캐시)~~ ✅ · ~~T-M4-10(Outbox 파티션·보관)~~ ✅ · ~~T-M5-01·03~09 보안 통제~~ ✅( [13](13-security-controls-plan.md) · ~~인증 T-M5-02·MFA T-M5-10~~ ✅ 로컬 OIDC, [12](12-authentication-plan.md)) · ~~T-M5-20~29 보안 파이프라인(비밀·SAST·SCA·SBOM·이미지·IaC 스캔·보안 시험·DAST·서명·admission controller)~~ ✅([11](11-security-pipeline.md)) · ~~T-M5-62 복구 검증 자동화~~ ✅ · ~~T-M5-63 Writer fencing~~ ✅ · ~~T-M5-65 만료 경보~~ ✅([14](14-operations-automation.md)) · T-M6-01·06·07(온보딩 도구·상태 페이지·최소 정보 지원 화면) · ~~T-M6-02 호환 시험~~ ✅ · ~~T-M6-14 온보딩 문서~~ ✅([16](16-university-onboarding.md)) · ~~T-M6-03 CSP 사전 점검~~ ✅([14](14-operations-automation.md)) · ~~T-M6-11 처리 흐름도~~ ✅([15](15-privacy-data-flow.md)) |
+| **A. AI 가 이 PC 에서 끝낼 수 있다** (코드·CI·kind) | **1**(처음 20) | ~~화면 제품화 T-M5-50~56~~ ✅ · ~~접근성 T-M5-40~46~~ ✅([09](09-accessibility.md)) · ~~T-M3-03 WORM~~ ✅ · ~~T-M3-06 JWKS 캐시~~ ✅ · ~~T-M4-10 Outbox 보관~~ ✅ · ~~T-M5-01·03~09 보안 통제~~ ✅([13](13-security-controls-plan.md)) · ~~인증 T-M5-02·MFA T-M5-10~~ ✅([12](12-authentication-plan.md)) · ~~T-M5-20~29 보안 파이프라인~~ ✅([11](11-security-pipeline.md)) · ~~T-M5-62 복구 검증 자동화~~ ✅ · ~~T-M5-63 Writer fencing~~ ✅ · ~~T-M5-65 만료 경보~~ ✅([14](14-operations-automation.md)) · ~~T-M6-01 전형 Schema 온보딩~~ ✅ · ~~T-M6-06 상태 페이지·대학별 장애 배너~~ ✅(D-78, [17](17-pilot-support-tools.md)) · **T-M6-07 개인정보 최소 상담 화면** · ~~T-M6-02 호환 시험~~ ✅ · ~~T-M6-14 온보딩 문서~~ ✅([16](16-university-onboarding.md)) · ~~T-M6-03 CSP 사전 점검~~ ✅([14](14-operations-automation.md)) · ~~T-M6-11 처리 흐름도~~ ✅([15](15-privacy-data-flow.md)) |
 | **B. 외부 환경이 있어야 한다** (K-PaaS·HA DB·PG 계약) | **12** | T-M4-06(DB HA 계층) · T-M4-30·31·32(부하 500·1,500·3,000 VU) · T-M4-36(부하 중 DB Failover) · T-M4-39 판정(Edge 재시도) · T-M4-41(6시간 Soak) · T-M5-60·61·64(Multi-AZ·PITR·DR 훈련) · T-M6-04·05(실 PG sandbox·정산 실계정) |
 | **C. 사람·기관이 해야 한다** | **9** | T-M0-08(제출 PDF 정정 — 문구 준비됨) · T-M5-47 나머지(실물 Firefox·Safari — 또는 시험용 브라우저 내려받기 승인) · T-M5-48(KWCAG 수동 검사 — 실제 스크린리더) · T-M6-08·09(런북·운영 캘린더 확정) · T-M6-10(War-room 훈련) · T-M6-12(영향평가) · T-M6-13(Compliance 실증) · T-M6-15(대학 Shadow Test) |
 
@@ -167,7 +167,7 @@ T-M5-40~46 ✅·47 🟡 — **[09-accessibility.md](09-accessibility.md)**. 설�
 4. ~~보안 통제 T-M5-01·03~09~~ ✅ **끝(2026-10-03, [13](13-security-controls-plan.md))**: 단계 1 ✅ 서비스 간 상호 TLS·대학 신원 묶기(내부 경로 여섯이 인증 없이 열려 있던 결함 D-69 수정 — 다른 대학 사칭·남의 공통원서·서류 검사 위조 차단, `test:security:mtls` 25). 단계 2 ✅ 출구 허용 목록(서버 호출은 의존 서비스 호스트만, 연결 순간 메타데이터 주소 거절, 서류 워커 서명 URL SSRF 차단)·NetworkPolicy 자동 시험(kind 72칸 `test:security:netpol`). 단계 3 ✅ 필드 암호화(원서 항목 값·공통원서 금고가 평문 jsonb 이던 것 D-70 — 봉투 암호화, KEK 교체·닫힌 실패, 마이그레이션 대학 0003·중앙 0004). 단계 4 ✅ Vault(첨부 정책 그대로 + 워크로드별 PKI 역할 D-71, Transit KEK·DB 동적 계정 무중단 교체·PKI 짧은 인증서, `test:security:vault` 22). 단계 5 ✅ break-glass(끝나는 시각 전에만 렌더링·매분 회수 작업·경보 이벤트, DB 비상 계정은 Vault 15분·기록·문장 로그 D-72, kind `test:security:break-glass` 9). 단계 6 ✅ 실 clamd(실 clamd 가 먼저 끊으면 워커가 멈추던 결함·PDF 능동 콘텐츠 D-73, `test:security:clamd` 10)
 5. ~~T-M4-10 Outbox 파티션·보관~~ ✅ **끝(2026-10-03, D-74)** — 보관 표만 월별 파티션(바로 쓰는 표는 유니크 키 때문에 그대로), 7일 지난 전송 완료를 영수증과 함께 옮기고 원서마다 마지막 순번은 남김, 13개월 지난 달은 파티션째 삭제(SECURITY DEFINER 함수), 마이그레이션 0005
 6. ~~운영 자동화 T-M5-62·63·65·T-M3-03~~ ✅ **끝(2026-10-03, [14](14-operations-automation.md))**: T-M5-65 ✅ 만료 경보(지표 `credential_expiry_timestamp_seconds`, 30/14/7/3/1일·갱신 멈춤 경보 규칙). T-M3-03 ✅ WORM(감사 기록을 Object Lock COMPLIANCE 조각으로, 슈퍼유저 변조 대조 D-75). T-M5-62 ✅ 복구 검증(같은 시점 덤프·새 DB 복구·행 수·체크섬·불변식·제약, 매달 CI — 시험 정리 코드가 남긴 고아 행을 잡았다). T-M5-63 ✅ Writer fencing(쓰기 세대·문장 트리거·승격 잠금 D-76). **운영 자동화 끝**
-7. Pilot 도구·문서 T-M6-01·02·03·06·07·11·14 — **진행 중**: T-M6-03 ✅ CSP 사전 점검(`npm run ops:csp-preflight`, kind 결과 zone·LB 없음). T-M6-11 ✅ 개인정보 처리흐름도([15](15-privacy-data-flow.md) — 저장소별 보호·보존, 밖으로 나가는 곳). T-M6-14 ✅ 대학 온보딩 문서([16](16-university-onboarding.md)). T-M6-02 ✅ Config 호환 시험(진행 중 원서를 새 양식으로 검사, 깨지면 적용 거절 D-77). 남은 A: T-M6-01·06·07
+7. Pilot 도구·문서 T-M6-01·02·03·06·07·11·14 — **진행 중**: T-M6-03 ✅ CSP 사전 점검. T-M6-11 ✅ 개인정보 처리흐름도([15](15-privacy-data-flow.md)). T-M6-14 ✅ 대학 온보딩 문서([16](16-university-onboarding.md)). T-M6-02 ✅ Config 호환 시험(D-77). T-M6-01 ✅ 구조화 전형 Schema 온보딩. T-M6-06 ✅ 대학 Data Plane 장애 원장·공개 상태 API·지원자 전역 배너/상태 페이지·운영자 발행/해제(D-78, [17](17-pilot-support-tools.md)). **남은 A: T-M6-07 하나**
 
 A 를 다 해도 **B·C 21개**가 남는다 — K-PaaS 시험 환경·실 PG sandbox·대학 협조가 있어야 끝난다.
 

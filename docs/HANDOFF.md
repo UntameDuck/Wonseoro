@@ -1,14 +1,14 @@
 # 인수인계 — 다음 작업자(사람·AI 공통)가 먼저 읽는 문서
 
-> 작성: 2026-09-29 · **최종 갱신 2026-10-03** · 마지막 커밋 기준 `main`
+> 작성: 2026-09-29 · **최종 갱신 2026-10-04** · 작업 폴더 기준(아래 변경은 아직 커밋하지 않음)
 >
 > **2026-10-03 세션 정리(다른 도구가 이어받을 때 여기부터)** — 이 날 끝낸 것: 보안 통제 단계 3~6(필드 암호화·Vault·break-glass·실 clamd, D-70~D-73),
 > Outbox 보관(T-M4-10, D-74), 운영 자동화(만료 경보 T-M5-65·WORM T-M3-03 D-75·복구 검증 T-M5-62·Writer fencing T-M5-63 D-76),
-> Pilot 도구 일부(CSP 사전 점검 T-M6-03·처리흐름도 T-M6-11·온보딩 문서 T-M6-14·Config 호환 시험 T-M6-02 D-77). 전체 **122/146**.
-> **AI 가 이 PC 에서 할 남은 일은 3개** — T-M6-01(전형 Schema 온보딩 도구), T-M6-06(상태 페이지·대학별 장애 배너, 화면), T-M6-07(개인정보 최소 상담 화면, 화면).
-> 화면 작업은 접근성 시험을 다시 돌리고 `check:ui-copy` 를 지킨다(§2). 나머지 21개는 외부 환경·사람·기관 몫(문서 03 B·C).
-> 지금 켜 둔 컨테이너: kind 두 클러스터, CI 재현 DB `ci-pg`(:5499 — `bash .cache/ci-pg.sh` 로 새로 만든다), MinIO(:9000), Vault(:8200, 개발 모드 — 다시 켜면 `node scripts/vault/dev-vault.mjs`).
-> 대학 DB 마이그레이션은 **0001~0006**, 중앙은 **0001~0004** 다(`infra/db/README.md`). 알려진 간헐 실패 하나(대학 API OIDC 통합 시험, 단독 실행은 통과)는 따로 조사 중일 수 있다.
+> Pilot 도구(CSP 사전 점검 T-M6-03·처리흐름도 T-M6-11·온보딩 문서 T-M6-14·Config 호환 시험 T-M6-02 D-77·전형 Schema 온보딩 T-M6-01·상태 페이지/대학별 장애 배너 T-M6-06 D-78). 전체 **124/146**.
+> **AI 가 이 PC 에서 할 남은 일은 1개** — T-M6-07(개인정보 최소 상담 화면). 나머지 21개는 외부 환경·사람·기관 몫(문서 03 B·C).
+> **2026-10-04 Claude 인계 지점** — 사용자 요청에 따라 사용량 11%가 남은 시점부터 새 작업을 시작하지 않았다. `T-M6-01`은 구조화 문항·공통원서 연결·서류 편집, 빈/적용 중 Config 시작, 알 수 없는 고급 키 보존까지 완료했다. `T-M6-06`은 대학 Data Plane 장애 원장(`0007_service_incident.sql`), 공개 상태 API, 지원자 전역 배너·`/status`, 운영자 발행/해제 화면·감사/Step-up/멱등성까지 완료했다. **T-M6-07은 설계·코드 모두 시작하지 않았다.** 상세 구현 기록과 다음 순서는 [17-pilot-support-tools.md](17-pilot-support-tools.md)에서 이어간다.
+> 화면 작업은 접근성 시험을 다시 돌리고 `check:ui-copy` 를 지킨다(§2). 이번 작업의 임시 웹/API 프로세스는 모두 종료했다. 화면 시험용 PostgreSQL 컨테이너 `ui-shots-pg`는 실행 중일 수 있다.
+> 대학 DB 마이그레이션은 **0001~0007**, 중앙은 **0001~0004** 다(`infra/db/README.md`). 대학 API 전체 시험은 실 DB에서 **382개 중 379 통과·3 skip·0 실패**했다.
 > 같은 폴더에서 다른 세션이 일했다(`apps/admission-api/.dist-flaky/` — 무시 목록에 넣었다). 커밋 전 `git status` 로 남의 파일을 섞지 않는다.
 > 이 저장소는 지금까지 한 AI 도구로 개발했다. 다른 도구(또는 사람)가 이어받을 때
 > **도구 설정 파일에만 있던 규칙**과 **문서 여러 곳에 흩어진 다음 할 일**을 여기 한 장에 모았다.
@@ -19,7 +19,7 @@
 ## 1. 30초 요약
 
 - **제품**: 원서로(K-Admission) — 대학 입학 원서접수를 대학별 Data Plane 으로 분산하는 플랫폼. 2026 GovTech 공모전 출품작
-- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 20/28 진행 중**. 전체 **122/146** 태스크(✅ 만 셈, 2026-10-03 보안 통제 T-M5-01·03~09·Outbox 보관 T-M4-10·만료 경보 T-M5-65·WORM T-M3-03·복구 검증 T-M5-62·Writer fencing T-M5-63·CSP 사전 점검 T-M6-03·처리흐름도 T-M6-11·온보딩 문서 T-M6-14·호환 시험 T-M6-02 까지). **CI 네 잡과 Security 기본 열한 잡·서명 다섯 잡·admission 실증 잡 모두 초록**(Actions run 36906282615·36906280555)
+- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 21/28 진행 중**. 전체 **124/146** 태스크(✅ 만 셈, 2026-10-04 T-M6-01·T-M6-06 포함). **CI 네 잡과 Security 기본 열한 잡·서명 다섯 잡·admission 실증 잡 모두 초록**(Actions run 36906282615·36906280555). 이번 작업 폴더의 미커밋 변경은 로컬 검증을 마쳤고 원격 CI는 아직 돌리지 않았다
 - **완료한 핵심 증명**: 로컬 kind 2클러스터 축소 환경에서 **대학 간 장애 격리 T-M4-42 통과**. A대 전면 정지 중 B대 접수·중앙 반영, A대 복구 후 접수까지 확인
 - **최근 완료**: T-M4-07 Peak Mode(ADR-0006) · T-M4-20 전 서비스 계측·로그 상관관계 · T-M4-24 로그 마스킹 강제 · **T-M4-21~23 업무 KPI·대시보드 3종** · **D-50 취소 이벤트 계약 위반 수정** · CI 복구 · **T-M4-40 NAT Adaptive Throttling(ADR-0007)** · 과부하 중 API 프로세스가 죽던 결함 수정 · **T-M4-37 Redis 장애 무영향** · T-M4-39 다중 노드 시험(drain 무중단·노드 장애 때 전체가 멈추던 DB 연결 결함 수정, D-52) · **맡겨진 결정 정리(2026-09-30)** — D-44 ⑦(Pod 당 38)·D-47·D-51(OpenAPI v1.3.0 429)·D-52(ADR-0008)·D-53(ingress-nginx 은퇴) 결정·저장소 반영. §05 runtime 첨부를 차트 렌더링으로 바꿔 CI 가 드리프트를 막는다. **노션 반영은 AI 쓰기가 막혀 [06-notion-changeset.md](06-notion-changeset.md) 로 대기**
 - **T-M4-35 ✅** 중앙 2시간 실제 단절 통과 — 원서 24건 처리·DEAD 0·event loss 0·복구 10초 뒤 전량 전송·재시작 0 (`central-outage-realtime-2026-09-30T01-59-27-784Z.json`)
@@ -62,12 +62,12 @@
 - **T-M5-65 ✅ (2026-10-03)** — 만료 경보([14](14-operations-automation.md)). 지표 `credential_expiry_timestamp_seconds`, 규칙 `deploy/platform/observability/expiry-rules.yaml`(Prometheus 에 `-f expiry-rules.yaml` 로 더한다 — kind 관측 스택에는 아직 안 올렸다)
 - **T-M3-03 ✅ (2026-10-03)** — 감사 기록 WORM(D-75, `modules/audit/audit-worm.ts`). 운영은 `AUDIT_WORM_BUCKET` 필수(Object Lock 버킷). 시험은 로컬 MinIO(:9000, `docker compose … up -d minio`)가 있어야 돈다 — 시험마다 `audit-worm-it-<시각>` 버킷이 남는다(보관 1일, 잠긴 조각이 있어 바로 못 지운다)
 - **T-M5-62 ✅ (2026-10-03)** — 복구 검증 `npm run ops:restore-verify`(기본 원본 CI 재현 DB :5499, 새 컨테이너 :5498 에 복구하고 지운다), 매달 `.github/workflows/restore-verify.yml`. 시험 `breakGlass` 정리가 남기던 고아 데이터 키를 치우게 고쳤다
-- **T-M5-63 ✅ (2026-10-03)** — Writer fencing(D-76, `0006_writer_fence.sql`). 대학 DB 마이그레이션은 이제 **0001~0006**. 앱은 `WRITER_EPOCH` 가 있으면 트랜잭션마다 세대를 넘긴다(없으면 넘기지 않는다 — 개발). **시험 코드가 원서 없는 감사 기록(운영자 체인)을 만들면 동시에 도는 체인 검사 시험이 깨진다** — 시험은 자기 원서에 붙인다
+- **T-M5-63 ✅ (2026-10-03)** — Writer fencing(D-76, `0006_writer_fence.sql`). 이후 T-M6-06의 `0007_service_incident.sql`까지 추가되어 대학 DB 마이그레이션은 **0001~0007**. 앱은 `WRITER_EPOCH` 가 있으면 트랜잭션마다 세대를 넘긴다(없으면 넘기지 않는다 — 개발). **시험 코드가 원서 없는 감사 기록(운영자 체인)을 만들면 동시에 도는 체인 검사 시험이 깨진다** — 시험은 자기 원서에 붙인다
 - **T-M6-03 ✅ (2026-10-03)** — CSP 사전 점검 `npm run ops:csp-preflight -- --context=<컨텍스트>`(점검용 네임스페이스를 만들고 지운다, 약 1분 반)
 - **T-M6-11 ✅ (2026-10-03)** — 개인정보 처리흐름도 [15](15-privacy-data-flow.md)(흐름도·저장소별 보호·보존·밖으로 나가는 곳). 코드가 바뀌면 같이 고친다
 - **T-M6-14 ✅ (2026-10-03)** — 대학 온보딩 문서 [16](16-university-onboarding.md)(입학처 설정·정보화부서 인프라·계정·접수 전 확인 순서)
 - **T-M6-02 ✅ (2026-10-03)** — Config 호환 시험(D-77, `modules/config/config-compat.ts`): 적용 직전 진행 중 원서를 새 양식으로 검사해 깨지면 거절
-- **바로 다음 할 일(A 의 남은 3개)**: T-M6-01 전형 Schema 온보딩 도구(새 대학이 설정만으로 — 설정 초안 생성기·검사, 진행 중 원서 호환 시험은 T-M6-02 로 이미 있다) → T-M6-06 상태 페이지·대학별 장애 배너(화면 — 접근성 시험 다시) → T-M6-07 개인정보 최소 상담 화면(상담원이 원서 본문을 못 보게, 화면 — 접근성 시험 다시)
+- **바로 다음 할 일(A 의 남은 1개)**: T-M6-07 개인정보 최소 상담 화면. **아직 설계 결정을 내리지 않았다.** 먼저 노션 §01 B11과 [17-pilot-support-tools.md](17-pilot-support-tools.md)의 금지 범위를 대조하고, 응답 필드·상담 역할·증적번호 생성 규칙이 원문에 부족하면 [02-spec-discrepancy-register.md](02-spec-discrepancy-register.md)에 새 결정을 등록한다. 상담원에게 원서 본문·공통원서·첨부파일·이름/연락처를 노출하지 말고 상태·처리 시각·결제/서류 요약·동기화 안내·자동 증적번호만 제공한다. 구현 뒤 관리자 1280/320 접근성 시험과 `check:ui-copy`를 다시 돌린다
 
 ## 2. 반드시 지킬 규칙
 
@@ -262,7 +262,7 @@ Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, s
 | 노션 문서 지도·동기화 규칙 | [01-notion-sync-protocol.md](01-notion-sync-protocol.md) |
 | 왜 이렇게 정했나 | [adr/](adr/) — 최신 ADR-0009 퍼즐형 CAPTCHA 를 두지 않는다(한도에 걸린 사람의 접근 가능한 길) · ADR-0008 노드 장애 흡수 |
 | 배포 | `deploy/` — 차트 `charts/k-admission`, 대학별 `universities/`, 로컬 `local/` |
-| API 계약 | `packages/contracts/openapi/k-admission.v1.yaml` (v1.7.0) — 컨트롤러와 다르면 계약 적합성 시험이, 계약 파일이 깨지거나 비호환이면 `check:contracts` 가 깨진다 |
+| API 계약 | `packages/contracts/openapi/k-admission.v1.yaml` (v1.8.0) — 컨트롤러와 다르면 계약 적합성 시험이, 계약 파일이 깨지거나 비호환이면 `check:contracts` 가 깨진다 |
 | 사람 말 사전(상태·행위·예외 등 화면 이름) | `packages/contracts/src/labels.ts` — 화면은 내부 코드를 그대로 보이지 않는다 (T-M5-51) |
 | 날짜·시각 표기·아이콘 | `packages/krds/src/format.ts`(언제나 한국 시간)·`icon.tsx`(SVG) — 화면은 `toLocaleString`·이모지를 직접 쓰지 않는다 (T-M5-54) |
 | 오류 문구표(오류 code → 화면 제목·설명) | `packages/contracts/src/problem-text.ts` — 화면은 서버 오류 문구를 그대로 보이지 않는다. 조사 함수 `josa.ts` (T-M5-52) |

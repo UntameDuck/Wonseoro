@@ -23,14 +23,18 @@
 
 ## 태스크
 
+> **2026-10-03 작업 기록** — 노션 원본을 다시 확인했다(운영 리스크 페이지 최종 편집 2026-09-27 18:37 KST, 기술설계서 2026-09-27 21:22 KST). 저장소 문서와 T-M6-01·06·07의 인수기준을 바꾸는 새 내용은 없었다. T-M6-01 완료: 기존 고급 JSON 편집은 보존하고, 전형·항목·서류를 사람 말로 구성해 같은 Config를 만드는 구조화 온보딩 화면을 추가했다. 빈 Config 생성, 알 수 없는 기존 Schema 키 보존, 화면 선검사 뒤 서버 Config Linter·2인 승인·호환 시험으로 이어진다. 관리자 빌드·문구 검사와 접근성 1280/320px(각 9화면, 문제 0) 통과.
+>
+> **2026-10-04 작업 기록** — T-M6-06 완료(D-78): 대학 DB의 추가 전용 장애 원장, 공개 상태 API, 지원자 전역 배너·`/status`, 운영자 발행/해제 화면을 연결했다. 운영 변경은 operator 권한·Step-up·멱등 키·감사 체인을 거치며 삭제나 본문 수정은 허용하지 않는다. OpenAPI 1.8.0, DB 제약 22종, admission-api 382개(379 pass·3 skip·0 fail), 두 앱 빌드·화면 문구 검사, 상태 화면과 관리자 화면 1280/320 접근성 문제 0을 확인했다. 사용량 11% 시점에 새 작업을 멈췄으며 T-M6-07은 미착수다([17](../17-pilot-support-tools.md)).
+
 | ID | 태스크 | 담당 | 근거 노션 | 인수기준 |
 |---|---|---|---|---|
-| T-M6-01 | 전형 Schema 온보딩 도구 | 송리안 | §01 A5 | 신규 대학 추가가 Config만으로 가능 |
+| T-M6-01 | 전형 Schema 온보딩 도구 | 송리안 | §01 A5 | 신규 대학 추가가 Config만으로 가능 — ✅ 2026-10-03 구조화 전형·문항·서류 편집 + 빈 Config 시작 |
 | T-M6-02 | Config Linter + Compatibility Test | 송리안 | §01 A5 | 잘못된 Config가 Production 반영 불가 — ✅ 2026-10-03 진행 중 원서 호환 시험·적용 거절(D-77) |
 | T-M6-03 | CSP Conformance Preflight | 송리안 | §01 A8 | StorageClass·IngressClass·KMS·LB capability 검사 — ✅ 2026-10-03 `scripts/ops/csp-preflight.mjs`([14](../14-operations-automation.md)) |
 | T-M6-04 | 실 PG Sandbox 연동 | 송리안 | v1.0 §5.5 | Mock Provider를 Adapter 교체만으로 대체 |
 | T-M6-05 | PG Reconciliation 실계정 검증 | 송리안 | §01 B4 | 정산 대조 |
-| T-M6-06 | Status Page + 대학별 Incident Banner | 권민준 | §01 B11 | 장애 시 고객센터 폭주 완화 |
+| T-M6-06 | Status Page + 대학별 Incident Banner | 권민준 | §01 B11 | 장애 시 고객센터 폭주 완화 — ✅ 2026-10-04 대학별 장애 원장·공개 상태 API·전역 배너·운영자 발행/해제(D-78, OpenAPI 1.8.0) |
 | T-M6-07 | PII 최소 Support View | 권민준 | §01 B11 | 상담원이 원서 본문을 못 보게 |
 | T-M6-08 | 운영 런북 (SEV1~3) | 공동 | v1.0 §14.3 | Detect→IC 지정→변경동결→격리→Failover→통보→공지→증적보존→복구검증→Reconciliation→Postmortem |
 | T-M6-09 | 연간 운영주기 캘린더 | 공동 | v1.0 §14.2 | D-180~D+30 체크리스트 |

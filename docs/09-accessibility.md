@@ -108,6 +108,8 @@
 
 ## 남은 것
 
+- 2026-10-03 T-M6-01 전형 Schema 온보딩 화면 추가 뒤 `focus-sweep admin`을 Chrome 1280px·320px에서 다시 실행했다. 각 9화면, Tab 자리 153·157개, 문제 0건. 결과: `focus-sweep-admin-chrome-1280-2026-10-03T14-46-46-818Z.json`, `focus-sweep-admin-chrome-320-2026-10-03T14-47-24-496Z.json`. 이때 새 DB와 맞지 않는 과거 원서 ID 때문에 증적 열람 시험이 멈추는 결함도 고쳤다(현재 DB에 있는 원서만 연다).
+- 2026-10-04 T-M6-06 상태 페이지·대학별 장애 배너 추가 뒤 Chrome 1280px·320px에서 다시 실행했다. 전용 `status` 묶음은 각 2화면·Tab 19자리, 관리자 전체는 각 10화면·Tab 176/180자리였고 모두 문제 0건이다. 결과: `focus-sweep-status-chrome-1280-2026-10-03T15-12-50-355Z.json`, `focus-sweep-status-chrome-320-2026-10-03T15-13-02-841Z.json`, `focus-sweep-admin-chrome-1280-2026-10-03T15-13-20-868Z.json`, `focus-sweep-admin-chrome-320-2026-10-03T15-14-07-087Z.json`. 발행→전역 배너/상태 페이지→해제 흐름도 키보드로 확인했다.
 - **T-M5-47 실물 Firefox·Safari** — 위 「사람이 할 것」
 - **T-M5-48 KWCAG 수동 검사(사람)** — 실제 스크린리더·확대 프로그램·음성 입력
 - **본인확인(T-M5-02)과 함께** — 세션 만료 시각·연장을 인증 세션으로, 위험점수 차단을 본인확인 다시 하기로 해제(ADR-0009)
