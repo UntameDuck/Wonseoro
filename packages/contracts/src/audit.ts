@@ -19,6 +19,9 @@ export const AUDIT_ACTION = [
   'RECEIPT_ISSUED',
   'ADMIN_VIEWED_PII',
   'ADMIN_CHANGED_CONFIG',
+  /** 대학별 공개 장애 공지 발행·해제 (T-M6-06, D-78). */
+  'INCIDENT_PUBLISHED',
+  'INCIDENT_RESOLVED',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTION)[number];

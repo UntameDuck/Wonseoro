@@ -16,6 +16,7 @@ const NAV: Array<[string, string]> = [
   ['/config', '설정 승인'],
   ['/deadline', '마감 · 연장'],
   ['/reconciliation', '대조 · 예외'],
+  ['/status', '장애 공지'],
   ['/evidence', '증적 조회'],
   ['/retention', '보존기간'],
 ];

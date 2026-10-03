@@ -56,6 +56,7 @@ export type RouteAudience = 'public' | 'applicant' | 'staff' | 'none';
 export const PUBLIC_ROUTES: ReadonlySet<string> = new Set([
   'GET /api/v1/meta/time',
   'GET /api/v1/meta/operating-mode',
+  'GET /api/v1/meta/service-status',
   'GET /api/v1/meta/signing-keys',
   // 모집·전형·모집단위 — 누구에게나 같은 공개 정보, 로그인 전 화면·운영 콘솔이 보인다 (계약 1.7.0, D-65)
   'GET /api/v1/admission-cycles/current',

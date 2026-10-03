@@ -57,6 +57,8 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   RECEIPT_ISSUED: '접수증 발급',
   ADMIN_VIEWED_PII: '담당자 열람',
   ADMIN_CHANGED_CONFIG: '담당자 처리',
+  INCIDENT_PUBLISHED: '장애 공지 발행',
+  INCIDENT_RESOLVED: '장애 공지 해제',
 };
 
 export const AUDIT_RESULT_LABEL: Record<'ACCEPTED' | 'REJECTED' | 'FAILED', string> = {

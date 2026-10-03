@@ -1,6 +1,6 @@
 // T-M5-41 Visible Focus / Focus Order — 모든 화면을 Tab 으로 한 바퀴 돈다.
 //
-// 사용: node tests/a11y/focus-sweep.mjs <applicant|admin|admin-oidc|applicant-oidc|issuer> [--width=1280] [--browser=chrome|edge]
+// 사용: node tests/a11y/focus-sweep.mjs <applicant|admin|status|admin-oidc|applicant-oidc|issuer> [--width=1280] [--browser=chrome|edge]
 //   applicant  지원자 웹(:4001) — 접수 홈·공통원서·내 원서·원서 1~6단계·접수증·없는 화면·장애 안내
 //   admin      입학처 콘솔(:4101) — 첫 화면·설정 승인(검토 열기)·마감·대조·증적·보존기간·없는 화면
 //   admin-oidc 관리자 로그인 콘솔(:4100, 미리보기 `auth-admin`·`auth-admission`·로컬 발급자) — 로그인 전 화면, 키보드로
@@ -40,8 +40,8 @@ const API = 'http://localhost:3101';
 const ADMIN_OIDC = 'http://localhost:4100';
 const WEB_OIDC = 'http://localhost:3001';
 const PG = 'ui-shots-pg';
-if (!['applicant', 'admin', 'admin-oidc', 'applicant-oidc', 'issuer'].includes(PHASE ?? '')) {
-  console.error('사용: node tests/a11y/focus-sweep.mjs <applicant|admin|admin-oidc|applicant-oidc|issuer> [--width=1280] [--browser=chrome|edge]');
+if (!['applicant', 'admin', 'status', 'admin-oidc', 'applicant-oidc', 'issuer'].includes(PHASE ?? '')) {
+  console.error('사용: node tests/a11y/focus-sweep.mjs <applicant|admin|status|admin-oidc|applicant-oidc|issuer> [--width=1280] [--browser=chrome|edge]');
   process.exit(2);
 }
 
@@ -249,8 +249,33 @@ async function createApplication(a) {
 }
 
 async function applicant() {
+  // 대학별 장애 배너·Status Page — 접근성 순회 뒤 바로 해제한다. 시험이 중간에 멈추면 다음 실행의
+  // 관리자 화면에서 해제할 수 있고, 고유 멱등 키라 중복 발행은 없다.
+  const incidentResponse = await fetch(`${API}/admin/v1/incidents`, {
+    method: 'POST',
+    headers: {
+      'x-admin-id': 'a11y-sweep@univ-a',
+      'content-type': 'application/json',
+      'idempotency-key': `a11y-incident-${randomUUID()}`,
+    },
+    body: JSON.stringify({
+      severity: 'NOTICE',
+      title: '서비스 상태 안내',
+      message: '접수 기능은 정상입니다. 서비스 상태 화면의 키보드 이동을 확인하고 있습니다.',
+    }),
+  });
+  if (!incidentResponse.ok) throw new Error(`장애 공지 만들기 ${incidentResponse.status} ${await incidentResponse.text()}`);
+  const incident = await incidentResponse.json();
+
   await go(`${WEB}/`, '원서 작성 시작');
   await sweep('접수 홈 (본인확인 전)');
+  await go(`${WEB}/status`, '서비스 상태 안내');
+  await sweep('서비스 상태 (대학별 공지)');
+  const resolved = await fetch(`${API}/admin/v1/incidents/${incident.id}/resolve`, {
+    method: 'POST',
+    headers: { 'x-admin-id': 'a11y-sweep@univ-a', 'idempotency-key': `a11y-resolve-${randomUUID()}` },
+  });
+  if (!resolved.ok) throw new Error(`장애 공지 해제 ${resolved.status} ${await resolved.text()}`);
   await go(`${WEB}/dashboard`, '본인확인');
   await sweep('내 원서 (본인확인 전)');
   await go(`${WEB}/no-such-page`, '찾을 수 없는 화면');
@@ -324,6 +349,36 @@ async function applicant() {
   await sweep('원서 화면 (불러오기 실패)');
 }
 
+/** T-M6-06 빠른 회귀 — 전체 원서 흐름 없이 대학별 배너·Status Page 만 1280/320으로 돈다. */
+async function serviceStatus() {
+  const created = await fetch(`${API}/admin/v1/incidents`, {
+    method: 'POST',
+    headers: {
+      'x-admin-id': 'a11y-status@univ-a',
+      'content-type': 'application/json',
+      'idempotency-key': `a11y-status-${randomUUID()}`,
+    },
+    body: JSON.stringify({
+      severity: 'DEGRADED',
+      title: '서류 확인이 지연되고 있습니다',
+      message: '원서는 계속 작성할 수 있습니다. 올린 서류의 확인 결과가 늦게 표시될 수 있습니다.',
+    }),
+  });
+  if (!created.ok) throw new Error(`장애 공지 만들기 ${created.status} ${await created.text()}`);
+  const incident = await created.json();
+  try {
+    await go(`${WEB}/`, '서류 확인이 지연되고 있습니다');
+    await sweep('접수 홈 (대학별 장애 배너)');
+    await go(`${WEB}/status`, '서류 확인이 지연되고 있습니다');
+    await sweep('서비스 상태 (대학별 장애 공지)');
+  } finally {
+    await fetch(`${API}/admin/v1/incidents/${incident.id}/resolve`, {
+      method: 'POST',
+      headers: { 'x-admin-id': 'a11y-status@univ-a', 'idempotency-key': `a11y-status-resolve-${randomUUID()}` },
+    });
+  }
+}
+
 /* ── 콘솔 ────────────────────────────────────────────────────────────── */
 
 async function admin() {
@@ -342,6 +397,9 @@ async function admin() {
   await go(`${ADMIN}/config`, '설정 버전');
   await b.waitFor(`!document.body.innerText.includes('불러오는 중')`, '설정 목록');
   await sweep('설정 승인');
+  await keyTo('지금 적용 중인 설정에서 시작');
+  await b.waitFor(`document.body.innerText.includes('문항과 제출 서류 구성')`, '전형 Schema 온보딩');
+  await sweep('전형 Schema 온보딩');
   const hasDraft = await b.evaluate(`[...document.querySelectorAll('button')].some((x) => x.textContent.trim() === '검토')`);
   if (hasDraft) {
     await keyTo('검토');
@@ -359,6 +417,9 @@ async function admin() {
   const h = await focusInfo(b);
   if (!h.name.startsWith('최근 48시간 대조')) problems.push(`대조: 실행 뒤 포커스가 "${h.name || '문서 처음'}" 에 있다`);
   await sweep('대조 · 예외');
+  await go(`${ADMIN}/status`, '지원자 공지 발행');
+  await b.waitFor(`!document.body.innerText.includes('불러오는 중')`, '장애 공지 원장');
+  await sweep('장애 공지');
   await go(`${ADMIN}/evidence`, '증적 조회');
   await sweep('증적 조회');
   // 접수를 마친 원서 하나 — keyboard-walk 가 완주한 가장 최근 원서를 연다
@@ -367,7 +428,15 @@ async function admin() {
     .map((f) => JSON.parse(readFileSync(path.resolve('tests/a11y/results', f), 'utf8')))
     .filter((r) => r.completed && r.applicationId)
     .sort((x, y) => x.at.localeCompare(y.at));
-  const applicationId = walks.at(-1)?.applicationId ?? null;
+  const candidateId = walks.at(-1)?.applicationId ?? null;
+  // 결과 파일은 DB보다 오래 남는다. DB를 새로 만든 뒤의 옛 원서 ID를 넣으면 실패 화면을 기다리다
+  // 시험 자체가 멈춘다. 지금 전용 DB에 실제로 있는 원서만 열람한다.
+  const candidate = candidateId
+    ? await fetch(`${API}/admin/v1/evidence/applications/${candidateId}`, {
+        headers: { 'x-admin-id': 'officer2@univ-a', 'x-evidence-reason': '접근성 점검 사전 확인' },
+      }).catch(() => null)
+    : null;
+  const applicationId = candidate?.ok ? candidateId : null;
   if (!applicationId) console.log('… keyboard-walk 완주 결과가 없어 증적 열람 화면은 건너뛴다');
   if (applicationId) {
     await keyTo('원서 ID', 'Tab');
@@ -416,6 +485,12 @@ async function adminOidc() {
   await go(`${ADMIN_OIDC}/config`, '설정 버전');
   await b.waitFor(`!document.body.innerText.includes('불러오는 중')`, '설정 목록');
   await sweep('설정 승인 (관리자 로그인)');
+  await keyTo('지금 적용 중인 설정에서 시작');
+  await b.waitFor(`document.body.innerText.includes('문항과 제출 서류 구성')`, '전형 Schema 온보딩');
+  await sweep('전형 Schema 온보딩 (관리자 로그인)');
+  await go(`${ADMIN_OIDC}/status`, '지원자 공지 발행');
+  await b.waitFor(`!document.body.innerText.includes('불러오는 중')`, '장애 공지 원장');
+  await sweep('장애 공지 (관리자 로그인)');
 }
 
 /* ── 본인확인 지원자 화면 (T-M5-02 단계 6) ─────────────────────────────── */
@@ -556,6 +631,7 @@ try {
   else if (PHASE === 'issuer') await issuer();
   else if (PHASE === 'applicant-oidc') await applicantOidc();
   else if (PHASE === 'admin-oidc') await adminOidc();
+  else if (PHASE === 'status') await serviceStatus();
   else await admin();
 } catch (err) {
   fatal = err.message;

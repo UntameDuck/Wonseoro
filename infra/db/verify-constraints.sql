@@ -357,6 +357,13 @@ BEGIN
               -- 비상 접속 기록(0004) — 앱은 읽지도 쓰지도 않는다
               THEN has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'SELECT')
                    OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'INSERT')
+              WHEN t.tablename = 'service_incident'
+              -- 장애 공지(0007) — 앱은 발행·해제(UPDATE)만. 삭제·비우기는 원장 규칙상 없다
+              THEN NOT (has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'SELECT')
+                    AND has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'INSERT')
+                    AND has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'UPDATE'))
+                   OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'DELETE')
+                   OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'TRUNCATE')
               WHEN t.tablename IN ('audit_event', 'activation_record')
               THEN NOT has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'INSERT')
                    OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'UPDATE')

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import '@wonseoro/krds/tokens.css';
 import { CycleBadge } from '../krds/cycle-badge';
 import { SessionTimeout } from '../krds/session-timeout';
+import { ServiceIncidentBanner } from '../krds/service-status';
 
 /**
  * 화면마다 제목이 다르다 — "검토·결제 — 원서 작성 | 원서로". 탭·스크린리더·방문 기록이 화면을 구별한다
@@ -66,6 +67,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <a href="/dashboard" style={{ color: 'var(--krds-primary)' }}>
                 내 원서
               </a>
+              <a href="/status" style={{ color: 'var(--krds-primary)' }}>
+                서비스 상태
+              </a>
             </nav>
           </div>
         </header>
@@ -74,6 +78,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           id="main"
           style={{ maxWidth: 960, margin: '0 auto', padding: 'var(--krds-space-5) var(--krds-space-4)' }}
         >
+          <ServiceIncidentBanner />
           {children}
         </main>
 

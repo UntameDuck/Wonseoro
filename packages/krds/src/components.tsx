@@ -87,7 +87,7 @@ export interface FieldProps {
   hint?: string;
   error?: string;
   required?: boolean;
-  type?: 'text' | 'email' | 'number';
+  type?: 'text' | 'email' | 'number' | 'datetime-local';
   maxLength?: number;
   multiline?: boolean;
 }

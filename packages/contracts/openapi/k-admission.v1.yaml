@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: K-Admission University Data Plane API
-  version: 1.7.0
+  version: 1.8.0
   description: >
     Reference contract for a university-local K-Admission data plane.
     The university DB is the source of truth; central sync is not in the applicant critical path.
@@ -39,6 +39,11 @@ info:
     1.7.0 makes the catalog public (D-65): the current cycle, admission types and departments carry
     `security: []`. They are the same for everyone, contain no personal data, and are shown before
     sign-in (deadline, list of programmes) and by the staff console. Relaxing a requirement is compatible.
+
+
+    1.8.0 adds the university-local public service status and operator incident ledger (T-M6-06,
+    D-78). The public response contains only the university name and applicant guidance; publishing
+    and resolving require the operator scope and recent authentication. New paths and schemas only.
 
 
     Common rules:
@@ -103,6 +108,25 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OperatingMode' }
+  /api/v1/meta/service-status:
+    get:
+      tags: [Meta, Support]
+      operationId: getServiceStatus
+      x-kadmission-register: D-78
+      summary: University-local public service status and active notices
+      description: >
+        Remains available when the central plane is unavailable. Contains no personal data, internal
+        topology, or root-cause detail; only guidance deliberately published for applicants.
+      security: []
+      responses:
+        '200':
+          description: Current university service status
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ServiceStatus' }
   /api/v1/meta/signing-keys:
     get:
       tags: [Meta]
@@ -614,6 +638,70 @@ paths:
           $ref: '#/components/responses/Problem'
         '429':
           $ref: '#/components/responses/RateLimited'
+  /admin/v1/incidents:
+    get:
+      tags: [Admin]
+      operationId: listServiceIncidents
+      x-kadmission-register: D-78
+      security: [{ oidc: [operator] }]
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [ACTIVE, RESOLVED, ALL], default: ALL }
+      responses:
+        '200':
+          description: Incident ledger, newest and most severe first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [incidents]
+                properties:
+                  incidents:
+                    type: array
+                    items: { $ref: '#/components/schemas/AdminServiceIncident' }
+    post:
+      tags: [Admin]
+      operationId: publishServiceIncident
+      x-kadmission-register: D-78
+      description: Publishes applicant-safe guidance. Requires recent staff authentication.
+      security: [{ oidc: [operator] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PublishServiceIncidentRequest' }
+      responses:
+        '201':
+          description: Published incident
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminServiceIncident' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+  /admin/v1/incidents/{incidentId}/resolve:
+    post:
+      tags: [Admin]
+      operationId: resolveServiceIncident
+      x-kadmission-register: D-78
+      description: Resolves an active notice. The published body remains immutable in the ledger.
+      security: [{ oidc: [operator] }]
+      parameters:
+        - in: path
+          name: incidentId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Resolved incident
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminServiceIncident' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
   /admin/v1/config/active:
     get:
       tags: [Admin]
@@ -1944,6 +2032,47 @@ components:
             lagging: { type: boolean }
         checkedAt: { type: string, format: date-time }
         serverTime: { type: string, format: date-time }
+    ServiceIncident:
+      type: object
+      required: [id, severity, title, message, startsAt, expectedResolvedAt, status, createdAt, resolvedAt]
+      properties:
+        id: { type: string, format: uuid }
+        severity: { type: string, enum: [NOTICE, DEGRADED, OUTAGE] }
+        title: { type: string, minLength: 1, maxLength: 120 }
+        message: { type: string, minLength: 1, maxLength: 1000 }
+        startsAt: { type: string, format: date-time }
+        expectedResolvedAt: { type: [string, 'null'], format: date-time }
+        status: { type: string, enum: [ACTIVE, RESOLVED] }
+        createdAt: { type: string, format: date-time }
+        resolvedAt: { type: [string, 'null'], format: date-time }
+    AdminServiceIncident:
+      allOf:
+        - $ref: '#/components/schemas/ServiceIncident'
+        - type: object
+          required: [createdBy, resolvedBy]
+          properties:
+            createdBy: { type: string }
+            resolvedBy: { type: [string, 'null'] }
+    ServiceStatus:
+      type: object
+      required: [universityId, universityName, status, incidents, checkedAt]
+      properties:
+        universityId: { type: string }
+        universityName: { type: string }
+        status: { type: string, enum: [OPERATIONAL, NOTICE, DEGRADED, OUTAGE] }
+        incidents:
+          type: array
+          items: { $ref: '#/components/schemas/ServiceIncident' }
+        checkedAt: { type: string, format: date-time }
+    PublishServiceIncidentRequest:
+      type: object
+      required: [severity, title, message]
+      additionalProperties: false
+      properties:
+        severity: { type: string, enum: [NOTICE, DEGRADED, OUTAGE] }
+        title: { type: string, minLength: 1, maxLength: 120 }
+        message: { type: string, minLength: 1, maxLength: 1000 }
+        expectedResolvedAt: { type: [string, 'null'], format: date-time }
     SigningKey:
       type: object
       required: [keyId, alg, publicKeyPem]

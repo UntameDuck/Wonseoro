@@ -214,6 +214,26 @@ export interface OperatingModeView {
   serverTime: string;
 }
 
+export type ServiceIncidentSeverity = 'NOTICE' | 'DEGRADED' | 'OUTAGE';
+export interface ServiceIncident {
+  id: string;
+  severity: ServiceIncidentSeverity;
+  title: string;
+  message: string;
+  startsAt: string;
+  expectedResolvedAt: string | null;
+  status: 'ACTIVE' | 'RESOLVED';
+  createdAt: string;
+  resolvedAt: string | null;
+}
+export interface ServiceStatus {
+  universityId: string;
+  universityName: string;
+  status: 'OPERATIONAL' | ServiceIncidentSeverity;
+  incidents: ServiceIncident[];
+  checkedAt: string;
+}
+
 /** 전형이 받는 서류. 대학 설정에서 온다 — 화면에 서류 종류를 박지 않는다. (§A5, D-56) */
 export interface DocumentSpec {
   documentType: string;
@@ -340,6 +360,8 @@ export const api = {
     call<SelfCheck>(`/api/v1/applications/${id}/self-check`, { applicantId }),
 
   operatingMode: () => call<OperatingModeView>('/api/v1/meta/operating-mode'),
+
+  serviceStatus: () => call<ServiceStatus>('/api/v1/meta/service-status'),
 
   /**
    * 추가문항 스키마. 화면은 이것을 보고 입력 필드를 그린다.

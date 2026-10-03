@@ -157,6 +157,8 @@ describe('운영 API 권한 — 계약 범위와 같다 (T-M5-10, STRIDE E-03)',
       'POST /admin/v1/deadline-policies/:policyId/activate',
       'POST /admin/v1/deadline-policies/:policyId/approve',
       'POST /admin/v1/deadline-policies/extensions',
+      'POST /admin/v1/incidents',
+      'POST /admin/v1/incidents/:incidentId/resolve',
       'POST /admin/v1/reconciliation/:exceptionId/resolve',
     ]);
   });
