@@ -10,7 +10,7 @@
 ## 1. 30초 요약
 
 - **제품**: 원서로(K-Admission) — 대학 입학 원서접수를 대학별 Data Plane 으로 분산하는 플랫폼. 2026 GovTech 공모전 출품작
-- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 20/28 진행 중**. 전체 **115/146** 태스크(✅ 만 셈, 2026-10-03 보안 통제 T-M5-01·03~09·Outbox 보관 T-M4-10·만료 경보 T-M5-65 까지). **CI 네 잡과 Security 기본 열한 잡·서명 다섯 잡·admission 실증 잡 모두 초록**(Actions run 36906282615·36906280555)
+- **현재**: M0~M3 끝(MVP가 화면에서 접수번호까지 동작), **M4(분산 실증) 20/28 진행 중**. 전체 **116/146** 태스크(✅ 만 셈, 2026-10-03 보안 통제 T-M5-01·03~09·Outbox 보관 T-M4-10·만료 경보 T-M5-65·WORM T-M3-03 까지). **CI 네 잡과 Security 기본 열한 잡·서명 다섯 잡·admission 실증 잡 모두 초록**(Actions run 36906282615·36906280555)
 - **완료한 핵심 증명**: 로컬 kind 2클러스터 축소 환경에서 **대학 간 장애 격리 T-M4-42 통과**. A대 전면 정지 중 B대 접수·중앙 반영, A대 복구 후 접수까지 확인
 - **최근 완료**: T-M4-07 Peak Mode(ADR-0006) · T-M4-20 전 서비스 계측·로그 상관관계 · T-M4-24 로그 마스킹 강제 · **T-M4-21~23 업무 KPI·대시보드 3종** · **D-50 취소 이벤트 계약 위반 수정** · CI 복구 · **T-M4-40 NAT Adaptive Throttling(ADR-0007)** · 과부하 중 API 프로세스가 죽던 결함 수정 · **T-M4-37 Redis 장애 무영향** · T-M4-39 다중 노드 시험(drain 무중단·노드 장애 때 전체가 멈추던 DB 연결 결함 수정, D-52) · **맡겨진 결정 정리(2026-09-30)** — D-44 ⑦(Pod 당 38)·D-47·D-51(OpenAPI v1.3.0 429)·D-52(ADR-0008)·D-53(ingress-nginx 은퇴) 결정·저장소 반영. §05 runtime 첨부를 차트 렌더링으로 바꿔 CI 가 드리프트를 막는다. **노션 반영은 AI 쓰기가 막혀 [06-notion-changeset.md](06-notion-changeset.md) 로 대기**
 - **T-M4-35 ✅** 중앙 2시간 실제 단절 통과 — 원서 24건 처리·DEAD 0·event loss 0·복구 10초 뒤 전량 전송·재시작 0 (`central-outage-realtime-2026-09-30T01-59-27-784Z.json`)
@@ -51,7 +51,8 @@
 - **보안 통제 단계 6 ✅ — 보안 통제 끝 (2026-10-03)** — 실 clamd(D-73). `docker compose -f infra/compose/docker-compose.dev.yml --profile av up -d clamav`(처음엔 서명 DB 를 받느라 몇 분, 메모리 약 1.3GB — kind 두 개와 함께 켜도 됐다) → `npm run test:security:clamd`. 실 clamd 에서 워커가 멈추던 결함을 고쳤고 PDF 능동 콘텐츠를 거절한다
 - **T-M4-10 ✅ (2026-10-03)** — Outbox 보관(D-74, `0005_outbox_archive.sql`, `common/outbox/outbox-archive.ts`). 대학 DB 마이그레이션은 이제 **0001~0005** 다(적용 목록은 `infra/db/README.md`). admission-api 전체 실행에서 `oidc-auth.integration.test` 의 "계약의 공개 경로는 토큰 없이…" 가 가끔 실패한다(단독 실행 9/9 통과, 이 세션 전부터) — 따로 조사할 일
 - **T-M5-65 ✅ (2026-10-03)** — 만료 경보([14](14-operations-automation.md)). 지표 `credential_expiry_timestamp_seconds`, 규칙 `deploy/platform/observability/expiry-rules.yaml`(Prometheus 에 `-f expiry-rules.yaml` 로 더한다 — kind 관측 스택에는 아직 안 올렸다)
-- **바로 다음 할 일**: 운영 자동화 T-M3-03 WORM → T-M5-62 복구 검증 → T-M5-63 Writer fencing → Pilot 도구 T-M6-01·02·03·06·07·11·14
+- **T-M3-03 ✅ (2026-10-03)** — 감사 기록 WORM(D-75, `modules/audit/audit-worm.ts`). 운영은 `AUDIT_WORM_BUCKET` 필수(Object Lock 버킷). 시험은 로컬 MinIO(:9000, `docker compose … up -d minio`)가 있어야 돈다 — 시험마다 `audit-worm-it-<시각>` 버킷이 남는다(보관 1일, 잠긴 조각이 있어 바로 못 지운다)
+- **바로 다음 할 일**: T-M5-62 복구 검증 → T-M5-63 Writer fencing → Pilot 도구 T-M6-01·02·03·06·07·11·14
 
 ## 2. 반드시 지킬 규칙
 

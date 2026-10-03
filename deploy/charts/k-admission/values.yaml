@@ -158,6 +158,8 @@ redis:
 objectStorage:
   endpoint: ""
   bucket: ""
+  # 감사 기록 WORM 버킷(T-M3-03, D-75) — IaC 가 Object Lock(COMPLIANCE·기본 보관 규칙)을 켜서 만든다. 운영은 필수
+  auditWormBucket: ""
   directUpload: true
   presignTtlSeconds: 600
   publicAccess: false

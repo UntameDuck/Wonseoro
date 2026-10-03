@@ -241,6 +241,20 @@ export const IDEMPOTENCY_PURGE = {
 } as const;
 
 /**
+ * 감사 기록 WORM (T-M3-03, D-75) — Object Lock(COMPLIANCE) 버킷으로 감사 기록을 조각으로 내보낸다.
+ * 운영은 버킷이 필수다(없으면 기동 거부) — 버킷은 IaC 가 Object Lock 을 켜서 만든다. 개발은 비우면 끈다.
+ * 보관 기간 기본 5년 — 버킷의 기본 보관 규칙보다 짧으면 버킷 규칙이 이긴다.
+ */
+export const AUDIT_WORM = {
+  bucket: envOrDev('AUDIT_WORM_BUCKET', '', '감사 기록 WORM 버킷(Object Lock COMPLIANCE) — 감사 기록을 DB 밖에 지울 수 없게 둔다'),
+  autostart: envBool('AUDIT_WORM_AUTOSTART', true),
+  intervalMs: envInt('AUDIT_WORM_INTERVAL_MS', 300_000, { min: 10_000, max: 86_400_000 }),
+  settleSeconds: envInt('AUDIT_WORM_SETTLE_SECONDS', 120, { min: 0, max: 3600 }),
+  batch: envInt('AUDIT_WORM_BATCH', 5000, { min: 1, max: 100_000 }),
+  retentionDays: envInt('AUDIT_WORM_RETENTION_DAYS', 1825, { min: 1, max: 3650 }),
+} as const;
+
+/**
  * Outbox 보관 (T-M4-10, §01 B7, 0005_outbox_archive.sql) — 전송·확인이 끝나고 afterDays 지난 이벤트를 영수증과 함께 월별 파티션으로 옮기고,
  * keepMonths 보다 오래된 달은 파티션째 지운다. 기본 보관 13개월 — 한 입시 주기와 이의 신청 기간을 넘긴다.
  */

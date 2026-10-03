@@ -103,6 +103,11 @@ spec:
               value: {{ $v.objectStorage.endpoint | quote }}
             - name: S3_BUCKET
               value: {{ $v.objectStorage.bucket | quote }}
+            {{- with $v.objectStorage.auditWormBucket }}
+            # 감사 기록 WORM(T-M3-03) — Object Lock(COMPLIANCE) 버킷. 운영은 필수(없으면 API 가 뜨지 않는다)
+            - name: AUDIT_WORM_BUCKET
+              value: {{ . | quote }}
+            {{- end }}
             {{- include "ka.mtlsEnv" (list . "api") | nindent 12 }}
             {{- include "ka.extraEnv" $v.api.env | nindent 12 }}
           envFrom:

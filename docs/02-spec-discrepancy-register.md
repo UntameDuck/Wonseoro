@@ -1134,6 +1134,20 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-75. 감사 기록의 "분리 저장소" 가 없어 DB 슈퍼유저가 지운 감사 기록은 되찾을 수 없었다 🟡
+
+| | |
+|---|---|
+| **발견** | 2026-10-03 (T-M3-03 — §01 A11 "감사 분리 저장소", v1.0 §9) |
+| **충돌** | 감사 기록은 DB 안에서 앱 권한·추가 전용 트리거·hash-chain 으로 지킨다(D-41·D-62). 그러나 DB 슈퍼유저는 트리거를 끄고 고치거나 지울 수 있다 — 체인이 "끊김" 을 알려도 **무엇이 있었는지 되찾지 못하고**, 체인을 처음부터 다시 계산해 덮으면 끊김도 사라진다. 노션은 분리 저장소를 요구하지만 구현이 없었다(🟡) |
+| **판정** | **Object Lock(COMPLIANCE) 버킷으로 내보낸다** — 앱이 5분마다(리더 하나·Peak Mode 억제) 감사 기록을 (시각, id) 순서의 NDJSON 조각으로 올리고 보관 기간(기본 5년)을 건다. 보관 동안은 루트 계정도 지우거나 보관을 줄이지 못한다. 이어 내보낼 자리는 **키 이름**(`audit/<대학>/<날짜>/<마지막 시각>_<마지막 id>.ndjson`)에서 읽는다 — 믿지 않으려는 DB 에 두지 않는다. 늦게 커밋된 기록을 놓치지 않게 2분 지난 것만. **대조**(`verifyAuditWorm`)는 조각과 DB 를 맞춰 지워진 기록·고쳐진 기록을 찾는다. 운영은 버킷 필수(`AUDIT_WORM_BUCKET`, 없으면 기동 거부), 차트 `objectStorage.auditWormBucket` |
+| **재현 시험** | admission-api `audit-worm.integration.test`(실제 MinIO Object Lock 3개 — 조각 내보내기·이어서 겹치지 않음, 지우기·보관 단축 거절, 슈퍼유저가 고친 기록·지운 기록 찾기) |
+| **저장소 반영** | ✅ (2026-10-03) `apps/admission-api/src/modules/audit/audit-worm.ts`, 설정 `AUDIT_WORM_*`, 차트 |
+| **노션 반영** | ⬜ §01 A11·v1.0 §9 에 WORM 방식(Object Lock COMPLIANCE·조각·대조), §05 values-m 에 `objectStorage.auditWormBucket` — [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🟡 저장소 반영, 노션 반영 대기 |
+
+---
+
 <!--
 신규 항목 템플릿
 
