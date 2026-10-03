@@ -12,3 +12,4 @@ export * from './egress';
 export * from './mtls';
 export * from './field-crypto';
 export * from './vault';
+export * from './expiry';

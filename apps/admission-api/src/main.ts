@@ -21,7 +21,7 @@ async function bootstrap(): Promise<void> {
  */
   assertConfigured();
   // Vault 를 쓰면 인증서·KEK 를 먼저 받는다(인증서 파일을 읽기 전에, T-M5-04)
-  await startVaultSecrets();
+  await startVaultSecrets('admission-api');
 
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,

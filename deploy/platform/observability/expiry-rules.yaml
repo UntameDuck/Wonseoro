@@ -1,0 +1,66 @@
+# 인증서·자격증명 만료 사전 경보 (T-M5-65, 기술설계서 §01 B9 "30/14/7/3/1일")
+#
+# 지표: credential_expiry_timestamp_seconds{kind, name} — 서비스마다(server-kit expiry.ts).
+#   kind = workload-cert(상호 TLS 인증서) · ca-cert(플랫폼 CA) · db-credential(Vault DB 동적 계정)
+# 짧게 쓰는 것(워크로드 인증서 24시간·DB 계정 1시간)은 정상일 때도 하루 안에 끝난다 — 날짜 경보가 아니라
+# "갱신이 멈췄다(수명의 1/3 아래로 내려갔다)" 경보를 따로 둔다. 날짜 경보(30/14/7/3/1일)는 오래 쓰는 것(CA·외부 인증서·서명키)에 건다.
+#
+# Prometheus chart(29.x) values 다: helm upgrade prometheus ... -f prometheus-values.yaml -f kpi-rules.yaml -f expiry-rules.yaml
+serverFiles:
+  alerting_rules.yml:
+    groups:
+      - name: k-admission-credential-expiry
+        rules:
+          # ── 날짜 경보 — 오래 쓰는 인증서·키 ───────────────────────────
+          - alert: CredentialExpiresIn30Days
+            expr: (min by (namespace, kind, name) (credential_expiry_timestamp_seconds{kind!~"workload-cert|db-credential"}) - time()) < 30 * 86400
+            for: 10m
+            labels: { severity: info, horizon: 30d }
+            annotations:
+              summary: "{{ $labels.kind }}/{{ $labels.name }} 가 30일 안에 끝난다 — 교체 일정을 잡는다"
+          - alert: CredentialExpiresIn14Days
+            expr: (min by (namespace, kind, name) (credential_expiry_timestamp_seconds{kind!~"workload-cert|db-credential"}) - time()) < 14 * 86400
+            for: 10m
+            labels: { severity: warning, horizon: 14d }
+            annotations:
+              summary: "{{ $labels.kind }}/{{ $labels.name }} 가 14일 안에 끝난다"
+          - alert: CredentialExpiresIn7Days
+            expr: (min by (namespace, kind, name) (credential_expiry_timestamp_seconds{kind!~"workload-cert|db-credential"}) - time()) < 7 * 86400
+            for: 10m
+            labels: { severity: warning, horizon: 7d }
+            annotations:
+              summary: "{{ $labels.kind }}/{{ $labels.name }} 가 7일 안에 끝난다 — 교체 훈련 절차로 바꾼다"
+          - alert: CredentialExpiresIn3Days
+            expr: (min by (namespace, kind, name) (credential_expiry_timestamp_seconds{kind!~"workload-cert|db-credential"}) - time()) < 3 * 86400
+            for: 5m
+            labels: { severity: critical, horizon: 3d }
+            annotations:
+              summary: "{{ $labels.kind }}/{{ $labels.name }} 가 3일 안에 끝난다"
+          - alert: CredentialExpiresIn1Day
+            expr: (min by (namespace, kind, name) (credential_expiry_timestamp_seconds{kind!~"workload-cert|db-credential"}) - time()) < 86400
+            for: 1m
+            labels: { severity: critical, horizon: 1d, page: "true" }
+            annotations:
+              summary: "{{ $labels.kind }}/{{ $labels.name }} 가 하루 안에 끝난다 — 지금 바꾼다"
+          # ── 갱신 멈춤 — 짧게 쓰는 것 ──────────────────────────────────
+          # 워크로드 인증서는 수명 2/3 에 다시 받는다(24시간 → 16시간째). 8시간 아래면 두 번 연속 못 받은 것
+          - alert: WorkloadCertificateNotRenewed
+            expr: (min by (namespace, name) (credential_expiry_timestamp_seconds{kind="workload-cert"}) - time()) < 8 * 3600
+            for: 5m
+            labels: { severity: critical, page: "true" }
+            annotations:
+              summary: "{{ $labels.name }} 의 워크로드 인증서가 갱신되지 않는다 — Vault PKI·네트워크를 본다"
+          # DB 계정은 수명 2/3 에 바꾼다(1시간 → 40분째). 10분 아래면 교체가 멈춘 것 — 끝나면 Vault 가 세션을 끊는다
+          - alert: DbCredentialNotRotated
+            expr: (min by (namespace, name) (credential_expiry_timestamp_seconds{kind="db-credential"}) - time()) < 600
+            for: 2m
+            labels: { severity: critical, page: "true" }
+            annotations:
+              summary: "{{ $labels.name }} 의 DB 동적 계정이 교체되지 않는다 — 곧 DB 연결이 끊긴다"
+          # 지표 자체가 사라졌다(상호 TLS 를 켠 워크로드인데 만료를 모른다)
+          - alert: CredentialExpiryUnknown
+            expr: absent(credential_expiry_timestamp_seconds{kind="ca-cert"})
+            for: 30m
+            labels: { severity: warning }
+            annotations:
+              summary: "플랫폼 CA 만료 지표가 없다 — 만료 경보가 꺼진 것과 같다"

@@ -266,6 +266,10 @@ try {
     ready,
     vaultDbSessions: sessions.rows.length,
   });
+  // 만료 지표(T-M5-65) — 워크로드 인증서·CA·DB 계정의 끝나는 시각을 Prometheus 로 낸다
+  const prom = await fetch('http://127.0.0.1:9471/metrics').then((r) => r.text(), () => '');
+  const kinds = ['workload-cert', 'ca-cert', 'db-credential'].filter((k) => new RegExp(`credential_expiry_timestamp_seconds\{[^}]*kind="${k}"`).test(prom));
+  check(kinds.length === 3, '인증서·CA·DB 계정의 만료 시각을 지표로 낸다(30/14/7/3/1일·갱신 멈춤 경보의 재료)', { kinds });
   const apiCert = new X509Certificate(readFileSync(apiFiles.certFile));
   check(apiCert.subjectAltName?.includes('URI:spiffe://wonseoro/university/UNIV-A/admission-api'), '대학 API 의 인증서는 기동 때 Vault 에서 받은 것');
 } catch (err) {

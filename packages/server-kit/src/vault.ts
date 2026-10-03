@@ -6,6 +6,7 @@ import { metrics } from '@opentelemetry/api';
 import { FieldKeyUnavailable, type KekProvider } from './field-crypto';
 import { egressHttp, internalAuthConfig, type MtlsFiles } from './mtls';
 import { fieldKeyRing } from './field-crypto';
+import { watchCertificateExpiry } from './expiry';
 
 /**
  * Vault — 대학별 경로 분리·짧은 자격증명 (T-M5-04, docs/13 단계 4, 노션 06 "Short-lived Credential", 첨부 `vault-policy.hcl`)
@@ -277,7 +278,7 @@ export class VaultCertRenewer {
  *   MTLS_ISSUER=vault        → VAULT_PKI_ROLE·WORKLOAD_URI 로 인증서를 받아 MTLS_* 파일에 쓰고 수명 2/3 마다 다시
  *   FIELD_KEK_PROVIDER=vault → Transit 키에 한 번 감싸 보아 정책·연결을 확인한다(안 되면 기동 실패 — 첫 저장 때 알면 늦다)
  */
-export async function startVaultSecrets(): Promise<void> {
+export async function startVaultSecrets(workload = 'service'): Promise<void> {
   const vault = vaultFromEnv();
   if (process.env.MTLS_ISSUER === 'vault') {
     const files = internalAuthConfig().files;
@@ -293,6 +294,8 @@ export async function startVaultSecrets(): Promise<void> {
       ...(process.env.VAULT_PKI_TTL ? { ttl: process.env.VAULT_PKI_TTL } : {}),
     }).start();
   }
+  // 인증서·CA 만료 지표(T-M5-65) — Vault 를 쓰든 Secret 을 쓰든
+  watchCertificateExpiry(internalAuthConfig().files, workload);
   const ring = process.env.FIELD_KEK_PROVIDER === 'vault' ? fieldKeyRing() : null;
   if (ring instanceof VaultTransitKeyRing) await ring.init();
 }

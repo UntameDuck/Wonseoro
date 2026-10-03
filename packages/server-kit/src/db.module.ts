@@ -2,6 +2,7 @@ import { DynamicModule, Global, Logger, Module, OnApplicationShutdown } from '@n
 import { Pool, PoolClient } from 'pg';
 import { metrics } from '@opentelemetry/api';
 import { databaseConnectionString, poolBudgetFor, startupJitter } from './db.config';
+import { recordExpiry } from './expiry';
 import { type DbCredential, vaultDbCredential, vaultFromEnv } from './vault';
 
 const rotations = metrics.getMeter('k-admission.db').createCounter('db_credential_rotations', {
@@ -93,6 +94,7 @@ export class Db implements OnApplicationShutdown {
       const cred = await source();
       await this.useCredential(cred);
       rotations.add(1, { result: 'ok' });
+      recordExpiry('db-credential', this.service, new Date(Date.now() + cred.leaseSeconds * 1000));
       this.logger.log(`DB 자격증명 교체 — 수명 ${cred.leaseSeconds}초`);
       return cred;
     };

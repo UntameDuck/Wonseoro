@@ -89,3 +89,7 @@ kubectl --context kind-univ-a get --raw `
 로컬 값은 보존 1시간·단일 replica·`emptyDir`다. 운영 HA/장기 보존 설정이 아니다.
 로컬 kind에는 metrics-server가 없으므로 CPU 지표는 별도 설치 전까지 `<unknown>`이다. HPA 연동 시험에서는
 DB 연결 예산 30을 넘지 않도록 `api.autoscaling.maxReplicas=4`로만 낮추고, 시험 뒤 HPA를 다시 끈다.
+
+## 만료 경보 (T-M5-65)
+
+`expiry-rules.yaml` — 인증서·자격증명 만료 30/14/7/3/1일 날짜 경보와 짧게 쓰는 것(워크로드 인증서·DB 동적 계정)의 갱신 멈춤 경보. Prometheus 를 올릴 때 `-f kpi-rules.yaml -f expiry-rules.yaml`. 지표는 서비스마다 `credential_expiry_timestamp_seconds{kind,name}`([docs/14](../../../docs/14-operations-automation.md)).
