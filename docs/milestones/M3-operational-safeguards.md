@@ -24,7 +24,7 @@
 | 구분 | 태스크 |
 |---|---|
 | ✅ 완료 | T-M3-01 Deadline Policy · T-M3-02 Config Governance · T-M3-04 Reconciliation · T-M3-05 Exception Queue · T-M3-07 Evidence Package · T-M3-08 Circuit Breaker · T-M3-15 서명된 활성화 기록 · T-M3-10 Retention Matrix · T-M3-09 Purpose-scoped Token · **T-M3-11~14 관리자 콘솔** |
-| 🟡 부분 | T-M3-03 hash-chain (물리 분리는 M5) |
+| ✅ M5 에서 마무리 | T-M3-03 hash-chain + WORM 물리 분리 (2026-10-03, D-75 — Object Lock COMPLIANCE 조각·DB 대조) |
 | ✅ M5 에서 마무리 | T-M3-06 Autonomous Mode — JWKS 캐시 발급자 정지 실증·단절 유예 (T-M5-02 단계 7, D-67, 2026-10-03) |
 | ✅ 종료 전 보강 | **G1 결제 자동 정합화 (D-40)** — PG 콜백 · 재확인 워커 · 대조 스케줄 (2026-09-27) |
 | ✅ 종료 전 보강 | **G2 감사 삭제 불가 (D-41)** — 앱 최소권한 역할 · 추가 전용 트리거 · `db:verify` 15~18 (2026-09-27) |
