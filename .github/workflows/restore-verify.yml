@@ -1,0 +1,58 @@
+# 복구 검증 — 매달 (T-M5-62, 노션 §01 B10 "월별 자동 복구 + checksum/row-count/업무 invariant")
+# 시드와 통합 시험이 만든 데이터를 같은 시점으로 덤프해 새 DB 에 복구하고, 표마다 행 수·체크섬과 업무 불변식·DB 제약을 맞춘다.
+# 운영은 같은 검사를 백업 저장소(PITR)에서 복구한 DB 에 돌린다 — 원본만 바뀐다(scripts/ops/restore-verify.mjs).
+name: 복구 검증
+on:
+  schedule:
+    - cron: '17 3 1 * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  restore-verify:
+    name: restore verify · checksum · invariants
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wonseoro
+          POSTGRES_PASSWORD: wonseoro
+          POSTGRES_DB: univ_a
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wonseoro -d univ_a"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      ADMIN_DATABASE_URL: postgresql://wonseoro:wonseoro@localhost:5432/univ_a
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: DB 준비
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in migrations/0001_init.sql migrations/0002_db_roles.sql migrations/0003_field_encryption.sql migrations/0004_break_glass.sql migrations/0005_outbox_archive.sql dev-roles.sql seed-dev.sql ci-seed-deadline.sql; do
+            psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "infra/db/$f"
+          done
+      - name: 통합 시험으로 데이터 만들기
+        run: |
+          npm run build -w @wonseoro/contracts -w @wonseoro/server-kit
+          npm run test -w @wonseoro/admission-api
+        env:
+          DATABASE_URL: postgresql://kadmission_app:kadmission_app_dev@localhost:5432/univ_a
+          DATABASE_ADMIN_URL: postgresql://wonseoro:wonseoro@localhost:5432/univ_a
+          UNIVERSITY_ID: UNIV-A
+      - name: 덤프 → 새 DB 복구 → 행 수·체크섬·불변식·제약
+        # pg_dump 는 컨테이너에서 돈다 — 서비스 DB 는 도커 브리지의 호스트 주소로 닿는다
+        run: node scripts/ops/restore-verify.mjs --source="$ADMIN_DATABASE_URL" --dump-url=postgresql://wonseoro:wonseoro@172.17.0.1:5432/univ_a
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: restore-verify
+          path: tests/ops/results/

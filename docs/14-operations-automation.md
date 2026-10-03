@@ -30,3 +30,15 @@
 - **설정** — `AUDIT_WORM_BUCKET`(운영 필수 — 없으면 기동 거부, 개발은 비우면 끔), 차트 `objectStorage.auditWormBucket`. 버킷은 IaC 가 Object Lock 을 켜서 만든다(개발은 `S3_AUTO_CREATE_BUCKET`)
 - **시험** — 실제 MinIO 3개: 내보내기·이어서 겹치지 않음, 보관 중 지우기·보관 단축 거절(COMPLIANCE), 슈퍼유저가 트리거를 끄고 고친 기록·지운 기록을 찾음. MinIO 가 없으면 건너뛴다(CI 통합 잡에는 MinIO 가 없다)
 - **남은 것** — 대조를 정기 작업·경보로(지금은 함수·시험). 운영 버킷 IaC. 노션(D-75)
+
+### T-M5-62 ✅ (2026-10-03) — 복구 검증 자동화
+
+- **`scripts/ops/restore-verify.mjs`**(`npm run ops:restore-verify`) — 원본에서 REPEATABLE READ 스냅숏을 내보내 **같은 시점**으로 덤프(`pg_dump --snapshot`)·체크섬을 잡고, 매번 새 PostgreSQL 컨테이너에 복구한 뒤 맞춘다
+  - 표마다 행 수·체크섬(행 글자를 정렬해 md5) 원본 = 복구본
+  - 자기 시험 — 복구본 한 행을 바꾸면 체크섬이 달라지는지(검사가 늘 "같다" 고만 하지 않게)
+  - 업무 불변식 — 접수 1건/원서, 접수된 원서는 FINALIZED·확정 결제, FINALIZED 는 접수 기록, Outbox 순번 유일, 감사 체인 앞 해시 연결
+  - DB 제약 검사 `verify-constraints.sql`(PASS 22) 을 복구본에
+- **매달** `.github/workflows/restore-verify.yml`(매월 1일, 수동 실행 가능) — 시드·통합 시험이 만든 데이터로
+- **찾은 것** — 처음 돌리자 복구가 외래키 위반으로 멈췄다. 시험 정리 코드(`breakGlass`)가 외래키 검사를 끈 채 원서를 지워 연쇄 삭제가 안 되고 데이터 키가 남았다. 정리 코드가 남은 자식 행을 치우게 고쳤다 — 복구 검증이 "백업이 복구되지 않는 DB" 를 실제로 잡는다
+- **운영** — 원본 대신 백업 저장소(PITR 기본 백업 + WAL, T-M5-61)에서 복구한 DB 를 같은 검사에 넣는다. 복구 시간도 결과에 남는다
+- 로컬 결과: 표 25개·행 118, 11개 통과(복구 3.9초)

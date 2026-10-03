@@ -150,7 +150,7 @@
 |---|---|---|---|
 | T-M5-60 | Multi-AZ Primary/Standby | v1.0 §10.3 | 동기 복제 |
 | T-M5-61 | PITR + 원격지 백업 소산 | v1.0 §10.3 | 다른 장애영역 |
-| T-M5-62 | **Restore Verification 자동화** | §01 B10 | 월별 자동 복구 + checksum/row-count/업무 invariant |
+| T-M5-62 | **Restore Verification 자동화** | §01 B10 | 월별 자동 복구 + checksum/row-count/업무 invariant — ✅ 2026-10-03 `scripts/ops/restore-verify.mjs`·매달 CI([14](../14-operations-automation.md)) |
 | T-M5-63 | Writer Fencing + Promotion Lock | §01 A10 | Split-brain 방지, 단일 Writer |
 | T-M5-64 | DR 전환 훈련 | v1.0 §10.3 | RTO 15분 / RPO 0~1분 실측 |
 | T-M5-65 | 인증서·Secret 만료 사전경보 | §01 B9 | 30/14/7/3/1일, rotation drill — ✅ 2026-10-03 만료 지표·경보 규칙·교체 훈련([14](../14-operations-automation.md)) |

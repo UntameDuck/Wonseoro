@@ -22,6 +22,14 @@ export async function breakGlass<T>(fn: (client: Client) => Promise<T>): Promise
     await client.query('BEGIN');
     await client.query(`SET LOCAL session_replication_role = replica`);
     const result = await fn(client);
+    // replica 모드는 외래키의 연쇄 삭제도 끈다 — 원서를 지운 시험이 남긴 자식 행(데이터 키·항목 값)을 치운다.
+    // 남겨 두면 덤프를 복구할 때 외래키 위반으로 멈춘다(복구 검증 T-M5-62 가 찾았다)
+    await client.query(
+      `DELETE FROM kadmission.application_data_key k WHERE NOT EXISTS (SELECT 1 FROM kadmission.application a WHERE a.id = k.application_id)`,
+    );
+    await client.query(
+      `DELETE FROM kadmission.application_field_value v WHERE NOT EXISTS (SELECT 1 FROM kadmission.application a WHERE a.id = v.application_id)`,
+    );
     await client.query('COMMIT');
     return result;
   } catch (err) {
