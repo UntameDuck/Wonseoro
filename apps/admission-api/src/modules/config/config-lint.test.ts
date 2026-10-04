@@ -98,6 +98,35 @@ describe('설정에서 화면 정보 만들기 (§A5, D-56)', () => {
     ]);
   });
 
+  it('민감정보 서류는 별도 동의 코드를 싣는다 (G-8, D-85)', () => {
+    const docs = documentsOf({ ...GOOD, sensitiveDocuments: { AWARD: 'SENSITIVE_HEALTH' } }, 'EARLY');
+    assert.deepEqual(docs[1], { documentType: 'AWARD', label: '수상 실적', required: false, sensitiveConsentCode: 'SENSITIVE_HEALTH' });
+    assert.equal('sensitiveConsentCode' in docs[0]!, false);
+  });
+
+  it('민감정보 서류 — 없는 동의를 가리키면 오류, 필수 동의·안 받는 서류는 경고, 민감해 보이는데 표시가 없으면 경고 (G-8, D-85)', () => {
+    const health = { code: 'SENSITIVE_HEALTH', title: '민감정보 처리', text: '장애 수험생 편의 제공', required: false, version: 'v1' };
+    const cert = {
+      ...GOOD,
+      optionalDocuments: { EARLY: ['AWARD', 'DISABILITY_CERT'] },
+      documentLabels: { ...GOOD.documentLabels, DISABILITY_CERT: '장애인 증명서' },
+    };
+    // 표시가 없으면 경고 — 서류 이름에서 알아본다
+    assert.ok(lintConfig(cert, ['EARLY']).warnings.some((w) => w.startsWith('sensitiveDocuments:') && w.includes('장애인 증명서')));
+    // 올바르게 표시하면 오류도 경고도 없다
+    const marked = { ...cert, consents: [...GOOD.consents, health], sensitiveDocuments: { DISABILITY_CERT: 'SENSITIVE_HEALTH' } };
+    assert.deepEqual(lintConfig(marked, ['EARLY']), { errors: [], warnings: [] });
+    // 문안이 없는 동의를 가리키면 아무도 올릴 수 없다 — 거절
+    assert.ok(lintConfig({ ...cert, sensitiveDocuments: { DISABILITY_CERT: 'NOPE' } }, ['EARLY']).errors.some((e) => e.includes('consents 에 없습니다')));
+    // 필수 동의면 모든 지원자가 동의해야 한다 — 경고
+    const required = lintConfig({ ...marked, consents: [...GOOD.consents, { ...health, required: true }] }, ['EARLY']);
+    assert.ok(required.warnings.some((w) => w.includes('필수를 풀어')));
+    // 어느 전형도 받지 않는 서류
+    assert.ok(lintConfig({ ...marked, sensitiveDocuments: { ...marked.sensitiveDocuments, MEDICAL_NOTE: 'SENSITIVE_HEALTH' } }, ['EARLY']).warnings.some((w) => w.includes('받지 않는 서류')));
+    // 형식
+    assert.ok(lintConfig({ ...GOOD, sensitiveDocuments: ['X'] }, ['EARLY']).errors.some((e) => e.startsWith('sensitiveDocuments')));
+  });
+
   it('필수와 선택에 같은 서류가 있으면 필수로 본다', () => {
     const docs = documentsOf({ requiredDocuments: { A: ['X'] }, optionalDocuments: { A: ['X', 'Y'] } }, 'A');
     assert.deepEqual(docs.map((d) => [d.documentType, d.required]), [['X', true], ['Y', false]]);

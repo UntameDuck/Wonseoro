@@ -333,6 +333,14 @@ async function applicant() {
     await b.waitFor(`document.body.innerText.includes(${JSON.stringify(title)})`, title);
     await sweep(`원서 ${no}단계`);
   }
+  // 민감정보 서류의 별도 동의(D-85) — 동의하면 그 서류를 올리는 칸이 나타난다. 체크에 포커스가 남는다
+  if (await b.evaluate(`!!document.getElementById('consent-SENSITIVE_HEALTH')`)) {
+    await keyTo('위 내용에 동의합니다 (선택)', ' ');
+    await b.waitFor(`document.querySelectorAll('input[type=file]').length >= 2`, '민감정보 서류 올리는 칸');
+    const sc = await focusInfo(b);
+    if (sc.id !== 'consent-SENSITIVE_HEALTH') problems.push(`민감정보 동의: 동의 뒤 포커스가 "${sc.name || '문서 처음'}" 에 있다`);
+    await sweep('원서 4단계 (민감정보 별도 동의 뒤)');
+  }
   // 서류 — Enter 로 연 파일 대화상자에 파일을 넘긴다(keyboard-walk 와 같다)
   await b.send('Page.setInterceptFileChooserDialog', { enabled: true });
   const chooser = new Promise((res) => b.on('Page.fileChooserOpened', res));

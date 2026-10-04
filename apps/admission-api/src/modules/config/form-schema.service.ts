@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import Ajv, { ErrorObject, ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
 import { Db } from '@wonseoro/server-kit';
-import { josa } from '@wonseoro/contracts';
+import { josa, pickSensitiveDocuments } from '@wonseoro/contracts';
 import { ProblemException } from '../../common/problem/problem.exception';
 
 export interface ValidationIssue {
@@ -23,6 +23,8 @@ export interface DocumentSpec {
   label: string;
   /** 접수(=결제) 전에 검사를 통과해야 하는가. */
   required: boolean;
+  /** 민감정보 서류면 올리기 전에 받아야 하는 별도 동의 코드 (보호법 제23조, D-85). 아니면 없다 */
+  sensitiveConsentCode?: string;
 }
 
 export interface FormSchema {
@@ -44,6 +46,8 @@ interface ConfigJson {
   requiredDocuments?: Record<string, string[]>;
   optionalDocuments?: Record<string, string[]>;
   documentLabels?: Record<string, string>;
+  /** 민감정보 서류 → 별도 동의 코드 (D-85) */
+  sensitiveDocuments?: Record<string, string>;
 }
 
 interface ConfigRow extends Record<string, unknown> {
@@ -73,10 +77,14 @@ export function documentsOf(config: ConfigJson | undefined, admissionTypeCode: s
   const required = config?.requiredDocuments?.[admissionTypeCode] ?? [];
   const optional = (config?.optionalDocuments?.[admissionTypeCode] ?? []).filter((t) => !required.includes(t));
   const label = (t: string) => config?.documentLabels?.[t] ?? t;
-  return [
-    ...required.map((t) => ({ documentType: t, label: label(t), required: true })),
-    ...optional.map((t) => ({ documentType: t, label: label(t), required: false })),
-  ];
+  const sensitive = pickSensitiveDocuments(config?.sensitiveDocuments);
+  const spec = (t: string, req: boolean): DocumentSpec => ({
+    documentType: t,
+    label: label(t),
+    required: req,
+    ...(sensitive[t] ? { sensitiveConsentCode: sensitive[t] } : {}),
+  });
+  return [...required.map((t) => spec(t, true)), ...optional.map((t) => spec(t, false))];
 }
 
 /**

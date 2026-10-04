@@ -230,6 +230,8 @@ export default function ApplyPage({
    */
   const commonCodes = Object.keys(schema?.properties ?? {}).filter((c) => profileFields.includes(c));
   const extraCodes = Object.keys(schema?.properties ?? {}).filter((c) => !profileFields.includes(c));
+  /** 민감정보 서류의 별도 동의 코드 — 1단계가 아니라 4단계 그 서류 옆에서 받는다 (D-85) */
+  const sensitiveCodes = new Set(documents.flatMap((d) => (d.sensitiveConsentCode ? [d.sensitiveConsentCode] : [])));
   /** 칸 옆에 붙일 오류 — 오류 요약과 같은 문장이다. */
   const fieldErrors = Object.fromEntries(
     issues.filter((i) => fieldOf(i.path)).map((i) => [fieldOf(i.path), i.message]),
@@ -295,10 +297,11 @@ export default function ApplyPage({
     focusAfterRender(focusId);
   }
 
-  /** 오류 요약에서 누른 칸으로 간다 — 동의·공통원서 항목은 1단계, 나머지는 3단계에 있다. */
+  /** 오류 요약에서 누른 칸으로 간다 — 동의·공통원서 항목은 1단계(민감정보 서류의 별도 동의는 4단계), 나머지는 3단계에 있다. */
   function selectIssue(path: string) {
     if (path.startsWith('/consents/')) {
-      goTo(1, `consent-${path.slice('/consents/'.length)}`);
+      const code = path.slice('/consents/'.length);
+      goTo(sensitiveCodes.has(code) ? 4 : 1, `consent-${code}`);
       return;
     }
     const code = fieldOf(path);
@@ -523,7 +526,13 @@ export default function ApplyPage({
             공통원서에서 가져온 정보입니다. 동의하신 항목만 이 대학으로 전달됩니다.
           </p>
           {/* 원서 동의 — 공통정보보다 먼저(문서 10 G-2, D-81) */}
-          <ConsentPanel consents={consents} errors={consentErrors} disabled={!editable} onChange={(code, granted) => void changeConsent(code, granted)} />
+          {/* 민감정보 서류의 별도 동의는 그 서류 옆(4단계)에서 받는다 — 다른 동의와 섞지 않는다 (보호법 제23조, D-85) */}
+          <ConsentPanel
+            consents={consents.filter((c) => !sensitiveCodes.has(c.code))}
+            errors={consentErrors}
+            disabled={!editable}
+            onChange={(code, granted) => void changeConsent(code, granted)}
+          />
           <SchemaForm
             schema={schema}
             values={fields}
@@ -602,17 +611,44 @@ export default function ApplyPage({
             <Alert tone="info" title="이 전형은 제출 서류가 없습니다" />
           )}
           {editable &&
-            documents.map((d) => (
-              <FileUpload
-                key={d.documentType}
-                applicationId={applicationId}
-                applicantId={applicantId}
-                documentType={d.documentType}
-                label={`${d.label}${d.required ? ' (필수)' : ' (선택)'}`}
-                scan={(selfCheck?.documents ?? []).filter((x) => x.documentType === d.documentType).at(-1)?.status}
-                onUploaded={() => void refreshDocuments()}
-              />
-            ))}
+            documents.map((d) => {
+              const upload = (
+                <FileUpload
+                  key={d.documentType}
+                  applicationId={applicationId}
+                  applicantId={applicantId}
+                  documentType={d.documentType}
+                  label={`${d.label}${d.required ? ' (필수)' : ' (선택)'}`}
+                  scan={(selfCheck?.documents ?? []).filter((x) => x.documentType === d.documentType).at(-1)?.status}
+                  onUploaded={() => void refreshDocuments()}
+                />
+              );
+              const consent = d.sensitiveConsentCode ? consents.find((c) => c.code === d.sensitiveConsentCode) : undefined;
+              if (!d.sensitiveConsentCode) return upload;
+              // 민감정보 서류 — 별도 동의를 먼저 받고, 동의한 뒤에만 올리는 칸을 보인다 (보호법 제23조 ① 1, D-85)
+              return (
+                <div key={d.documentType}>
+                  {consent && (
+                    <ConsentPanel
+                      consents={[consent]}
+                      errors={consentErrors}
+                      disabled={!editable}
+                      onChange={(code, granted) => void changeConsent(code, granted)}
+                      heading={`${d.label} — 민감정보 별도 동의`}
+                      intro="장애·건강 정보를 담은 서류입니다. 이 서류를 내시는 분만 동의해 주십시오. 동의하셔야 서류를 올릴 수 있습니다."
+                      headingId={`sensitive-${d.documentType}-title`}
+                    />
+                  )}
+                  {consent?.granted ? (
+                    upload
+                  ) : (
+                    <p style={{ margin: '0 0 var(--krds-space-5)', fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)' }}>
+                      {consent ? '위 별도 동의를 하시면 이 서류를 올릴 수 있습니다.' : '이 서류는 지금 올릴 수 없습니다. 입학처에 문의해 주십시오.'}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
 
           <h3 style={{ fontSize: 'var(--krds-text-base)' }}>올린 서류</h3>
           <DocumentStatusList

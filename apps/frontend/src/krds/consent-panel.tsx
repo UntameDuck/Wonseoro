@@ -14,21 +14,28 @@ export function ConsentPanel({
   errors,
   disabled,
   onChange,
+  heading = '개인정보 수집·이용 동의',
+  intro = '필수 동의를 하지 않으면 원서를 접수할 수 없습니다. 전문을 읽고 동의해 주십시오.',
+  headingId = 'consent-title',
 }: {
   consents: ConsentState[];
   /** 코드 → 오류 문장 */
   errors: Record<string, string>;
   disabled: boolean;
   onChange: (code: string, granted: boolean) => void;
+  /** 민감정보 서류의 별도 동의(4단계, D-85)는 제목·안내가 다르다. 한 화면에 여럿이면 제목 id 도 다르게 */
+  heading?: string;
+  intro?: string;
+  headingId?: string;
 }) {
   if (consents.length === 0) return null;
   return (
-    <section aria-labelledby="consent-title" style={{ marginBottom: 'var(--krds-space-5)' }}>
-      <h3 id="consent-title" style={{ margin: '0 0 var(--krds-space-2)', fontSize: 'var(--krds-text-lg)' }}>
-        개인정보 수집·이용 동의
+    <section aria-labelledby={headingId} style={{ marginBottom: 'var(--krds-space-5)' }}>
+      <h3 id={headingId} style={{ margin: '0 0 var(--krds-space-2)', fontSize: 'var(--krds-text-lg)' }}>
+        {heading}
       </h3>
       <p style={{ margin: '0 0 var(--krds-space-3)', fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)' }}>
-        필수 동의를 하지 않으면 원서를 접수할 수 없습니다. 전문을 읽고 동의해 주십시오.
+        {intro}
       </p>
       {consents.map((c) => {
         const id = `consent-${c.code}`;

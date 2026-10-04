@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { createHash } from 'node:crypto';
+import { pickSensitiveDocuments } from '@wonseoro/contracts';
 import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { ActivationRecorder } from '../activation/activation-recorder';
@@ -188,7 +189,9 @@ export class EvidenceService {
       .update(JSON.stringify(stable))
       .digest('hex');
 
-    await this.recordAccess(applicationId, viewer, reason, evidenceHash);
+    // 민감정보 서류(장애·건강)가 든 원서를 열었는지 열람 기록에 남긴다 — 패키지 모양은 바꾸지 않는다(같은 내용 = 같은 해시) (D-85)
+    const sensitiveDocuments = await this.countSensitiveDocuments(application.cycleId, documents.map((d) => d.documentType));
+    await this.recordAccess(applicationId, viewer, reason, evidenceHash, sensitiveDocuments);
 
     if (!chainVerification.valid) {
       // 증적이 변조된 상태다. 조용히 넘기지 않는다.
@@ -206,6 +209,7 @@ export class EvidenceService {
     viewer: string,
     reason: string,
     evidenceHash: string,
+    sensitiveDocuments: number,
   ): Promise<void> {
     await this.db.tx(async (client) => {
       await this.audit.record(client, {
@@ -214,9 +218,21 @@ export class EvidenceService {
         actorId: viewer,
         action: 'ADMIN_VIEWED_PII',
         result: 'ACCEPTED',
-        details: { purpose: 'EVIDENCE_PACKAGE', reason, evidenceHash },
+        details: { purpose: 'EVIDENCE_PACKAGE', reason, evidenceHash, ...(sensitiveDocuments > 0 ? { sensitiveDocuments } : {}) },
       });
     });
+  }
+
+  /** 적용 중 설정이 민감정보로 표시한 서류가 몇 건인가 (D-85) */
+  private async countSensitiveDocuments(cycleId: string, documentTypes: string[]): Promise<number> {
+    if (documentTypes.length === 0) return 0;
+    const { rows } = await this.db.query<{ sensitive: unknown }>(
+      `SELECT config_json->'sensitiveDocuments' AS sensitive FROM config_version
+        WHERE cycle_id = $1 AND status = 'ACTIVE' ORDER BY activated_at DESC NULLS LAST LIMIT 1`,
+      [cycleId],
+    );
+    const sensitive = pickSensitiveDocuments(rows[0]?.sensitive);
+    return documentTypes.filter((t) => t in sensitive).length;
   }
 
   private async loadApplication(applicationId: string) {

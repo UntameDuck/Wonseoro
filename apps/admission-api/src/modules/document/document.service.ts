@@ -4,6 +4,7 @@ import { DocumentStatus, APPLICATION_STATUS_LABEL, labelOf } from '@wonseoro/con
 import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { AuditService } from '../audit/audit.service';
+import { ConsentService } from '../config/consent.service';
 import { FormSchemaService } from '../config/form-schema.service';
 import { FileInspector } from './file-inspector';
 import { ObjectStorage, PresignedUpload } from './object-storage';
@@ -52,6 +53,7 @@ export class DocumentService {
   private readonly logger = new Logger(DocumentService.name);
 
   private readonly forms: FormSchemaService;
+  private readonly consents: ConsentService;
 
   constructor(
     private readonly db: Db,
@@ -59,8 +61,10 @@ export class DocumentService {
     private readonly inspector: FileInspector,
     private readonly audit: AuditService,
     forms?: FormSchemaService,
+    consents?: ConsentService,
   ) {
     this.forms = forms ?? new FormSchemaService(db);
+    this.consents = consents ?? new ConsentService(db, audit);
   }
 
   /**
@@ -97,6 +101,8 @@ export class DocumentService {
         `이 전형에서 받지 않는 서류입니다: ${documentType}. 받는 서류: ${documents.map((d) => d.label).join(', ')}`,
       );
     }
+    // 장애·건강 서류는 별도 동의를 받은 뒤에만 받는다 (보호법 제23조, D-85)
+    await this.consents.assertSensitiveConsent(applicationId, app.cycle_id, documentType);
   }
 
   /**

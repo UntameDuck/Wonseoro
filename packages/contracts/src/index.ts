@@ -15,3 +15,4 @@ export * from './support';
 export * from './university-notices';
 export * from './consents';
 export * from './privacy-requests';
+export * from './sensitive-documents';

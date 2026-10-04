@@ -245,6 +245,8 @@ export interface DocumentSpec {
   documentType: string;
   label: string;
   required: boolean;
+  /** 민감정보 서류면 올리기 전에 받을 별도 동의 코드 (계약 1.16.0, D-85) */
+  sensitiveConsentCode?: string;
 }
 
 /** 공통원서 — 중앙 Vault 에 있는 지원자 본인의 것. (D-57) */

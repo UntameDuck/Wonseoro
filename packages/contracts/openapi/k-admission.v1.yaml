@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: K-Admission University Data Plane API
-  version: 1.15.0
+  version: 1.16.0
   description: >
     Reference contract for a university-local K-Admission data plane.
     The university DB is the source of truth; central sync is not in the applicant critical path.
@@ -84,6 +84,13 @@ info:
     for access, correction, deletion or suspension of processing; the request gets a number and a
     statutory due date (10 days). The admissions office works a queue, opens a request (recorded as a
     PII view) and answers once; partial or refused answers must give the reason. New operations.
+
+
+    1.16.0 marks sensitive documents (D-85, note G-8): a form schema document may carry
+    `sensitiveConsentCode`, the separate consent (Personal Information Protection Act art. 23) the
+    applicant gives before uploading it. Upload intents for such a document are refused (400) until
+    that consent is given, and validation reports CONSENT_REQUIRED while the document is attached
+    without it. Optional field; behaviour applies only to configurations that mark documents.
 
 
     Common rules:
@@ -2646,6 +2653,14 @@ components:
               documentType: { type: string }
               label: { type: string }
               required: { type: boolean }
+              sensitiveConsentCode:
+                type: string
+                pattern: '^[A-Z][A-Z0-9_]{0,63}$'
+                x-kadmission-register: D-85
+                description: >
+                  Present only for sensitive documents (disability, health). The applicant must agree to
+                  this separate consent before uploading; while such a document is attached the consent
+                  is required for validation and payment (1.16.0).
         consents:
           type: array
           x-kadmission-register: D-81
