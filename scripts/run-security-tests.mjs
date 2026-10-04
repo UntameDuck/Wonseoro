@@ -39,6 +39,8 @@ const groups = [
       'apps/admission-api/dist/modules/support/support.integration.test.js',
       // 권리 요청 — 내용 봉함·감사에 내용 없음·회신 한 번·삭제 불가 (G-10, D-84)
       'apps/admission-api/dist/modules/privacy/privacy-request.integration.test.js',
+      // 전형료 반환 — 계좌 봉함·끝 네 자리 표기·결정 한 번·금액 상한 (G-5, D-89)
+      'apps/admission-api/dist/modules/refund/fee-refund.integration.test.js',
     ],
     env: {
       DATABASE_URL: universityUrl,

@@ -64,6 +64,8 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   PRIVACY_REQUEST_RECEIVED: '개인정보 권리 요청',
   PRIVACY_REQUEST_DECIDED: '개인정보 권리 요청 회신',
   APPLICATION_RULES_ACKNOWLEDGED: '지원 제한 확인',
+  FEE_REFUND_REQUESTED: '전형료 반환 신청',
+  FEE_REFUND_DECIDED: '전형료 반환 결정',
 };
 
 export const AUDIT_RESULT_LABEL: Record<'ACCEPTED' | 'REJECTED' | 'FAILED', string> = {

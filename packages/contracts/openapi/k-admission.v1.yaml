@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: K-Admission University Data Plane API
-  version: 1.18.0
+  version: 1.19.0
   description: >
     Reference contract for a university-local K-Admission data plane.
     The university DB is the source of truth; central sync is not in the applicant critical path.
@@ -102,6 +102,12 @@ info:
     `x-sensitive-consent: <consent code>` (e.g. passport number, art. 24 of the Personal Information
     Protection Act). Saving a non-empty value for it is refused (400) until that consent is given, and
     validation reports CONSENT_REQUIRED while a value is stored without it. No schema change.
+
+
+    1.19.0 adds application fee refund requests (D-89, note G-5): the owner of an application with a
+    confirmed payment asks for a refund with a statutory reason or fee exemption, by bank transfer or
+    in person; the admissions office opens (recorded) and decides once with an amount or a reason.
+    New operations.
 
 
     Common rules:
@@ -517,6 +523,83 @@ paths:
                     type: array
                     items: { $ref: '#/components/schemas/PrivacyRequest' }
                   dueDays: { type: integer, description: Statutory days to answer }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/applications/{applicationId}/fee-refunds:
+    post:
+      tags: [Applications]
+      operationId: createFeeRefund
+      x-kadmission-register: D-89
+      description: >
+        Ask for an application fee refund (Enforcement Decree of the Higher Education Act art. 42-3):
+        a statutory reason or fee exemption, paid by bank transfer (account) or in person. Only for an
+        application with a confirmed payment (409 otherwise). The account and text are sealed with the
+        application's data key; responses show the last four digits only. An open request is returned
+        as is (200). Audited (FEE_REFUND_REQUESTED, without account or text). Owner only.
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason, method]
+              properties:
+                reason: { $ref: '#/components/schemas/FeeRefundReason' }
+                method: { type: string, enum: [ACCOUNT, VISIT] }
+                account:
+                  type: object
+                  description: Required when method is ACCOUNT
+                  required: [bank, holder, number]
+                  properties:
+                    bank: { type: string, maxLength: 40 }
+                    holder: { type: string, maxLength: 40 }
+                    number: { type: string, pattern: '^[0-9][0-9-]{5,29}$' }
+                detail: { type: string, maxLength: 1000 }
+      responses:
+        '201':
+          description: Request received
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeeRefund' }
+        '200':
+          description: An open request already exists
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeeRefund' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    get:
+      tags: [Applications]
+      operationId: listFeeRefunds
+      x-kadmission-register: D-89
+      description: The owner's refund requests on this application with the university's decisions, newest first.
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+      responses:
+        '200':
+          description: Requests
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [requests]
+                properties:
+                  requests:
+                    type: array
+                    items: { $ref: '#/components/schemas/FeeRefund' }
         '404': { $ref: '#/components/responses/Problem' }
         '429':
           $ref: '#/components/responses/RateLimited'
@@ -944,6 +1027,90 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+  /admin/v1/fee-refunds:
+    get:
+      tags: [Admin]
+      operationId: listFeeRefundQueue
+      x-kadmission-register: D-89
+      description: Fee refund requests. OPEN (default) oldest first, DONE by decision time. Rows carry no account or text.
+      security: [{ oidc: [operator] }]
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [OPEN, DONE, ALL], default: OPEN }
+      responses:
+        '200':
+          description: Queue
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, counts]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/FeeRefundQueueItem' }
+                  counts:
+                    type: object
+                    required: [open]
+                    properties:
+                      open: { type: integer }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /admin/v1/fee-refunds/{requestNumber}:
+    get:
+      tags: [Admin]
+      operationId: getFeeRefund
+      x-kadmission-register: D-89
+      description: Opens one request with the account. Requires recent authentication; appends ADMIN_VIEWED_PII.
+      security: [{ oidc: [operator] }]
+      parameters:
+        - $ref: '#/components/parameters/FeeRefundNumber'
+      responses:
+        '200':
+          description: Request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeeRefundQueueItem' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /admin/v1/fee-refunds/{requestNumber}/decision:
+    post:
+      tags: [Admin]
+      operationId: decideFeeRefund
+      x-kadmission-register: D-89
+      description: >
+        Decides once. APPROVED needs an integer amount between 1 and the paid fee; REJECTED needs a
+        reason of at least 10 characters. A second decision is 409. Requires recent authentication;
+        audited (FEE_REFUND_DECIDED). The transfer itself is the university's finance process.
+      security: [{ oidc: [operator] }]
+      parameters:
+        - $ref: '#/components/parameters/FeeRefundNumber'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [outcome, note]
+              properties:
+                outcome: { type: string, enum: [APPROVED, REJECTED] }
+                amount: { type: integer, minimum: 1 }
+                note: { type: string, minLength: 1, maxLength: 2000 }
+      responses:
+        '200':
+          description: Decided request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeeRefundQueueItem' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /admin/v1/privacy-requests:
     get:
       tags: [Admin]
@@ -2037,6 +2204,11 @@ components:
       name: requestNumber
       required: true
       schema: { type: string, pattern: '^PR-[0-9]{8}-[0-9A-HJKMNP-TV-Z]{6}$' }
+    FeeRefundNumber:
+      in: path
+      name: requestNumber
+      required: true
+      schema: { type: string, pattern: '^FR-[0-9]{8}-[0-9A-HJKMNP-TV-Z]{6}$' }
     IdempotencyKey:
       in: header
       name: Idempotency-Key
@@ -2778,6 +2950,45 @@ components:
               at: { type: string, format: date-time }
               what: { type: string }
               result: { type: string }
+    FeeRefundReason:
+      type: string
+      enum: [OVERPAID, UNIVERSITY_FAULT, DISASTER, HOSPITALIZED, DECEASED, STAGE_FAILED, EXEMPTION]
+      description: Statutory refund grounds (art. 42-3) and fee exemption or reduction (paid first, refunded).
+    FeeRefund:
+      type: object
+      required: [requestNumber, reason, method, accountMasked, detail, status, paidAmount, approvedAmount, receivedAt, decidedAt, resultNote]
+      properties:
+        requestNumber: { type: string, pattern: '^FR-[0-9]{8}-[0-9A-HJKMNP-TV-Z]{6}$' }
+        reason: { $ref: '#/components/schemas/FeeRefundReason' }
+        method: { type: string, enum: [ACCOUNT, VISIT] }
+        accountMasked: { type: [string, 'null'], description: Last four digits only }
+        detail: { type: [string, 'null'] }
+        status: { type: string, enum: [RECEIVED, APPROVED, REJECTED] }
+        paidAmount: { type: number }
+        approvedAmount: { type: [number, 'null'] }
+        receivedAt: { type: string, format: date-time }
+        decidedAt: { type: [string, 'null'], format: date-time }
+        resultNote: { type: [string, 'null'] }
+    FeeRefundQueueItem:
+      allOf:
+        - $ref: '#/components/schemas/FeeRefund'
+        - type: object
+          required: [applicationNumber, supportCode, applicationStatus, decidedBy, account]
+          properties:
+            applicationNumber: { type: [string, 'null'] }
+            supportCode: { type: string }
+            applicationStatus: { type: string }
+            decidedBy: { type: [string, 'null'] }
+            account:
+              description: Only when one request is opened
+              oneOf:
+                - type: 'null'
+                - type: object
+                  required: [bank, holder, number]
+                  properties:
+                    bank: { type: string }
+                    holder: { type: string }
+                    number: { type: string }
     PrivacyRequestKind:
       type: string
       enum: [ACCESS, CORRECTION, DELETION, SUSPENSION]

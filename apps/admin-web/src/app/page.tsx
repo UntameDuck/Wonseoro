@@ -38,6 +38,9 @@ export default function Home() {
             <a href="/privacy">권리 요청</a> — 지원자의 개인정보 열람·정정·삭제·처리정지 요청을 기한 안에 처리·회신
           </li>
           <li>
+            <a href="/refunds">전형료 반환</a> — 전형료 반환·면제 감액 신청 검토·결정
+          </li>
+          <li>
             <a href="/evidence">증적 조회</a> — 한 원서의 접수 과정 확인 (조회 사실이 기록됩니다)
           </li>
           <li>

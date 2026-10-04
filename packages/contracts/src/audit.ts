@@ -31,6 +31,9 @@ export const AUDIT_ACTION = [
   'PRIVACY_REQUEST_DECIDED',
   /** 지원자가 원서 작성 전에 지원 제한(지원 횟수·이중등록 금지 등) 고지를 확인했다 — 문안 해시와 함께 (D-86). */
   'APPLICATION_RULES_ACKNOWLEDGED',
+  /** 지원자가 전형료 반환·면제 감액을 신청했다 / 입학처가 결정했다 — 신청번호와 함께, 계좌는 싣지 않는다 (D-89). */
+  'FEE_REFUND_REQUESTED',
+  'FEE_REFUND_DECIDED',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTION)[number];

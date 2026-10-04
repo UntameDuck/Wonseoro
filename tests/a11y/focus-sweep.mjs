@@ -394,6 +394,17 @@ async function applicant() {
   await b.waitFor(`location.pathname.startsWith('/receipt/') && document.body.innerText.includes('접수번호')`, '접수증');
   await sweep('접수증');
 
+  // 전형료 반환 신청 (G-5, D-89) — 접수한 원서. 사유를 고르고 방문 수령으로 보낸다
+  await go(`${WEB}/refund/${applicationId}`, '보낸 신청과 결과');
+  await sweep('전형료 반환 신청');
+  await keyTo('반환 사유', 'ArrowDown');
+  await keyTo('돌려받을 방법', 'ArrowDown');
+  await keyTo('반환 신청');
+  await b.waitFor(`document.body.innerText.includes('전형료 반환을 신청했습니다') || document.body.innerText.includes('이미 검토 중인 신청이 있습니다')`, '반환 신청 보냄', 30_000);
+  const rf = await focusInfo(b);
+  if (!/신청했습니다|검토 중인 신청/.test(rf.name)) problems.push(`반환 신청: 보낸 뒤 포커스가 "${rf.name || '문서 처음'}" 에 있다`);
+  await sweep('전형료 반환 신청 (보낸 뒤)');
+
   await sleep(4000); // 중계기가 중앙에 보낼 시간
   await go(`${WEB}/dashboard`, '접수번호');
   await sweep('내 원서 (접수 뒤)');
@@ -486,8 +497,9 @@ async function admin() {
   // 결과 파일은 DB보다 오래 남는다. DB를 새로 만든 뒤의 옛 원서 ID를 넣으면 실패 화면을 기다리다
   // 시험 자체가 멈춘다. 지금 전용 DB에 실제로 있는 원서만 열람한다.
   const candidate = candidateId
-    ? await fetch(`${API}/admin/v1/evidence/applications/${candidateId}`, {
-        headers: { 'x-admin-id': 'officer2@univ-a', 'x-evidence-reason': '접근성 점검 사전 확인' },
+    ? // 열람 사유는 질의 매개변수다(reason) — 전에는 헤더로 보내 400 이 나 증적 화면을 늘 건너뛰었다
+      await fetch(`${API}/admin/v1/evidence/applications/${candidateId}?reason=${encodeURIComponent('접근성 점검 사전 확인')}`, {
+        headers: { 'x-admin-id': 'officer2@univ-a' },
       }).catch(() => null)
     : null;
   const applicationId = candidate?.ok ? candidateId : null;
@@ -499,7 +511,8 @@ async function admin() {
     await press(b, 'Tab');
     await typeText(b, '접근성 점검 — 증적 화면의 키보드 이동 확인');
     await keyTo('증적 열기');
-    await b.waitFor(`document.body.innerText.includes('판정에 쓰인 마감 정책')`, '증적', 30_000);
+    // 마감 정책 카드는 서명된 정책이 있는 DB 에서만 그린다 — 늘 있는 감사 체인 결과를 기다린다
+    await b.waitFor(`/감사 체인 \\d+건|감사 체인이 끊겨/.test(document.body.innerText)`, '증적', 30_000);
     const e = await focusInfo(b);
     if (!e.name.startsWith('감사 체인')) problems.push(`증적: 연 뒤 포커스가 "${e.name || '문서 처음'}" 에 있다`);
     await sweep('증적 (열람 결과)');
@@ -565,6 +578,39 @@ async function admin() {
   const p2 = await focusInfo(b);
   if (!p2.name.includes('회신했습니다')) problems.push(`권리 요청: 회신 뒤 포커스가 "${p2.name || '문서 처음'}" 에 있다`);
   await sweep('권리 요청 (회신 뒤)');
+
+  // 전형료 반환 큐 (G-5, D-89) — keyboard-walk 가 접수한 원서에 반환 신청을 만들고, 열어서 승인한다
+  const walk = walks.at(-1);
+  if (applicationId && walk?.applicant) {
+    const fr = await fetch(`${API}/api/v1/applications/${applicationId}/fee-refunds`, {
+      method: 'POST',
+      headers: {
+        'x-applicant-id': walk.applicant.applicantId,
+        'x-subject-token': walk.applicant.subjectToken,
+        'content-type': 'application/json',
+        'idempotency-key': `a11y-refund-${randomUUID()}`,
+      },
+      body: JSON.stringify({ reason: 'OVERPAID', method: 'ACCOUNT', account: { bank: '원서은행', holder: '김지원', number: '110-234-567890' } }),
+    });
+    if (!fr.ok) throw new Error(`반환 신청 만들기 ${fr.status} ${await fr.text()}`);
+    const refundNumber = (await fr.json()).requestNumber;
+    await go(`${ADMIN}/refunds`, refundNumber);
+    await sweep('전형료 반환 큐');
+    await keyTo(`${refundNumber} 열기`);
+    await b.waitFor(`document.body.innerText.includes('이 열람은 기록됩니다')`, '반환 신청 열람', 30_000);
+    const r1 = await focusInfo(b);
+    if (r1.id !== 'refund-detail-title') problems.push(`반환 신청: 연 뒤 포커스가 "${r1.name || '문서 처음'}" 에 있다`);
+    await sweep('전형료 반환 (열람)');
+    await keyTo('결정', 'ArrowDown');
+    await keyTo('지원자에게 보낼 안내', 'Tab');
+    await press(b, 'Tab', { shift: true });
+    await typeText(b, '알려 주신 계좌로 다음 주에 이체합니다.');
+    await keyTo('결정 보내기');
+    await b.waitFor(`document.body.innerText.includes('결정했습니다')`, '반환 결정', 30_000);
+    await sweep('전형료 반환 (결정 뒤)');
+  } else {
+    console.log('… keyboard-walk 완주 결과가 없어 전형료 반환 화면은 건너뛴다');
+  }
 
   await go(`${ADMIN}/retention`, '보존기간');
   await sweep('보존기간');

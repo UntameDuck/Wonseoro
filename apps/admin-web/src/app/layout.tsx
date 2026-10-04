@@ -19,6 +19,7 @@ const NAV: Array<[string, string]> = [
   ['/status', '장애 공지'],
   ['/support', '상담 조회'],
   ['/privacy', '권리 요청'],
+  ['/refunds', '전형료 반환'],
   ['/evidence', '증적 조회'],
   ['/retention', '보존기간'],
 ];

@@ -481,6 +481,8 @@ export default function ApplyPage({
           접수 홈으로
         </a>
         <PrivacyRightsLink applicationId={applicationId} />
+        {/* 취소 전에 결제가 확인됐으면 돌려받을 전형료가 있다 — 확인된 결제가 없으면 서버가 안내한다 */}
+        <FeeRefundLink applicationId={applicationId} />
       </Card>
     );
   }
@@ -906,6 +908,12 @@ export default function ApplyPage({
           <PrivacyRightsLink applicationId={applicationId} />
         </Card>
       )}
+      {/* 결제가 확인된 원서만 반환을 신청할 수 있다 — 서버도 409 로 막는다 (시행령 제42조의3, D-89) */}
+      {app && (app.status === 'PAID' || app.status === 'FINALIZED') && (
+        <Card title="전형료 반환">
+          <FeeRefundLink applicationId={applicationId} />
+        </Card>
+      )}
     </>
   );
 }
@@ -920,6 +928,18 @@ function PrivacyRightsLink({ applicationId }: { applicationId: string }) {
       이 원서의 개인정보를 보여 달라거나 바로잡거나 지워 달라고 대학에 요청할 수 있습니다.{' '}
       <a href={`/privacy/${applicationId}`} style={{ color: 'var(--krds-primary)' }}>
         개인정보 열람·정정·삭제 요청
+      </a>
+    </p>
+  );
+}
+
+/** 전형료 반환·면제/감액 신청으로 가는 길 (시행령 제42조의3, D-89) */
+function FeeRefundLink({ applicationId }: { applicationId: string }) {
+  return (
+    <p style={{ margin: 'var(--krds-space-3) 0 0' }}>
+      반환 사유가 있거나 전형료 면제·감액 대상이면 신청할 수 있습니다.{' '}
+      <a href={`/refund/${applicationId}`} style={{ color: 'var(--krds-primary)' }}>
+        전형료 반환 신청
       </a>
     </p>
   );

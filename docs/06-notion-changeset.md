@@ -10,7 +10,7 @@
 
 | 노션 문서 | 첨부 이름 | 저장소 파일 | 바이트 | SHA-256 | 근거 |
 |---|---|---|---|---|---|
-| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.18.0) | 124,162 | `a35af210cb22461373dfa7e93bf40154383e9976944275520bffe39064e1d191` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 · D-78 · D-79 · D-80 · D-81 · D-82 · D-84 · D-85 · D-86 · D-88 |
+| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.19.0) | 133,129 | `b5ac3fbf99a70c704db7fbc51b3cb0cc8789de3168a1778dbba7fa09ee658cb6` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 · D-78 · D-79 · D-80 · D-81 · D-82 · D-84 · D-85 · D-86 · D-88 · D-89 |
 | [§04 CloudEvents](https://app.notion.com/p/3df75ab5debe81d68e37fabd3678dcc4) | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | 6,104 | `3ed7ec8a340c50f6e7de25b2c3322ffd7c6b4914fd046afdc67a2efea699ca02` | D-47 · T-M5-51 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` (v1.2) | 4,036 | `1aaef0db712e1d9a15da41fb86b7832a3da8c6decfdcd5992a57bb071e5b1975` | D-44 · D-49 · D-52 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` (v1.5, 차트 렌더링 — RBAC 6종·내부 상호 TLS·서류 워커 출구) | 40,216 | `28c54fbdb2e83edc849526c06c7158017110fa0e24a3b3cbfe8f525febf2b315` | D-44 · D-52 · D-68 · D-69 |
@@ -22,6 +22,12 @@
 ## 본문 수정
 
 ### 기술설계서 v1.0 본문
+
+결제·환불 절에 더한다 (D-89):
+
+> 전형료 반환(고등교육법 시행령 제42조의3) — 결제가 확인된 원서에 지원자가 사유(착오 과납·대학 귀책·천재지변·입원·사망·단계 불합격·면제/감액 대상)와
+> 받는 방법(계좌이체·방문 수령)을 골라 신청한다. 계좌는 신청할 때만 받아 원서 데이터 키로 봉하고 화면·큐에는 끝 네 자리만 보인다. 입학처는 한 건을 열어(열람 감사)
+> 승인(낸 금액 이하)·거절(사유)을 한 번 결정하고, 이체·지급은 대학 재무 절차로 한다. PG 결제 취소와는 잇지 않는다.
 
 §17 Privacy 에 더한다 (D-84):
 
@@ -146,6 +152,8 @@ B11 대응에 더한다:
 > Outbox 보관 `outbox_event_archive` — `created_at` 월별 파티션, 영수증 열을 펼쳐 둔다. 전송·확인이 끝나고 7일 지난 이벤트를 옮기되 원서마다 마지막 순번은 남긴다(순번이 이어진다).
 > 13개월이 지난 달은 파티션째 지운다(§01 B7 디스크 고갈 방지). 바로 쓰는 `outbox_event` 는 유니크(aggregate_id, aggregate_sequence) 때문에 파티션하지 않는다(저장소 마이그레이션 0005, D-74).
 > 상담 확인번호 `application.support_code`(Crockford base32 10자, 유니크, 바꿀 수 없음)와 상담 증적 `support_lookup(evidence_number, application_id, lookup_kind, reason, agent_id, looked_up_at, snapshot, snapshot_hash)` — 추가만(트리거), 앱은 넣고 읽기만(저장소 마이그레이션 `0008_support_view.sql`, D-79).
+> 전형료 반환 신청 `fee_refund_request(request_number, application_id, reason, method, account_ciphertext, account_masked, detail_ciphertext, paid_amount, status, approved_amount, received_at, decided_at, decided_by, result_note_ciphertext)` —
+> 원서마다 검토 중 하나(부분 유니크), 계좌이체면 계좌 필수·방문이면 없음, 승인 금액은 낸 금액 이하(제약), 결정 한 번(트리거), 변경·삭제 거절(저장소 마이그레이션 `0010_fee_refund_request.sql`, D-89).
 > 정보주체 권리 요청 `privacy_request(request_number, application_id, kind, detail_ciphertext, status, received_at, due_at, decided_at, decided_by, result_note_ciphertext)` —
 > 같은 원서·종류의 처리 중 요청은 하나(부분 유니크), 회신은 처리 중 → 결과 한 번(트리거), 내용·받은 시각·기한 변경과 삭제는 거절, 앱은 결과 칸만 UPDATE(저장소 마이그레이션 `0009_privacy_request.sql`, D-84).
 > 장애 공지 원장 `service_incident` 는 대학 Data Plane에 둔다(저장소 마이그레이션 `0007_service_incident.sql`, D-78). 상태는 `ACTIVE`에서 `RESOLVED`로만 바뀌고 제목·안내·수준·시각·발행자는 수정하지 못한다. 앱 역할에는 조회·추가·해제용 UPDATE만 주며 DELETE·TRUNCATE 권한은 주지 않는다.
@@ -177,6 +185,9 @@ v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
 
 > **2026-10-04 v1.9.0** — 개인정보 최소 상담 조회 `POST /admin/v1/support/lookups`·`GET /admin/v1/support/lookups/{evidenceNumber}`(새 범위 `support`), 응답 `SupportView`(허용 목록),
 > 지원자 Self-check 에 선택 필드 `supportCode`. 새 경로·범위·선택 필드 추가라 호환 변경이다(§A16). (D-79)
+
+> **2026-10-04 v1.19.0** — 전형료 반환 신청: 지원자 `POST·GET /api/v1/applications/{id}/fee-refunds`(확인된 결제가 있는 원서만, 검토 중 신청은 200 으로 그대로),
+> 입학처 `GET /admin/v1/fee-refunds`(큐)·`GET …/{requestNumber}`(계좌 열람, 재인증·감사)·`POST …/{requestNumber}/decision`(결정 한 번, 재인증), 범위 operator. 새 오퍼레이션이라 호환 변경이다(§A16). (D-89)
 
 > **2026-10-04 v1.18.0** — 설명만: 양식 항목 확장 키 `x-sensitive-consent`(동의 전 저장 400, 값이 있는데 동의가 없으면 검증 `CONSENT_REQUIRED`). 스키마 변경 없음(§A16). (D-88)
 

@@ -96,6 +96,7 @@ jobs:
       # 개인정보 최소 상담 조회(T-M6-07, D-79)
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0008_support_view.sql
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0009_privacy_request.sql
+      - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0010_fee_refund_request.sql
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/dev-roles.sql
       # 제약이 실제로 막는지 먼저 확인한다
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/verify-constraints.sql

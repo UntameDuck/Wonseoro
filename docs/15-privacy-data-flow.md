@@ -42,6 +42,7 @@ flowchart LR
 | DB 비상 접속 기록 | 비상 DB 계정 이름·끝나는 시각 | 추가 전용 | DB 와 같음 | `0004_break_glass.sql`, D-72 |
 | 대학 DB `support_lookup`(상담 증적) | 상담 담당 ID·문의 분류·그 순간 상담 화면 응답(상태·시각·결제/서류 요약 — 원서 값·연락처·파일 이름 없음). 원서마다 상담 확인번호(`application.support_code`, 가명 번호) | 추가 전용 트리거·응답 해시·원서 감사 체인(`SUPPORT_LOOKUP`) | 원서와 같음 | `modules/support/*`, `0008_support_view.sql`, D-79 |
 | 대학 DB `privacy_request`(정보주체 권리 요청) | 요청 종류·받은 시각·법정 기한·결과·회신 담당자 ID. 지원자가 쓴 요청 내용·입학처 회신(개인정보가 적힐 수 있다) | 내용·회신은 **원서 데이터 키로 봉투 암호화**, 회신 한 번·삭제 불가 트리거, 열람은 감사 `ADMIN_VIEWED_PII`, 감사 기록에는 내용 없음 | 원서와 같음 | `modules/privacy/*`, `0009_privacy_request.sql`, D-84 |
+| 대학 DB `fee_refund_request`(전형료 반환 신청) | 반환 사유·받는 방법·낸 금액·결정 금액·결정 담당자 ID. **계좌(은행·예금주·계좌번호)**·신청 내용·회신 | 계좌·내용·회신은 **원서 데이터 키로 봉투 암호화**, 화면·큐는 끝 네 자리 표기만, 열람은 감사 `ADMIN_VIEWED_PII`, 결정 한 번·삭제 불가 트리거, 감사 기록에 계좌 없음 | 원서와 같음 | `modules/refund/*`, `0010_fee_refund_request.sql`, D-89 |
 
 ## 3. 밖으로 나가는 곳 — 위탁·Subprocessor 후보
 

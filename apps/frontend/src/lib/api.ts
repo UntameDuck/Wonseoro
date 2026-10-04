@@ -7,7 +7,16 @@
  *   - 오류는 problem+json 으로 온다
  */
 
-import type { ApplicationConsent, PrivacyRequestKind, PrivacyRequestView, UniversityNotices } from '@wonseoro/contracts';
+import type {
+  ApplicationConsent,
+  FeeRefundAccount,
+  FeeRefundMethod,
+  FeeRefundReason,
+  FeeRefundView,
+  PrivacyRequestKind,
+  PrivacyRequestView,
+  UniversityNotices,
+} from '@wonseoro/contracts';
 
 /** 원서 동의 문안과 이 원서의 동의 여부 (계약 1.11.0, D-81) */
 export type ConsentState = ApplicationConsent & { granted: boolean };
@@ -350,6 +359,17 @@ export const api = {
       idempotencyKey: key,
       applicantId,
     }),
+
+  /** 전형료 반환·면제 감액 신청 — 결제가 확인된 원서만. 검토 중 신청이 있으면 그것이 돌아온다(200) (G-5, D-89) */
+  createFeeRefund: (
+    id: string,
+    body: { reason: FeeRefundReason; method: FeeRefundMethod; account?: FeeRefundAccount; detail?: string },
+    applicantId: string,
+    key: string,
+  ) => call<FeeRefundView>(`/api/v1/applications/${id}/fee-refunds`, { method: 'POST', body, idempotencyKey: key, applicantId }),
+
+  feeRefunds: (id: string, applicantId: string) =>
+    call<{ requests: FeeRefundView[] }>(`/api/v1/applications/${id}/fee-refunds`, { applicantId }),
 
   privacyRequests: (id: string, applicantId: string) =>
     call<{ requests: PrivacyRequestView[]; dueDays: number }>(`/api/v1/applications/${id}/privacy-requests`, { applicantId }),
