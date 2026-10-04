@@ -16,6 +16,19 @@ npm run ops:pilot-readiness -- --file=deploy/pilot/<대학>-<전형>.yaml
 
 설계 원본은 노션 [기술설계서 v1.0 §14·§16·§19](https://app.notion.com/p/3de75ab5debe801f99c5fee017130c65)이며, 운영 위험 보완은 [v1.1 §01](https://app.notion.com/p/3df75ab5debe813c87fceef73f0d74e8)이다. 2026-10-04 다시 읽었고 아래 기준과 충돌하는 내용은 없었다.
 
+### 실행 게이트 빠른 색인
+
+| 범위 | 명령 | 시작 양식 | 완료 태스크 |
+|---|---|---|---|
+| Pilot 전체 | `ops:pilot-readiness` | `pilot-readiness.example.yaml` | T-M6-08·09·10·12·13·15 |
+| M Profile 부하 | `ops:load-acceptance` → `ops:load-campaign-acceptance` | `load-campaign.example.yaml` | T-M4-30·31·32·36·41 |
+| PostgreSQL HA/PITR/DR | `ops:ha-preflight` → `ops:dr-acceptance` | `dr-acceptance.example.yaml` | T-M4-06·T-M5-60·61·64 |
+| Edge 노드 장애 | `ops:edge-failover-acceptance` | `edge-failover-acceptance.example.yaml` | T-M4-39 |
+| 실 PG Sandbox | `ops:pg-sandbox-acceptance` | `pg-sandbox-acceptance.example.yaml` | T-M6-04·05 |
+| 실물·수동 접근성 | `ops:manual-accessibility-acceptance` | `manual-accessibility.example.yaml` | T-M5-47·48 |
+
+양식은 모두 `deploy/pilot/`에 있다. 빈 예시는 의도적으로 실패한다. 판정기 단위시험 8종은 `npm run test:ops:external-gates`로 한 번에 실행한다.
+
 ## 2. 시작 전에 기관이 채울 것
 
 | 항목 | 책임 | 저장소에 남길 것 | 저장소에 넣지 않을 것 |

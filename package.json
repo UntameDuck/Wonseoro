@@ -66,6 +66,7 @@
     "test:ops:dr-acceptance": "node --test scripts/ops/dr-acceptance.test.mjs",
     "ops:manual-accessibility-acceptance": "node scripts/ops/manual-accessibility-acceptance.mjs",
     "test:ops:manual-accessibility-acceptance": "node --test scripts/ops/manual-accessibility-acceptance.test.mjs",
+    "test:ops:external-gates": "npm run test:ops:pilot-readiness && npm run test:ops:load-acceptance && npm run test:ops:ha-preflight && npm run test:ops:pg-sandbox-acceptance && npm run test:ops:edge-failover-acceptance && npm run test:ops:dr-acceptance && npm run test:ops:load-campaign-acceptance && npm run test:ops:manual-accessibility-acceptance",
     "pretest:security": "npm run build -w @wonseoro/contracts -w @wonseoro/server-kit -w @wonseoro/admission-api -w @wonseoro/document-service -w @wonseoro/central-api",
     "test:security": "node scripts/run-security-tests.mjs",
     "test:auth:issuer": "node tests/auth/local-issuer.mjs",
