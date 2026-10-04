@@ -1,0 +1,138 @@
+{{- /*
+  담당자 접근 권한 부여·변경·말소 기록 수집 (개인정보의 안전성 확보조치 기준 제5조 ③, 문서 10 G-15, 대장 D-91).
+  1시간마다 로그인 서버(담당자 렐름) 관리 이벤트를 대학 DB 의 추가 전용 기록(access_grant_log, 마이그레이션 0011)으로 옮기고
+  실제 권한과 대조한다. 관리 이벤트가 꺼져 있거나 해시 체인이 끊기면 Job 이 실패한다 — Job 실패 경보로 받는다.
+  이미지는 접수 API 와 같다(dist/tools/access-grant-sync.js). Kubernetes 권한은 없다(서비스 계정 토큰을 붙이지 않는다).
+  운영에서 담당자 로그인(api.env.AUTH_MODE=oidc)을 쓰면 꺼 둘 수 없다(validate.yaml).
+*/ -}}
+{{- $v := .Values -}}
+{{- $ag := $v.accessGrantSync -}}
+{{- if $ag.enabled }}
+{{- $name := printf "%s-access-grant-sync" (include "ka.fullname" .) }}
+{{- $issuer := default (index $v.api.env "OIDC_STAFF_ISSUER" | default "") $ag.issuer }}
+{{- if not $issuer }}
+{{- fail "accessGrantSync.issuer(또는 api.env.OIDC_STAFF_ISSUER)가 필요하다 — 담당자 렐름 발급자 주소 (G-15, D-91)" }}
+{{- end }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  labels: {{- include "ka.labels" . | nindent 4 }}
+automountServiceAccountToken: false
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ $name }}
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  schedule: {{ $ag.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: {{ $ag.activeDeadlineSeconds }}
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            {{- include "ka.labels" . | nindent 12 }}
+            app: access-grant-sync
+            network-role: access-grant-sync
+        spec:
+          serviceAccountName: {{ $name }}
+          restartPolicy: Never
+          {{- include "ka.podSecurity" . | nindent 10 }}
+          containers:
+            - name: sync
+              image: {{ include "ka.image" (list . $v.api.image) }}
+              imagePullPolicy: {{ $v.global.imagePullPolicy }}
+              command: ["node", "dist/tools/access-grant-sync.js", "sync"]
+              env:
+                {{- include "ka.commonEnv" . | nindent 16 }}
+                - name: OIDC_STAFF_ISSUER
+                  value: {{ $issuer | quote }}
+                - name: ACCESS_GRANT_CLIENT_ID
+                  value: {{ $ag.clientId | quote }}
+                {{- if $v.database.pooler.enabled }}
+                - name: DB_PROXY_HOST
+                  value: {{ printf "%s-pgbouncer" (include "ka.fullname" .) | quote }}
+                - name: DB_PROXY_PORT
+                  value: {{ $v.database.pooler.port | quote }}
+                - name: DB_PROXY_SSLMODE
+                  value: {{ $v.database.pooler.clientTlsSslMode | quote }}
+                {{- end }}
+                {{- include "ka.extraEnv" $ag.env | nindent 16 }}
+              # DATABASE_URL·ACCESS_GRANT_CLIENT_SECRET 은 런타임 Secret 에서
+              envFrom:
+                - secretRef:
+                    name: {{ include "ka.runtimeSecret" . }}
+              resources:
+                requests: { cpu: 50m, memory: 128Mi }
+                limits: { memory: 256Mi }
+              {{- include "ka.containerSecurity" . | nindent 14 }}
+{{- if $v.networkPolicy.defaultDeny }}
+---
+# 수집 작업 → DNS · DB(PgBouncer 또는 직접) · 로그인 서버만. 들어오는 연결은 없다
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $name }}
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      network-role: access-grant-sync
+  policyTypes: [Ingress, Egress]
+  egress:
+    - ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+    {{- if $v.database.pooler.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+              app: pgbouncer
+      ports:
+        - { protocol: TCP, port: {{ $v.database.pooler.port }} }
+    {{- else }}
+    - to: {{- toYaml $v.networkPolicy.databaseEgress.to | nindent 8 }}
+      ports:
+        {{- range $v.networkPolicy.databaseEgress.ports }}
+        - { protocol: TCP, port: {{ . }} }
+        {{- end }}
+    {{- end }}
+    - to: {{- toYaml $ag.issuerEgress.to | nindent 8 }}
+      ports:
+        {{- range $ag.issuerEgress.ports }}
+        - { protocol: TCP, port: {{ . }} }
+        {{- end }}
+{{- if $v.database.pooler.enabled }}
+---
+# PgBouncer 가 수집 작업의 연결을 받는다 — 접수 API·Relay 규칙(allow-app-to-pgbouncer)에 더해진다
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $name }}-to-pgbouncer
+  labels: {{- include "ka.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app: pgbouncer
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+              network-role: access-grant-sync
+      ports:
+        - { protocol: TCP, port: {{ $v.database.pooler.port }} }
+{{- end }}
+{{- end }}
+{{- end }}

@@ -9,4 +9,5 @@ export const VALID_RETENTION = {
   PAYMENT_RECORD: { days: 3650 },
   CONSENT_RECORD: { days: 3650 },
   ADMIN_ACCESS_LOG: { days: 730 },
+  ACCESS_GRANT_LOG: { days: 1095 },
 };

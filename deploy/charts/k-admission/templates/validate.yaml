@@ -6,7 +6,7 @@
 {{- fail "global.universityId 가 필요하다 — 대학마다 하나씩 설치한다" -}}
 {{- end -}}
 {{- /* 출구 규칙에 전체 인터넷·클라우드 메타데이터 대역을 넣지 못한다 (T-M5-01·07). 한 줄 실수로 기본 차단이 무너진다 */ -}}
-{{- $egress := list $v.networkPolicy.databaseEgress $v.networkPolicy.cacheEgress $v.networkPolicy.controlledEgress $v.documentService.scannerEgress $v.observability.collectorEgress -}}
+{{- $egress := list $v.networkPolicy.databaseEgress $v.networkPolicy.cacheEgress $v.networkPolicy.controlledEgress $v.documentService.scannerEgress $v.observability.collectorEgress ($v.accessGrantSync | default dict).issuerEgress -}}
 {{- range $e := $egress -}}
 {{- range $to := (($e | default dict).to | default list) -}}
 {{- with $to.ipBlock -}}
@@ -18,6 +18,10 @@
 {{- end -}}
 {{- if and (eq $v.global.environment "production") (not $v.internalTls.enabled) -}}
 {{- fail "운영(global.environment=production)은 internalTls.enabled 를 끌 수 없다 — 내부 경로가 인증 없이 열린다 (T-M5-05, D-69)" -}}
+{{- end -}}
+{{- /* 담당자 로그인을 쓰는 운영은 권한 부여·변경·말소 기록 수집을 끌 수 없다 (안전성 확보조치 기준 제5조 ③, G-15·D-91) */ -}}
+{{- if and (eq $v.global.environment "production") (eq (toString (index ($v.api.env | default dict) "AUTH_MODE" | default "")) "oidc") (not ($v.accessGrantSync | default dict).enabled) -}}
+{{- fail "운영에서 담당자 로그인(api.env.AUTH_MODE=oidc)을 쓰면 accessGrantSync.enabled 를 켜야 한다 — 권한 부여·변경·말소 기록 3년 보관 (G-15, D-91)" -}}
 {{- end -}}
 {{- if not (has $v.global.environment (list "production" "staging" "local")) -}}
 {{- fail (printf "global.environment 는 production | staging | local 이어야 한다: %s" $v.global.environment) -}}

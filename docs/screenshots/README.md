@@ -1,7 +1,7 @@
 # 화면 캡처
 
 > 찍은 날: **2026-10-04**(개인정보·법정 고지 G-1~G-13의 AI 구현과 인증 T-M5-02·10 이후) · 로컬 **축소 환경**(한 PC, 로컬 프로세스) · 1280px 데스크톱 · 전체 페이지
-> 개발 모드 — 지원자 웹·장애 화면 22장 · 관리자 콘솔 12장. **로그인 모드**(본인확인·관리자 로그인) — 8장(28~35). 모두 42장.
+> 개발 모드 — 지원자 웹·장애 화면 22장 · 관리자 콘솔 13장. **로그인 모드**(본인확인·관리자 로그인) — 8장(28~35). 모두 43장. (43 권한 변경 기록은 2026-10-05 추가)
 > 새로 찍은 개발 모드 34장과 로그인 모드 28~34번은 **렌더링 문구 검사**(`capture.mjs --check-copy`)에서 위반이 없었다. 35번은 화면 코드가 바뀌지 않은 2026-10-03 통과본이다. 검사 내용은 화면에 실제로 보이는 글에 설계 문서 번호·내부 상태 코드·ISO 시각 원문·영문 검증 문구·기호 아이콘이 없는지다. 지원자 화면은 UUID·내부 버전도 막는다.
 > 다시 찍는 방법은 아래 [「다시 찍기」](#다시-찍기)에 있다. 스크립트는 `scripts/screenshots/`에 있다.
 > 처음 찍은 판(2026-09-30)과 그때 찾은 결함 U-1~U-11 은 git 이력에 있다. 결함은 [08-ui-production-readiness.md](../08-ui-production-readiness.md) 의 U-1~U-59 로 옮겨 모두 고쳤다(U-51 도 2026-10-04 끝).
@@ -76,6 +76,7 @@
 | [40-privacy-detail](admin/40-privacy-detail.png) | 권리 요청 열람·회신 | 열람 감사 안내·요청 내용·처리 결과와 지원자 안내 입력 |
 | [41-fee-refund-queue](admin/41-fee-refund-queue.png) | 전형료 반환 큐 | 신청 사유·접수번호·낸 전형료·검토 상태. 줄에는 계좌 원문이 없다 |
 | [42-fee-refund-detail](admin/42-fee-refund-detail.png) | 전형료 반환 열람·결정 | 열람 감사 안내·계좌와 신청 내용·결정과 지원자 안내 입력 |
+| [43-access-grants](admin/43-access-grants.png) | 권한 변경 기록 | 보안 감사 전용 · 맨 위 **체인 검증**(끊김 없음) · 기준·관리자가 준 역할·**실제 권한과 달라 맞춤(바꾼 사람 모름)**·회수 · 계정 ID·로그인 이름으로 찾기. 기록은 화면 DB 에 넣은 예시(로그인 서버 없이) |
 
 27번의 "보존 정책이 설정되지 않았습니다"는 결함이 아니다. 개발 시드 설정에 보존기간이 없어서 뜬 경고다. 대학이 설정 승인으로 넣어야 하는 값이다(D-38).
 
@@ -114,7 +115,7 @@ Claude 데스크톱의 미리보기는 서버를 5개까지만 띄울 수 있다
 6. shots-admission 내림 → capture.mjs admission-down … (18~19) → shots-admission 띄움
 7. shots-relay 내림 → capture.mjs seed-recon → prepare.sh recon → prepare.sh config
 8. shots-scanner 내림 → shots-admin 띄움 → capture.mjs admin … (20~27·39~42)
-   # 후반만 다시 찍을 때: capture.mjs admin-tail … (26·27·39~42)
+   # 후반만 다시 찍을 때: capture.mjs admin-tail … (26·27·39~43) — 권한 변경 기록만: capture.mjs admin-grants … (43)
 9. 모두 내리고 docker rm -f ui-shots-pg
 10. 로그인 모드(28~35): 로컬 발급자(--profile auth)·CI 재현 DB(:5499) → auth-admission · auth-central · auth-web · auth-admin 띄우기
     → node scripts/screenshots/capture.mjs auth docs/screenshots --check-copy   # 재인증 창 5분을 실제로 기다린다(약 7분)

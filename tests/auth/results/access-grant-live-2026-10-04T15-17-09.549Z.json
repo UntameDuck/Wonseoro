@@ -1,0 +1,57 @@
+{
+  "test": "access-grant-live",
+  "issuer": "http://localhost:18080",
+  "durationMs": 13055,
+  "passed": true,
+  "steps": [
+    {
+      "ok": true,
+      "what": "수집이 정상 종료(0) — {\"realm\":\"wonseoro-staff\",\"eventsSeen\":4,\"eventsRecorded\":1,\"baselines\":1,\"reconciled\":0,\"accounts\":9,\"adminEventsEnabled\":true}"
+    },
+    {
+      "ok": true,
+      "what": "로그인 서버 계정 9개(서비스 계정 포함) 모두 기준(또는 대조) 기록이 있다"
+    },
+    {
+      "ok": true,
+      "what": "수집 클라이언트 자신의 읽기 권한도 기록된다 — [\"realm-management:view-clients\",\"realm-management:view-events\",\"realm-management:view-realm\",\"realm-management:view-users\"]"
+    },
+    {
+      "ok": true,
+      "what": "입학처 담당자 기준 — 역할만, 이메일 없음 ([\"admission-admin\"])"
+    },
+    {
+      "ok": true,
+      "what": "관리 이벤트 2건을 옮겼다 — {\"realm\":\"wonseoro-staff\",\"eventsSeen\":6,\"eventsRecorded\":2,\"baselines\":0,\"reconciled\":0,\"accounts\":9,\"adminEventsEnabled\":true}"
+    },
+    {
+      "ok": true,
+      "what": "부여·회수가 바꾼 관리자 계정 ID 와 함께 순서대로 — [[\"ROLE_ADDED\",[\"support-agent\"],true],[\"ROLE_REMOVED\",[\"support-agent\"],true]]"
+    },
+    {
+      "ok": true,
+      "what": "다시 돌려도 같은 이벤트는 한 줄 — 새 줄 없음"
+    },
+    {
+      "ok": true,
+      "what": "관리 이벤트가 꺼져 있으면 수집이 실패(1)로 끝난다 — {\"realm\":\"wonseoro-staff\",\"eventsSeen\":6,\"eventsRecorded\":0,\"baselines\":0,\"reconciled\":1,\"accounts\":9,\"adminEventsEnabled\":false}"
+    },
+    {
+      "ok": true,
+      "what": "이벤트 없이 준 권한도 대조 기록으로 남는다(바꾼 사람 모름) — [[\"GRANT\",\"RECONCILED\",[\"support-agent\"]]]"
+    },
+    {
+      "ok": true,
+      "what": "다시 켜면 회수가 이벤트로 남고 대조 기록은 없다 — [\"ROLE_REMOVED\"]"
+    },
+    {
+      "ok": true,
+      "what": "해시 체인 검증 통과 — {\"chain\":{\"checked\":24,\"brokenSeq\":null}}"
+    },
+    {
+      "ok": true,
+      "what": "이번 시험이 남긴 줄 31개 — 지울 수 없어 그대로 둔다(시험 DB)"
+    }
+  ],
+  "problems": []
+}

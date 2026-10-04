@@ -165,12 +165,15 @@ export class RetentionService {
   }
 
   private async countEvents(code: RetentionCategoryCode, before: Date): Promise<number> {
-    if (code !== 'ADMIN_ACCESS_LOG') return 0;
-    const { rows } = await this.db.query<{ n: string }>(
-      `SELECT count(*) AS n FROM audit_event
-        WHERE action = 'ADMIN_VIEWED_PII' AND occurred_at < $1`,
-      [before],
-    );
+    const sql: Partial<Record<RetentionCategoryCode, string>> = {
+      ADMIN_ACCESS_LOG: `SELECT count(*) AS n FROM audit_event
+                          WHERE action = 'ADMIN_VIEWED_PII' AND occurred_at < $1`,
+      // 권한 변경 기록(0011, G-15) — 지우는 경로가 없어 기간이 지난 수만 보인다
+      ACCESS_GRANT_LOG: `SELECT count(*) AS n FROM access_grant_log WHERE occurred_at < $1`,
+    };
+    const q = sql[code];
+    if (!q) return 0;
+    const { rows } = await this.db.query<{ n: string }>(q, [before]);
     return Number(rows[0]?.n ?? 0);
   }
 }

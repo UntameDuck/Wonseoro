@@ -44,6 +44,9 @@ export default function Home() {
             <a href="/evidence">증적 조회</a> — 한 원서의 접수 과정 확인 (조회 사실이 기록됩니다)
           </li>
           <li>
+            <a href="/access-grants">권한 변경 기록</a> — 담당자 계정의 권한 부여·변경·말소 기록 확인 (보안 감사)
+          </li>
+          <li>
             <a href="/retention">보존기간</a> — 데이터 종류별 파기 계획 확인
           </li>
         </ul>

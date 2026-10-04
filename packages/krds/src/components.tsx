@@ -287,10 +287,11 @@ export function Select({
         </p>
       )}
 
+      {/* 필수는 aria-required 로만 알린다 — 브라우저 기본 검사(required)는 빈 선택을 앱의 오류 문장 없이 "잘못됨" 으로
+          스크린리더에 알린다(오류 칸인데 이유가 없다). 필수 확인은 화면이 오류 문장과 함께 한다 (T-M5-42) */}
       <select
         id={id}
         value={value}
-        required={required}
         disabled={disabled}
         aria-describedby={[hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined}
         aria-invalid={error ? true : undefined}

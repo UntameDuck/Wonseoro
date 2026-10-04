@@ -19,6 +19,8 @@
   "attributes": {
     "acr.loa.map": "{\"pwd\":\"1\",\"mfa\":\"2\"}"
   },
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": true,
   "browserFlow": "browser-loa",
   "roles": {
     "realm": [
@@ -113,6 +115,19 @@
       ]
     },
     {
+      "clientId": "access-grant-collector",
+      "name": "권한 변경 기록 수집",
+      "description": "관리 이벤트(권한 부여·변경·말소)를 읽어 대학 DB 의 권한 변경 기록으로 옮긴다 — 읽기 권한만(view-events·view-users·view-realm·view-clients)",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "access-grant-collector-dev-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false
+    },
+    {
       "clientId": "wonseoro-dev-cli",
       "name": "개발 시험용 (로컬 전용 — 운영 렐름에 두지 않는다)",
       "enabled": true,
@@ -136,6 +151,10 @@
     }
   ],
   "users": [
+    {
+      "username": "service-account-access-grant-collector", "enabled": true, "serviceAccountClientId": "access-grant-collector",
+      "clientRoles": { "realm-management": ["view-events", "view-users", "view-realm", "view-clients"] }
+    },
     {
       "id": "7a1c0001-0000-4000-8000-00000000a001", "username": "admin-a", "enabled": true, "email": "admin-a@univ-a.test", "emailVerified": true, "firstName": "입학처", "lastName": "담당자A",
       "realmRoles": ["admission-admin"],

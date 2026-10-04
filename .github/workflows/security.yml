@@ -196,6 +196,7 @@ jobs:
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0008_support_view.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0009_privacy_request.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0010_fee_refund_request.sql
+          psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0011_access_grant_log.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/dev-roles.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/seed-dev.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/ci-seed-deadline.sql
@@ -281,6 +282,7 @@ jobs:
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0008_support_view.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0009_privacy_request.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0010_fee_refund_request.sql
+          psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0011_access_grant_log.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/dev-roles.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/seed-dev.sql
           psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/ci-seed-deadline.sql

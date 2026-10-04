@@ -2,14 +2,15 @@
 //
 // 사용: node scripts/screenshots/capture.mjs <단계> [출력 폴더=docs/screenshots] [--check-copy]
 //   --check-copy  찍는 화면마다 보이는 글을 검사한다 — 설계 번호·내부 코드·UUID·ISO 시각·영문 검증 문구 (T-M5-56)
-//   단계: applicant | central-down | admission-down | seed-recon | admin | admin-tail | auth
+//   단계: applicant | central-down | admission-down | seed-recon | admin | admin-tail | admin-grants | auth
+//   admin-grants  권한 변경 기록(43)만 — 앞 단계 상태가 필요 없다(admin-tail 끝에서도 찍는다)
 //   순서·서버 준비는 docs/screenshots/README.md 「다시 찍기」.
 //   auth  로그인 모드(28~35) — 미리보기 `auth-admission`·`auth-central`·`auth-web`(:3001)·`auth-admin`(:4100)과 로컬 발급자(:18080).
 //         관리자 재인증 안내를 찍으려고 로그인 뒤 5분(재인증 창)을 실제로 기다린다 — 약 7분
 //
 // 전용 DB(ui-shots-pg :5497)와 전용 포트(중앙 3100 · 대학 3101 · 지원자 웹 4001 · 콘솔 4101)만 쓴다.
 // kind 시험·로컬 개발 DB(:5432)·ka-central(:3000)과 섞이지 않는다.
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -185,7 +186,7 @@ async function setSession(s) {
 }
 
 const shots = [];
-async function shot(name, caption) {
+async function shot(name, caption, { maxHeight = Infinity } = {}) {
   // 개발 서버 표시(Next.js 배지)·포커스 테두리는 화면의 일부가 아니다.
   await evaluate(`(() => {
     document.querySelectorAll('nextjs-portal').forEach((e) => e.remove());
@@ -194,7 +195,8 @@ async function shot(name, caption) {
   })()`);
   await sleep(250);
   const m = await send('Page.getLayoutMetrics');
-  const height = Math.max(H, Math.ceil(m.cssContentSize.height));
+  // 긴 표(쪽마다 50줄)는 위쪽만 — maxHeight
+  const height = Math.min(maxHeight, Math.max(H, Math.ceil(m.cssContentSize.height)));
   const r = await send('Page.captureScreenshot', {
     format: 'png',
     captureBeyondViewport: true,
@@ -556,6 +558,36 @@ async function adminTail() {
   await goto(`${ADMIN}/retention`, '보존기간');
   await sleep(1500);
   await shot('admin/27-retention', '보존기간 — 데이터 종류별 파기 계획(실행하지 않음)');
+
+  await adminGrants();
+}
+
+/**
+ * 권한 변경 기록 (G-15, D-91) — 수집 도구가 남기는 모양의 기록을 화면 DB 에 넣고 찍는다(로그인 서버 없이).
+ * 기준(입학처·감사·상담) → 관리자가 준 역할 → 이벤트 없이 바뀐 권한(대조) → 관리자가 회수. 표는 추가 전용이라 다시 찍으면 쌓인다.
+ */
+async function adminGrants() {
+  const s = Date.now();
+  const kc = '57ce75c2-434f-41c4-9ae0-aec8499737b1';
+  const rows = [
+    ['BASELINE', 'BASELINE', '7a1c0001-0000-4000-8000-00000000a001', ['admission-admin'], null, { username: 'admin-a', enabled: true }],
+    ['BASELINE', 'BASELINE', '7a1c0001-0000-4000-8000-00000000a002', ['admission-admin'], null, { username: 'admin-b', enabled: true }],
+    ['BASELINE', 'BASELINE', '7a1c0001-0000-4000-8000-00000000a003', ['security-auditor'], null, { username: 'auditor', enabled: true }],
+    ['BASELINE', 'BASELINE', '7a1c0001-0000-4000-8000-00000000a004', ['platform-viewer'], null, { username: 'viewer', enabled: true }],
+    ['GRANT', 'ROLE_ADDED', '7a1c0001-0000-4000-8000-00000000a002', ['support-agent'], kc, {}],
+    ['GRANT', 'RECONCILED', '7a1c0001-0000-4000-8000-00000000a004', ['platform-viewer', 'support-agent'], null, { username: 'viewer', enabled: true, enabledBefore: true, added: ['support-agent'], removed: [] }],
+    ['REVOKE', 'ROLE_REMOVED', '7a1c0001-0000-4000-8000-00000000a004', ['support-agent'], kc, {}],
+  ];
+  const q = (v) => (v === null ? 'NULL' : `'${String(v).replaceAll("'", "''")}'`);
+  const values = rows
+    .map(([action, kind, subject, roles, actor, details], i) =>
+      `('IDP', 'shots:${s}:${i}', now() - interval '${(rows.length - i) * 7} minutes', '${action}', '${kind}', '${subject}', ARRAY[${roles.map(q).join(',')}]::text[], ${q(actor)}, ${q(JSON.stringify(details))}::jsonb, '')`)
+    .join(',\n');
+  execFileSync('docker', ['exec', 'ui-shots-pg', 'psql', '-q', '-U', 'wonseoro', '-d', 'univ_a', '-v', 'ON_ERROR_STOP=1', '-c',
+    `INSERT INTO kadmission.access_grant_log (source, source_event_id, occurred_at, action, change_kind, subject, roles, actor, details, row_hash) VALUES ${values}`]);
+  await goto(`${ADMIN}/access-grants`, '끊김 없이 이어집니다');
+  await sleep(800);
+  await shot('admin/43-access-grants', '권한 변경 기록 — 체인 검증·기준·부여·대조(바꾼 사람 모름)·회수, 보안 감사 전용', { maxHeight: 1700 });
 }
 
 /** 대조 예외 준비 — 중계기를 멈춘 채 두 번째 지원자가 접수한다. 화면은 찍지 않는다. */
@@ -705,6 +737,7 @@ try {
   else if (PHASE === 'admission-down') await admissionDown();
   else if (PHASE === 'admin') await admin();
   else if (PHASE === 'admin-tail') await adminTail();
+  else if (PHASE === 'admin-grants') await adminGrants();
   else if (PHASE === 'seed-recon') await seedRecon();
   else throw new Error(`알 수 없는 단계: ${PHASE}`);
   if (CHECK_COPY) {

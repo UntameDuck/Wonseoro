@@ -612,6 +612,43 @@ async function admin() {
     console.log('… keyboard-walk 완주 결과가 없어 전형료 반환 화면은 건너뛴다');
   }
 
+  // 권한 변경 기록 (G-15, D-91) — 화면 시험 DB 에 기록을 넣는다(추가 전용이라 시험 DB 에 쌓인다 — 쪽 나눔이 보이게 51건 넘게)
+  const stamp = Date.now();
+  execFileSync('docker', [
+    'exec', PG, 'psql', '-q', '-U', 'wonseoro', '-d', 'univ_a', '-v', 'ON_ERROR_STOP=1', '-c',
+    `INSERT INTO kadmission.access_grant_log (source, source_event_id, occurred_at, action, change_kind, subject, roles, actor, details, row_hash)
+     SELECT 'IDP', 'sweep:${stamp}:' || n, now() - (n || ' minutes')::interval,
+            CASE WHEN n % 3 = 0 THEN 'BASELINE' WHEN n % 3 = 1 THEN 'GRANT' ELSE 'CHANGE' END,
+            CASE WHEN n % 3 = 0 THEN 'BASELINE' WHEN n % 3 = 1 THEN 'ROLE_ADDED' ELSE 'RECONCILED' END,
+            'sweep-${stamp}-' || (n % 4), ARRAY['support-agent'],
+            CASE WHEN n % 3 = 1 THEN 'sweep-admin' END,
+            CASE WHEN n % 3 = 1 THEN '{}'::jsonb
+                 ELSE jsonb_build_object('username', 'sweep-' || (n % 4), 'enabled', true, 'added', '["support-agent"]'::jsonb, 'removed', '[]'::jsonb) END,
+            ''
+       FROM generate_series(60, 1, -1) n`,
+  ]);
+  await go(`${ADMIN}/access-grants`, '끊김 없이 이어집니다');
+  await sweep('권한 변경 기록');
+  await keyTo('계정 ID 또는 로그인 이름');
+  await typeText(b, 'sweep-1');
+  await keyTo('찾기');
+  await b.waitFor(`document.body.innerText.includes('기록 — sweep-1')`, '계정으로 찾기', 30_000);
+  await sweep('권한 변경 기록 (계정으로 찾기)');
+  await keyTo('전체 보기');
+  await b.waitFor(`document.body.innerText.includes('기록 — 최신순')`, '전체 보기', 30_000);
+  const g1 = await focusInfo(b);
+  if (g1.id !== 'grants-title') problems.push(`권한 변경 기록: 전체 보기 뒤 포커스가 "${g1.name || '문서 처음'}" 에 있다`);
+  // 누른 "더 보기" 에 포커스가 남는다 — 쪽이 남아 있는 동안은 그 자리에서 다시 누른다
+  for (let i = 0; i < 20 && (await b.evaluate(`[...document.querySelectorAll('button')].some((x) => x.textContent.trim() === '더 보기')`)); i++) {
+    const rows = await b.evaluate(`document.querySelectorAll('tbody tr').length`);
+    if ((await focusInfo(b)).name === '더 보기') await press(b, 'Enter');
+    else await keyTo('더 보기');
+    await b.waitFor(`document.querySelectorAll('tbody tr').length > ${rows}`, '더 보기', 30_000);
+  }
+  const g2 = await focusInfo(b);
+  if (g2.id !== 'grants-title') problems.push(`권한 변경 기록: 마지막 쪽에서 "더 보기" 가 사라진 뒤 포커스가 "${g2.name || '문서 처음'}" 에 있다`);
+  await sweep('권한 변경 기록 (끝까지)');
+
   await go(`${ADMIN}/retention`, '보존기간');
   await sweep('보존기간');
   await go(`${ADMIN}/no-such-page`, '찾을 수 없는');

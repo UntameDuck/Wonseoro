@@ -21,6 +21,7 @@ const NAV: Array<[string, string]> = [
   ['/privacy', '권리 요청'],
   ['/refunds', '전형료 반환'],
   ['/evidence', '증적 조회'],
+  ['/access-grants', '권한 변경 기록'],
   ['/retention', '보존기간'],
 ];
 

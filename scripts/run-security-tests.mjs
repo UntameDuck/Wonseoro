@@ -41,6 +41,9 @@ const groups = [
       'apps/admission-api/dist/modules/privacy/privacy-request.integration.test.js',
       // 전형료 반환 — 계좌 봉함·끝 네 자리 표기·결정 한 번·금액 상한 (G-5, D-89)
       'apps/admission-api/dist/modules/refund/fee-refund.integration.test.js',
+      // 권한 부여·변경·말소 기록 — 추가 전용·DB 해시 체인·이벤트 없는 변경 대조 (G-15, D-91)
+      'apps/admission-api/dist/modules/access-grant/access-grant-events.test.js',
+      'apps/admission-api/dist/modules/access-grant/access-grant.integration.test.js',
     ],
     env: {
       DATABASE_URL: universityUrl,

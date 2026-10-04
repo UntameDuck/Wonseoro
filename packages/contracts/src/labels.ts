@@ -179,6 +179,28 @@ export const STAFF_ROLE_LABEL: Record<string, string> = {
   'break-glass': '비상 접근',
 };
 
+/** 권한 변경 기록의 종류 (G-15, D-91 — access_grant_log.action·change_kind) */
+export const ACCESS_GRANT_ACTION_LABEL: Record<'BASELINE' | 'GRANT' | 'CHANGE' | 'REVOKE', string> = {
+  BASELINE: '기준',
+  GRANT: '부여',
+  CHANGE: '변경',
+  REVOKE: '말소',
+};
+
+export const ACCESS_GRANT_KIND_LABEL: Record<string, string> = {
+  BASELINE: '처음 확인한 권한',
+  RECONCILED: '실제 권한과 달라 맞춤(변경한 사람 모름)',
+  ROLE_ADDED: '역할 추가',
+  ROLE_REMOVED: '역할 회수',
+  GROUP_JOINED: '그룹 가입',
+  GROUP_LEFT: '그룹 탈퇴',
+  ACCOUNT_CREATED: '계정 생성',
+  ACCOUNT_UPDATED: '계정 정보 변경',
+  ACCOUNT_DISABLED: '계정 사용 중지',
+  ACCOUNT_DELETED: '계정 삭제',
+  ROLE_DEFINITION_CHANGED: '역할 정의 변경',
+};
+
 /* ── 보존기간 ─────────────────────────────────────────────────────────── */
 
 /** 보존 정책 검사 문제의 분류. 데이터 종류 코드는 RETENTION_CATEGORIES 의 label 을 쓴다 — 이것은 그 밖의 분류다. */

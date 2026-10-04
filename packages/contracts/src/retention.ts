@@ -136,6 +136,19 @@ export const RETENTION_CATEGORIES = {
     purge: 'NONE',
     personal: false,
   },
+  ACCESS_GRANT_LOG: {
+    label: '개인정보처리시스템 접근 권한 부여·변경·말소 기록',
+    anchor: 'EVENT_TIME',
+    floor: {
+      kind: 'LEGAL',
+      days: 1095,
+      // 문서 10 G-15, 대장 D-91 — 0011 access_grant_log
+      basis: '개인정보의 안전성 확보조치 기준 제5조 ③ — 3년 이상',
+    },
+    // 해시 체인 안에 있고 지우는 경로가 없다(트리거). 하한보다 길게 두는 것은 막지 않는다
+    purge: 'NONE',
+    personal: false,
+  },
   AUDIT_EVENT: {
     label: '감사 기록 (위변조 검출 체인)',
     anchor: 'EVENT_TIME',

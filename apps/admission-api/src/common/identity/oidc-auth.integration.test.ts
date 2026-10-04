@@ -213,6 +213,8 @@ describe('OIDC 인증 — HTTP (T-M5-02·10 단계 3)', () => {
       ['evidence', `/admin/v1/evidence/applications/${appId}?reason=${encodeURIComponent('감사 확인')}`],
       // 없는 증적번호 — 열리면 404, 막히면 401·403 (T-M6-07, D-79)
       ['support', `/admin/v1/support/lookups/SR-20000101-000000`],
+      // 권한 변경 기록은 보안 감사자만 (G-15, D-91)
+      ['grants', `/admin/v1/access-grants?limit=1`],
     ];
     const table: Record<string, string> = {};
     for (const role of ['platform-viewer', 'sre-operator', 'admission-admin', 'security-auditor', 'support-agent', 'release-controller', 'break-glass']) {
@@ -225,13 +227,13 @@ describe('OIDC 인증 — HTTP (T-M5-02·10 단계 3)', () => {
       table[role] = row.join(' ');
     }
     assert.deepEqual(table, {
-      'platform-viewer': 'config:403 retention:403 recon:403 evidence:403 support:403',
-      'sre-operator': 'config:403 retention:403 recon:403 evidence:403 support:403',
-      'admission-admin': 'config:open retention:open recon:open evidence:403 support:open',
-      'security-auditor': 'config:403 retention:403 recon:403 evidence:open support:403',
-      'support-agent': 'config:403 retention:403 recon:403 evidence:403 support:open',
-      'release-controller': 'config:403 retention:403 recon:403 evidence:403 support:403',
-      'break-glass': 'config:403 retention:403 recon:403 evidence:403 support:403',
+      'platform-viewer': 'config:403 retention:403 recon:403 evidence:403 support:403 grants:403',
+      'sre-operator': 'config:403 retention:403 recon:403 evidence:403 support:403 grants:403',
+      'admission-admin': 'config:open retention:open recon:open evidence:403 support:open grants:403',
+      'security-auditor': 'config:403 retention:403 recon:403 evidence:open support:403 grants:open',
+      'support-agent': 'config:403 retention:403 recon:403 evidence:403 support:open grants:403',
+      'release-controller': 'config:403 retention:403 recon:403 evidence:403 support:403 grants:403',
+      'break-glass': 'config:403 retention:403 recon:403 evidence:403 support:403 grants:403',
     });
   });
 

@@ -364,8 +364,8 @@ BEGIN
                     AND has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'UPDATE'))
                    OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'DELETE')
                    OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'TRUNCATE')
-              WHEN t.tablename = 'support_lookup'
-              -- 상담 증적(0008) — 앱은 넣고 읽기만. 고치기·지우기 없음
+              WHEN t.tablename IN ('support_lookup', 'access_grant_log')
+              -- 상담 증적(0008)·권한 변경 기록(0011) — 앱은 넣고 읽기만. 고치기·지우기 없음
               THEN NOT (has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'SELECT')
                     AND has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'INSERT'))
                    OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'UPDATE')
@@ -609,6 +609,51 @@ BEGIN
   ASSERT fr_cap, '낸 금액보다 많은 반환이 승인된다';
   ASSERT fr_fixed, '결정한 반환 신청을 고칠 수 있다';
   ASSERT app_del, '앱 역할이 반환 신청을 지운다';
+END $$;
+
+-- ── 25. 권한 변경 기록 — 추가만 · DB 가 매긴 해시 체인 · 트리거를 끄고 고쳐도 검증이 잡는다 (G-15·D-91, 0011) ───
+DO $$
+DECLARE upd boolean := false; app_del boolean := false; app_seq boolean := false; linked boolean := false;
+        ok_before boolean := false; caught boolean := false; s1 bigint; s2 bigint; v record;
+BEGIN
+  -- 넣는 쪽이 준 순번·해시는 무시된다
+  INSERT INTO access_grant_log (seq, source, source_event_id, occurred_at, action, change_kind, subject, roles, row_hash)
+  VALUES (-1, 'IDP', 'verify-1', now(), 'BASELINE', 'BASELINE', 'verify-user', ARRAY['admission-admin'], repeat('0', 64))
+  RETURNING seq INTO s1;
+  INSERT INTO access_grant_log (seq, source, source_event_id, occurred_at, action, change_kind, subject, roles, actor, row_hash)
+  VALUES (-2, 'IDP', 'verify-2', now(), 'GRANT', 'ROLE_ADDED', 'verify-user', ARRAY['support-agent'], 'verify-admin', repeat('0', 64))
+  RETURNING seq INTO s2;
+  SELECT (b.prev_hash = a.row_hash AND a.row_hash <> repeat('0', 64) AND s1 > 0 AND s2 > s1) INTO linked
+    FROM access_grant_log a, access_grant_log b WHERE a.seq = s1 AND b.seq = s2;
+  -- 검색 경로가 kadmission 이 아닌 세션(관리자 psql 등)에서도 트리거가 같은 순번·표를 본다
+  PERFORM set_config('search_path', 'public', true);
+  INSERT INTO kadmission.access_grant_log (source, source_event_id, occurred_at, action, change_kind, subject, roles, row_hash)
+  VALUES ('IDP', 'verify-3', now(), 'BASELINE', 'BASELINE', 'verify-user-2', '{}', '');
+  PERFORM set_config('search_path', 'kadmission, public', true);
+  SELECT * INTO v FROM access_grant_log_verify();
+  ok_before := v.broken_seq IS NULL AND v.checked >= 2;
+  BEGIN UPDATE access_grant_log SET roles = ARRAY['break-glass'] WHERE seq = s2;
+  EXCEPTION WHEN insufficient_privilege THEN upd := true; END;
+  SET LOCAL ROLE kadmission_app;
+  BEGIN DELETE FROM access_grant_log WHERE seq = s1;
+  EXCEPTION WHEN insufficient_privilege THEN app_del := true; END;
+  BEGIN PERFORM setval('access_grant_log_seq', 1);
+  EXCEPTION WHEN insufficient_privilege THEN app_seq := true; END;
+  RESET ROLE;
+  -- 슈퍼유저가 트리거를 끄고 고쳐도 검증이 그 행을 짚는다(이 검증 전체가 끝에서 ROLLBACK 된다)
+  ALTER TABLE access_grant_log DISABLE TRIGGER access_grant_log_guard;
+  UPDATE access_grant_log SET roles = ARRAY['break-glass'] WHERE seq = s2;
+  ALTER TABLE access_grant_log ENABLE TRIGGER access_grant_log_guard;
+  SELECT * INTO v FROM access_grant_log_verify();
+  caught := v.broken_seq = s2;
+  RAISE NOTICE '25. 권한 변경 기록 추가만·DB 해시 체인·앱 삭제/순번 되돌리기 불가·변조 검출: %',
+    CASE WHEN linked AND ok_before AND upd AND app_del AND app_seq AND caught THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT linked, '권한 변경 기록의 순번·해시를 넣는 쪽이 정했거나 체인이 이어지지 않는다';
+  ASSERT ok_before, '손대지 않은 권한 변경 기록을 검증이 끊김으로 본다';
+  ASSERT upd, '권한 변경 기록을 고칠 수 있다';
+  ASSERT app_del, '앱 역할이 권한 변경 기록을 지운다';
+  ASSERT app_seq, '앱 역할이 권한 변경 기록 순번을 되돌린다';
+  ASSERT caught, '트리거를 끄고 고친 권한 변경 기록을 검증이 못 잡는다';
 END $$;
 
 ROLLBACK;

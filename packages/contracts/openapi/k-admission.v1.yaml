@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: K-Admission University Data Plane API
-  version: 1.19.0
+  version: 1.20.0
   description: >
     Reference contract for a university-local K-Admission data plane.
     The university DB is the source of truth; central sync is not in the applicant critical path.
@@ -108,6 +108,12 @@ info:
     confirmed payment asks for a refund with a statutory reason or fee exemption, by bank transfer or
     in person; the admissions office opens (recorded) and decides once with an amount or a reason.
     New operations.
+
+
+    1.20.0 adds the staff access-grant log (D-91, note G-15): grants, changes and revocations of
+    staff roles, copied from the identity provider's admin events with the acting administrator and
+    reconciled against the live roles, kept append-only in a hash chain for at least three years.
+    Security auditors read it with the chain verification result. New operation, read only.
 
 
     Common rules:
@@ -1739,6 +1745,39 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
+  /admin/v1/access-grants:
+    get:
+      tags: [Admin]
+      operationId: listAccessGrants
+      x-kadmission-register: D-91
+      summary: Staff access grant, change and revocation log — newest first, with chain verification
+      description: >
+        Rows are written only by the collector (identity provider admin events and reconciliation
+        against live roles) and can never be changed or deleted. Staff account ids and role names
+        only — no personal data of applicants. `subject` matches an account id or a login name.
+      security: [{ oidc: [auditor] }]
+      parameters:
+        - in: query
+          name: subject
+          schema: { type: string, maxLength: 200 }
+        - in: query
+          name: before
+          description: Return rows older than this sequence number (from nextBefore).
+          schema: { type: integer, minimum: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        '200':
+          description: One page of the log
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccessGrantPage' }
+        '400':
+          $ref: '#/components/responses/Problem'
   /admin/v1/retention/matrix:
     get:
       tags: [Admin]
@@ -3143,6 +3182,43 @@ components:
           properties:
             kind: { const: IMMUTABLE }
             basis: { type: string }
+    AccessGrantEntry:
+      type: object
+      required: [seq, occurredAt, recordedAt, action, changeKind, subject, username, roles, actor, enabled, added, removed, missing]
+      properties:
+        seq: { type: integer }
+        occurredAt: { type: string, format: date-time }
+        recordedAt: { type: string, format: date-time }
+        action: { type: string, enum: [BASELINE, GRANT, CHANGE, REVOKE] }
+        changeKind:
+          type: string
+          enum: [BASELINE, RECONCILED, ROLE_ADDED, ROLE_REMOVED, GROUP_JOINED, GROUP_LEFT, ACCOUNT_CREATED, ACCOUNT_UPDATED, ACCOUNT_DISABLED, ACCOUNT_DELETED, ROLE_DEFINITION_CHANGED]
+          description: RECONCILED means the live roles differed from the log (a change without an admin event); the actor is unknown.
+        subject: { type: string, description: 'Staff account id, group:<id> or role:<path>' }
+        username: { type: [string, 'null'], description: Login name last seen for the subject }
+        roles:
+          type: array
+          items: { type: string }
+          description: Roles added or removed by this change; for BASELINE and RECONCILED the whole set at that time. Client roles are <client>:<role>, groups group:<path>.
+        actor: { type: [string, 'null'], description: Identity provider account id of the administrator who made the change }
+        enabled: { type: [boolean, 'null'] }
+        added: { type: array, items: { type: string } }
+        removed: { type: array, items: { type: string } }
+        missing: { type: boolean, description: The account no longer exists at the identity provider }
+    AccessGrantPage:
+      type: object
+      required: [items, nextBefore, chain]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AccessGrantEntry' }
+        nextBefore: { type: [integer, 'null'] }
+        chain:
+          type: object
+          required: [checked, brokenSeq]
+          properties:
+            checked: { type: integer }
+            brokenSeq: { type: [integer, 'null'], description: First row whose hash or link does not verify; null when the whole chain verifies }
     RetentionCategory:
       type: object
       required: [label, anchor, floor, purge, personal]

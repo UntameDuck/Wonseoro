@@ -82,8 +82,14 @@ describe('보존 정책 검증 (v1.1 §A15)', () => {
       ADMIN_ACCESS_LOG: { days: 30 },
       AUDIT_EVENT: { days: 10 },
     });
-    // 법정 미달 1 + 불변 1 + 누락 8 (신원·서류를 접수·미접수로 나눠 항목이 둘 늘었다, D-87)
-    assert.equal(problems.length, 10);
+    // 법정 미달 1 + 불변 1 + 누락 9 (신원·서류를 접수·미접수로 나눠 둘, 권한 변경 기록 하나가 늘었다 — D-87·D-91)
+    assert.equal(problems.length, 11);
+  });
+
+  it('권한 부여·변경·말소 기록은 3년보다 짧게 정할 수 없다 (안전성 확보조치 기준 제5조 ③, G-15·D-91)', () => {
+    const problems = validateRetention({ ...VALID_RETENTION, ACCESS_GRANT_LOG: { days: 730 } });
+    assert.deepEqual(problems.map((p) => p.category), ['ACCESS_GRANT_LOG']);
+    assert.match(problems[0]!.message, /1095/);
   });
 });
 

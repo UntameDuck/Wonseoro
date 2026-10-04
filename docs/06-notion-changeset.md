@@ -10,7 +10,7 @@
 
 | 노션 문서 | 첨부 이름 | 저장소 파일 | 바이트 | SHA-256 | 근거 |
 |---|---|---|---|---|---|
-| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.19.0) | 133,129 | `b5ac3fbf99a70c704db7fbc51b3cb0cc8789de3168a1778dbba7fa09ee658cb6` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 · D-78 · D-79 · D-80 · D-81 · D-82 · D-84 · D-85 · D-86 · D-88 · D-89 |
+| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.20.0) | 137,000 | `9064e8e4f717508630456a6ac6f6b078b8fbc302cecb41a850e171fc18915ea0` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 · D-78 · D-79 · D-80 · D-81 · D-82 · D-84 · D-85 · D-86 · D-88 · D-89 · D-91 |
 | [§04 CloudEvents](https://app.notion.com/p/3df75ab5debe81d68e37fabd3678dcc4) | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | 6,104 | `3ed7ec8a340c50f6e7de25b2c3322ffd7c6b4914fd046afdc67a2efea699ca02` | D-47 · T-M5-51 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` (v1.2) | 4,036 | `1aaef0db712e1d9a15da41fb86b7832a3da8c6decfdcd5992a57bb071e5b1975` | D-44 · D-49 · D-52 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` (v1.5, 차트 렌더링 — RBAC 6종·내부 상호 TLS·서류 워커 출구) | 40,216 | `28c54fbdb2e83edc849526c06c7158017110fa0e24a3b3cbfe8f525febf2b315` | D-44 · D-52 · D-68 · D-69 |
@@ -167,6 +167,8 @@ B11 대응에 더한다:
 > 원서마다 검토 중 하나(부분 유니크), 계좌이체면 계좌 필수·방문이면 없음, 승인 금액은 낸 금액 이하(제약), 결정 한 번(트리거), 변경·삭제 거절(저장소 마이그레이션 `0010_fee_refund_request.sql`, D-89).
 > 정보주체 권리 요청 `privacy_request(request_number, application_id, kind, detail_ciphertext, status, received_at, due_at, decided_at, decided_by, result_note_ciphertext)` —
 > 같은 원서·종류의 처리 중 요청은 하나(부분 유니크), 회신은 처리 중 → 결과 한 번(트리거), 내용·받은 시각·기한 변경과 삭제는 거절, 앱은 결과 칸만 UPDATE(저장소 마이그레이션 `0009_privacy_request.sql`, D-84).
+> 권한 부여·변경·말소 기록 `access_grant_log(seq, source, source_event_id, occurred_at, action, change_kind, subject, roles, actor, details, recorded_at, prev_hash, row_hash)` —
+> 추가만(트리거), (source, source_event_id) 유일, **순번·기록 시각·SHA-256 해시 체인은 DB 트리거가 매긴다**, 검증 함수 `access_grant_log_verify()`, 앱은 넣고 읽기만(저장소 마이그레이션 `0011_access_grant_log.sql`, D-91).
 > 장애 공지 원장 `service_incident` 는 대학 Data Plane에 둔다(저장소 마이그레이션 `0007_service_incident.sql`, D-78). 상태는 `ACTIVE`에서 `RESOLVED`로만 바뀌고 제목·안내·수준·시각·발행자는 수정하지 못한다. 앱 역할에는 조회·추가·해제용 UPDATE만 주며 DELETE·TRUNCATE 권한은 주지 않는다.
 
 v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
@@ -196,6 +198,9 @@ v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
 
 > **2026-10-04 v1.9.0** — 개인정보 최소 상담 조회 `POST /admin/v1/support/lookups`·`GET /admin/v1/support/lookups/{evidenceNumber}`(새 범위 `support`), 응답 `SupportView`(허용 목록),
 > 지원자 Self-check 에 선택 필드 `supportCode`. 새 경로·범위·선택 필드 추가라 호환 변경이다(§A16). (D-79)
+
+> **2026-10-05 v1.20.0** — 권한 부여·변경·말소 기록: 보안 감사자 `GET /admin/v1/access-grants`(최신순 쪽 나눔 `before`·`limit`, 계정 ID·로그인 이름으로 찾기, 해시 체인 검증 결과 포함), 범위 auditor, 읽기 전용.
+> 새 오퍼레이션이라 호환 변경이다(§A16). (D-91)
 
 > **2026-10-04 v1.19.0** — 전형료 반환 신청: 지원자 `POST·GET /api/v1/applications/{id}/fee-refunds`(확인된 결제가 있는 원서만, 검토 중 신청은 200 으로 그대로),
 > 입학처 `GET /admin/v1/fee-refunds`(큐)·`GET …/{requestNumber}`(계좌 열람, 재인증·감사)·`POST …/{requestNumber}/decision`(결정 한 번, 재인증), 범위 operator. 새 오퍼레이션이라 호환 변경이다(§A16). (D-89)
@@ -307,6 +312,16 @@ v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
 
 > 공개 트래픽 입구 선택자(edge 네임스페이스의 `ingress-nginx`)는 예시다. ingress-nginx 는 2026년 3월 은퇴해 보안 패치가 없으므로
 > 운영은 Gateway API 를 지원하는 유지보수 중인 컨트롤러로 하고 선택자를 그에 맞춘다(D-53, ADR-0008).
+
+「역할 정의」 표 아래에 더한다 (G-15, D-91 — 개인정보의 안전성 확보조치 기준 제5조 ③):
+
+> 권한 부여·변경·말소 기록 — 담당자 권한의 원본은 로그인 서버(담당자 렐름)다. 렐름의 관리 이벤트(세부 포함)를 켜고,
+> 읽기 전용 수집 클라이언트(서비스 계정 — 이벤트·계정·렐름·클라이언트 조회만)가 1시간마다 역할·그룹·계정 생성/사용 중지/삭제·역할 정의 변경을
+> **바꾼 관리자 계정 ID 와 함께** 대학 DB 의 추가 전용 기록 `access_grant_log` 로 옮긴다. 매번 실제 권한과 기록으로 복원한 권한을 대조해
+> 처음 보는 계정은 기준(BASELINE), 이벤트 없이 바뀐 권한은 대조(RECONCILED) 기록을 남긴다. 관리 이벤트가 꺼져 있으면 수집이 실패로 알린다.
+> 서비스 계정의 권한도 기록한다. 이름·이메일·IP 는 옮기지 않는다. 최소 3년 보관(Retention Matrix `ACCESS_GRANT_LOG` 하한 1095일, 지우는 경로 없음).
+> 배포: 차트 `accessGrantSync` CronJob(접수 API 이미지, Kubernetes 권한 없음, 출구는 DNS·DB·로그인 서버만). 운영에서 담당자 로그인을 쓰면 끌 수 없다.
+> (기본 꺼짐이라 §05 runtime 첨부는 바뀌지 않는다.)
 
 ### §09 STRIDE — 파일 업로드
 
