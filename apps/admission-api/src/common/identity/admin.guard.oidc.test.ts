@@ -7,7 +7,7 @@ import type { ExecutionContext } from '@nestjs/common';
  * 운영 API 문지기 — AUTH_MODE=oidc (T-M5-02·10, STRIDE E-03 수직 권한)
  *
  * 설정은 모듈을 읽을 때 정해진다. 이 파일은 따로 도는 프로세스라(node --test) 여기서 oidc 로 바꾸고 읽는다.
- * 역할 6종 × 범위 3종, 인증 수준(acr), 재인증 시각(auth_time)을 본다. 신원은 앞단 훅이 붙인 것을 흉내 낸다.
+ * 역할 7종 × 범위 4종, 인증 수준(acr), 재인증 시각(auth_time)을 본다. 신원은 앞단 훅이 붙인 것을 흉내 낸다.
  */
 process.env.AUTH_MODE = 'oidc';
 process.env.UNIVERSITY_ID ??= 'UNIV-GUARD';
@@ -18,7 +18,7 @@ type Guard = { canActivate(ctx: ExecutionContext): boolean };
 let guard: Guard;
 let scope: typeof import('./admin-scope');
 
-const ROLES = ['platform-viewer', 'sre-operator', 'admission-admin', 'security-auditor', 'release-controller', 'break-glass'];
+const ROLES = ['platform-viewer', 'sre-operator', 'admission-admin', 'security-auditor', 'support-agent', 'release-controller', 'break-glass'];
 
 /** 테스트용 핸들러·클래스 — 데코레이터 메타데이터만 쓴다 */
 function handlers() {
@@ -26,6 +26,7 @@ function handlers() {
     adminRead() {}
     operatorRun() {}
     auditorRead() {}
+    supportLookup() {}
     approve() {}
     unscoped() {}
   }
@@ -34,6 +35,7 @@ function handlers() {
   put(scope.ADMIN_SCOPE_KEY, 'admin', p.adminRead!);
   put(scope.ADMIN_SCOPE_KEY, 'operator', p.operatorRun!);
   put(scope.ADMIN_SCOPE_KEY, 'auditor', p.auditorRead!);
+  put(scope.ADMIN_SCOPE_KEY, 'support', p.supportLookup!);
   put(scope.ADMIN_SCOPE_KEY, 'admin', p.approve!);
   put(scope.STEP_UP_KEY, true, p.approve!);
   return { Target, p };
@@ -87,7 +89,7 @@ describe('운영 API 문지기 — oidc (T-M5-02·10)', () => {
     assert.equal(outcome(() => guard.canActivate(ctx(p.unscoped!, Target, staff(['admission-admin'])))), '403 FORBIDDEN');
   });
 
-  it('역할 6종 × 범위 3종 — 범위에 맞는 역할만 연다', () => {
+  it('역할 7종 × 범위 4종 — 범위에 맞는 역할만 연다', () => {
     const { Target, p } = handlers();
     const table: Record<string, Record<string, string>> = {};
     for (const role of ROLES) {
@@ -95,16 +97,19 @@ describe('운영 API 문지기 — oidc (T-M5-02·10)', () => {
         admin: outcome(() => guard.canActivate(ctx(p.adminRead!, Target, staff([role])))),
         operator: outcome(() => guard.canActivate(ctx(p.operatorRun!, Target, staff([role])))),
         auditor: outcome(() => guard.canActivate(ctx(p.auditorRead!, Target, staff([role])))),
+        support: outcome(() => guard.canActivate(ctx(p.supportLookup!, Target, staff([role])))),
       };
     }
     const F = '403 FORBIDDEN';
     assert.deepEqual(table, {
-      'platform-viewer': { admin: F, operator: F, auditor: F },
-      'sre-operator': { admin: F, operator: F, auditor: F },
-      'admission-admin': { admin: 'ok', operator: 'ok', auditor: F },
-      'security-auditor': { admin: F, operator: F, auditor: 'ok' },
-      'release-controller': { admin: F, operator: F, auditor: F },
-      'break-glass': { admin: F, operator: F, auditor: F },
+      'platform-viewer': { admin: F, operator: F, auditor: F, support: F },
+      'sre-operator': { admin: F, operator: F, auditor: F, support: F },
+      'admission-admin': { admin: 'ok', operator: 'ok', auditor: F, support: 'ok' },
+      'security-auditor': { admin: F, operator: F, auditor: 'ok', support: F },
+      // 상담 담당은 상담 조회만 — 설정·대사·증적은 열지 못한다 (T-M6-07, D-79)
+      'support-agent': { admin: F, operator: F, auditor: F, support: 'ok' },
+      'release-controller': { admin: F, operator: F, auditor: F, support: F },
+      'break-glass': { admin: F, operator: F, auditor: F, support: F },
     });
   });
 

@@ -450,6 +450,36 @@ async function admin() {
     if (!e.name.startsWith('감사 체인')) problems.push(`증적: 연 뒤 포커스가 "${e.name || '문서 처음'}" 에 있다`);
     await sweep('증적 (열람 결과)');
   }
+  // 상담 조회 (T-M6-07) — 새 원서의 상담 확인번호를 지원자 상태 확인에서 받아 키보드로 조회하고, 증적번호로 다시 연다
+  const sa = newApplicant();
+  const supportApp = await createApplication(sa);
+  const check = await (await fetch(`${API}/api/v1/applications/${supportApp}/self-check`, {
+    headers: { 'x-applicant-id': sa.applicantId, 'x-subject-token': sa.subjectToken },
+  })).json();
+  if (!/^[0-9A-Z]{10}$/.test(check.supportCode ?? '')) throw new Error(`상담 확인번호 없음: ${JSON.stringify(check).slice(0, 200)}`);
+  await go(`${ADMIN}/support`, '원서 찾기');
+  await sweep('상담 조회');
+  await keyTo('접수번호 또는 상담 확인번호', 'Tab');
+  await press(b, 'Tab', { shift: true });
+  await typeText(b, `${check.supportCode.slice(0, 5)}-${check.supportCode.slice(5)}`);
+  await press(b, 'Tab');
+  await press(b, 'ArrowDown');
+  await keyTo('조회');
+  await b.waitFor(`document.body.innerText.includes('안내할 말')`, '상담 조회 결과', 30_000);
+  const s1 = await focusInfo(b);
+  if (!s1.name.startsWith('증적번호')) problems.push(`상담 조회: 조회 뒤 포커스가 "${s1.name || '문서 처음'}" 에 있다`);
+  await sweep('상담 조회 (결과)');
+  const evidenceNumber = await b.evaluate(`(document.body.innerText.match(/SR-\\d{8}-[0-9A-Z]{6}/) || [''])[0]`);
+  if (!evidenceNumber) throw new Error('증적번호를 화면에서 찾지 못했다');
+  await go(`${ADMIN}/support`, '증적번호로 다시 보기');
+  await keyTo('증적번호', 'Tab');
+  await press(b, 'Tab', { shift: true });
+  await typeText(b, evidenceNumber);
+  await keyTo('다시 보기');
+  await b.waitFor(`document.body.innerText.includes('기록 원본과 같습니다')`, '증적번호로 다시 보기 결과', 30_000);
+  const s2 = await focusInfo(b);
+  if (!s2.name.startsWith('증적번호')) problems.push(`상담 다시 보기: 연 뒤 포커스가 "${s2.name || '문서 처음'}" 에 있다`);
+  await sweep('상담 조회 (증적번호로 다시 보기)');
   await go(`${ADMIN}/retention`, '보존기간');
   await sweep('보존기간');
   await go(`${ADMIN}/no-such-page`, '찾을 수 없는');

@@ -249,6 +249,7 @@ export function FailureNotice({
   lastSavedAt,
   savedHere,
   serverState,
+  supportCode,
   onRecheck,
 }: {
   title: string;
@@ -260,6 +261,8 @@ export function FailureNotice({
   savedHere?: string | null;
   /** 서버가 확인한 현재 상태(Self-check 요약). 서버에 닿지 못하면 없다 */
   serverState?: string | null;
+  /** 상담 확인번호(화면 표기 그대로) — 고객센터에 이름·연락처 대신 불러 준다. 모르면 없다 */
+  supportCode?: string | null;
   onRecheck: () => void;
 }) {
   // 장애 안내는 화면 전체를 바꾼다 — 누른 버튼이 사라져 포커스가 문서 처음으로 떨어진다. 안내 제목으로 옮긴다 (T-M5-40)
@@ -277,6 +280,7 @@ export function FailureNotice({
     ['마지막 저장', saved],
     ['서버가 확인한 상태', serverState ?? '지금은 확인할 수 없습니다. 연결되면 "현재 상태 다시 확인" 을 눌러 주십시오.'],
     ['요청번호', traceId || '-', true],
+    ...(supportCode ? ([['상담 확인번호', supportCode, true]] as Array<[string, string, boolean]>) : []),
   ];
   return (
     <div

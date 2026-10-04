@@ -2,7 +2,7 @@
 
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Button, Card, DescriptionList, ErrorSummary, Field, fieldOf, cycleTitle } from '@wonseoro/krds';
-import { PROBLEM_TEXT, problemText } from '@wonseoro/contracts';
+import { PROBLEM_TEXT, formatSupportCode, problemText } from '@wonseoro/contracts';
 import { SchemaForm, type JsonSchema } from '../../../krds/schema-form';
 import { DocumentStatusList, FileUpload } from '../../../krds/file-upload';
 import { Breadcrumb, STEPS, StepIndicator, type StepNo } from '../../../krds/navigation';
@@ -422,6 +422,7 @@ export default function ApplyPage({
           lastSavedAt={app?.lastSavedAt ?? null}
           savedHere={lastSavedHere(applicationId)}
           serverState={selfCheck?.application.summary ?? null}
+          supportCode={selfCheck?.supportCode ? formatSupportCode(selfCheck.supportCode) : null}
           onRecheck={() => void recheck()}
         />
       </>
@@ -635,6 +636,10 @@ export default function ApplyPage({
               ['현재 서버 시각', formatKst(app?.serverTime ?? null)],
               ['마감 시각', formatKst(app?.deadlineAt ?? null)],
               ['결제 후 수정·취소', '불가능합니다'],
+              // 고객센터에 문의할 때 이름·연락처 대신 이 번호를 불러 준다 (T-M6-07, D-79)
+              ...(selfCheck?.supportCode
+                ? ([['상담 확인번호', formatSupportCode(selfCheck.supportCode)]] as Array<[string, string]>)
+                : []),
             ]}
           />
           {/* 결제가 곧 제출이다 (D-42). 복구 불가능한 동작 직전에 알린다. (§07) */}
@@ -699,6 +704,9 @@ export default function ApplyPage({
                     </strong>,
                   ],
                   ['접수 시각', formatKst(submission.finalizedAt)],
+                  ...(selfCheck?.supportCode
+                    ? ([['상담 확인번호', formatSupportCode(selfCheck.supportCode)]] as Array<[string, string]>)
+                    : []),
                 ]}
               />
               {/* 중앙 동기화 지연은 접수완료 여부와 분리해 표시한다. (v1.1 §07) */}

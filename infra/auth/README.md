@@ -18,7 +18,7 @@ node tests/a11y/focus-sweep.mjs applicant-oidc   # 본인확인·공통원서·�
 
 | 렐름 | 발급자 | 무엇 |
 |---|---|---|
-| `wonseoro-staff` | `http://localhost:18080/realms/wonseoro-staff` | 대학 담당자. 비밀번호 + TOTP 필수(인증 수준 `acr=mfa`), 5분이 지나면 TOTP 를 다시 묻는다. 역할 6종(`roles` 클레임). 클라이언트 `admin-web`(콘솔, 기밀 + PKCE) |
+| `wonseoro-staff` | `http://localhost:18080/realms/wonseoro-staff` | 대학 담당자. 비밀번호 + TOTP 필수(인증 수준 `acr=mfa`), 5분이 지나면 TOTP 를 다시 묻는다. 역할 7종(`roles` 클레임). 클라이언트 `admin-web`(콘솔, 기밀 + PKCE) |
 | `wonseoro-applicant` | `http://localhost:18080/realms/wonseoro-applicant` | 지원자 본인확인 흉내(실 간편인증·PASS 는 외부 기관). 역할 없음. 클라이언트 `applicant-web`(공개 + PKCE), 갱신 토큰 회전 |
 
 **시험 계정** — 비밀번호·TOTP 비밀은 렐름 파일에 있는 **로컬 전용 시험값**이다. 시험 스크립트도 렐름 파일에서 읽는다.
@@ -27,6 +27,7 @@ node tests/a11y/focus-sweep.mjs applicant-oidc   # 본인확인·공통원서·�
 |---|---|---|
 | `admin-a`, `admin-b` | admission-admin | 2인 승인 시험용으로 둘 |
 | `auditor` | security-auditor | |
+| `support` | support-agent | 상담 조회만(T-M6-07, D-79) |
 | `viewer` | platform-viewer | 틀린 OTP 시험에 쓴다(잠금이 다른 시험을 막지 않게) |
 | `sre` | sre-operator | |
 | `release` | release-controller | |

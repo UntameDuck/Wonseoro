@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: K-Admission University Data Plane API
-  version: 1.8.0
+  version: 1.9.0
   description: >
     Reference contract for a university-local K-Admission data plane.
     The university DB is the source of truth; central sync is not in the applicant critical path.
@@ -44,6 +44,13 @@ info:
     1.8.0 adds the university-local public service status and operator incident ledger (T-M6-06,
     D-78). The public response contains only the university name and applicant guidance; publishing
     and resolving require the operator scope and recent authentication. New paths and schemas only.
+
+
+    1.9.0 adds the PII-minimal support view (T-M6-07, D-79). Support staff (`support` scope) find an
+    application by its application number or by the per-application support code the applicant sees
+    on the self-check (`supportCode`, additive); every lookup issues an evidence number and keeps the
+    exact response. The response is an allow-list: no form values, common profile, documents, names,
+    contacts, internal identifiers or provider references. New paths, a new scope and an optional field.
 
 
     Common rules:
@@ -701,6 +708,71 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/AdminServiceIncident' }
         '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /admin/v1/support/lookups:
+    post:
+      tags: [Admin]
+      operationId: createSupportLookup
+      x-kadmission-register: D-79
+      description: >
+        Finds an application by application number or support code and returns the PII-minimal
+        support view. Every lookup issues an evidence number, stores the exact response with its
+        SHA-256 and appends SUPPORT_LOOKUP to the application's audit chain. Unknown numbers of either
+        kind answer the same 404.
+      security: [{ oidc: [support] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, reason]
+              properties:
+                key: { type: string, minLength: 1, maxLength: 80, description: Application number or support code }
+                reason: { $ref: '#/components/schemas/SupportReason' }
+      responses:
+        '201':
+          description: Support view with its evidence number
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SupportView' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /admin/v1/support/lookups/{evidenceNumber}:
+    get:
+      tags: [Admin]
+      operationId: getSupportLookup
+      x-kadmission-register: D-79
+      description: Reopens exactly what was shown at that lookup, with an integrity check of the stored copy.
+      security: [{ oidc: [support] }]
+      parameters:
+        - in: path
+          name: evidenceNumber
+          required: true
+          schema: { type: string, pattern: '^SR-[0-9]{8}-[0-9A-HJKMNP-TV-Z]{6}$' }
+      responses:
+        '200':
+          description: Stored support view
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SupportView'
+                  - type: object
+                    required: [snapshotHash, intact]
+                    properties:
+                      snapshotHash: { type: string, pattern: '^[0-9a-f]{64}$' }
+                      intact: { type: boolean, description: The stored copy still hashes to snapshotHash }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
   /admin/v1/config/active:
     get:
@@ -2242,6 +2314,13 @@ components:
         serverTime: { type: string, format: date-time }
         deadlineAt: { type: string, format: date-time }
         deadlinePolicyVersion: { type: string }
+        supportCode:
+          type: string
+          pattern: '^[0-9A-HJKMNP-TV-Z]{10}$'
+          x-kadmission-register: D-79
+          description: >
+            Support code (1.9.0) - the applicant reads it to the help desk instead of a name or phone
+            number; shown as XXXXX-XXXXX. Fixed for the life of the application.
         application:
           type: object
           required: [status, lastSavedAt, summary]
@@ -2303,6 +2382,101 @@ components:
               at: { type: string, format: date-time }
               what: { type: string }
               result: { type: string }
+    SupportReason:
+      type: string
+      enum: [STATUS, PAYMENT, DOCUMENT, INCIDENT, OTHER]
+      description: Category only - no free text, so staff never type personal data into the record.
+    SupportView:
+      type: object
+      x-kadmission-register: D-79
+      description: >
+        Allow-list. Must not carry form values, common profile, document types or file names, names,
+        contacts, applicant/application/payment/submission identifiers, provider references,
+        admission type or department.
+      required: [evidenceNumber, lookedUpAt, reason, lookupKind, universityName, cycleName, application,
+        submission, payment, documents, centralSync, deadline, incidents, timeline, agentGuidance]
+      properties:
+        evidenceNumber: { type: string, pattern: '^SR-[0-9]{8}-[0-9A-HJKMNP-TV-Z]{6}$' }
+        lookedUpAt: { type: string, format: date-time, description: DB time }
+        reason: { $ref: '#/components/schemas/SupportReason' }
+        lookupKind: { type: string, enum: [APPLICATION_NUMBER, SUPPORT_CODE] }
+        universityName: { type: string }
+        cycleName: { type: string }
+        application:
+          type: object
+          additionalProperties: false
+          required: [status, summary, lastSavedAt]
+          properties:
+            status: { type: string }
+            summary: { type: string }
+            lastSavedAt: { type: [string, 'null'], format: date-time }
+        submission:
+          type: object
+          additionalProperties: false
+          required: [submitted, applicationNumber, finalizedAt]
+          properties:
+            submitted: { type: boolean }
+            applicationNumber: { type: [string, 'null'] }
+            finalizedAt: { type: [string, 'null'], format: date-time }
+        payment:
+          type: object
+          additionalProperties: false
+          required: [status, amount, requestedAt, verifiedAt, guidance]
+          properties:
+            status: { type: [string, 'null'] }
+            amount: { type: [number, 'null'] }
+            requestedAt: { type: [string, 'null'], format: date-time }
+            verifiedAt: { type: [string, 'null'], format: date-time }
+            guidance: { type: string }
+        documents:
+          type: object
+          additionalProperties: false
+          description: Counts by status only
+          required: [available, scanning, rejected, uploading]
+          properties:
+            available: { type: integer, minimum: 0 }
+            scanning: { type: integer, minimum: 0 }
+            rejected: { type: integer, minimum: 0 }
+            uploading: { type: integer, minimum: 0 }
+        centralSync:
+          type: object
+          additionalProperties: false
+          required: [pending, sent, lastSentAt, guidance]
+          properties:
+            pending: { type: integer, minimum: 0 }
+            sent: { type: integer, minimum: 0 }
+            lastSentAt: { type: [string, 'null'], format: date-time }
+            guidance: { type: string }
+        deadline:
+          type: object
+          additionalProperties: false
+          required: [deadlineAt]
+          properties:
+            deadlineAt: { type: [string, 'null'], format: date-time }
+        incidents:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [severity, title, startsAt]
+            properties:
+              severity: { type: string, enum: [NOTICE, DEGRADED, OUTAGE] }
+              title: { type: string }
+              startsAt: { type: string, format: date-time }
+        timeline:
+          type: array
+          maxItems: 200
+          items:
+            type: object
+            additionalProperties: false
+            required: [at, what, result]
+            properties:
+              at: { type: string, format: date-time }
+              what: { type: string }
+              result: { type: string }
+        agentGuidance:
+          type: array
+          items: { type: string }
     CancelResult:
       type: object
       required: [applicationId, status, cancelledAt, refundRequired, paymentId]

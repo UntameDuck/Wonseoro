@@ -364,6 +364,13 @@ BEGIN
                     AND has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'UPDATE'))
                    OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'DELETE')
                    OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'TRUNCATE')
+              WHEN t.tablename = 'support_lookup'
+              -- 상담 증적(0008) — 앱은 넣고 읽기만. 고치기·지우기 없음
+              THEN NOT (has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'SELECT')
+                    AND has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'INSERT'))
+                   OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'UPDATE')
+                   OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'DELETE')
+                   OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'TRUNCATE')
               WHEN t.tablename IN ('audit_event', 'activation_record')
               THEN NOT has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'INSERT')
                    OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'UPDATE')
@@ -528,6 +535,38 @@ BEGIN
   ASSERT upd, '비상 접속 기록을 고칠 수 있다';
   ASSERT ddl, '비상 역할이 DDL 을 한다';
   ASSERT aud, '비상 역할이 감사 기록을 고친다';
+END $$;
+
+-- ── 23. 상담 확인번호 고정·형식 · 상담 증적은 추가만 · 앱 역할은 고치지도 지우지도 못한다 (T-M6-07, 0008) ───
+DO $$
+DECLARE code varchar; fixed boolean := false; fmt boolean := false; upd boolean := false; app_del boolean := false;
+        app_id uuid := gen_random_uuid(); ev varchar := 'SR-20990101-VER1FY';
+BEGIN
+  INSERT INTO application (id, cycle_id, applicant_id, admission_type_id, department_id, status)
+  VALUES (app_id, '11111111-1111-1111-1111-111111111111', '4a4a4a4a-4444-4444-4444-444444444444',
+          '22222222-2222-2222-2222-222222222222', (SELECT id FROM department WHERE cycle_id = '11111111-1111-1111-1111-111111111111' LIMIT 1), 'CANCELLED')
+  RETURNING support_code INTO code;
+  BEGIN UPDATE application SET support_code = '0000000000' WHERE id = app_id;
+  EXCEPTION WHEN insufficient_privilege THEN fixed := true; END;
+  BEGIN INSERT INTO application (id, cycle_id, applicant_id, admission_type_id, department_id, status, support_code)
+        VALUES (gen_random_uuid(), '11111111-1111-1111-1111-111111111111', '4a4a4a4a-4444-4444-4444-444444444444',
+                '22222222-2222-2222-2222-222222222222', (SELECT id FROM department WHERE cycle_id = '11111111-1111-1111-1111-111111111111' LIMIT 1), 'CANCELLED', 'OIL0000000');
+  EXCEPTION WHEN check_violation THEN fmt := true; END;
+  INSERT INTO support_lookup (evidence_number, application_id, lookup_kind, reason, agent_id, snapshot, snapshot_hash)
+  VALUES (ev, app_id, 'SUPPORT_CODE', 'STATUS', 'verifier', '{}', repeat('0', 64));
+  BEGIN UPDATE support_lookup SET reason = 'OTHER' WHERE evidence_number = ev;
+  EXCEPTION WHEN insufficient_privilege THEN upd := true; END;
+  SET LOCAL ROLE kadmission_app;
+  BEGIN DELETE FROM support_lookup WHERE evidence_number = ev;
+  EXCEPTION WHEN insufficient_privilege THEN app_del := true; END;
+  RESET ROLE;
+  RAISE NOTICE '23. 상담 확인번호 고정·형식(%) · 상담 증적 추가만 · 앱 역할 삭제 불가: %', code,
+    CASE WHEN code ~ '^[0-9A-HJKMNP-TV-Z]{10}$' AND fixed AND fmt AND upd AND app_del THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT code ~ '^[0-9A-HJKMNP-TV-Z]{10}$', '상담 확인번호 형식이 아니다';
+  ASSERT fixed, '상담 확인번호를 바꿀 수 있다';
+  ASSERT fmt, '헷갈리는 글자가 든 상담 확인번호가 들어간다';
+  ASSERT upd, '상담 증적을 고칠 수 있다';
+  ASSERT app_del, '앱 역할이 상담 증적을 지운다';
 END $$;
 
 ROLLBACK;

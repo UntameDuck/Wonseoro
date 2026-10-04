@@ -190,6 +190,8 @@ export interface SelfCheck {
   applicationId: string;
   serverTime: string;
   deadlineAt: string;
+  /** 상담 확인번호 — 고객센터에 이름·연락처 대신 불러 준다(계약 1.9.0). 옛 서버면 없다 */
+  supportCode?: string;
   application: { status: string; lastSavedAt: string | null; summary: string };
   submission: {
     submissionId: string;

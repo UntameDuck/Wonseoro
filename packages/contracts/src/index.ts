@@ -11,3 +11,4 @@ export * from './labels';
 export * from './problem-text';
 export * from './josa';
 export * from './upload';
+export * from './support';

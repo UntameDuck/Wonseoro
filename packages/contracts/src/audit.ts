@@ -22,6 +22,8 @@ export const AUDIT_ACTION = [
   /** 대학별 공개 장애 공지 발행·해제 (T-M6-06, D-78). */
   'INCIDENT_PUBLISHED',
   'INCIDENT_RESOLVED',
+  /** 상담원이 개인정보 최소 상담 조회로 원서 상태를 봤다 — 증적번호와 함께 (T-M6-07, D-79). */
+  'SUPPORT_LOOKUP',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTION)[number];

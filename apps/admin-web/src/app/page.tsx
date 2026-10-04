@@ -29,6 +29,12 @@ export default function Home() {
             <a href="/reconciliation">대조 · 예외</a> — 결제·접수·통합 조회 반영이 어긋난 건 해소
           </li>
           <li>
+            <a href="/status">장애 공지</a> — 이 대학 접수 화면에 보일 공지 발행·해제
+          </li>
+          <li>
+            <a href="/support">상담 조회</a> — 접수번호·상담 확인번호로 접수·결제 상태 확인 (조회마다 증적번호가 남습니다)
+          </li>
+          <li>
             <a href="/evidence">증적 조회</a> — 한 원서의 접수 과정 확인 (조회 사실이 기록됩니다)
           </li>
           <li>

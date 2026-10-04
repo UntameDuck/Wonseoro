@@ -6,7 +6,7 @@ import { ConsoleProvider } from '../components/console';
 export const metadata: Metadata = {
   // 화면마다 제목이 다르다 — "마감 · 연장 | 원서로 입학처 콘솔" (T-M5-55)
   title: { default: '원서로 입학처 콘솔', template: '%s | 원서로 입학처 콘솔' },
-  description: '설정 승인 · 마감 연장 · 대조 · 증적',
+  description: '설정 승인 · 마감 연장 · 대조 · 상담 · 증적',
   robots: { index: false, follow: false },
 };
 
@@ -17,6 +17,7 @@ const NAV: Array<[string, string]> = [
   ['/deadline', '마감 · 연장'],
   ['/reconciliation', '대조 · 예외'],
   ['/status', '장애 공지'],
+  ['/support', '상담 조회'],
   ['/evidence', '증적 조회'],
   ['/retention', '보존기간'],
 ];

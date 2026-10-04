@@ -211,9 +211,11 @@ describe('OIDC 인증 — HTTP (T-M5-02·10 단계 3)', () => {
       ['retention', `/admin/v1/retention/matrix`],
       ['recon', `/admin/v1/reconciliation/exceptions`],
       ['evidence', `/admin/v1/evidence/applications/${appId}?reason=${encodeURIComponent('감사 확인')}`],
+      // 없는 증적번호 — 열리면 404, 막히면 401·403 (T-M6-07, D-79)
+      ['support', `/admin/v1/support/lookups/SR-20000101-000000`],
     ];
     const table: Record<string, string> = {};
-    for (const role of ['platform-viewer', 'sre-operator', 'admission-admin', 'security-auditor', 'release-controller', 'break-glass']) {
+    for (const role of ['platform-viewer', 'sre-operator', 'admission-admin', 'security-auditor', 'support-agent', 'release-controller', 'break-glass']) {
       const t = await token('staff', `staff-${role}`, { roles: [role] });
       const row: string[] = [];
       for (const [name, url] of probes) {
@@ -223,12 +225,13 @@ describe('OIDC 인증 — HTTP (T-M5-02·10 단계 3)', () => {
       table[role] = row.join(' ');
     }
     assert.deepEqual(table, {
-      'platform-viewer': 'config:403 retention:403 recon:403 evidence:403',
-      'sre-operator': 'config:403 retention:403 recon:403 evidence:403',
-      'admission-admin': 'config:open retention:open recon:open evidence:403',
-      'security-auditor': 'config:403 retention:403 recon:403 evidence:open',
-      'release-controller': 'config:403 retention:403 recon:403 evidence:403',
-      'break-glass': 'config:403 retention:403 recon:403 evidence:403',
+      'platform-viewer': 'config:403 retention:403 recon:403 evidence:403 support:403',
+      'sre-operator': 'config:403 retention:403 recon:403 evidence:403 support:403',
+      'admission-admin': 'config:open retention:open recon:open evidence:403 support:open',
+      'security-auditor': 'config:403 retention:403 recon:403 evidence:open support:403',
+      'support-agent': 'config:403 retention:403 recon:403 evidence:403 support:open',
+      'release-controller': 'config:403 retention:403 recon:403 evidence:403 support:403',
+      'break-glass': 'config:403 retention:403 recon:403 evidence:403 support:403',
     });
   });
 

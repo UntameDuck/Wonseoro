@@ -59,6 +59,7 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   ADMIN_CHANGED_CONFIG: '담당자 처리',
   INCIDENT_PUBLISHED: '장애 공지 발행',
   INCIDENT_RESOLVED: '장애 공지 해제',
+  SUPPORT_LOOKUP: '상담 조회',
 };
 
 export const AUDIT_RESULT_LABEL: Record<'ACCEPTED' | 'REJECTED' | 'FAILED', string> = {
@@ -165,6 +166,7 @@ export const EXCEPTION_FACT_LABEL: Record<string, string> = {
 export const STAFF_ROLE_LABEL: Record<string, string> = {
   'admission-admin': '입학처 담당',
   'security-auditor': '보안 감사',
+  'support-agent': '상담 담당',
   'platform-viewer': '플랫폼 조회',
   'sre-operator': '운영 지원',
   'release-controller': '배포 관리',

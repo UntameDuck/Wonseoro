@@ -5,19 +5,22 @@ import { SetMetadata } from '@nestjs/common';
  * 경로마다 붙인다. 붙이지 않은 운영 경로는 AdminGuard 가 닫는다(닫힌 실패).
  * 계약과 어긋나면 `oidc-routes.test.ts` 가 깨진다.
  */
-export type AdminScopeName = 'admin' | 'operator' | 'auditor';
+export type AdminScopeName = 'admin' | 'operator' | 'auditor' | 'support';
 
 /**
  * 계약 범위 → 담당자 역할 (docs/12-authentication-plan.md A5, 노션 06 역할 정의)
  *   admin    — admission-admin: 업무 Config API(설정·마감·보존·활성화 기록)
  *   operator — admission-admin: 결제 대사도 입학처 업무다. sre-operator 는 Kubernetes 권한만 갖는다
  *   auditor  — security-auditor: 감사·증적 읽기 전용
+ *   support  — support-agent(상담 담당)·admission-admin: 개인정보 최소 상담 조회만 (T-M6-07, D-79).
+ *              원서 내용·서류·연락처가 응답에 없으므로 감사 역할보다 좁다. 입학처 담당도 상담을 받는다
  * platform-viewer·sre-operator·release-controller·break-glass 는 업무 API 권한이 없다.
  */
 export const SCOPE_ROLES: Readonly<Record<AdminScopeName, readonly string[]>> = {
   admin: ['admission-admin'],
   operator: ['admission-admin'],
   auditor: ['security-auditor'],
+  support: ['support-agent', 'admission-admin'],
 };
 
 export const ADMIN_SCOPE_KEY = 'wonseoro:admin-scope';

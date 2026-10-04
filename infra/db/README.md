@@ -52,7 +52,7 @@ docs/spec-assets/README.md 참조. 별도로 DDL을 새로 쓰지 말 것 (이�
 여러 번 돌려도 같은 결과다.
 
 저장소가 더한 마이그레이션(노션 첨부 교체 때 0001 로 접어 넣는다):
-`0003_field_encryption.sql`(원서 항목 값 암호화, D-70) · `0004_break_glass.sql`(DB 비상 접속 역할·기록, D-72) · `0005_outbox_archive.sql`(Outbox 보관 월별 파티션, D-74) · `0006_writer_fence.sql`(쓰기 세대 펜싱, D-76) · `0007_service_incident.sql`(대학별 장애 공지 원장, D-78).
+`0003_field_encryption.sql`(원서 항목 값 암호화, D-70) · `0004_break_glass.sql`(DB 비상 접속 역할·기록, D-72) · `0005_outbox_archive.sql`(Outbox 보관 월별 파티션, D-74) · `0006_writer_fence.sql`(쓰기 세대 펜싱, D-76) · `0007_service_incident.sql`(대학별 장애 공지 원장, D-78) · `0008_support_view.sql`(상담 확인번호·상담 증적, D-79).
 적용 순서는 0001 → 0002 → 0003 → 0004 → 0005 → 0006 → dev-roles. 중앙은 `central/0001`~`0004`(0004 = 공통원서 금고 암호화).
 
 앞으로 스키마가 바뀌면 같은 방식을 따른다: 0003 부터 임시 마이그레이션으로 덧붙이고, 대장에 올리고,

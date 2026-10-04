@@ -1,11 +1,12 @@
 import { Controller, Get, Header, Param, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
-import { APPLICATION_STATUS_LABEL, AUDIT_ACTION_LABEL, CACHE_CONTROL_PII, labelOf } from '@wonseoro/contracts';
+import { AUDIT_ACTION_LABEL, CACHE_CONTROL_PII, labelOf } from '@wonseoro/contracts';
 import { Db } from '@wonseoro/server-kit';
 import { applicantFrom } from '../../common/identity/identity';
 import { Ownership } from '../../common/identity/ownership.service';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { DeadlineService } from '../deadline/deadline.service';
+import { applicationSummary, centralSyncGuidance, paymentGuidance } from './status-summary';
 
 interface TimelineEntry {
   at: string;
@@ -61,13 +62,18 @@ export class SelfCheckController {
       serverTime: snapshot.serverTime,
       deadlineAt: snapshot.deadlineAt,
       deadlinePolicyVersion: snapshot.deadlinePolicyVersion,
+      /**
+       * 상담 확인번호 — 고객센터에 이름·연락처 대신 불러 주는 번호. 접수 전 원서에는 접수번호가 없다 (T-M6-07, D-79).
+       * 상담원은 이 번호로 상태만 보고, 원서 내용·서류·연락처는 보지 못한다.
+       */
+      supportCode: app.supportCode,
 
       // ── 접수 상태. 이것이 사용자가 가장 알고 싶은 것이다 ──────────────
       application: {
         status: app.status,
         lastSavedAt: app.lastSavedAt,
         // 접수 완료 여부를 한 문장으로. 화면이 이걸 그대로 보여줘도 되게.
-        summary: this.summarize(app.status, submission !== null),
+        summary: applicationSummary(app.status, submission !== null),
       },
       submission,
 
@@ -87,30 +93,9 @@ export class SelfCheckController {
     };
   }
 
-  private summarize(status: string, hasSubmission: boolean): string {
-    if (hasSubmission) return '접수가 완료되었습니다. 추가로 하실 일은 없습니다.';
-    switch (status) {
-      case 'DRAFT':
-        return '작성 중입니다. 아직 접수되지 않았습니다.';
-      case 'READY':
-        return '작성이 끝났습니다. 전형료 결제가 남았습니다.';
-      case 'PAYMENT_PENDING':
-        return '결제 진행 중입니다. 결제창을 닫으셨다면 상태를 다시 확인해 주십시오.';
-      case 'PAID':
-      case 'FINALIZING':
-        return '결제가 확인되었습니다. 접수 처리 중입니다. 다시 결제하지 마십시오.';
-      case 'EXPIRED':
-        return '마감되어 접수할 수 없습니다.';
-      case 'CANCELLED':
-        return '취소된 원서입니다. 결제하신 전형료가 있으면 대학이 환불 절차를 안내합니다.';
-      default:
-        return `현재 상태: ${labelOf(APPLICATION_STATUS_LABEL, status, '확인 중')}`;
-    }
-  }
-
   private async loadApplication(applicationId: string) {
     const { rows } = await this.db.query<Record<string, unknown>>(
-      `SELECT id, cycle_id, status, last_saved_at FROM application WHERE id = $1`,
+      `SELECT id, cycle_id, status, last_saved_at, support_code FROM application WHERE id = $1`,
       [applicationId],
     );
     const r = rows[0];
@@ -119,6 +104,7 @@ export class SelfCheckController {
       cycleId: String(r.cycle_id),
       status: String(r.status),
       lastSavedAt: r.last_saved_at ? (r.last_saved_at as Date).toISOString() : null,
+      supportCode: String(r.support_code),
     };
   }
 
@@ -130,7 +116,7 @@ export class SelfCheckController {
       [applicationId],
     );
     const r = rows[0];
-    if (!r) return { exists: false, guidance: '아직 결제 내역이 없습니다.' };
+    if (!r) return { exists: false, guidance: paymentGuidance(null) };
 
     const status = String(r.status);
     return {
@@ -146,14 +132,7 @@ export class SelfCheckController {
         : null,
       verifiedAt: r.verified_at ? (r.verified_at as Date).toISOString() : null,
       // 재결제를 유도하지 않는다. 중복 결제가 확인 지연보다 큰 사고다. (v1.1 §B4)
-      guidance:
-        status === 'CONFIRMED'
-          ? '결제가 확인되었습니다.'
-          : status === 'UNKNOWN' || status === 'PENDING'
-            ? '결제 확인 중입니다. 다시 결제하지 마시고 잠시 후 확인해 주십시오.'
-            : status === 'FAILED' || status === 'CANCELLED'
-              ? '결제가 완료되지 않았습니다. 다시 시도하실 수 있습니다.'
-              : '결제 상태를 확인하는 중입니다.',
+      guidance: paymentGuidance(status),
     };
   }
 
@@ -214,10 +193,7 @@ export class SelfCheckController {
       pending,
       sent: Number(r.sent ?? 0),
       lastSentAt: r.last_sent_at ? (r.last_sent_at as Date).toISOString() : null,
-      guidance:
-        pending > 0
-          ? '통합 조회 화면 반영이 지연되고 있습니다. 접수 자체는 이미 완료되었습니다.'
-          : '통합 조회 화면까지 반영되었습니다.',
+      guidance: centralSyncGuidance(pending),
     };
   }
 
