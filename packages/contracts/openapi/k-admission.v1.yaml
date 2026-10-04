@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: K-Admission University Data Plane API
-  version: 1.17.0
+  version: 1.18.0
   description: >
     Reference contract for a university-local K-Admission data plane.
     The university DB is the source of truth; central sync is not in the applicant critical path.
@@ -96,6 +96,12 @@ info:
     1.17.0 adds the application-limits notice (D-86, note G-12): `notices.applicationRules` is shown
     before an application is created and the create request may carry `rulesAcknowledged`, recorded
     with the text hash. Optional fields.
+
+
+    1.18.0 documents field-level separate consent (D-88, note G-9): a form schema property may carry
+    `x-sensitive-consent: <consent code>` (e.g. passport number, art. 24 of the Personal Information
+    Protection Act). Saving a non-empty value for it is refused (400) until that consent is given, and
+    validation reports CONSENT_REQUIRED while a value is stored without it. No schema change.
 
 
     Common rules:

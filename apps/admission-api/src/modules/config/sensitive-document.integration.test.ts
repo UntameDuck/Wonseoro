@@ -121,6 +121,32 @@ describe('민감정보 서류 별도 동의 (G-8, D-85)', () => {
   });
 });
 
+describe('항목 단위 별도 동의 — 여권번호 (G-9, D-88)', () => {
+  it('동의 전에는 값을 저장하지 않고(빈 값은 된다), 값이 있는데 동의를 거두면 접수 검증이 요구한다', async (t) => {
+    if (!available) return t.skip('DB 없음');
+    const { schema } = await new FormSchemaService(db).load(CYCLE, 'EARLY');
+    const props = (schema.properties ?? {}) as Record<string, Record<string, unknown>>;
+    if (props.passportNumber?.['x-sensitive-consent'] !== 'PASSPORT_COLLECTION') return t.skip('개발 시드가 옛 판 — seed-dev.sql 을 다시 적용한다');
+    const { consents } = services();
+    await assert.rejects(
+      consents.assertSensitiveFields(applicationId, CYCLE, schema, { passportNumber: 'M12345678' }),
+      (e: unknown) => e instanceof ProblemException && e.getStatus() === 400 && /별도 동의/.test(String(e.problem.detail)),
+    );
+    await consents.assertSensitiveFields(applicationId, CYCLE, schema, { passportNumber: '', gpa: 4.1 });
+
+    await consents.record({ applicationId, applicantId, changes: [{ code: 'PASSPORT_COLLECTION', granted: true }] });
+    await consents.assertSensitiveFields(applicationId, CYCLE, schema, { passportNumber: 'M12345678' });
+    await db.query(
+      `INSERT INTO application_field_value (id, application_id, field_code, schema_version, value_json) VALUES ($1,$2,'passportNumber','cfg-2027-v1','"M12345678"'::jsonb)`,
+      [randomUUID(), applicationId],
+    );
+    assert.equal((await issuePaths()).includes('/consents/PASSPORT_COLLECTION'), false);
+
+    await consents.record({ applicationId, applicantId, changes: [{ code: 'PASSPORT_COLLECTION', granted: false }] });
+    assert.equal((await issuePaths()).includes('/consents/PASSPORT_COLLECTION'), true);
+  });
+});
+
 describe('지원 제한 고지 확인 (G-12, D-86)', () => {
   it('원서 작성 전 확인은 그때 문안의 해시와 함께 원서 감사 체인에 남는다', async (t) => {
     if (!available) return t.skip('DB 없음');

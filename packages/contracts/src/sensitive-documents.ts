@@ -10,6 +10,27 @@
 /** 서류 종류·이름이 이 말을 담으면 민감정보 서류로 보인다 — 표시가 없으면 설정 검사가 경고한다 */
 export const SENSITIVE_DOCUMENT_HINT = /장애|진단|입원|건강|질병|질환|병원|의료|disab|medical|health|hospital|diagnos/i;
 
+/**
+ * 항목 단위 별도 동의 — 여권번호처럼 동의로 받는 고유식별정보(보호법 제24조 ① 1, 문서 10 G-9, D-88)는 양식 항목에
+ * `"x-sensitive-consent": "<동의 코드>"` 를 단다. 그 동의를 하기 전에는 값을 저장하지 않고, 값이 있으면 동의가 필수다.
+ */
+export const SENSITIVE_FIELD_KEY = 'x-sensitive-consent';
+
+/** 항목 이름·코드가 이 말을 담으면 별도 동의가 필요한 고유식별정보로 보인다 */
+export const SENSITIVE_FIELD_HINT = /여권|passport|외국인\s*등록|alien[\s_-]*registration/i;
+
+/** 양식 JSON Schema 에서 (항목 코드 → 별도 동의 코드)를 꺼낸다 */
+export function sensitiveFieldsOf(schema: unknown): Record<string, string> {
+  const props = schema && typeof schema === 'object' ? (schema as { properties?: unknown }).properties : undefined;
+  if (!props || typeof props !== 'object') return {};
+  const out: Record<string, string> = {};
+  for (const [field, p] of Object.entries(props as Record<string, unknown>)) {
+    const code = p && typeof p === 'object' ? (p as Record<string, unknown>)[SENSITIVE_FIELD_KEY] : undefined;
+    if (typeof code === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/.test(code)) out[field] = code;
+  }
+  return out;
+}
+
 /** 설정 값에서 형식이 맞는 (서류 종류 → 동의 코드) 쌍만 꺼낸다 */
 export function pickSensitiveDocuments(value: unknown): Record<string, string> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};

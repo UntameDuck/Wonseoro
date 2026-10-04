@@ -332,6 +332,14 @@ async function applicant() {
     await keyTo('다음 단계');
     await b.waitFor(`document.body.innerText.includes(${JSON.stringify(title)})`, title);
     await sweep(`원서 ${no}단계`);
+    // 항목 단위 별도 동의(여권번호, D-88) — 동의하면 그 칸이 나타난다
+    if (no === 3 && (await b.evaluate(`!!document.getElementById('consent-PASSPORT_COLLECTION')`))) {
+      await keyTo('위 내용에 동의합니다 (선택)', ' ');
+      await b.waitFor(`!!document.getElementById('field-passportNumber')`, '여권번호 칸');
+      const fc = await focusInfo(b);
+      if (fc.id !== 'consent-PASSPORT_COLLECTION') problems.push(`여권번호 동의: 동의 뒤 포커스가 "${fc.name || '문서 처음'}" 에 있다`);
+      await sweep('원서 3단계 (고유식별정보 별도 동의 뒤)');
+    }
   }
   // 민감정보 서류의 별도 동의(D-85) — 동의하면 그 서류를 올리는 칸이 나타난다. 체크에 포커스가 남는다
   if (await b.evaluate(`!!document.getElementById('consent-SENSITIVE_HEALTH')`)) {

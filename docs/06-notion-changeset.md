@@ -10,7 +10,7 @@
 
 | 노션 문서 | 첨부 이름 | 저장소 파일 | 바이트 | SHA-256 | 근거 |
 |---|---|---|---|---|---|
-| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.17.0) | 123,761 | `42608e4534e8aca88110d72c24205774e9a16b0d38cddccafa7e648dfcbd7578` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 · D-78 · D-79 · D-80 · D-81 · D-82 · D-84 · D-85 · D-86 |
+| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.18.0) | 124,162 | `a35af210cb22461373dfa7e93bf40154383e9976944275520bffe39064e1d191` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 · D-78 · D-79 · D-80 · D-81 · D-82 · D-84 · D-85 · D-86 · D-88 |
 | [§04 CloudEvents](https://app.notion.com/p/3df75ab5debe81d68e37fabd3678dcc4) | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | 6,104 | `3ed7ec8a340c50f6e7de25b2c3322ffd7c6b4914fd046afdc67a2efea699ca02` | D-47 · T-M5-51 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` (v1.2) | 4,036 | `1aaef0db712e1d9a15da41fb86b7832a3da8c6decfdcd5992a57bb071e5b1975` | D-44 · D-49 · D-52 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` (v1.5, 차트 렌더링 — RBAC 6종·내부 상호 TLS·서류 워커 출구) | 40,216 | `28c54fbdb2e83edc849526c06c7158017110fa0e24a3b3cbfe8f525febf2b315` | D-44 · D-52 · D-68 · D-69 |
@@ -53,6 +53,8 @@
 > `consents` 에 필수 아님으로 둔다(해당 서류를 내는 지원자만 동의, 보호법 제23조). 그 동의가 없으면 그 서류의 업로드 URL 을 주지 않고, 서류가 원서에 있는 동안
 > 동의가 없으면 최종 검증·결제 전 확인이 거절한다. 설정 검사는 문안 없는 동의를 거절하고, 민감해 보이는 서류에 표시가 없으면 경고한다.
 > 증적 열람 기록에 민감정보 서류 수를 남긴다.
+> 동의로 받는 고유식별정보 항목(여권번호 등)은 양식 항목에 `x-sensitive-consent: <동의 코드>` 를 단다(보호법 제24조 ① 1). 그 동의 전에는 값을 저장하지 않고,
+> 값이 있는데 동의가 없으면 최종 검증·결제 전 확인이 거절한다. 화면은 그 항목 위에서 동의를 받는다 (D-88).
 
 §8.3 「동의 기록」 에 더한다 (D-81):
 
@@ -175,6 +177,8 @@ v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
 
 > **2026-10-04 v1.9.0** — 개인정보 최소 상담 조회 `POST /admin/v1/support/lookups`·`GET /admin/v1/support/lookups/{evidenceNumber}`(새 범위 `support`), 응답 `SupportView`(허용 목록),
 > 지원자 Self-check 에 선택 필드 `supportCode`. 새 경로·범위·선택 필드 추가라 호환 변경이다(§A16). (D-79)
+
+> **2026-10-04 v1.18.0** — 설명만: 양식 항목 확장 키 `x-sensitive-consent`(동의 전 저장 400, 값이 있는데 동의가 없으면 검증 `CONSENT_REQUIRED`). 스키마 변경 없음(§A16). (D-88)
 
 > **2026-10-04 v1.17.0** — 대학 고지에 선택 필드 `notices.applicationRules`(지원 횟수 제한·이중등록 금지·위반 시 입학 무효), 원서 생성 요청에 선택 필드 `rulesAcknowledged`(새 원서에 확인 감사와 문안 해시). 선택 필드라 호환 변경이다(§A16). (D-86)
 

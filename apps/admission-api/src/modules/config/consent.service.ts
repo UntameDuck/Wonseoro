@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
-import { pickConsents, pickSensitiveDocuments, type ApplicationConsent } from '@wonseoro/contracts';
+import { pickConsents, pickSensitiveDocuments, sensitiveFieldsOf, type ApplicationConsent } from '@wonseoro/contracts';
 import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { AuditService } from '../audit/audit.service';
@@ -35,20 +35,23 @@ export class ConsentService {
     consents: ApplicationConsent[];
     sensitive: Record<string, string>;
     labels: Record<string, string>;
+    forms: Record<string, unknown>;
   }> {
-    const { rows } = await this.db.query<{ consents: unknown; sensitive: unknown; labels: unknown }>(
+    const { rows } = await this.db.query<{ consents: unknown; sensitive: unknown; labels: unknown; forms: unknown }>(
       `SELECT config_json->'consents' AS consents, config_json->'sensitiveDocuments' AS sensitive,
-              config_json->'documentLabels' AS labels
+              config_json->'documentLabels' AS labels, config_json->'forms' AS forms
          FROM config_version
         WHERE cycle_id = $1 AND status = 'ACTIVE'
         ORDER BY activated_at DESC NULLS LAST LIMIT 1`,
       [cycleId],
     );
     const labels = rows[0]?.labels;
+    const forms = rows[0]?.forms;
     return {
       consents: pickConsents(rows[0]?.consents),
       sensitive: pickSensitiveDocuments(rows[0]?.sensitive),
       labels: labels && typeof labels === 'object' && !Array.isArray(labels) ? (labels as Record<string, string>) : {},
+      forms: forms && typeof forms === 'object' && !Array.isArray(forms) ? (forms as Record<string, unknown>) : {},
     };
   }
 
@@ -78,6 +81,32 @@ export class ConsentService {
       }),
     );
     return true;
+  }
+
+  /**
+   * 별도 동의가 필요한 항목(여권번호 등, `x-sensitive-consent`)에 값을 저장하기 전에 — 그 동의(지금 판)가 있어야 한다
+   * (보호법 제24조 ① 1, D-88). 빈 값은 막지 않는다(지우는 저장). 화면은 동의하기 전에는 칸을 보이지 않는다.
+   */
+  async assertSensitiveFields(
+    applicationId: string,
+    cycleId: string,
+    schema: Record<string, unknown>,
+    fields: Record<string, unknown>,
+  ): Promise<void> {
+    const sensitive = sensitiveFieldsOf(schema);
+    const touched = Object.entries(fields)
+      .filter(([code, v]) => sensitive[code] && v !== null && v !== undefined && v !== '')
+      .map(([code]) => code);
+    if (touched.length === 0) return;
+    const state = await this.state(applicationId, cycleId);
+    for (const code of touched) {
+      const consent = state.find((c) => c.code === sensitive[code]);
+      if (!consent?.granted) {
+        throw ProblemException.validationFailed(
+          `${consent?.title ?? '고유식별정보 처리'}에 먼저 동의해 주십시오. 여권번호 같은 고유식별정보는 별도 동의가 있어야 적을 수 있습니다.`,
+        );
+      }
+    }
   }
 
   /**
@@ -126,7 +155,29 @@ export class ConsentService {
       .filter((c) => c.required && !c.granted)
       .map((c) => ({ code: 'CONSENT_REQUIRED', path: `/consents/${c.code}`, message: `${c.title}에 동의해 주십시오.` }));
 
-    const { sensitive, labels } = await this.activeConfig(cycleId);
+    const { sensitive, labels, forms } = await this.activeConfig(cycleId);
+
+    // 별도 동의가 필요한 항목에 값이 있으면 그 동의도 필수다 (D-88)
+    const typeRow = await this.db.query<{ code: string }>(
+      `SELECT t.code FROM application a JOIN admission_type t ON t.id = a.admission_type_id WHERE a.id = $1`,
+      [applicationId],
+    );
+    const schema = typeRow.rows[0] ? forms[typeRow.rows[0].code] : undefined;
+    const sensitiveFields = sensitiveFieldsOf(schema);
+    const fieldCodes = Object.keys(sensitiveFields);
+    if (fieldCodes.length > 0) {
+      const filled = await this.db.query<{ field_code: string }>(
+        `SELECT field_code FROM application_field_value WHERE application_id = $1 AND field_code = ANY($2::text[]) ORDER BY field_code`,
+        [applicationId, fieldCodes],
+      );
+      for (const { field_code: field } of filled.rows) {
+        const code = sensitiveFields[field]!;
+        const consent = state.find((c) => c.code === code);
+        if ((consent?.granted ?? false) || issues.some((i) => i.path === `/consents/${code}`)) continue;
+        issues.push({ code: 'CONSENT_REQUIRED', path: `/consents/${code}`, message: `${consent?.title ?? '고유식별정보 처리'}에 동의해 주십시오.` });
+      }
+    }
+
     const types = Object.keys(sensitive);
     if (types.length === 0) return issues;
     const { rows } = await this.db.query<{ document_type: string }>(

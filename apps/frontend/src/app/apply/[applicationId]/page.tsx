@@ -231,7 +231,16 @@ export default function ApplyPage({
   const commonCodes = Object.keys(schema?.properties ?? {}).filter((c) => profileFields.includes(c));
   const extraCodes = Object.keys(schema?.properties ?? {}).filter((c) => !profileFields.includes(c));
   /** 민감정보 서류의 별도 동의 코드 — 1단계가 아니라 4단계 그 서류 옆에서 받는다 (D-85) */
-  const sensitiveCodes = new Set(documents.flatMap((d) => (d.sensitiveConsentCode ? [d.sensitiveConsentCode] : [])));
+  const documentConsentCodes = new Set(documents.flatMap((d) => (d.sensitiveConsentCode ? [d.sensitiveConsentCode] : [])));
+  /** 여권번호처럼 별도 동의 뒤에만 적는 항목 → 동의 코드. 3단계 그 칸 위에서 받는다 (D-88) */
+  const fieldConsent: Record<string, string> = Object.fromEntries(
+    extraCodes.flatMap((c) => {
+      const code = schema?.properties?.[c]?.['x-sensitive-consent'];
+      return code ? [[c, code]] : [];
+    }),
+  );
+  const fieldConsentCodes = new Set(Object.values(fieldConsent));
+  const sensitiveCodes = new Set([...documentConsentCodes, ...fieldConsentCodes]);
   /** 칸 옆에 붙일 오류 — 오류 요약과 같은 문장이다. */
   const fieldErrors = Object.fromEntries(
     issues.filter((i) => fieldOf(i.path)).map((i) => [fieldOf(i.path), i.message]),
@@ -301,7 +310,7 @@ export default function ApplyPage({
   function selectIssue(path: string) {
     if (path.startsWith('/consents/')) {
       const code = path.slice('/consents/'.length);
-      goTo(sensitiveCodes.has(code) ? 4 : 1, `consent-${code}`);
+      goTo(documentConsentCodes.has(code) ? 4 : fieldConsentCodes.has(code) ? 3 : 1, `consent-${code}`);
       return;
     }
     const code = fieldOf(path);
@@ -587,10 +596,39 @@ export default function ApplyPage({
             schema={schema}
             values={fields}
             onChange={update}
-            only={extraCodes}
+            only={extraCodes.filter((c) => !fieldConsent[c])}
             errors={fieldErrors}
             readOnly={!editable}
           />
+          {/* 여권번호 같은 고유식별정보 — 별도 동의를 먼저 받고, 동의한 뒤에만 칸을 보인다 (보호법 제24조 ① 1, D-88) */}
+          {extraCodes
+            .filter((c) => fieldConsent[c])
+            .map((c) => {
+              const consent = consents.find((x) => x.code === fieldConsent[c]);
+              const title = schema?.properties?.[c]?.title ?? '이 항목';
+              return (
+                <div key={c}>
+                  {consent && (
+                    <ConsentPanel
+                      consents={[consent]}
+                      errors={consentErrors}
+                      disabled={!editable}
+                      onChange={(code, granted) => void changeConsent(code, granted)}
+                      heading={`${title} — 고유식별정보 별도 동의`}
+                      intro="해당하는 분만 동의해 주십시오. 동의하셔야 이 항목을 적을 수 있습니다."
+                      headingId={`sensitive-field-${c}-title`}
+                    />
+                  )}
+                  {consent?.granted ? (
+                    <SchemaForm schema={schema} values={fields} onChange={update} only={[c]} errors={fieldErrors} readOnly={!editable} />
+                  ) : (
+                    <p style={{ margin: '0 0 var(--krds-space-5)', fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)' }}>
+                      {consent ? '위 별도 동의를 하시면 이 항목을 적을 수 있습니다.' : '이 항목은 지금 적을 수 없습니다. 입학처에 문의해 주십시오.'}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--krds-space-3)' }}>
             <Button variant="secondary" onClick={() => goTo(2)}>
               이전

@@ -6,6 +6,8 @@ import {
   CONSENT_LIMITS,
   RESERVED_CONSENT_CODES,
   SENSITIVE_DOCUMENT_HINT,
+  SENSITIVE_FIELD_HINT,
+  SENSITIVE_FIELD_KEY,
   UNIVERSITY_NOTICE_KEYS,
   UNIVERSITY_NOTICE_MAX,
   UNIVERSITY_NOTICE_REQUIRED,
@@ -130,6 +132,31 @@ export function lintConfig(config: unknown, typeCodes: readonly string[] | null)
           warnings.push(
             `${at}: 자기소개서로 보이는 항목이 있습니다. 대입 전형은 자기소개서를 받지 않습니다(고등교육법 시행령 제35조) — 법령상 예외 전형이 아니면 빼 주십시오 — ${selfIntro.join(', ')}`,
           );
+        }
+        // 여권번호 같은 고유식별정보를 동의로 받으면 별도 동의가 필요하다(보호법 제24조 ① 1, D-88)
+        for (const [field, p] of Object.entries(properties)) {
+          if (!isObject(p)) continue;
+          const marker = p[SENSITIVE_FIELD_KEY];
+          const name = typeof p.title === 'string' && p.title.trim() ? p.title.trim() : field;
+          if (marker === undefined) {
+            if (SENSITIVE_FIELD_HINT.test(field) || SENSITIVE_FIELD_HINT.test(name)) {
+              warnings.push(`${at}.properties.${field}: 여권번호 같은 고유식별정보로 보입니다 — 동의로 받으려면 별도 동의를 지정해야 합니다(개인정보 보호법 제24조) — ${name}`);
+            }
+            continue;
+          }
+          if (typeof marker !== 'string' || !CONSENT_CODE.test(marker)) {
+            errors.push(`${at}.properties.${field}.${SENSITIVE_FIELD_KEY}: 별도 동의 코드(대문자·숫자·_)여야 합니다.`);
+            continue;
+          }
+          const consent = (Array.isArray(config.consents) ? config.consents : []).find((c) => isObject(c) && c.code === marker);
+          if (!consent) {
+            errors.push(`${at}.properties.${field}: 별도 동의 ${marker} 의 문안이 consents 에 없습니다 — 이 항목을 아무도 적을 수 없습니다.`);
+          } else if (isObject(consent) && consent.required === true) {
+            warnings.push(`${at}.properties.${field}: 별도 동의 ${marker} 가 필수로 되어 있습니다 — 해당 지원자에게만 받습니다. 필수를 풀어 주십시오.`);
+          }
+          if (Array.isArray(form.required) && form.required.includes(field)) {
+            warnings.push(`${at}.properties.${field}: 별도 동의가 필요한 항목이 필수입니다 — 동의하지 않은 지원자는 접수할 수 없게 됩니다.`);
+          }
         }
         const offStandard = Object.entries(properties)
           .filter(([field, p]) => isObject(p) && p['x-profile'] === true && !COMMON_PROFILE_CODES.includes(field))

@@ -128,6 +128,19 @@ describe('설정에서 화면 정보 만들기 (§A5, D-56)', () => {
     assert.ok(lintConfig({ ...GOOD, sensitiveDocuments: ['X'] }, ['EARLY']).errors.some((e) => e.startsWith('sensitiveDocuments')));
   });
 
+  it('항목 단위 별도 동의 — 없는 동의는 오류, 필수 동의·필수 항목은 경고, 여권번호로 보이는데 표시가 없으면 경고 (G-9, D-88)', () => {
+    const passport = { code: 'PASSPORT_COLLECTION', title: '여권번호 수집', text: '외국인 지원자 본인 확인', required: false, version: 'v1' };
+    const withField = (prop: Record<string, unknown>, extra: Record<string, unknown> = {}) => ({
+      ...GOOD,
+      consents: [...GOOD.consents, passport],
+      forms: { EARLY: { ...GOOD.forms.EARLY, properties: { ...GOOD.forms.EARLY.properties, passportNumber: { type: 'string', title: '여권번호', ...prop } } }, ...extra },
+    });
+    assert.ok(lintConfig(withField({}), ['EARLY']).warnings.some((w) => w.includes('고유식별정보로 보입니다')));
+    assert.deepEqual(lintConfig(withField({ 'x-sensitive-consent': 'PASSPORT_COLLECTION' }), ['EARLY']), { errors: [], warnings: [] });
+    assert.ok(lintConfig(withField({ 'x-sensitive-consent': 'NOPE' }), ['EARLY']).errors.some((e) => e.includes('consents 에 없습니다')));
+    assert.ok(lintConfig(withField({ 'x-sensitive-consent': 'bad code' }), ['EARLY']).errors.some((e) => e.includes('x-sensitive-consent')));
+  });
+
   it('필수와 선택에 같은 서류가 있으면 필수로 본다', () => {
     const docs = documentsOf({ requiredDocuments: { A: ['X'] }, optionalDocuments: { A: ['X', 'Y'] } }, 'A');
     assert.deepEqual(docs.map((d) => [d.documentType, d.required]), [['X', true], ['Y', false]]);

@@ -40,6 +40,8 @@ export interface JsonSchemaProperty {
   /** 선택지마다 보일 이름. 없으면 값을 그대로 쓴다 */
   'x-enumTitles'?: string[];
   'x-multiline'?: boolean;
+  /** 여권번호처럼 별도 동의 뒤에만 적는 항목 — 그 동의 코드 (D-88). 원서 화면이 동의 칸과 함께 따로 그린다 */
+  'x-sensitive-consent'?: string;
 }
 
 

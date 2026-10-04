@@ -173,6 +173,11 @@ export class ApplicationController {
       typeCode,
       body.fields ?? {},
     );
+    // 여권번호 같은 항목은 별도 동의 뒤에만 저장한다 (보호법 제24조 ① 1, D-88)
+    if (body.fields && Object.keys(body.fields).length > 0) {
+      const { schema } = await this.forms.load(current.cycleId, typeCode);
+      await this.consents.assertSensitiveFields(applicationId, current.cycleId, schema, body.fields);
+    }
 
     const row = await this.repo.patch({
       applicationId,
