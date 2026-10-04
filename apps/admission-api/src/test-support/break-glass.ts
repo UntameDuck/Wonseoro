@@ -39,6 +39,11 @@ export async function breakGlass<T>(fn: (client: Client) => Promise<T>): Promise
     await client.query(
       `DELETE FROM kadmission.fee_refund_request f WHERE NOT EXISTS (SELECT 1 FROM kadmission.application a WHERE a.id = f.application_id)`,
     );
+    // 대조 예외는 정기 대조가 시험 원서에도 만든다 — 남기면 복구 검증의 pg_restore 가 외래키에서 멈춘다(2026-10-05 복구 검증이 찾았다)
+    await client.query(
+      `DELETE FROM kadmission.reconciliation_exception r
+        WHERE r.application_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM kadmission.application a WHERE a.id = r.application_id)`,
+    );
     await client.query('COMMIT');
     return result;
   } catch (err) {

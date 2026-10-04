@@ -22,6 +22,12 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: 러너 준비 — Chrome 샌드박스·한글 글꼴
+        run: |
+          # Ubuntu 24.04 는 AppArmor 가 비특권 사용자 네임스페이스를 막아 Chrome 샌드박스가 뜨지 않을 수 있다 — 샌드박스를 끄지 않고 허용한다
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          # 한글 글꼴이 없으면 글자 폭이 달라져 "잘린 글"·가로 스크롤 판정이 로컬(Windows 맑은 고딕)과 어긋난다
+          sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk
       - run: npm ci
       - run: npm run build -w @wonseoro/contracts -w @wonseoro/server-kit
       - run: npm run build -w @wonseoro/admission-api -w @wonseoro/central-api -w @wonseoro/document-service -w @wonseoro/event-relay

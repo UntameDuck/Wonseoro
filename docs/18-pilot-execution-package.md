@@ -141,7 +141,7 @@ DB 전환은 `pg_promote()` → 새 Primary의 `promote_writer(세대+1, 행위�
 
 | ID | 요구영역 | 저장소의 기존 후보 증적 | 기관이 추가로 판정할 것 |
 |---|---|---|---|
-| `krds` | KRDS | `packages/krds`, 화면 42장 | 대학 브랜드 변경 뒤 패턴 유지 |
+| `krds` | KRDS | `packages/krds`, 화면 43장 | 대학 브랜드 변경 뒤 패턴 유지 |
 | `kwcag-wcag` | KWCAG/WCAG | `docs/09-accessibility.md`, `tests/a11y/results` | 실제 스크린리더·보조기기 수동 검사 |
 | `web-compatibility` | 웹 호환성 | 두 앱 `browserslist`, UTF-8 계약 시험 | 실물 Firefox·Safari, 기관 브라우저 정책 |
 | `secure-development` | SW 개발보안 | `docs/11-security-pipeline.md`, Security Actions | 기관 모의해킹·잔여 위험 승인 |

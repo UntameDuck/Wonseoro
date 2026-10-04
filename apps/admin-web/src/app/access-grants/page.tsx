@@ -43,17 +43,21 @@ const roleText = (roles: string[]) => (roles.length ? roles.map((r) => labelOf(S
 export default function AccessGrantsPage() {
   const [query, setQuery] = useState('');
   const [applied, setApplied] = useState('');
+  // 바꾼 사람을 모르는 변경(대조 기록)만 — 감사가 먼저 볼 것. 찾기를 눌러야 적용한다(칸을 바꿀 때마다 목록이 바뀌지 않게)
+  const [unexplained, setUnexplained] = useState(false);
+  const [appliedUnexplained, setAppliedUnexplained] = useState(false);
   const [page, setPage] = useState<Page | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
 
-  const load = useCallback(async (subject: string, before?: number) => {
+  const load = useCallback(async (subject: string, onlyUnexplained: boolean, before?: number) => {
     setBusy(true);
     try {
       const next = await adminGet<Page>('access-grants', {
         limit: String(PAGE_SIZE),
         ...(subject ? { subject } : {}),
+        ...(onlyUnexplained ? { unexplained: 'true' } : {}),
         ...(before ? { before: String(before) } : {}),
       });
       setPage((prev) => (before && prev ? { ...next, items: [...prev.items, ...next.items] } : next));
@@ -68,13 +72,16 @@ export default function AccessGrantsPage() {
   }, []);
 
   useEffect(() => {
-    void load('');
+    void load('', false);
   }, [load]);
 
-  const search = (subject: string) => {
+  const search = (subject: string, onlyUnexplained: boolean) => {
     setApplied(subject);
-    void load(subject);
+    setAppliedUnexplained(onlyUnexplained);
+    void load(subject, onlyUnexplained);
   };
+  const filtered = applied !== '' || appliedUnexplained;
+  const listTitle = `기록 — ${[applied, appliedUnexplained ? '바꾼 사람을 모르는 변경만' : ''].filter(Boolean).join(' · ') || '최신순'}`;
 
   return (
     <>
@@ -92,14 +99,19 @@ export default function AccessGrantsPage() {
         ))}
       <Card title="계정으로 찾기">
         <Field label="계정 ID 또는 로그인 이름" hint="비우고 찾으면 모든 계정의 기록을 최신순으로 봅니다." value={query} onChange={setQuery} maxLength={200} />
+        <label style={{ display: 'flex', gap: 'var(--krds-space-2)', alignItems: 'flex-start', margin: '0 0 var(--krds-space-4)' }}>
+          <input type="checkbox" checked={unexplained} onChange={(e) => setUnexplained(e.target.checked)} style={{ width: 24, height: 24, marginTop: 0, flex: '0 0 auto' }} />
+          <span>바꾼 사람을 모르는 변경만 보기 — 로그인 서버 기록 없이 실제 권한이 달라져 맞춘 것</span>
+        </label>
         <div style={{ display: 'flex', gap: 'var(--krds-space-3)', flexWrap: 'wrap' }}>
-          <Button onClick={() => !busy && search(query.trim())}>찾기</Button>
-          {applied && (
+          <Button onClick={() => !busy && search(query.trim(), unexplained)}>찾기</Button>
+          {filtered && (
             <Button
               variant="secondary"
               onClick={() => {
                 setQuery('');
-                search('');
+                setUnexplained(false);
+                search('', false);
                 document.getElementById(TITLE_ID)?.focus();
               }}
             >
@@ -114,9 +126,9 @@ export default function AccessGrantsPage() {
       </LiveRegion>
       {!page && !error && <p role="status">불러오는 중…</p>}
       {page && (
-        <Card title={applied ? `기록 — ${applied}` : '기록 — 최신순'} titleId={TITLE_ID}>
+        <Card title={listTitle} titleId={TITLE_ID}>
           {page.items.length === 0 ? (
-            <p style={{ margin: 0 }}>{applied ? '이 계정의 기록이 없습니다.' : '아직 옮긴 기록이 없습니다.'}</p>
+            <p style={{ margin: 0 }}>{filtered ? '조건에 맞는 기록이 없습니다.' : '아직 옮긴 기록이 없습니다.'}</p>
           ) : (
             <TableScroll label="권한 변경 기록">
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--krds-text-sm)' }}>
@@ -173,7 +185,7 @@ export default function AccessGrantsPage() {
           )}
           {page.nextBefore !== null && (
             <div style={{ marginTop: 'var(--krds-space-4)' }}>
-              <Button variant="secondary" onClick={() => !busy && void load(applied, page.nextBefore ?? undefined)}>
+              <Button variant="secondary" onClick={() => !busy && void load(applied, appliedUnexplained, page.nextBefore ?? undefined)}>
                 더 보기
               </Button>
             </div>

@@ -146,6 +146,9 @@ describe('권한 변경 기록 수집 (실 DB)', () => {
     const b = await svc.list({ subject: B, limit: 10 });
     assert.deepEqual(b.items.find((i) => i.changeKind === 'RECONCILED')?.removed, ['support-agent']);
     assert.equal(byName.chain.brokenSeq, null);
+    // 바꾼 사람을 모르는 변경(대조 기록)만
+    const unexplained = await svc.list({ subject: B, limit: 10, unexplainedOnly: true });
+    assert.deepEqual(unexplained.items.map((i) => i.changeKind), ['RECONCILED']);
   });
 
   it('해시 체인이 처음부터 끝까지 이어진다 — 순번·해시는 DB 가 매겼다', async (t) => {

@@ -1767,6 +1767,10 @@ paths:
         - in: query
           name: limit
           schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - in: query
+          name: unexplained
+          description: true returns only RECONCILED rows — changes made without an admin event, actor unknown.
+          schema: { type: boolean, default: false }
       responses:
         '200':
           description: One page of the log

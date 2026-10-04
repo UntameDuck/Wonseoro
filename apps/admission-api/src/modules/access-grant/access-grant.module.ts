@@ -41,9 +41,11 @@ const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is
 export class AccessGrantService {
   constructor(private readonly db: Db) {}
 
-  async list(o: { subject?: string; before?: number; limit: number }): Promise<AccessGrantPage> {
+  async list(o: { subject?: string; before?: number; limit: number; unexplainedOnly?: boolean }): Promise<AccessGrantPage> {
     const params: unknown[] = [o.limit + 1];
     const where: string[] = [];
+    // 이벤트 없이 바뀐 권한(대조 기록) — 누가 바꿨는지 모르는 변경이라 감사가 먼저 확인한다
+    if (o.unexplainedOnly) where.push(`g.change_kind = 'RECONCILED'`);
     if (o.subject) {
       params.push(o.subject);
       where.push(`(g.subject = $${params.length} OR u.username = $${params.length})`);
@@ -111,14 +113,22 @@ export class AccessGrantController {
 
   @Get()
   @Header('cache-control', 'no-store')
-  async list(@Query('subject') subject?: string, @Query('before') before?: string, @Query('limit') limit?: string) {
+  async list(
+    @Query('subject') subject?: string,
+    @Query('before') before?: string,
+    @Query('limit') limit?: string,
+    @Query('unexplained') unexplained?: string,
+  ) {
+    if (unexplained !== undefined && unexplained !== 'true' && unexplained !== 'false') {
+      throw ProblemException.validationFailed('바꾼 사람을 모르는 변경만 볼지를 다시 골라 주십시오.');
+    }
     const n = limit === undefined ? 50 : Number(limit);
     if (!Number.isInteger(n) || n < 1 || n > 200) throw ProblemException.validationFailed('한 번에 볼 수 있는 기록은 1~200건입니다.');
     const b = before === undefined ? undefined : Number(before);
     if (b !== undefined && (!Number.isInteger(b) || b < 1)) throw ProblemException.validationFailed('이어서 볼 위치가 올바르지 않습니다.');
     const s = subject?.trim();
     if (s !== undefined && s.length > 200) throw ProblemException.validationFailed('찾을 계정은 200자 이내로 입력해 주십시오.');
-    return this.grants.list({ subject: s || undefined, before: b, limit: n });
+    return this.grants.list({ subject: s || undefined, before: b, limit: n, unexplainedOnly: unexplained === 'true' });
   }
 }
 

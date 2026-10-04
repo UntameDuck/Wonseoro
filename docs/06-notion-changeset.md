@@ -10,7 +10,7 @@
 
 | 노션 문서 | 첨부 이름 | 저장소 파일 | 바이트 | SHA-256 | 근거 |
 |---|---|---|---|---|---|
-| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.20.0) | 137,000 | `9064e8e4f717508630456a6ac6f6b078b8fbc302cecb41a850e171fc18915ea0` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 · D-78 · D-79 · D-80 · D-81 · D-82 · D-84 · D-85 · D-86 · D-88 · D-89 · D-91 |
+| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.20.0) | 137,213 | `c32173b38cfdcfcc65c434f2bda2831ebb6eb35ede0e9e67eedda542c69f461d` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 · D-78 · D-79 · D-80 · D-81 · D-82 · D-84 · D-85 · D-86 · D-88 · D-89 · D-91 |
 | [§04 CloudEvents](https://app.notion.com/p/3df75ab5debe81d68e37fabd3678dcc4) | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | 6,104 | `3ed7ec8a340c50f6e7de25b2c3322ffd7c6b4914fd046afdc67a2efea699ca02` | D-47 · T-M5-51 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` (v1.2) | 4,036 | `1aaef0db712e1d9a15da41fb86b7832a3da8c6decfdcd5992a57bb071e5b1975` | D-44 · D-49 · D-52 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` (v1.5, 차트 렌더링 — RBAC 6종·내부 상호 TLS·서류 워커 출구) | 40,216 | `28c54fbdb2e83edc849526c06c7158017110fa0e24a3b3cbfe8f525febf2b315` | D-44 · D-52 · D-68 · D-69 |
@@ -199,7 +199,7 @@ v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
 > **2026-10-04 v1.9.0** — 개인정보 최소 상담 조회 `POST /admin/v1/support/lookups`·`GET /admin/v1/support/lookups/{evidenceNumber}`(새 범위 `support`), 응답 `SupportView`(허용 목록),
 > 지원자 Self-check 에 선택 필드 `supportCode`. 새 경로·범위·선택 필드 추가라 호환 변경이다(§A16). (D-79)
 
-> **2026-10-05 v1.20.0** — 권한 부여·변경·말소 기록: 보안 감사자 `GET /admin/v1/access-grants`(최신순 쪽 나눔 `before`·`limit`, 계정 ID·로그인 이름으로 찾기, 해시 체인 검증 결과 포함), 범위 auditor, 읽기 전용.
+> **2026-10-05 v1.20.0** — 권한 부여·변경·말소 기록: 보안 감사자 `GET /admin/v1/access-grants`(최신순 쪽 나눔 `before`·`limit`, 계정 ID·로그인 이름으로 찾기, `unexplained=true` 면 바꾼 사람을 모르는 대조 기록만, 해시 체인 검증 결과 포함), 범위 auditor, 읽기 전용.
 > 새 오퍼레이션이라 호환 변경이다(§A16). (D-91)
 
 > **2026-10-04 v1.19.0** — 전형료 반환 신청: 지원자 `POST·GET /api/v1/applications/{id}/fee-refunds`(확인된 결제가 있는 원서만, 검토 중 신청은 200 으로 그대로),

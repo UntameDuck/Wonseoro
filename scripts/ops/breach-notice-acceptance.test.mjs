@@ -114,6 +114,26 @@ describe('유출 통지·신고 게이트', () => {
   });
 });
 
+describe('범위 산정 결과와 대조', () => {
+  const scope = { affected: { applicants: 11 }, breakdown: { sensitiveApplications: 1, uniqueIdApplications: 0, residentIdApplicants: 0 }, externalIntrusion: true };
+  it('산정보다 적게 적거나 민감정보를 빠뜨리면 막고, 넓게 적은 것은 통과', () => {
+    const doc = valid();
+    doc.discovery.scope.sensitive = true;
+    assert.deepEqual(validateBreachNotice(doc, scope).blockers, []);
+    doc.discovery.scope.applicants = 9;
+    doc.notification.recipients = 9;
+    doc.discovery.scope.sensitive = false;
+    assert.deepEqual(at(validateBreachNotice(doc, scope)).sort(), ['discovery.scope.applicants', 'discovery.scope.sensitive']);
+    const wider = valid();
+    wider.discovery.scope = { ...wider.discovery.scope, applicants: 20, sensitive: true, uniqueIdentifier: true };
+    wider.notification.recipients = 20;
+    assert.deepEqual(validateBreachNotice(wider, scope).blockers, []);
+  });
+  it('대조하지 않으면 경고로 남긴다', () => {
+    assert.ok(validateBreachNotice(valid()).warnings.some((w) => w.at === 'discovery.scope'));
+  });
+});
+
 describe('유출 범위 판단', () => {
   it('전형 설정에서 민감정보·고유식별 별도 동의 코드를 꺼낸다', () => {
     const codes = sensitiveConsentCodes([

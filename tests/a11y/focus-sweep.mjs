@@ -634,6 +634,12 @@ async function admin() {
   await keyTo('찾기');
   await b.waitFor(`document.body.innerText.includes('기록 — sweep-1')`, '계정으로 찾기', 30_000);
   await sweep('권한 변경 기록 (계정으로 찾기)');
+  // 바꾼 사람을 모르는 변경만 — 체크는 Space, 적용은 찾기
+  await keyTo('바꾼 사람을 모르는 변경만 보기 — 로그인 서버 기록 없이 실제 권한이 달라져 맞춘 것', ' ');
+  if (!(await focusInfo(b)).checked) problems.push('권한 변경 기록: Space 로 "바꾼 사람을 모르는 변경만 보기" 가 체크되지 않는다');
+  await keyTo('찾기');
+  await b.waitFor(`document.body.innerText.includes('기록 — sweep-1 · 바꾼 사람을 모르는 변경만')`, '대조 기록만', 30_000);
+  await sweep('권한 변경 기록 (바꾼 사람 모르는 변경만)');
   await keyTo('전체 보기');
   await b.waitFor(`document.body.innerText.includes('기록 — 최신순')`, '전체 보기', 30_000);
   const g1 = await focusInfo(b);

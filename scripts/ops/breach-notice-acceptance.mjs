@@ -1,7 +1,7 @@
 // 개인정보 유출등 통지·신고 판정 게이트 — 개인정보 보호법 제34조, 시행령 제39·40조 (문서 10 G-14, 대장 D-92, 문서 19)
 //
 // 사용:
-//   node scripts/ops/breach-notice-acceptance.mjs --file=<사건 기록 YAML> [--no-write]
+//   node scripts/ops/breach-notice-acceptance.mjs --file=<사건 기록 YAML> [--scope=<ops:breach-scope --out 결과>] [--no-write]
 //   시작 양식: deploy/pilot/breach-notice.example.yaml (빈 양식은 의도대로 실패한다)
 //
 // 사람이 채운 사건 기록이 법정 절차를 지켰는지 본다 — 인지 뒤 72시간 안 통지(제39조 ①)·통지 6개 항목(제34조 ① 1~6),
@@ -43,7 +43,29 @@ export function reportReasons(discovery) {
   return r;
 }
 
-export function validateBreachNotice(document) {
+/**
+ * 사건 기록의 범위가 범위 산정 결과(ops:breach-scope --out)와 맞는지 — 손으로 옮기다 수를 줄이거나
+ * 민감·고유식별 포함을 빠뜨리면 신고 대상을 놓친다. 산정 결과보다 적게 적으면 막는다(더 넓게 적는 것은 괜찮다).
+ */
+export function compareWithScope(discovery, scope) {
+  const out = [];
+  const s = discovery?.scope ?? {};
+  const applicants = scope?.affected?.applicants;
+  if (Number.isInteger(applicants) && Number.isInteger(s.applicants) && s.applicants < applicants) {
+    out.push({ at: 'discovery.scope.applicants', message: `범위 산정(${applicants}명)보다 적게 적었다(${s.applicants}명)` });
+  }
+  const b = scope?.breakdown ?? {};
+  if ((b.sensitiveApplications ?? 0) > 0 && s.sensitive !== true) out.push({ at: 'discovery.scope.sensitive', message: `범위 산정에 민감정보 동의 원서 ${b.sensitiveApplications}건이 있는데 민감정보 아님으로 적었다` });
+  if (((b.uniqueIdApplications ?? 0) > 0 || (b.residentIdApplicants ?? 0) > 0) && s.uniqueIdentifier !== true) {
+    out.push({ at: 'discovery.scope.uniqueIdentifier', message: '범위 산정에 고유식별정보가 있는데 고유식별정보 아님으로 적었다' });
+  }
+  if (typeof scope?.externalIntrusion === 'boolean' && typeof discovery?.externalIntrusion === 'boolean' && scope.externalIntrusion && !discovery.externalIntrusion) {
+    out.push({ at: 'discovery.externalIntrusion', message: '범위 산정 때 외부 불법 접근으로 정했는데 사건 기록은 아니라고 적었다' });
+  }
+  return out;
+}
+
+export function validateBreachNotice(document, scope = null) {
   const blockers = [];
   const warnings = [];
   const block = (at, message) => blockers.push({ at, message });
@@ -66,6 +88,8 @@ export function validateBreachNotice(document) {
     if (typeof d.scope?.[k] !== 'boolean') block(`discovery.scope.${k}`, `${k === 'sensitive' ? '민감정보' : '고유식별정보'} 포함 여부를 정하지 않았다`);
   }
   evidence(d.scope?.evidence, 'discovery.scope.evidence');
+  if (scope) blockers.push(...compareWithScope(d, scope));
+  else warnings.push({ at: 'discovery.scope', message: '범위 산정 결과 파일(--scope=)과 대조하지 않았다' });
 
   // ── 피해 최소화 (제34조 ③) ──
   if (list(doc.containment?.actions).filter(hasValue).length === 0) block('containment.actions', '피해 확산 방지·최소화 조치가 없다(제34조 ③)');
@@ -171,7 +195,9 @@ function cli() {
   }
   const absolute = path.resolve(ROOT, fileArg);
   const document = parse(readFileSync(absolute, 'utf8'));
-  const v = validateBreachNotice(document);
+  const scopeArg = process.argv.find((a) => a.startsWith('--scope='))?.slice('--scope='.length);
+  const scope = scopeArg ? JSON.parse(readFileSync(path.resolve(ROOT, scopeArg), 'utf8')) : null;
+  const v = validateBreachNotice(document, scope);
   const result = {
     test: '개인정보 유출등 통지·신고 판정 게이트 (제34조, 시행령 제39·40조)',
     at: new Date().toISOString(),
