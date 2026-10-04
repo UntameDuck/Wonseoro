@@ -83,6 +83,16 @@ npm run ops:ha-preflight -- --environment=pilot-staging-a --approval=기관-티�
 
 자동 점검 통과는 HA/PITR/DR 태스크 완료가 아니라 **실훈련 진입 조건**이다.
 
+### 외부 PITR·DR 완료 판정
+
+실훈련 뒤에는 `deploy/pilot/dr-acceptance.example.yaml` 사본에 원격 소산·목표 시각 PITR·부하 중 Failover·Failback·사후 대조 증적을 채우고 다음을 실행한다.
+
+```powershell
+npm run ops:dr-acceptance -- --file=deploy/pilot/<대학>-dr.yaml
+```
+
+`scripts/ops/dr-acceptance.mjs`는 입력한 RTO/RPO를 믿는 대신 장애·복구·마지막 WAL 시각으로 다시 계산한다. RTO 900초·RPO 60초 이내, HA 사전 점검 13/13, 복구 검증 skip 0, Writer epoch +1과 옛 Writer 거절, Failback, 유실·중복·미복구·대조 예외 0을 모두 요구한다. 빈 양식은 의도적으로 실패한다. 자세한 절차는 [Pilot 실행 패키지 §8.3](18-pilot-execution-package.md#83-t-m4-06t-m5-606164--pitrdr-수용-게이트)이다.
+
 ### T-M6-02 ✅ (2026-10-03) — Config 호환 시험 (D-77)
 
 - 설정 자체 검사(Config Linter)·위험도 Diff 는 있었다(D-59). 빠져 있던 것은 **진행 중 원서와의 호환** — 줄인 최대 글자 수·바뀐 형식·새 필수 항목이 이미 쓴 원서를 깨는지

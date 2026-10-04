@@ -148,11 +148,11 @@
 
 | ID | 태스크 | 근거 노션 | 인수기준 |
 |---|---|---|---|
-| T-M5-60 | Multi-AZ Primary/Standby | v1.0 §10.3 | 동기 복제 — DB 역할·동기 streaming·계보·WAL 지연 자동 점검 준비, zone 증적·실배치 대기([14](../14-operations-automation.md)) |
-| T-M5-61 | PITR + 원격지 백업 소산 | v1.0 §10.3 | 다른 장애영역 — archive 설정 자동 점검 준비, 원격 소산·실 PITR 복구 증적 대기([14](../14-operations-automation.md)) |
+| T-M5-60 | Multi-AZ Primary/Standby | v1.0 §10.3 | 동기 복제 — DB 역할·동기 streaming·계보·WAL 지연 사전 점검 + zone·실전환 수용 게이트 준비, 실배치 대기([14](../14-operations-automation.md)) |
+| T-M5-61 | PITR + 원격지 백업 소산 | v1.0 §10.3 | 다른 장애영역 — archive 사전 점검 + 원격 기본 백업/WAL·목표 시각 PITR·복구본 검증 게이트 준비, 실제 실행 대기([18 §8.3](../18-pilot-execution-package.md#83-t-m4-06t-m5-606164--pitrdr-수용-게이트)) |
 | T-M5-62 | **Restore Verification 자동화** | §01 B10 | 월별 자동 복구 + checksum/row-count/업무 invariant — ✅ 2026-10-03 `scripts/ops/restore-verify.mjs`·매달 CI([14](../14-operations-automation.md)) |
 | T-M5-63 | Writer Fencing + Promotion Lock | §01 A10 | Split-brain 방지, 단일 Writer — ✅ 2026-10-03 쓰기 세대·문장 트리거·승격 잠금(D-76, [14](../14-operations-automation.md)) |
-| T-M5-64 | DR 전환 훈련 | v1.0 §10.3 | RTO 15분 / RPO 0~1분 실측 — writer token/epoch 사전 점검·문서 18 런북 준비, 실제 전환 대기 |
+| T-M5-64 | DR 전환 훈련 | v1.0 §10.3 | RTO 15분 / RPO 0~1분 실측 — 사건 시각 재계산·Writer 세대/옛 Writer 차단·Failback·사후 대조 게이트 준비, 실제 전환 대기([18 §8.3](../18-pilot-execution-package.md#83-t-m4-06t-m5-606164--pitrdr-수용-게이트)) |
 | T-M5-65 | 인증서·Secret 만료 사전경보 | §01 B9 | 30/14/7/3/1일, rotation drill — ✅ 2026-10-03 만료 지표·경보 규칙·교체 훈련([14](../14-operations-automation.md)) |
 
 ## 종료 체크리스트 — 노션 §09 Security Acceptance

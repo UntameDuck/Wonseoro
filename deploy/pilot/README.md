@@ -46,3 +46,14 @@ npm run ops:edge-failover-acceptance -- --file=deploy/pilot/<대학>-edge-failov
 ```
 
 게이트는 안전 메서드 재시도, 멱등 키가 있는 쓰기만 재시도, 능동 헬스체크, 계획 정비와 노드 강제 손실 2개 시나리오를 확인한다. 강제 손실에서는 Edge 재시도가 실제로 1건 이상 관찰되어야 하며 사용자 체감 실패·중복 쓰기·중복 접수·이중 승인·미복구 이벤트 공백은 모두 0이어야 한다. 로컬·kind, 건너뜀, 승인 목표보다 긴 복구는 통과하지 않는다.
+
+## PostgreSQL PITR·DR 수용 증적
+
+`dr-acceptance.example.yaml`은 T-M4-06·T-M5-60·61·64의 실제 CSP 실행 양식이다. `ops:ha-preflight` 13/13 통과 뒤, DB와 다른 장애영역의 기본 백업·WAL에서 목표 시각 PITR을 만들고 승인된 부하 중 Failover·Failback을 수행해 채운다.
+
+```powershell
+Copy-Item deploy/pilot/dr-acceptance.example.yaml deploy/pilot/<대학>-dr.yaml
+npm run ops:dr-acceptance -- --file=deploy/pilot/<대학>-dr.yaml
+```
+
+게이트는 사건 시각에서 RTO·RPO를 다시 계산해 각각 15분·1분을 넘으면 실패시킨다. Writer 세대가 정확히 1 증가하고 옛 Writer가 거절되는지, DNS/Edge 전환과 현재 Writer 기준 Failback이 끝났는지, 복구 검증 건너뜀이 0인지, 유실·중복·미복구 순번·대조 예외가 모두 0인지도 요구한다. 로컬 덤프 복구는 이 양식의 대체 증적이 아니다.

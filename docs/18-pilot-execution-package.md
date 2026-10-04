@@ -205,6 +205,24 @@ npm run ops:edge-failover-acceptance -- --file=deploy/pilot/<대학>-edge-failov
 
 이 결과가 성공하고 담당자가 Gateway 로그·Kubernetes 이벤트·DB 대조를 표본 확인한 뒤에만 T-M4-39의 🟡를 완료로 바꾼다.
 
+### 8.3 T-M4-06·T-M5-60·61·64 — PITR·DR 수용 게이트
+
+`ops:ha-preflight` 13/13은 실훈련의 진입 조건이다. 실제 완료 판정은 DB와 다른 장애영역에 소산한 기본 백업·WAL, 목표 시각 PITR, 부하 중 전환, Writer fencing, Failback, 사후 대조를 모두 필요로 한다. [빈 DR 증적 파일](../deploy/pilot/dr-acceptance.example.yaml)을 복사한다.
+
+```powershell
+npm run ops:dr-acceptance -- --file=deploy/pilot/<대학>-dr.yaml
+```
+
+판정기는 장애 시각→서비스 복구 시각으로 RTO를, 장애 시각→복구된 마지막 WAL 시각으로 RPO를 다시 계산한다. 노션 §10.3 기준인 RTO 15분·RPO 0~1분을 넘으면 실패한다. 다음도 모두 필요하다.
+
+- Primary와 동기 Standby의 zone이 다르고, 백업은 두 DB와 다른 장애영역에 암호화해 소산한다.
+- 목표 시각 PITR 복구본에 `ops:restore-verify`와 같은 행 수·체크섬·업무 불변식·DB 제약 검증을 건너뜀 없이 수행한다.
+- 승인된 부하 중 Writer 세대를 정확히 1 올리고, 옛 Writer의 쓰기와 재합류 전 임의 쓰기를 거절한다.
+- DNS/Edge를 새 Writer로 전환하고, 옛 Primary는 현재 Writer에서 다시 만든 뒤 Failback을 완료한다.
+- 유실된 커밋·중복 접수·이중 승인 결제·미복구 이벤트 순번 공백·미처리 대조 예외가 모두 0이다.
+
+성공 JSON만으로 자동 완료하지 않는다. SRE·DBA·입학처가 백업 객체 보존·Kubernetes/DB 이벤트·원시 부하 결과·대조 큐를 표본 확인하고 승인한 뒤 M4/M5 태스크를 갱신한다.
+
 ## 9. T-M6-15 — Sandbox→Shadow→제한 Pilot
 
 | 단계 | 데이터·외부 연계 | 진입 조건 | 종료 조건 |

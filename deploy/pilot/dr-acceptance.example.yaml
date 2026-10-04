@@ -1,0 +1,63 @@
+# 실제 CSP DR staging에서 승인된 부하 중 PITR·Failover·Failback을 실행한 뒤 채운다.
+# local/kind, pending, skip, 빈 evidence는 의도적으로 ops:dr-acceptance를 실패시킨다.
+metadata:
+  universityId: ""
+  environmentId: ""
+  environmentType: csp-dr-staging
+  csp: ""
+  deploymentRef: ""
+  primaryZone: ""
+  standbyZone: ""
+  backupFailureDomain: ""
+  evidence: []
+
+approval:
+  status: pending
+  approvedAt: ""
+  scope: ""
+  evidence: []
+
+preflight:
+  passed: false
+  automaticChecks: 0/13
+  skipped: 0
+  evidence: []
+
+backup:
+  baseBackupOffsite: false
+  walArchiveOffsite: false
+  encrypted: false
+  targetRecoveryAt: ""
+  actualRecoveryAt: ""
+  restoreVerificationPassed: false
+  restoreVerificationSkipped: 0
+  evidence: []
+
+failover:
+  status: pending
+  skipped: 0
+  loadRunning: false
+  failureAt: ""
+  serviceRecoveredAt: ""
+  recoveredThroughAt: ""
+  oldWriterEpoch: 0
+  newWriterEpoch: 0
+  oldWriterRejected: false
+  dnsOrEdgeSwitched: false
+  evidence: []
+
+failback:
+  status: pending
+  rebuiltFromCurrentWriter: false
+  skipped: 0
+  completedAt: ""
+  evidence: []
+
+integrity:
+  lostCommittedTransactions: -1
+  duplicateSubmissions: -1
+  doubleConfirmedPayments: -1
+  unrecoveredSequenceGaps: -1
+  openReconciliationExceptions: -1
+  checkedAt: ""
+  evidence: []
