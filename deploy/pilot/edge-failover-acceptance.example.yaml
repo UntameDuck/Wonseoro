@@ -1,0 +1,68 @@
+# 실제 CSP staging의 관리형 Edge/Gateway와 서로 다른 zone에서 실행한다.
+# local/kind, pending, skip, 빈 evidence는 의도적으로 ops:edge-failover-acceptance를 실패시킨다.
+metadata:
+  universityId: ""
+  environmentId: ""
+  environmentType: csp-staging
+  csp: ""
+  gatewayClass: ""
+  deploymentRef: ""
+  executedAt: ""
+  zones: []
+  evidence: []
+
+approval:
+  status: pending
+  approvedAt: ""
+  scope: ""
+  evidence: []
+
+retryPolicy:
+  safeMethods: []
+  idempotentWriteRequiresKey: true
+  retryUnsafeWrites: false
+  maxAttempts: 0
+  perTryTimeoutMs: 0
+  retryOn: []
+  evidence: []
+
+healthCheck:
+  active: false
+  intervalSeconds: 0
+  unhealthyThreshold: 0
+  evidence: []
+
+scenarios:
+  - id: planned-drain
+    status: pending
+    skipped: 0
+    requests: 0
+    firstAttemptFailures: 0
+    edgeRetriedRequests: 0
+    userVisibleFailures: -1
+    duplicateWrites: -1
+    observedRecoverySeconds: -1
+    targetRecoverySeconds: 0
+    startedAt: ""
+    endedAt: ""
+    evidence: []
+  - id: hard-node-loss
+    status: pending
+    skipped: 0
+    requests: 0
+    firstAttemptFailures: 0
+    edgeRetriedRequests: 0
+    userVisibleFailures: -1
+    duplicateWrites: -1
+    observedRecoverySeconds: -1
+    targetRecoverySeconds: 0
+    startedAt: ""
+    endedAt: ""
+    evidence: []
+
+integrity:
+  duplicateSubmissions: -1
+  doubleConfirmedPayments: -1
+  unrecoveredSequenceGaps: -1
+  checkedAt: ""
+  evidence: []

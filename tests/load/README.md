@@ -109,4 +109,4 @@ Failover는 실제 승격 뒤의 세대를 반드시 더한다.
 npm run ops:load-acceptance -- --summary=tests/load/results/raw-failover-70.json --users=D:\통제경로\load-users.json --profile=failover-70 --expected-writer-epoch=2
 ```
 
-결과는 `tests/load/results/load-acceptance-*.json`이다. k6 필수 metric/threshold 누락, 버린 iteration 1개 이상, DB 정합성 문제 1건 이상, Failover 세대 불일치 중 하나라도 있으면 종료 코드 1이다. 인프라 메모리·커넥션 누수 추세, RTO/RPO, Edge 재시도 판정은 이 JSON에 자동으로 지어 넣지 않고 대시보드·HA 이벤트 증적을 Pilot YAML에 별도로 연결한다.
+결과는 `tests/load/results/load-acceptance-*.json`이다. k6 필수 metric/threshold 누락, 버린 iteration 1개 이상, DB 정합성 문제 1건 이상, Failover 세대 불일치 중 하나라도 있으면 종료 코드 1이다. 인프라 메모리·커넥션 누수 추세와 RTO/RPO는 대시보드·HA 이벤트 증적을 Pilot YAML에 별도로 연결한다. T-M4-39의 Edge 재시도·능동 헬스체크·사용자 체감 실패/중복 0 판정은 같은 실행 결과를 `deploy/pilot/edge-failover-acceptance.example.yaml` 사본에 기록해 `npm run ops:edge-failover-acceptance -- --file=...`로 확인한다.

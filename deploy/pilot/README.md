@@ -35,3 +35,14 @@ npm run ops:pg-sandbox-acceptance -- --file=deploy/pilot/<대학>-pg-sandbox.yam
 결제 9종과 정산 5종이 모두 실제 `pg-sandbox`에서 통과하고 건너뜀이 0건이어야 한다. `mock-pg`는 거절한다. 거래번호·가맹점 번호는 원문으로 남기지 않고, 정렬한 식별자 집합의 소문자 SHA-256만 `transactionSetHash`·`merchantAccountRefHash`에 기록한다. 비밀키·콜백 비밀·토큰은 어떤 경우에도 Git에 넣지 않는다.
 
 빈 예시는 결제 0/9·정산 0/5로 실패하는 것이 정상이다. 성공 결과가 생겨도 담당자가 원시 PG 장부·애플리케이션 감사 기록·정산 예외를 표본 대조한 뒤에만 M6 태스크를 완료 처리한다.
+
+## CSP Edge·노드 장애 수용 증적
+
+`edge-failover-acceptance.example.yaml`은 로컬에서 끝내지 못한 T-M4-39의 실제 Edge 판정 양식이다. 관리형 Edge/Gateway와 서로 다른 zone이 두 곳 이상 있는 CSP staging에서만 쓴다.
+
+```powershell
+Copy-Item deploy/pilot/edge-failover-acceptance.example.yaml deploy/pilot/<대학>-edge-failover.yaml
+npm run ops:edge-failover-acceptance -- --file=deploy/pilot/<대학>-edge-failover.yaml
+```
+
+게이트는 안전 메서드 재시도, 멱등 키가 있는 쓰기만 재시도, 능동 헬스체크, 계획 정비와 노드 강제 손실 2개 시나리오를 확인한다. 강제 손실에서는 Edge 재시도가 실제로 1건 이상 관찰되어야 하며 사용자 체감 실패·중복 쓰기·중복 접수·이중 승인·미복구 이벤트 공백은 모두 0이어야 한다. 로컬·kind, 건너뜀, 승인 목표보다 긴 복구는 통과하지 않는다.

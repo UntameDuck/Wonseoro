@@ -187,6 +187,24 @@ npm run ops:pg-sandbox-acceptance -- --file=deploy/pilot/<대학>-pg-sandbox.yam
 
 이 게이트를 준비했다는 사실은 T-M6-04·05 완료가 아니다. `PaymentProviderPort` 구현과 운영 선택값, 대학·PG 실행 승인, 실제 Sandbox 원장까지 있어야 한다.
 
+### 8.2 T-M4-39 — CSP Edge·노드 장애 수용 게이트
+
+로컬 다중 노드 kind는 zone 재배치와 Pod 복구를 검증했지만 관리형 Edge의 능동 헬스체크·재시도는 포함하지 않는다. 실제 CSP staging에서는 [빈 Edge 증적 파일](../deploy/pilot/edge-failover-acceptance.example.yaml)을 복사해 다음을 실행한다.
+
+```powershell
+npm run ops:edge-failover-acceptance -- --file=deploy/pilot/<대학>-edge-failover.yaml
+```
+
+안전한 읽기 메서드는 연결 실패·reset·unavailable에 제한된 횟수와 시도별 timeout으로 재시도한다. 쓰기는 멱등 키가 확인된 요청만 같은 범위에서 재시도하고, 그 밖의 쓰기는 재시도하지 않는다. 계획 정비와 워커 노드 강제 손실 중 요청을 계속 보내 다음을 모두 증명한다.
+
+- 실제 Edge 재시도 횟수와 첫 시도 실패 수를 별도로 기록한다. 강제 손실에서 재시도 0건이면 시험이 장애 경로를 밟지 않은 것으로 본다.
+- 최종 사용자 체감 실패와 중복 쓰기는 0건이어야 한다.
+- 승인된 복구 목표와 관찰 복구 시간을 함께 남기고 목표를 넘으면 실패한다.
+- 사후 DB·이벤트 대조에서 중복 접수, 이중 승인 결제, 미복구 이벤트 순번 공백이 모두 0이어야 한다.
+- 서로 다른 zone 두 곳 이상과 Edge 능동 헬스체크 설정을 CSP 증적으로 남긴다.
+
+이 결과가 성공하고 담당자가 Gateway 로그·Kubernetes 이벤트·DB 대조를 표본 확인한 뒤에만 T-M4-39의 🟡를 완료로 바꾼다.
+
 ## 9. T-M6-15 — Sandbox→Shadow→제한 Pilot
 
 | 단계 | 데이터·외부 연계 | 진입 조건 | 종료 조건 |
