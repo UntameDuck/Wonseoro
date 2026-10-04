@@ -1,12 +1,14 @@
 #!/bin/sh
-# 커밋 작성자 규칙 — GitHub 기여자 그래프에 저장소 주인(ryan-ahn-song) 말고 다른 사람이 들어가지 않게 한다.
+# 커밋 작성자 규칙 — GitHub 기여자 그래프에는 팀원 두 사람만 들어간다.
+#   ryan-ahn-song(저장소 주인, ryansong0805@gmail.com)·권민준(m1nxun, 25_kmj0404@dshs.kr)
+# 다른 사람·AI 는 작성자로도, 공동저자(Co-authored-by)로도 들어오면 안 된다.
 # 켜기(클론마다 한 번): git config core.hooksPath .githooks
 #
 # 막는 것
 #   - 작성자(author)·커밋한 사람(committer) 이메일이 허용 목록 밖
-#   - 커밋 메시지의 Co-authored-by / Signed-off-by 줄(사람·AI 모두) — GitHub 가 공동 작성자로 센다
+#   - 허용 목록 밖 이메일의 Co-authored-by / Signed-off-by 줄 — GitHub 가 공동 작성자로 센다
 
-ALLOWED="ryansong0805@gmail.com 166101804+ryan-ahn-song@users.noreply.github.com"
+ALLOWED="ryansong0805@gmail.com 166101804+ryan-ahn-song@users.noreply.github.com 25_kmj0404@dshs.kr"
 # GitHub 웹에서 고치거나 합친 커밋은 "커밋한 사람" 이 GitHub 자신이다 — 기여자로 세지 않으므로 커밋한 사람에만 허용한다
 COMMITTER_EXTRA="noreply@github.com"
 
@@ -36,8 +38,13 @@ if ! allowed "$author" || ! allowed_committer "$committer"; then
   exit 1
 fi
 
-if grep -qiE '^[[:space:]]*(co-authored-by|signed-off-by)[[:space:]]*:' "$1"; then
-  echo "커밋 거절: 메시지에 Co-authored-by / Signed-off-by 줄이 있다 — 지우고 다시 커밋한다." >&2
+bad=$(grep -iE '^[[:space:]]*(co-authored-by|signed-off-by)[[:space:]]*:' "$1" | while IFS= read -r line; do
+  e=$(printf '%s\n' "$line" | sed -n 's/.*<\(.*\)>.*/\1/p')
+  allowed "$e" || printf '%s\n' "$line"
+done)
+if [ -n "$bad" ]; then
+  echo "커밋 거절: 팀원이 아닌 공동저자 줄이 있다 — 지우고 다시 커밋한다." >&2
+  printf '  %s\n' "$bad" >&2
   exit 1
 fi
 

@@ -8,7 +8,7 @@
 요점만:
 
 - 문서·커밋·보고는 **한국어**. 커밋에 AI 공동저자 줄을 넣지 않는다
-- **커밋 작성자는 언제나 `ryan-ahn-song <ryansong0805@gmail.com>` 한 사람** — GitHub 기여자 그래프에 다른 사람·AI 가 들어가면 안 된다. 클론 뒤 저장소 폴더에서(`--global` 금지) `git config user.name "ryan-ahn-song"`·`git config user.email "ryansong0805@gmail.com"`·`git config core.hooksPath .githooks`. `Co-authored-by`·`Signed-off-by` 줄 금지, `--no-verify` 금지, 이미 push 한 커밋은 강제 push 하지 않는다. 자세한 것은 HANDOFF §0 「커밋 작성자 규칙」
+- **GitHub 기여자는 팀원 두 사람만** — ryan-ahn-song(`ryansong0805@gmail.com`)·권민준(`m1nxun`, `25_kmj0404@dshs.kr`). 다른 사람·AI 는 작성자·공동저자로 들어오면 안 된다. 권민준의 기존 기여는 그대로 둔다. **AI 작업의 커밋 작성자는 언제나 `ryan-ahn-song <ryansong0805@gmail.com>`**. 클론 뒤 저장소 폴더에서(`--global` 금지) `git config user.name "ryan-ahn-song"`·`git config user.email "ryansong0805@gmail.com"`·`git config core.hooksPath .githooks`. AI 는 `Co-authored-by`·`Signed-off-by` 줄을 넣지 않는다, `--no-verify` 금지, 이미 push 한 커밋은 강제 push 하지 않는다. 자세한 것은 HANDOFF §0 「커밋 작성자 규칙」
 - 묻지 말고 최선안으로 결정·진행하고 결과를 보고한다. 작업마다 끝에 문서를 갱신한다. 삭제·전역 설정 변경·되돌리기 어려운 일만 사용자 확인 뒤에
 - "시험 통과" 는 건너뜀(skipped) 수까지 보고 말한다 — DB 없이 돌면 통합 시험이 건너뜀으로 끝난다(대학 API 정상 건너뜀은 3개). 못 돌린 검증은 그대로 보고한다
 - 노션 기술설계서가 설계 원본이다. 어긋나면 먼저 `docs/02-spec-discrepancy-register.md` 에 `D-N` 으로 올린다

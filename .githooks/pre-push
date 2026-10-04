@@ -1,9 +1,10 @@
 #!/bin/sh
 # push 직전 마지막 확인 — 올라갈 커밋마다 작성자·커밋한 사람 이메일과 공동저자 줄을 본다.
+# 기여자는 팀원 두 사람만: ryan-ahn-song(ryansong0805@gmail.com)·권민준(m1nxun, 25_kmj0404@dshs.kr).
 # commit-msg 훅을 거치지 않은 커밋(다른 기기·훅을 끈 상태·rebase 결과)도 여기서 걸린다.
 # 켜기(클론마다 한 번): git config core.hooksPath .githooks
 
-ALLOWED="ryansong0805@gmail.com 166101804+ryan-ahn-song@users.noreply.github.com"
+ALLOWED="ryansong0805@gmail.com 166101804+ryan-ahn-song@users.noreply.github.com 25_kmj0404@dshs.kr"
 # GitHub 웹에서 고치거나 합친 커밋은 "커밋한 사람" 이 GitHub 자신이다 — 기여자로 세지 않으므로 커밋한 사람에만 허용한다
 COMMITTER_EXTRA="noreply@github.com"
 ZERO=0000000000000000000000000000000000000000
@@ -35,8 +36,12 @@ while read -r local_ref local_sha remote_ref remote_sha; do
       echo "push 거절: $(git log -1 --format='%h %s' "$c") — 작성자 $ae / 커밋한 사람 $ce" >&2
       fail=1
     fi
-    if git log -1 --format=%B "$c" | grep -qiE '^[[:space:]]*(co-authored-by|signed-off-by)[[:space:]]*:'; then
-      echo "push 거절: $(git log -1 --format='%h %s' "$c") — 메시지에 Co-authored-by / Signed-off-by 줄" >&2
+    bad=$(git log -1 --format=%B "$c" | grep -iE '^[[:space:]]*(co-authored-by|signed-off-by)[[:space:]]*:' | while IFS= read -r line; do
+      e=$(printf '%s\n' "$line" | sed -n 's/.*<\(.*\)>.*/\1/p')
+      allowed "$e" || printf '%s\n' "$line"
+    done)
+    if [ -n "$bad" ]; then
+      echo "push 거절: $(git log -1 --format='%h %s' "$c") — 팀원이 아닌 공동저자 줄: $bad" >&2
       fail=1
     fi
   done
