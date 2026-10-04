@@ -8,7 +8,7 @@
 ├── postgres-univ-a :5432   ← univ-a 클러스터만 쓴다
 ├── postgres-univ-b :5442   ← univ-b 클러스터만 쓴다
 ├── postgres-central :5434 · central-api :3000 (컨테이너 ka-central)
-├── minio :9000
+├── object-storage(RustFS) :9000 · 관리 콘솔 :9001
 ├── kind: univ-a  → 접수 API NodePort → localhost:18081
 └── kind: univ-b  → 접수 API NodePort → localhost:18082
 ```

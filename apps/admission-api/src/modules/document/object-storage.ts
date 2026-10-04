@@ -43,7 +43,7 @@ export class ObjectStorage implements OnModuleInit {
     this.client = new S3Client({
       region: S3.region,
       endpoint: S3.endpoint,
-      // MinIO 는 path-style 을 쓴다. 운영 CSP 는 대개 virtual-host 다. (v1.1 §A8)
+      // 로컬 S3 호환 저장소는 path-style 을 쓴다. 운영 CSP 는 대개 virtual-host 다. (v1.1 §A8)
       forcePathStyle: envBool('S3_FORCE_PATH_STYLE', true),
       credentials: {
         // 운영에서 이 값이 없으면 기동하지 않는다.

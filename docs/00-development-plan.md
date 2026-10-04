@@ -36,7 +36,7 @@
 | — | 패키지 매니저 | **npm workspaces** (pnpm 미설치) | 추가 설치 없이 즉시 동작 |
 | — | 이벤트 네임스페이스 | `kr.kadmission.*` | v1.1 §04가 canonical (v1.0 §6.2 예시와 다름) |
 | — | 지원자 흐름 | **6단계** | v1.1 §07이 canonical (PDF 5단계 / v1.0 §12.1 10항목과 다름) |
-| — | 로컬 인프라 | Docker Compose (postgres / redis / minio) | K-PaaS는 M4에서 도입 |
+| — | 로컬 인프라 | Docker Compose (postgres / redis / S3 호환 Object Storage) | K-PaaS는 M4에서 도입 |
 
 > **Java → NestJS 변경은 "스펙 이탈"이 아니라 "스펙 문구 수정 대상"이다.**
 > 설계서가 실제로 요구하는 것은 언어가 아니라 ① ACID 트랜잭션 ② Outbox ③ 관측성 ④ 장기지원 런타임이다. Node 22/24 LTS + PostgreSQL 조합은 네 가지를 모두 만족한다. 심사·조달 문서에서 "Java LTS"로 적힌 부분은 제출 전에 한 번 정정해야 한다. (→ 액션 T-0)
@@ -122,7 +122,7 @@ dev-folder/                        ← git repo root (UntameDuck/Wonseoro)
 - [ ] Application 생성 시 Profile **Snapshot 복사**
 - [ ] Draft 자동저장 (Debounce + PATCH + ETag/version)
 - [ ] 대학별 추가문항 (JSON Schema 기반 동적 폼)
-- [ ] 서류 업로드 (MinIO Presigned URL + 서버측 재검증, AV는 Mock)
+- [ ] 서류 업로드 (S3 호환 Object Storage Presigned URL + 서버측 재검증, AV는 Mock)
 - [ ] 결제 (PG Sandbox Adapter — 서버측 재검증 필수)
 - [ ] **Finalize** (Idempotency-Key + 조건부 상태전이 + Submission UNIQUE + Outbox + Audit, 단일 트랜잭션)
 - [ ] 접수번호 발급 + 접수증 화면

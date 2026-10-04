@@ -7,9 +7,9 @@ import { breakGlass } from '../../test-support/break-glass';
 import { S3WormStore, exportAuditSegment, verifyAuditWorm } from './audit-worm';
 
 /**
- * 감사 기록 WORM — 실제 MinIO Object Lock 으로 (T-M3-03, D-75)
+ * 감사 기록 WORM — 실제 S3 호환 Object Lock 으로 (T-M3-03, D-75)
  * DB 슈퍼유저가 감사 기록을 고치거나 지워도 WORM 조각과 맞춰 찾아낸다. 조각은 보관 기간 동안 지울 수 없다.
- * MinIO(:9000)·DB 가 없으면 건너뛴다. 시험마다 새 버킷(Object Lock 버킷은 잠긴 조각이 있으면 지울 수 없다 — 보관 1일)
+ * Object Storage(:9000)·DB 가 없으면 건너뛴다. 시험마다 새 버킷(Object Lock 버킷은 잠긴 조각이 있으면 지울 수 없다 — 보관 1일)
  */
 const ENDPOINT = process.env.WORM_TEST_S3_ENDPOINT ?? 'http://localhost:9000';
 const BUCKET = `audit-worm-it-${Date.now()}`;
@@ -29,7 +29,7 @@ before(async () => {
   try {
     await store.ensureBucket();
   } catch {
-    return; // MinIO 없음
+    return; // Object Storage 없음
   }
   available = true;
   // 이 시험만의 원서에 붙인다 — 원서 없는 기록(운영자 체인)에 가짜 해시를 넣으면 동시에 도는 체인 검사 시험이 깨진다
@@ -62,7 +62,7 @@ describe('감사 기록 WORM (T-M3-03)', () => {
   let firstKey = '';
 
   it('감사 기록을 조각으로 내보내고, 이어서 내보내면 겹치지 않는다', async (t) => {
-    if (!available) return t.skip('DB·MinIO 없음');
+    if (!available) return t.skip('DB·Object Storage 없음');
     const opts = { university: UNIV, settleSeconds: 60, batch: 100_000, retentionDays: 1 };
     const first = await exportAuditSegment(db, store, opts);
     assert.ok(first.exported >= 3 && first.key);
@@ -81,7 +81,7 @@ describe('감사 기록 WORM (T-M3-03)', () => {
   });
 
   it('조각은 보관 기간 동안 지울 수도 보관을 줄일 수도 없다(COMPLIANCE)', async (t) => {
-    if (!available) return t.skip('DB·MinIO 없음');
+    if (!available) return t.skip('DB·Object Storage 없음');
     const head = await client.send(new HeadObjectCommand({ Bucket: BUCKET, Key: firstKey }));
     assert.equal(head.ObjectLockMode, 'COMPLIANCE');
     await assert.rejects(client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: firstKey, VersionId: head.VersionId })));
@@ -91,7 +91,7 @@ describe('감사 기록 WORM (T-M3-03)', () => {
   });
 
   it('DB 에서 고치거나 지운 감사 기록을 WORM 과 맞춰 찾아낸다(슈퍼유저가 트리거를 꺼도)', async (t) => {
-    if (!available) return t.skip('DB·MinIO 없음');
+    if (!available) return t.skip('DB·Object Storage 없음');
     const clean = await verifyAuditWorm(db, store, UNIV);
     assert.equal(clean.alteredInDb.filter((x) => ids.includes(x)).length, 0);
     await breakGlass(async (c) => {

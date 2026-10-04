@@ -92,7 +92,7 @@
 ## 다시 찍기
 
 Docker·Node 22+·Chrome이 필요하다. Chrome 경로가 다르면 `CHROME` 환경변수로 준다. 따로 설치할 것은 없다. 스크립트가 Chrome을 헤드리스로 띄워 DevTools 프로토콜로 조작한다.
-**kind 시험 중에도 돌릴 수 있다.** 전용 DB·전용 포트만 쓴다. 다만 Docker 메모리를 조금(PostgreSQL 컨테이너 하나) 더 쓴다. 서류 업로드에 로컬 MinIO(:9000)가 필요하다 — 꺼져 있으면 `docker start wonseoro-dev-minio-1`.
+**kind 시험 중에도 돌릴 수 있다.** 전용 DB·전용 포트만 쓴다. 다만 Docker 메모리를 조금(PostgreSQL 컨테이너 하나) 더 쓴다. 서류 업로드에 로컬 Object Storage(:9000)가 필요하다 — 꺼져 있으면 `docker compose -f infra/compose/docker-compose.dev.yml up -d object-storage`.
 
 서버는 `.claude/launch.json`의 `shots-*` 구성을 쓴다. env는 `scripts/screenshots/env/`에 있다. API·워커는 빌드 산출물(`dist`)로 뜬다. 코드가 바뀌었으면 먼저 `npm run build`를 한다. 지원자 웹·콘솔은 `next dev` 로 뜬다 — 개발용 신원 입력이 켜진다(T-M5-53).
 Claude 데스크톱의 미리보기는 서버를 5개까지만 띄울 수 있다. 그래서 단계마다 워커를 내리고 올린다.
@@ -113,5 +113,5 @@ Claude 데스크톱의 미리보기는 서버를 5개까지만 띄울 수 있다
 ```
 
 단계 사이에 이어 쓰는 원서 ID와 실패 화면(`fail-<단계>.png`)은 저장소 `.cache/shots/`(git 제외)에 남는다.
-업로드한 샘플 PDF는 로컬 MinIO의 `ui-shots-documents` 버킷에 쌓인다.
+업로드한 샘플 PDF는 로컬 Object Storage의 `ui-shots-documents` 버킷에 쌓인다.
 출력 폴더를 바꾸면(두 번째 인자) 저장소 캡처를 건드리지 않고 확인만 할 수 있다.

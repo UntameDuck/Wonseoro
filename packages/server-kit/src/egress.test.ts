@@ -9,21 +9,21 @@ const denied = (fn: () => unknown, reason: string) =>
   assert.throws(fn, (e: unknown) => e instanceof EgressDenied && e.reason === reason);
 
 describe('출구 허용 목록 — 요청 전 (T-M5-07)', () => {
-  const p = new EgressPolicy({ allow: ['sync.k-admission.kr', 'minio:9000', '*.objectstorage.kr', '169.254.169.254'], allowLoopback: false });
+  const p = new EgressPolicy({ allow: ['sync.k-admission.kr', 'object-storage:9000', '*.objectstorage.kr', '169.254.169.254'], allowLoopback: false });
 
   it('허용된 호스트만 — 다른 호스트·다른 포트는 거절', () => {
     assert.equal(p.check('https://sync.k-admission.kr/internal/v1/events').hostname, 'sync.k-admission.kr');
-    assert.equal(p.check('http://minio:9000/bucket/key?X-Amz-Signature=x').port, '9000');
+    assert.equal(p.check('http://object-storage:9000/bucket/key?X-Amz-Signature=x').port, '9000');
     assert.equal(p.check('https://univ-a.objectstorage.kr/doc').hostname, 'univ-a.objectstorage.kr');
     denied(() => p.check('https://evil.example.com/'), 'host');
-    denied(() => p.check('http://minio:9001/'), 'host');
+    denied(() => p.check('http://object-storage:9001/'), 'host');
     denied(() => p.check('https://objectstorage.kr/'), 'host'); // *.suffix 는 그 이름 자체를 포함하지 않는다
     denied(() => p.check('https://sync.k-admission.kr.evil.com/'), 'host');
     denied(() => p.check('https://SYNC.K-ADMISSION.KR@evil.com/'), 'host'); // 사용자 정보로 호스트를 속이기
   });
 
   it('http·https 만 — file·gopher·data 는 거절', () => {
-    for (const u of ['file:///etc/passwd', 'gopher://sync.k-admission.kr/', 'data:text/plain,x', 'ftp://minio:9000/']) denied(() => p.check(u), 'scheme');
+    for (const u of ['file:///etc/passwd', 'gopher://sync.k-admission.kr/', 'data:text/plain,x', 'ftp://object-storage:9000/']) denied(() => p.check(u), 'scheme');
     denied(() => p.check('not a url'), 'scheme');
   });
 
@@ -39,8 +39,8 @@ describe('출구 허용 목록 — 요청 전 (T-M5-07)', () => {
   });
 
   it('설정된 URL 들의 호스트로 만든다 — 비었거나 틀린 URL 은 건너뛴다', () => {
-    const q = EgressPolicy.fromUrls(['https://sync.k-admission.kr/internal/v1/events', 'http://minio:9000', '', null, 'not a url'], ['pg.example.kr']);
-    assert.deepEqual([...q.allow].sort(), ['minio:9000', 'pg.example.kr', 'sync.k-admission.kr']);
+    const q = EgressPolicy.fromUrls(['https://sync.k-admission.kr/internal/v1/events', 'http://object-storage:9000', '', null, 'not a url'], ['pg.example.kr']);
+    assert.deepEqual([...q.allow].sort(), ['object-storage:9000', 'pg.example.kr', 'sync.k-admission.kr']);
   });
 });
 

@@ -1141,7 +1141,7 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **발견** | 2026-10-03 (T-M3-03 — §01 A11 "감사 분리 저장소", v1.0 §9) |
 | **충돌** | 감사 기록은 DB 안에서 앱 권한·추가 전용 트리거·hash-chain 으로 지킨다(D-41·D-62). 그러나 DB 슈퍼유저는 트리거를 끄고 고치거나 지울 수 있다 — 체인이 "끊김" 을 알려도 **무엇이 있었는지 되찾지 못하고**, 체인을 처음부터 다시 계산해 덮으면 끊김도 사라진다. 노션은 분리 저장소를 요구하지만 구현이 없었다(🟡) |
 | **판정** | **Object Lock(COMPLIANCE) 버킷으로 내보낸다** — 앱이 5분마다(리더 하나·Peak Mode 억제) 감사 기록을 (시각, id) 순서의 NDJSON 조각으로 올리고 보관 기간(기본 5년)을 건다. 보관 동안은 루트 계정도 지우거나 보관을 줄이지 못한다. 이어 내보낼 자리는 **키 이름**(`audit/<대학>/<날짜>/<마지막 시각>_<마지막 id>.ndjson`)에서 읽는다 — 믿지 않으려는 DB 에 두지 않는다. 늦게 커밋된 기록을 놓치지 않게 2분 지난 것만. **대조**(`verifyAuditWorm`)는 조각과 DB 를 맞춰 지워진 기록·고쳐진 기록을 찾는다. 운영은 버킷 필수(`AUDIT_WORM_BUCKET`, 없으면 기동 거부), 차트 `objectStorage.auditWormBucket` |
-| **재현 시험** | admission-api `audit-worm.integration.test`(실제 MinIO Object Lock 3개 — 조각 내보내기·이어서 겹치지 않음, 지우기·보관 단축 거절, 슈퍼유저가 고친 기록·지운 기록 찾기) |
+| **재현 시험** | admission-api `audit-worm.integration.test`(실제 S3 호환 Object Storage Object Lock 3개 — 조각 내보내기·이어서 겹치지 않음, 지우기·보관 단축 거절, 슈퍼유저가 고친 기록·지운 기록 찾기) |
 | **저장소 반영** | ✅ (2026-10-03) `apps/admission-api/src/modules/audit/audit-worm.ts`, 설정 `AUDIT_WORM_*`, 차트 |
 | **노션 반영** | ⬜ §01 A11·v1.0 §9 에 WORM 방식(Object Lock COMPLIANCE·조각·대조), §05 values-m 에 `objectStorage.auditWormBucket` — [06-notion-changeset.md](06-notion-changeset.md) |
 | **상태** | 🟡 저장소 반영, 노션 반영 대기 |
@@ -1243,6 +1243,20 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **저장소 반영** | ✅ (2026-10-04) `packages/contracts/src/common-profile.ts`, `profile-vault.service.ts`·컨트롤러, `infra/db/central/0005_profile_collection_consent.sql`(CI·보안·`db:migrate:central`·캡처 목록), 지원자 공통원서 화면 |
 | **노션 반영** | ⬜ v1.0 §17 Privacy(공통원서 수집·이용 동의·제공 고지), §03 OpenAPI v1.12.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md) |
 | **상태** | 🟡 저장소 반영, 노션 반영 대기. 문안·운영 주체 확정은 운영기관·법무(문서 10 §7-1) |
+
+---
+
+## D-83. 로컬 MinIO OSS 이미지가 사라져 Object Storage 개발 환경을 다시 만들 수 없다 🟢
+
+| | |
+|---|---|
+| **발견** | 2026-10-04 (새 개발 PC에서 로컬 환경을 다시 만들며) |
+| **충돌** | 설계와 운영 계약은 제품을 정하지 않은 **S3 호환 Object Storage**인데, 로컬 Compose와 일부 시험은 `quay.io/minio/minio:latest`·MinIO 전용 컨테이너 이름·상태 확인 주소에 묶여 있다. MinIO OSS 저장소는 유지보수가 끝났고 해당 `latest` manifest도 없어 `npm run dev:infra`가 기동하지 않는다. 마지막 OSS 이미지를 다시 쓰면 2026년 공개 취약점 수정도 받을 수 없다 |
+| **판정** | **로컬 개발·시험 구현체만 RustFS 1.0.1 고정 digest로 교체**한다. Compose 서비스와 시험은 `object-storage`라는 중립 이름을 쓰고 앱의 `S3_*` 계약·운영 배포·노션 설계는 바꾸지 않는다. 기존 MinIO 데이터 경로는 재사용하거나 지우지 않고 새 볼륨을 쓴다. 완료 판정은 서명 URL PUT/GET·브라우저 CORS·서류 검사, Object Lock COMPLIANCE의 버전 삭제·보관 단축 거절, 장애·복구, 이미지 취약점 검사를 실제로 통과했을 때만 한다 |
+| **저장소 반영** | ✅ (2026-10-04) Compose 서비스 `object-storage`를 RustFS 1.0.1 고정 digest로 교체하고 전용 볼륨·명시적 CORS·비루트 UID 10001·`no-new-privileges`를 적용했다. 장애 시험은 중립 컨테이너 이름과 `/health`를 쓰며, 암호화 뒤 비어 있는 DB 평문 칼럼 대신 API 응답으로 자동저장을 확인하고 실제 PUT 성공까지 복구를 기다린다. 기존 `.data/minio`는 건드리지 않았다 |
+| **실증** | Trivy High/Critical 0, 브라우저 허용 Origin PUT·미허용 Origin 차단, 키보드 완주 105키·접수 완료·문제 0, 지원자 1280/320 각 22화면·296자리·문제 0, WORM 3개 전부 실행·통과(잠긴 버전 삭제·보관 단축 거절), admission-api 395개 중 392 통과·3 skip·0 실패, 저장소 중단 중 카탈로그 20회·원서 생성·자동저장 지속/직접 업로드만 실패·복구 뒤 기존 URL 업로드와 완료 통과(`object-storage-outage-2026-10-04T06-20-30-645Z.json`) |
+| **노션 반영** | 해당 없음 — 운영 계약은 전후 모두 S3 호환 Object Storage이고 제품을 정하지 않는다 |
+| **상태** | 🟢 CLOSED — 로컬 구현·회귀 실증 완료 (2026-10-04) |
 
 ---
 

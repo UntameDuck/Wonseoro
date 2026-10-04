@@ -47,14 +47,38 @@ services:
     command: ['redis-server', '--save', '', '--appendonly', 'no']
 
   # S3 호환 Object Storage. 서류는 브라우저에서 여기로 직접 업로드한다.
-  minio:
-    image: quay.io/minio/minio:latest
-    command: ['server', '/data', '--console-address', ':9001']
+  # MinIO OSS 종료 뒤 로컬 구현체만 RustFS 로 교체했다(D-83). 운영 제품 계약은 S3 호환으로 중립이다.
+  object-storage-permissions:
+    image: rustfs/rustfs:1.0.1@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c
+    user: '0:0'
+    entrypoint: ['sh', '-ec']
+    command: ['chown -R 10001:10001 /data']
+    volumes: ['object-storage-data:/data']
+    restart: 'no'
+
+  object-storage:
+    image: rustfs/rustfs:1.0.1@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c
+    depends_on:
+      object-storage-permissions:
+        condition: service_completed_successfully
     environment:
-      MINIO_ROOT_USER: wonseoro
-      MINIO_ROOT_PASSWORD: wonseoro123
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001
+      RUSTFS_CONSOLE_ENABLE: 'true'
+      RUSTFS_ACCESS_KEY: wonseoro
+      RUSTFS_SECRET_KEY: wonseoro123
+      # 지원자 웹이 서명 URL 로 직접 PUT 한다. 빈 값이나 * 대신 로컬의 신뢰할 오리진만 연다(D-83).
+      RUSTFS_CORS_ALLOWED_ORIGINS: http://localhost:3001,http://localhost:4000,http://localhost:4001
     ports: ['9000:9000', '9001:9001']
-    volumes: ['./.data/minio:/data']
+    volumes: ['object-storage-data:/data']
+    security_opt: ['no-new-privileges:true']
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:9000/health']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
 
   # PG Sandbox 대체. M2까지는 Mock Provider로 개발한다.
   pg-mock:
@@ -98,4 +122,5 @@ services:
     volumes: ['../clamav/clamd.conf:/etc/clamav/clamd.conf:ro', 'clamav-db:/var/lib/clamav']
 
 volumes:
+  object-storage-data:
   clamav-db:

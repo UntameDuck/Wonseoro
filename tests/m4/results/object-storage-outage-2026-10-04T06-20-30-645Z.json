@@ -1,0 +1,45 @@
+{
+  "test": "T-M4-38",
+  "environment": "local UNIV-A API + local S3-compatible Object Storage (축소 환경)",
+  "limitation": "Object Storage 완전 단절을 짧게 재현했다. 운영 지연 시간·부하 수치가 아니다.",
+  "startedAt": "2026-10-04T06:20:30.645Z",
+  "checks": {
+    "object-storage-is-down": {
+      "pass": true,
+      "detectedMs": 18
+    },
+    "catalog-continues-during-outage": {
+      "pass": true,
+      "requests": 20,
+      "failures": 0
+    },
+    "draft-save-continues-during-outage": {
+      "pass": true,
+      "createStatus": 201,
+      "saveStatus": 200,
+      "persisted": "Object Storage 장애 시험 고등학교"
+    },
+    "only-direct-upload-fails-during-outage": {
+      "pass": true,
+      "uploadStatus": 0,
+      "error": "curl: (7) Failed to connect to localhost port 9000 after 2035 ms: Could not connect to server",
+      "compressedOutageMs": 3956
+    },
+    "upload-recovers-after-storage-returns": {
+      "pass": true,
+      "recoveredMs": 737,
+      "uploadStatus": 200,
+      "completeStatus": 202,
+      "documentStatus": "QUARANTINED"
+    },
+    "object-storage-restored": {
+      "pass": true,
+      "restored": true
+    }
+  },
+  "applicationId": "73d25244-7bc9-48c5-aa01-7a5b440e4be3",
+  "documentId": "53306a9f-12ce-42c3-b97a-84c55b60cd35",
+  "compressedOutageMs": 5450,
+  "finishedAt": "2026-10-04T06:20:37.291Z",
+  "passed": true
+}

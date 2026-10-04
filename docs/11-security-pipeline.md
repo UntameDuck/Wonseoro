@@ -34,6 +34,8 @@ CI는 `.github/workflows/security.yml`의 5개 matrix 잡에서 각 이미지를
 `os,library` 스캐너로 Critical이 하나라도 있으면 실패한다. `ignore-unfixed`를 켜지 않아 수정판이 없는 Critical도 숨기지 않는다.
 원격 matrix도 모두 통과했다(Actions run 36890582638).
 
+D-83 로컬 Object Storage 교체 때 고정한 `rustfs/rustfs:1.0.1@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c`도 Trivy 0.75.0 `vuln` 스캐너(`HIGH,CRITICAL`, 수정판 없는 항목 제외)로 별도 확인했고 High/Critical 0이었다(2026-10-04). 이 이미지는 로컬 개발용이며 운영 서비스 이미지 matrix에는 넣지 않는다.
+
 ## 3. T-M5-25 IaC·Kubernetes 검사
 
 Trivy config가 다음을 함께 검사한다.

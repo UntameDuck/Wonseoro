@@ -1,8 +1,8 @@
 // T-M4-38 — Object Storage 장애 중 비서류 흐름 지속
 //
-// MinIO를 잠시 멈춘 동안 카탈로그 조회·원서 생성·자동저장이 계속되고, 브라우저의
+// 로컬 Object Storage를 잠시 멈춘 동안 카탈로그 조회·원서 생성·자동저장이 계속되고, 브라우저의
 // 직접 업로드만 실패하는지 확인한다. 복구 후 같은 단기 URL로 업로드·서버측 검증까지
-// 완료한다. 로컬 kind 축소 환경 결과이며 운영 지연 수치로 쓰지 않는다.
+// 완료한다. 로컬 축소 환경 결과이며 운영 지연 수치로 쓰지 않는다.
 //
 //   node tests/m4/object-storage-outage.mjs
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -10,8 +10,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
 const API = 'http://localhost:18081';
-const MINIO = 'http://localhost:9000';
-const MINIO_CONTAINER = 'wonseoro-dev-minio-1';
+const OBJECT_STORAGE = 'http://localhost:9000';
+const OBJECT_STORAGE_CONTAINER = 'wonseoro-dev-object-storage-1';
 const DB = 'wonseoro-dev-postgres-univ-a-1';
 const CYCLE = '11111111-1111-1111-1111-111111111111';
 const TYPE = '22222222-2222-2222-2222-222222222222';
@@ -20,7 +20,7 @@ const PDF = Buffer.from('%PDF-1.4\n%%EOF\n', 'utf8');
 
 const result = {
   test: 'T-M4-38',
-  environment: 'local-kind-univ-a + local MinIO (축소 환경)',
+  environment: 'local UNIV-A API + local S3-compatible Object Storage (축소 환경)',
   limitation: 'Object Storage 완전 단절을 짧게 재현했다. 운영 지연 시간·부하 수치가 아니다.',
   startedAt: new Date().toISOString(),
   checks: {},
@@ -51,14 +51,14 @@ async function request(base, method, path, { headers = {}, body, rawBody, timeou
   }
 }
 
-async function waitMinio(up, timeoutMs = 60_000) {
+async function waitObjectStorage(up, timeoutMs = 60_000) {
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
-    const response = await request(MINIO, 'GET', '/minio/health/ready', { timeoutMs: 2000 });
+    const response = await request(OBJECT_STORAGE, 'GET', '/health', { timeoutMs: 2000 });
     if (up ? response.status === 200 : response.status === 0) return Date.now() - started;
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  throw new Error(`MinIO가 ${up ? '복구' : '중단'} 상태가 되지 않았습니다`);
+  throw new Error(`Object Storage가 ${up ? '복구' : '중단'} 상태가 되지 않았습니다`);
 }
 
 function check(name, pass, detail) {
@@ -82,14 +82,27 @@ function directUpload(signedUrl, requiredHeaders, timeoutSeconds) {
   };
 }
 
-let minioRestored = false;
+async function waitDirectUpload(signedUrl, requiredHeaders, timeoutMs = 60_000) {
+  const started = Date.now();
+  let last = { status: 0, error: 'NOT_ATTEMPTED' };
+  while (Date.now() - started < timeoutMs) {
+    last = directUpload(signedUrl, requiredHeaders, 3);
+    if (last.status >= 200 && last.status < 300) {
+      return { ...last, recoveredMs: Date.now() - started };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  return { ...last, recoveredMs: Date.now() - started };
+}
+
+let objectStorageRestored = false;
 try {
   const ready = await request(API, 'GET', '/readyz');
   if (ready.status !== 200) throw new Error(`UNIV-A API가 준비되지 않았습니다: ${ready.status}`);
-  await waitMinio(true, 30_000);
+  await waitObjectStorage(true, 30_000);
 
-  execFileSync('docker', ['stop', MINIO_CONTAINER], { stdio: 'inherit' });
-  const detectedMs = await waitMinio(false, 30_000);
+  execFileSync('docker', ['stop', OBJECT_STORAGE_CONTAINER], { stdio: 'inherit' });
+  const detectedMs = await waitObjectStorage(false, 30_000);
   const outageStarted = Date.now();
   check('object-storage-is-down', true, { detectedMs });
 
@@ -125,7 +138,7 @@ try {
       },
     },
   });
-  const persisted = sql(`SELECT value_json #>> '{}' FROM application_field_value WHERE application_id='${applicationId}' AND field_code='highSchool'`);
+  const persisted = saved.json?.fields?.highSchool ?? null;
   check('draft-save-continues-during-outage', saved.status === 200 && persisted === 'Object Storage 장애 시험 고등학교', {
     createStatus: created.status,
     saveStatus: saved.status,
@@ -144,17 +157,17 @@ try {
     compressedOutageMs: Date.now() - outageStarted,
   });
 
-  execFileSync('docker', ['start', MINIO_CONTAINER], { stdio: 'inherit' });
-  const recoveredMs = await waitMinio(true, 60_000);
-  minioRestored = true;
+  execFileSync('docker', ['start', OBJECT_STORAGE_CONTAINER], { stdio: 'inherit' });
+  await waitObjectStorage(true, 60_000);
+  objectStorageRestored = true;
 
-  const uploaded = directUpload(intent.json.uploadUrl, intent.json.requiredHeaders, 8);
+  const uploaded = await waitDirectUpload(intent.json.uploadUrl, intent.json.requiredHeaders);
   const completed = await request(API, 'POST', `/api/v1/documents/${intent.json.documentId}/complete`, {
     headers: { ...identity, 'idempotency-key': `m4-38-complete-${randomUUID()}` },
     body: { sha256: createHash('sha256').update(PDF).digest('hex'), sizeBytes: PDF.length },
   });
   check('upload-recovers-after-storage-returns', uploaded.status >= 200 && uploaded.status < 300 && completed.status === 202, {
-    recoveredMs,
+    recoveredMs: uploaded.recoveredMs,
     uploadStatus: uploaded.status,
     completeStatus: completed.status,
     documentStatus: completed.json?.status ?? null,
@@ -168,15 +181,15 @@ try {
   console.error(`✖ 중단: ${result.error}`);
 } finally {
   try {
-    execFileSync('docker', ['start', MINIO_CONTAINER], { stdio: 'ignore' });
-    await waitMinio(true, 60_000);
-    minioRestored = true;
+    execFileSync('docker', ['start', OBJECT_STORAGE_CONTAINER], { stdio: 'ignore' });
+    await waitObjectStorage(true, 60_000);
+    objectStorageRestored = true;
   } catch (error) {
     result.restoreError = error instanceof Error ? error.message : String(error);
   }
 }
 
-check('object-storage-restored', minioRestored, { restored: minioRestored });
+check('object-storage-restored', objectStorageRestored, { restored: objectStorageRestored });
 result.finishedAt = new Date().toISOString();
 result.passed = !result.error && !result.restoreError && Object.values(result.checks).every((item) => item.pass);
 mkdirSync('tests/m4/results', { recursive: true });

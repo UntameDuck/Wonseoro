@@ -1,6 +1,6 @@
 # 인수인계 — 다음 작업자(사람·AI 공통)가 먼저 읽는 문서
 
-> 작성: 2026-09-29 · **최종 갱신 2026-10-04** · 모든 변경은 GitHub `main`(UntameDuck/Wonseoro)에 push 했다 — 원격 CI 결과는 GitHub Actions 에서 확인한다
+> 작성: 2026-09-29 · **최종 갱신 2026-10-04** · 원격 반영 여부는 `git status --branch`와 `git log origin/main..HEAD`로 확인한다 — 원격 CI 결과는 GitHub Actions 에서 확인한다
 >
 > **다른 컴퓨터·다른 AI 도구(Codex 등)로 이어받는다면 먼저 [§0 새 환경에서 시작하기](#0-새-환경에서-시작하기--다른-컴퓨터다른-ai-도구) 를 따른다.**
 >
@@ -10,6 +10,7 @@
 > **2026-10-04 (2) — T-M6-07 개인정보 최소 상담 조회 완료(D-79, 커밋 `314fb62`).** 전체 **125/146**. **A 목록(AI 가 이 PC 에서 끝낼 태스크)은 모두 끝났다.** 남은 21개는 외부 환경·사람·기관 몫(문서 03 B·C).
 > **2026-10-04 Claude 세션 마감 정리(다른 도구가 이어받을 때 여기부터)** — 이 세션에서 끝낸 것(커밋 순): T-M6-07 상담 조회(D-79, `314fb62`) → 문서 10 G-1 시드 「자기소개」 제거·설정 검사 경고(`2ab8e6d`) → G-4·G-6 대학 고지(처리방침·위탁·보호책임자·전형료 반환, D-80, `93986f7`) → G-2·G-11 원서 동의(D-81, `5d7d531`) → G-3 공통원서 수집·이용 동의·제공 고지(D-82, `988c3f3`) → G-10 일부 공통원서 삭제(`810350c`) → U-51 접수번호로 증적 열기. OpenAPI **1.14.0**(노션 첨부 교체 대기 — 06 의 바이트·해시). 사용자 요청대로 사용량 약 10% 가 남기 전에 멈췄다.
 > 마감 때 확인: admission-api 395개 중 392 통과·3 skip·0 실패, central-api 41 통과, 보안 선별 시험 221 통과(`test:security`), DB 제약 23종 PASS, 두 웹 운영 빌드·`check:contracts`·`check:ui-copy` 통과, 지원자 1280/320 각 22화면·관리자 1280/320 각 13화면 접근성 문제 0, 키보드 완주 문제 0.
+> **2026-10-04 Codex 세션 — D-83 로컬 Object Storage 교체 완료.** 사라진 `quay.io/minio/minio:latest` 대신 로컬·시험만 RustFS 1.0.1 고정 digest로 바꿨다. 서비스 이름은 `object-storage`, 앱·운영 계약은 `S3_*`/S3 호환 Object Storage로 그대로다. 기존 `.data/minio`는 보존하고 새 named volume을 쓴다. 명시적 브라우저 CORS, 비루트 UID 10001, `no-new-privileges`를 적용했다. Trivy High/Critical 0, WORM 3개 실제 실행·통과(삭제·보관 단축 거절), admission-api 395개 중 392 통과·3 skip·0 실패, 키보드 완주 105키·문제 0, 지원자 1280/320 각 22화면·296자리·문제 0, 저장소 실제 중단·복구 시험 통과. 원격 push는 사용자 몫이다.
 > **이어서 할 일** — 아래 「바로 다음 할 일」: G-10 남은 부분(대학 원서 열람·정정·삭제 요청 + 입학처 콘솔 처리 큐) → G-8(민감정보 서류 별도 동의). 그 밖은 외부·사람 몫(03 B·C)과 노션 반영(06).
 > **Pilot 지원 도구 기록** — T-M6-01(구조화 전형 Schema 온보딩)·T-M6-06(대학 장애 원장·공개 상태·배너)·T-M6-07(상담 확인번호·허용 목록 응답·자동 증적번호, 새 역할 `support-agent`) 상세는 [17-pilot-support-tools.md](17-pilot-support-tools.md).
 > 화면 작업은 접근성 시험을 다시 돌리고 `check:ui-copy` 를 지킨다(§2). 이번 작업의 임시 웹/API 프로세스는 모두 종료했다. 화면 시험용 PostgreSQL 컨테이너 `ui-shots-pg`는 실행 중일 수 있다.
@@ -33,7 +34,7 @@
 | Docker(또는 PostgreSQL 16 직접 설치) | DB 통합 시험·DB 제약 검증·보안 선별 시험 | **통합 시험이 실패가 아니라 "건너뜀(skip)" 으로 끝난다** — 통과처럼 보여도 검증이 아니다 |
 | Chrome 또는 Chromium | 접근성 시험(`tests/a11y/`)·화면 캡처 | 화면을 고친 뒤 규칙(§2·AGENTS)상 돌려야 하는 접근성 시험을 못 한다 |
 | 노션 읽기 | 설계 원본 대조 | 저장소 문서(02 대장·06 변경안·milestones)로 대신한다. 노션 쓰기는 원래 사람 몫이다 |
-| kind·Helm·kubectl·Keycloak·Vault·MinIO | kind 실증·로그인 끝에서 끝·보안 통제 실증 | 지금 다음 작업(G-10·G-8)에는 필요 없다. 그 시험을 다시 돌릴 때만 |
+| kind·Helm·kubectl·Keycloak·Vault·Object Storage | kind 실증·로그인 끝에서 끝·보안 통제 실증 | 지금 다음 작업(G-10·G-8)에는 필요 없다. 그 시험을 다시 돌릴 때만 |
 
 **못 돌린 검증은 반드시 보고한다.** "시험 통과" 라고 쓰기 전에 출력의 `skipped`(건너뜀) 수를 본다. 대학 API 의 정상 건너뜀은 **3개**뿐이다 — 그보다 많으면 DB 가 안 붙은 것이다. DB·브라우저가 없어 못 돌린 시험은 무엇을 못 돌렸는지 문서와 보고에 그대로 적는다.
 
@@ -130,7 +131,7 @@ npm run check:contracts && npm run check:ui-copy
 - **보안 통제 단계 6 ✅ — 보안 통제 끝 (2026-10-03)** — 실 clamd(D-73). `docker compose -f infra/compose/docker-compose.dev.yml --profile av up -d clamav`(처음엔 서명 DB 를 받느라 몇 분, 메모리 약 1.3GB — kind 두 개와 함께 켜도 됐다) → `npm run test:security:clamd`. 실 clamd 에서 워커가 멈추던 결함을 고쳤고 PDF 능동 콘텐츠를 거절한다
 - **T-M4-10 ✅ (2026-10-03)** — Outbox 보관(D-74, `0005_outbox_archive.sql`, `common/outbox/outbox-archive.ts`). 대학 DB 마이그레이션은 이제 **0001~0005** 다(적용 목록은 `infra/db/README.md`). admission-api 전체 실행에서 `oidc-auth.integration.test` 의 "계약의 공개 경로는 토큰 없이…" 가 가끔 실패하던 것은 **고쳤다(2026-10-03)** — 모집을 지정하지 않은 `GET /meta/time` 은 가장 최근에 연 OPEN 모집을 고르는데, 동시에 도는 `config-governance`·`deadline-extension` 시험이 마감 정책 없는 OPEN 모집을 잠시 만들면 그 모집이 뽑혀 503 이 났다(정책 없는 OPEN 모집을 일부러 넣어 단독 실행으로 재현). 시험이 개발 시드 모집을 지정한다. 같은 조사에서 `audit-worm.integration.test` 의 "이어서 내보내면 0건" 도 가끔 실패했다(다른 시험의 감사 기록이 그사이 60초를 넘겨 새 조각으로 나감) — 0건 대신 앞 조각과 겹치지 않는지를 본다. CI 재현 DB 전체 실행: 고치기 전 6회 중 2회 실패(oidc 1·audit-worm 2) → 고친 뒤 5회 모두 통과 377·실패 0·건너뜀 3
 - **T-M5-65 ✅ (2026-10-03)** — 만료 경보([14](14-operations-automation.md)). 지표 `credential_expiry_timestamp_seconds`, 규칙 `deploy/platform/observability/expiry-rules.yaml`(Prometheus 에 `-f expiry-rules.yaml` 로 더한다 — kind 관측 스택에는 아직 안 올렸다)
-- **T-M3-03 ✅ (2026-10-03)** — 감사 기록 WORM(D-75, `modules/audit/audit-worm.ts`). 운영은 `AUDIT_WORM_BUCKET` 필수(Object Lock 버킷). 시험은 로컬 MinIO(:9000, `docker compose … up -d minio`)가 있어야 돈다 — 시험마다 `audit-worm-it-<시각>` 버킷이 남는다(보관 1일, 잠긴 조각이 있어 바로 못 지운다)
+- **T-M3-03 ✅ (2026-10-03, D-83 재검증 2026-10-04)** — 감사 기록 WORM(D-75, `modules/audit/audit-worm.ts`). 운영은 `AUDIT_WORM_BUCKET` 필수(Object Lock 버킷). 로컬 시험은 S3 호환 Object Storage(:9000, `docker compose … up -d object-storage`)가 있어야 돈다 — 시험마다 `audit-worm-it-<시각>` 버킷이 남는다(보관 1일, 잠긴 조각이 있어 바로 못 지운다). RustFS 교체 뒤 3개 시험이 skip 없이 통과했고 COMPLIANCE 잠긴 버전 삭제·보관 단축이 실제로 거절됐다
 - **T-M5-62 ✅ (2026-10-03)** — 복구 검증 `npm run ops:restore-verify`(기본 원본 CI 재현 DB :5499, 새 컨테이너 :5498 에 복구하고 지운다), 매달 `.github/workflows/restore-verify.yml`. 시험 `breakGlass` 정리가 남기던 고아 데이터 키를 치우게 고쳤다
 - **T-M5-63 ✅ (2026-10-03)** — Writer fencing(D-76, `0006_writer_fence.sql`). 이후 T-M6-06의 `0007_service_incident.sql`까지 추가되어 대학 DB 마이그레이션은 **0001~0007**. 앱은 `WRITER_EPOCH` 가 있으면 트랜잭션마다 세대를 넘긴다(없으면 넘기지 않는다 — 개발). **시험 코드가 원서 없는 감사 기록(운영자 체인)을 만들면 동시에 도는 체인 검사 시험이 깨진다** — 시험은 자기 원서에 붙인다
 - **T-M6-03 ✅ (2026-10-03)** — CSP 사전 점검 `npm run ops:csp-preflight -- --context=<컨텍스트>`(점검용 네임스페이스를 만들고 지운다, 약 1분 반)
@@ -174,8 +175,8 @@ npm run check:contracts && npm run check:ui-copy
 | 로컬 관측 스택 | kind A `observability` 네임스페이스: Prometheus(KPI 규칙 포함)·Adapter·Grafana(익명 Viewer). Grafana 는 `kubectl -n observability port-forward svc/grafana 13000:80` |
 | 중앙 DB 마이그레이션 | `infra/db/central/0001_init.sql`·`0002_vault.sql`·**`0003_summary_names.sql`**(2026-10-01) — `npm run db:migrate:central` 이 셋 다 적용한다 |
 | 로컬 발급자 | compose 프로필 `auth` 의 `keycloak` :18080(약 75초에 뜬다, 메모리 약 600MB). 렐름·시험 계정 [infra/auth/README.md](../infra/auth/README.md). 틀린 비밀번호·OTP 를 5번 넣으면 그 계정이 잠시 잠긴다 — 시험을 다시 돌리기 전에 `up -d --force-recreate keycloak` 로 초기화 |
-| 로컬 DB | compose: `postgres-univ-a` :5432 · `postgres-univ-b` :5442(`--profile multi`) · `postgres-central` :5434 · redis :6379 · minio :9000 |
-| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api 358 · server-kit 72 · central-api 36 · event-relay 7 · document-service 8 · krds 5 (전체 486, CI 재현 DB 에서 실패 0·건너뜀 3, 2026-10-02). `app.module.boot.test` 는 실제 AppModule 로 DI 를 조립한다 — 서비스를 직접 `new` 하는 통합 시험이 못 잡는 "서버가 안 뜨는" 결함용. 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함). **DB 통합 시험 전에 kind univ-a 의 API·Relay 를 0 으로 줄인다** — 같은 로컬 `univ_a` DB 를 봐서 시험 행을 먼저 집어 간다(결제 재확인·Relay 시험이 실패하거나 멈춘다). event-relay 시험은 직렬로 돈다 |
+| 로컬 DB·저장소 | compose: `postgres-univ-a` :5432 · `postgres-univ-b` :5442(`--profile multi`) · `postgres-central` :5434 · redis :6379 · `object-storage`(RustFS) :9000, 콘솔 :9001. 예전 `.data/minio`는 보존하며 새 named volume을 쓴다 |
+| 테스트 | DB 가 있어야 통합 테스트까지 돈다 — 명령은 [03-next-steps.md 끝](03-next-steps.md#개발-환경-되살리기). admission-api **395개 중 392 통과·3 skip·0 실패**(RustFS WORM 3개 실제 실행, 2026-10-04). `app.module.boot.test` 는 실제 AppModule 로 DI 를 조립한다 — 서비스를 직접 `new` 하는 통합 시험이 못 잡는 "서버가 안 뜨는" 결함용. 배포 스크립트 시험은 `npm run test:m4:gitops`(Peak 예약 9건 포함). **DB 통합 시험 전에 kind univ-a 의 API·Relay 를 0 으로 줄인다** — 같은 로컬 `univ_a` DB 를 봐서 시험 행을 먼저 집어 간다(결제 재확인·Relay 시험이 실패하거나 멈춘다). event-relay 시험은 직렬로 돈다 |
 | 접근성 시험 | `npm run test:a11y:keyboard`(키보드 완주 — `--width=640`·`320`·`--text-zoom=2`·`--input=touch`·`--browser=edge`) · `test:a11y:focus -- applicant|admin`(전 화면 포커스·스크린리더 재료·가로 스크롤·대상 크기) · `test:a11y:deadline` · `test:a11y:session` · `test:a11y:rate-limit`. 화면 캡처와 같은 전용 DB·포트·서버(`shots-*`)를 쓴다 — 미리보기 서버 5개 한도 때문에 지원자 시험은 서류 워커, 콘솔 시험은 `shots-admin` 을 띄운다. 결과 `tests/a11y/results/`. **CI 에는 아직 없다**(서버 다섯이 필요) |
 | 검사 | `npm run db:verify`(DB 제약 20종) · `node scripts/check-deps.mjs`(의존성 선언) · `helm lint deploy/charts/k-admission` · `node scripts/render-runtime-attachment.mjs --check`(runtime 첨부 = 차트 렌더링) · `npm run check:ui-copy`(화면 문구에 설계 번호·개발 안내·구조 설명 금지, T-M5-50) · `npm run check:contracts`(OpenAPI `$ref`·operationId·대장 번호·직전 커밋 대비 호환성, CloudEvents 컴파일·이벤트 타입) |
 | 로컬 화면 확인 | kind 와 섞지 않으려면 로컬 프로세스를 CI 재현 DB 에 붙인다 — 중앙 :3100(`DATABASE_URL=…5499/central`)·대학 :3101(`…5499/univ_a`, `CENTRAL_SYNC_URL=http://localhost:3100`, `CORS_ORIGINS=http://localhost:4001`, `OTEL_METRICS_PORT` 를 9464 가 아닌 값으로)·지원자 웹 :4001(`NEXT_PUBLIC_ADMISSION_API`·`NEXT_PUBLIC_CENTRAL_API`). **:3000 은 쓰지 않는다** — kind 시험이 `ka-central` 을 거기 띄운다. 개발 시드 지원자: `44444444-4444-4444-4444-444444444444` / `subj-dev-0001` |
@@ -291,6 +292,8 @@ replica drift 1→2 자동 복구를 확인했다. 결과는 `tests/m4/results/g
 T-M4-38은 로컬 축소 환경에서 MinIO 완전 단절 중 카탈로그 20회·원서 생성·자동저장이 정상이고 직접 업로드만 실패하는 것을 확인했다.
 MinIO 복구 515ms 뒤 기존 단기 URL 업로드와 서버 검증까지 통과했다. 결과는
 `tests/m4/results/object-storage-outage-2026-09-28T06-14-19-725Z.json`.
+
+D-83 교체 뒤 같은 시험을 제품 중립 이름으로 다시 실행했다. RustFS 완전 단절 중 카탈로그 20회·원서 생성·자동저장이 계속되고 직접 업로드만 실패했으며, 복구 뒤 기존 단기 URL PUT과 완료 요청이 통과했다. 암호화된 원서 항목은 DB 평문 칼럼이 아니라 API 응답으로 확인한다. 결과는 `tests/m4/results/object-storage-outage-2026-10-04T06-20-30-645Z.json`.
 
 Docker 데이터는 `E:\DockerData\DockerDesktopWSL`로 이전되어 C: 여유 공간이 약 22GB로 회복됐다.
 Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, stale `dockerInference` 소켓으로 재기동이 충돌해

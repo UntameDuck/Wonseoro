@@ -192,7 +192,7 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 | T-M4-33 | 같은 원서 Finalize 100회 동시 | ✅ 100건 성공 → Submission·Outbox·감사 각 1건 |
 | T-M4-34 | PG 지연·timeout·콜백 1~30분 지연 | ✅ 실제 시간 — 1·5·15·30분 지연 8건 모두 자동 접수(콜백 경로 확정 뒤 4.7~7.9초, 폴링 경로 49.9~171.3초), 이중 확정·중복 접수 0 (`pg-delay-realtime-2026-09-30T06-43-39-291Z.json`). 이 시험에서 리더 잠금 결함(D-54)을 찾아 고쳤다 |
 | T-M4-35 | 중앙 Sync 차단 | ✅ 중앙 2시간 실제 단절 통과 — 원서 24건 처리·DEAD 0·event loss 0·복구 10초 뒤 전량 전송·재시작 0 (`central-outage-realtime-2026-09-30T01-59-27-784Z.json`) |
-| T-M4-38 | Object Storage 지연·단절 | ✅ MinIO 완전 단절 중 카탈로그 20회 오류 0·원서 생성/자동저장 지속, 직접 업로드만 실패. 복구 후 업로드·서버 검증 정상 (**로컬 축소 환경**) |
+| T-M4-38 | Object Storage 지연·단절 | ✅ S3 호환 저장소 완전 단절 중 카탈로그 20회 오류 0·원서 생성/자동저장 지속, 직접 업로드만 실패. D-83 RustFS 교체 뒤에도 복구 후 기존 단기 URL 업로드·서버 검증 정상 (`object-storage-outage-2026-10-04T06-20-30-645Z.json`, **로컬 축소 환경**) |
 | T-M4-39 | API Pod·노드 강제 종료 | 🟡 drain·정비 뒤 재분산 무중단, 노드 강제 정지 첫 시도 6.1%·체감 1.4%(NotReady 전 죽은 Pod 로 간 연결) — Edge 재시도는 K-PaaS 에서 판정 (ADR-0008) |
 
 ### 🎯 목표 3 — 차트에 남은 운영 기능 · ✅ 로컬에서 할 수 있는 것 완료 (다음 목표는 아래 「목표 5」)
@@ -381,7 +381,7 @@ npm run dev -w @wonseoro/admin-web
 | **실 PG** | Mock. 운영에서 선택되면 기동이 막힌다. 정산 대조 경로는 연결됐다(D-55) — 실 어댑터가 `reconcile()` 만 채우면 된다 | T-M6-04 |
 | **실 안티바이러스** | ClamAV 어댑터 구현(D-58). 실 clamd·서명 DB 로는 아직 돌려 보지 않았다 — 가짜 clamd 로 프로토콜만 시험 | T-M5-08 |
 | **원서 마감 처리(EXPIRED)** | 상태는 있지만 옮기지 않는다 — 마감 연장이 있어 마감 시각에 옮기면 되돌릴 수 없다(D-55) | 모집 종료 처리 |
-| **WORM 감사 저장소** | 같은 DB 안에 있다. 체인은 검증되지만 물리 분리는 아니다 | M5 |
+| **WORM 감사 저장소** | Object Lock COMPLIANCE 버킷으로 물리 분리하고 DB와 대조한다(D-75). 정기 대조 작업·경보와 운영 버킷 IaC는 남았다 | 운영 자동화 후속 |
 | **K-PaaS 배포** | Helm·Flux Pull 구조와 로컬 실증 완료. 실제 K-PaaS cluster·Registry release는 없음 | M4 |
 | **부하·장애 시험** | 숫자 없음. SLO 는 목표값이지 실측이 아니다 | M4 |
 | **제출 PDF 정정** | "Java LTS + Spring Boot" 로 적혀 있다 (실제는 NestJS) | T-M0-08 |
@@ -392,7 +392,7 @@ npm run dev -w @wonseoro/admin-web
 
 ```bash
 npm install
-npm run dev:infra            # postgres(univ_a 5432 / central 5434), MinIO
+npm run dev:infra            # postgres(univ_a 5432 / central 5434), redis, Object Storage(RustFS :9000)
 npm run db:migrate           # 0001(v1.2 스키마) · 0002(역할) + 개발용 앱 역할 로그인
 npm run db:migrate:central
 npm run db:seed

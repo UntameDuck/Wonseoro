@@ -1,0 +1,2324 @@
+{
+  "test": "T-M5-41 Visible Focus / Focus Order · T-M5-42 Screen Reader",
+  "environment": "축소 환경 — 로컬 전용 DB(ui-shots-pg)·개발 서버(next dev)",
+  "phase": "applicant",
+  "browser": "Chrome/154.0.8037.95",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "textZoom": 1,
+  "at": "2026-10-04T05:16:11.648Z",
+  "fatal": null,
+  "screens": 22,
+  "tabStops": 296,
+  "problems": [],
+  "detail": [
+    {
+      "name": "접수 홈 (본인확인 전)",
+      "url": "/",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태 자세히 보기",
+          "outline": 3,
+          "contrast": 4,
+          "say": "link \"서비스 상태 자세히 보기\""
+        },
+        {
+          "tag": "SELECT",
+          "name": "전형",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"전형\" — 전형에 따라 작성할 항목과 전형료가 달라집니다."
+        },
+        {
+          "tag": "SELECT",
+          "name": "모집단위",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"모집단위\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "시연 지원자 채우기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"시연 지원자 채우기\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "지원자 식별자",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"지원자 식별자\" 필수"
+        },
+        {
+          "tag": "INPUT",
+          "name": "공통원서 가명 토큰",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"공통원서 가명 토큰\" 필수 — 대학에 등록된 값과 같아야 합니다."
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "원서로 — 대학입학 원서접수",
+      "liveRegions": [
+        "서비스 상태 안내 접수 기능은 정상입니다. 서비스 상태 화면의 키보드 이동을 확인하고 있습니다. 서비스 상태 자세히 보기"
+      ]
+    },
+    {
+      "name": "서비스 상태 (대학별 공지)",
+      "url": "/status",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태 자세히 보기",
+          "outline": 3,
+          "contrast": 4,
+          "say": "link \"서비스 상태 자세히 보기\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "현재 상태 다시 확인",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"현재 상태 다시 확인\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "서비스 상태 | 원서로",
+      "liveRegions": [
+        "서비스 상태 안내 접수 기능은 정상입니다. 서비스 상태 화면의 키보드 이동을 확인하고 있습니다. 서비스 상태 자세히 보기"
+      ]
+    },
+    {
+      "name": "내 원서 (본인확인 전)",
+      "url": "/dashboard",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "A",
+          "name": "접수 홈으로",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"접수 홈으로\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "내 원서 | 원서로",
+      "liveRegions": []
+    },
+    {
+      "name": "없는 화면",
+      "url": "/no-such-page",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "A",
+          "name": "접수 홈으로",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"접수 홈으로\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서로",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"내 원서로\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "찾을 수 없는 화면 | 원서로",
+      "liveRegions": []
+    },
+    {
+      "name": "접수 홈 (본인확인 뒤)",
+      "url": "/",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "SELECT",
+          "name": "전형",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"전형\" — 전형에 따라 작성할 항목과 전형료가 달라집니다."
+        },
+        {
+          "tag": "SELECT",
+          "name": "모집단위",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"모집단위\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "시연 지원자 채우기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"시연 지원자 채우기\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "지원자 식별자",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"지원자 식별자\" 필수"
+        },
+        {
+          "tag": "INPUT",
+          "name": "공통원서 가명 토큰",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"공통원서 가명 토큰\" 필수 — 대학에 등록된 값과 같아야 합니다."
+        },
+        {
+          "tag": "A",
+          "name": "공통원서 작성·제공 동의",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서 작성·제공 동의\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "원서 작성 시작",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"원서 작성 시작\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "원서로 — 대학입학 원서접수",
+      "liveRegions": []
+    },
+    {
+      "name": "공통원서",
+      "url": "/profile",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "DIV",
+          "name": "공통원서 개인정보 수집·이용 전문",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "region \"공통원서 개인정보 수집·이용 전문\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "위 내용에 동의합니다 (필수)",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"위 내용에 동의합니다 (필수)\" 선택 안 됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "출신 고등학교",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"출신 고등학교\" — 0 / 100자"
+        },
+        {
+          "tag": "INPUT",
+          "name": "졸업(예정) 연도",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "spinbutton \"졸업(예정) 연도\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "이메일",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"이메일\" — 0 / 254자"
+        },
+        {
+          "tag": "INPUT",
+          "name": "휴대전화",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"휴대전화\" — 0 / 20자"
+        },
+        {
+          "tag": "INPUT",
+          "name": "출신 고등학교",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"출신 고등학교\" 선택 안 됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "졸업(예정) 연도",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"졸업(예정) 연도\" 선택 안 됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "이메일",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"이메일\" 선택 안 됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "휴대전화",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"휴대전화\" 선택 안 됨"
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "저장",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"저장\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "공통원서 | 원서로",
+      "liveRegions": []
+    },
+    {
+      "name": "공통원서 (저장 결과)",
+      "url": "/profile",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서 개인정보 수집·이용에 동의해 주십시오.",
+          "outline": 3,
+          "contrast": 4.09,
+          "say": "link \"공통원서 개인정보 수집·이용에 동의해 주십시오.\""
+        },
+        {
+          "tag": "DIV",
+          "name": "공통원서 개인정보 수집·이용 전문",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "region \"공통원서 개인정보 수집·이용 전문\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "위 내용에 동의합니다 (필수)",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"위 내용에 동의합니다 (필수)\" 올바르지 않음 선택 안 됨 — 공통원서 개인정보 수집·이용에 동의해 주십시오."
+        },
+        {
+          "tag": "INPUT",
+          "name": "출신 고등학교",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"출신 고등학교\" — 0 / 100자"
+        },
+        {
+          "tag": "INPUT",
+          "name": "졸업(예정) 연도",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "spinbutton \"졸업(예정) 연도\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "이메일",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"이메일\" — 0 / 254자"
+        },
+        {
+          "tag": "INPUT",
+          "name": "휴대전화",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"휴대전화\" — 0 / 20자"
+        },
+        {
+          "tag": "INPUT",
+          "name": "출신 고등학교",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"출신 고등학교\" 선택 안 됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "졸업(예정) 연도",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"졸업(예정) 연도\" 선택 안 됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "이메일",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"이메일\" 선택 안 됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "휴대전화",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"휴대전화\" 선택 안 됨"
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "저장",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"저장\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "공통원서 | 원서로",
+      "liveRegions": [
+        "입력을 확인해 주십시오 (1건) 공통원서 개인정보 수집·이용에 동의해 주십시오."
+      ]
+    },
+    {
+      "name": "공통원서 (삭제 확인)",
+      "url": "/profile",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "DIV",
+          "name": "공통원서 개인정보 수집·이용 전문",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "region \"공통원서 개인정보 수집·이용 전문\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "위 내용에 동의합니다 (필수)",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"위 내용에 동의합니다 (필수)\" 선택됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "출신 고등학교",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"출신 고등학교\" — 0 / 100자"
+        },
+        {
+          "tag": "INPUT",
+          "name": "졸업(예정) 연도",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "spinbutton \"졸업(예정) 연도\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "이메일",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"이메일\" — 0 / 254자"
+        },
+        {
+          "tag": "INPUT",
+          "name": "휴대전화",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"휴대전화\" — 0 / 20자"
+        },
+        {
+          "tag": "INPUT",
+          "name": "출신 고등학교",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"출신 고등학교\" 선택 안 됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "졸업(예정) 연도",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"졸업(예정) 연도\" 선택 안 됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "이메일",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"이메일\" 선택 안 됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "휴대전화",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"휴대전화\" 선택 안 됨"
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "저장",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"저장\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "삭제 확정",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"삭제 확정\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "그만두기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"그만두기\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "공통원서 | 원서로",
+      "liveRegions": [
+        "저장했습니다 (2026.10.04 14:16). 새로 만드는 원서부터 반영됩니다."
+      ]
+    },
+    {
+      "name": "공통원서 (삭제 뒤)",
+      "url": "/profile",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "DIV",
+          "name": "공통원서 개인정보 수집·이용 전문",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "region \"공통원서 개인정보 수집·이용 전문\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "위 내용에 동의합니다 (필수)",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"위 내용에 동의합니다 (필수)\" 선택 안 됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "출신 고등학교",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"출신 고등학교\" — 0 / 100자"
+        },
+        {
+          "tag": "INPUT",
+          "name": "졸업(예정) 연도",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "spinbutton \"졸업(예정) 연도\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "이메일",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"이메일\" — 0 / 254자"
+        },
+        {
+          "tag": "INPUT",
+          "name": "휴대전화",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"휴대전화\" — 0 / 20자"
+        },
+        {
+          "tag": "INPUT",
+          "name": "출신 고등학교",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"출신 고등학교\" 선택 안 됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "졸업(예정) 연도",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"졸업(예정) 연도\" 선택 안 됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "이메일",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"이메일\" 선택 안 됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "휴대전화",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"휴대전화\" 선택 안 됨"
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "저장",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"저장\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "공통원서 | 원서로",
+      "liveRegions": [
+        "공통원서를 지웠습니다. 이미 만든 원서는 바뀌지 않습니다 — 원서의 삭제는 그 대학에 요청해 주십시오."
+      ]
+    },
+    {
+      "name": "원서 1단계",
+      "url": "/apply/589f9415-5c24-4797-a798-1747e1e2cc32",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "DIV",
+          "name": "개인정보 수집·이용 전문",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "region \"개인정보 수집·이용 전문\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "위 내용에 동의합니다 (필수)",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"위 내용에 동의합니다 (필수)\" 선택됨"
+        },
+        {
+          "tag": "DIV",
+          "name": "학교생활기록부·수능 성적 온라인 제공 전문",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "region \"학교생활기록부·수능 성적 온라인 제공 전문\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "위 내용에 동의합니다 (필수)",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"위 내용에 동의합니다 (필수)\" 선택됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "출신 고등학교",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"출신 고등학교\" 필수 — 2~100자 0 / 100자"
+        },
+        {
+          "tag": "INPUT",
+          "name": "이메일",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"이메일\" — 이메일 형식"
+        },
+        {
+          "tag": "INPUT",
+          "name": "졸업(예정) 연도",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "spinbutton \"졸업(예정) 연도\" 필수 — 1990 이상 2030 이하"
+        },
+        {
+          "tag": "BUTTON",
+          "name": "다음 단계",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"다음 단계\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이 원서 취소하기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"이 원서 취소하기\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "공통정보 — 원서 작성 | 원서로",
+      "liveRegions": [
+        "자동으로 저장됩니다"
+      ]
+    },
+    {
+      "name": "원서 1단계 (취소 칸 열림)",
+      "url": "/apply/589f9415-5c24-4797-a798-1747e1e2cc32",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "DIV",
+          "name": "개인정보 수집·이용 전문",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "region \"개인정보 수집·이용 전문\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "위 내용에 동의합니다 (필수)",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"위 내용에 동의합니다 (필수)\" 선택됨"
+        },
+        {
+          "tag": "DIV",
+          "name": "학교생활기록부·수능 성적 온라인 제공 전문",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "region \"학교생활기록부·수능 성적 온라인 제공 전문\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "위 내용에 동의합니다 (필수)",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"위 내용에 동의합니다 (필수)\" 선택됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "출신 고등학교",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"출신 고등학교\" 필수 — 2~100자 0 / 100자"
+        },
+        {
+          "tag": "INPUT",
+          "name": "이메일",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"이메일\" — 이메일 형식"
+        },
+        {
+          "tag": "INPUT",
+          "name": "졸업(예정) 연도",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "spinbutton \"졸업(예정) 연도\" 필수 — 1990 이상 2030 이하"
+        },
+        {
+          "tag": "BUTTON",
+          "name": "다음 단계",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"다음 단계\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "취소 사유",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"취소 사유\" 필수 — 2~500자. 대학에만 기록되고 통합 조회에는 보내지 않습니다. 0 / 500자"
+        },
+        {
+          "tag": "BUTTON",
+          "name": "그만두기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"그만두기\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "공통정보 — 원서 작성 | 원서로",
+      "liveRegions": [
+        "자동으로 저장됩니다"
+      ]
+    },
+    {
+      "name": "원서 2단계",
+      "url": "/apply/589f9415-5c24-4797-a798-1747e1e2cc32",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이전",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"이전\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "다음 단계",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"다음 단계\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이 원서 취소하기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"이 원서 취소하기\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "대학·전형 — 원서 작성 | 원서로",
+      "liveRegions": [
+        "자동으로 저장됩니다"
+      ]
+    },
+    {
+      "name": "원서 3단계",
+      "url": "/apply/589f9415-5c24-4797-a798-1747e1e2cc32",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "내신 성적",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "spinbutton \"내신 성적\" — 0 이상 5 이하"
+        },
+        {
+          "tag": "TEXTAREA",
+          "name": "학적 변동 사항",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"학적 변동 사항\" 필수 — 전학·편입학·검정고시 등을 적습니다. 없으면 「없음」이라고 적습니다. 0 / 1000자"
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이전",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"이전\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "다음 단계",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"다음 단계\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이 원서 취소하기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"이 원서 취소하기\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "추가정보 — 원서 작성 | 원서로",
+      "liveRegions": [
+        "자동으로 저장됩니다"
+      ]
+    },
+    {
+      "name": "원서 4단계",
+      "url": "/apply/589f9415-5c24-4797-a798-1747e1e2cc32",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "파일 선택",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"파일 선택\" — 학교생활기록부 (선택) PDF 최대 10MB · JPG·PNG 최대 5MB. 올린 뒤 악성코드 검사를 거칩니다."
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이전",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"이전\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "검사 상태 새로고침",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"검사 상태 새로고침\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "검토 단계로",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"검토 단계로\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이 원서 취소하기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"이 원서 취소하기\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "서류 — 원서 작성 | 원서로",
+      "liveRegions": [
+        "자동으로 저장됩니다",
+        "선택된 파일이 없습니다."
+      ]
+    },
+    {
+      "name": "원서 4단계 (서류 검사 완료)",
+      "url": "/apply/589f9415-5c24-4797-a798-1747e1e2cc32",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "파일 선택",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"파일 선택\" — 학교생활기록부 (선택) PDF 최대 10MB · JPG·PNG 최대 5MB. 올린 뒤 악성코드 검사를 거칩니다."
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이전",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"이전\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "검사 상태 새로고침",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"검사 상태 새로고침\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "검토 단계로",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"검토 단계로\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이 원서 취소하기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"이 원서 취소하기\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "서류 — 원서 작성 | 원서로",
+      "liveRegions": [
+        "자동으로 저장됩니다",
+        "school-record.pdf — 업로드·검사 완료"
+      ]
+    },
+    {
+      "name": "원서 검증 오류",
+      "url": "/apply/589f9415-5c24-4797-a798-1747e1e2cc32",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "A",
+          "name": "출신 고등학교를 입력해 주십시오.",
+          "outline": 3,
+          "contrast": 4.09,
+          "say": "link \"출신 고등학교를 입력해 주십시오.\""
+        },
+        {
+          "tag": "A",
+          "name": "졸업(예정) 연도를 입력해 주십시오.",
+          "outline": 3,
+          "contrast": 4.09,
+          "say": "link \"졸업(예정) 연도를 입력해 주십시오.\""
+        },
+        {
+          "tag": "A",
+          "name": "학적 변동 사항을 입력해 주십시오.",
+          "outline": 3,
+          "contrast": 4.09,
+          "say": "link \"학적 변동 사항을 입력해 주십시오.\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "파일 선택",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"파일 선택\" — 학교생활기록부 (선택) PDF 최대 10MB · JPG·PNG 최대 5MB. 올린 뒤 악성코드 검사를 거칩니다."
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이전",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"이전\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "검사 상태 새로고침",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"검사 상태 새로고침\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "검토 단계로",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"검토 단계로\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이 원서 취소하기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"이 원서 취소하기\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "서류 — 원서 작성 | 원서로",
+      "liveRegions": [
+        "자동으로 저장됩니다",
+        "입력을 확인해 주십시오 (3건) 출신 고등학교를 입력해 주십시오. 졸업(예정) 연도를 입력해 주십시오. 학적 변동 사항을 입력해 주십시오.",
+        "school-record.pdf — 업로드·검사 완료"
+      ]
+    },
+    {
+      "name": "원서 5단계 검토·결제",
+      "url": "/apply/589f9415-5c24-4797-a798-1747e1e2cc32",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "결제 후에는 원서를 수정하거나 취소할 수 없다는 것을 확인했습니다.",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"결제 후에는 원서를 수정하거나 취소할 수 없다는 것을 확인했습니다.\" 선택 안 됨"
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이전",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"이전\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이 원서 취소하기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"이 원서 취소하기\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "검토·결제 — 원서 작성 | 원서로",
+      "liveRegions": [
+        "저장 완료 14:17:16"
+      ]
+    },
+    {
+      "name": "원서 5단계 (확인 체크 뒤)",
+      "url": "/apply/589f9415-5c24-4797-a798-1747e1e2cc32",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "결제 후에는 원서를 수정하거나 취소할 수 없다는 것을 확인했습니다.",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "checkbox \"결제 후에는 원서를 수정하거나 취소할 수 없다는 것을 확인했습니다.\" 선택됨"
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이전",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"이전\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "전형료 결제하고 접수",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"전형료 결제하고 접수\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "이 원서 취소하기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"이 원서 취소하기\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "검토·결제 — 원서 작성 | 원서로",
+      "liveRegions": [
+        "저장 완료 14:17:16"
+      ]
+    },
+    {
+      "name": "원서 6단계 접수 완료",
+      "url": "/apply/589f9415-5c24-4797-a798-1747e1e2cc32",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "A",
+          "name": "접수증 보기·인쇄",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"접수증 보기·인쇄\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "현재 상태 다시 확인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"현재 상태 다시 확인\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "최종제출 — 원서 작성 | 원서로",
+      "liveRegions": [
+        "저장 완료 14:17:16"
+      ]
+    },
+    {
+      "name": "접수증",
+      "url": "/receipt/0b74a499-8481-47f3-ae64-5bde5cce22ea",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "인쇄",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"인쇄\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "접수증 | 원서로",
+      "liveRegions": []
+    },
+    {
+      "name": "내 원서 (접수 뒤)",
+      "url": "/dashboard",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "A",
+          "name": "홈",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"홈\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "내 원서 | 원서로",
+      "liveRegions": []
+    },
+    {
+      "name": "원서 화면 (불러오기 실패)",
+      "url": "/apply/00000000-0000-4000-8000-000000000000",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 · 원서로대학교 2027 수시\""
+        },
+        {
+          "tag": "A",
+          "name": "공통원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"공통원서\""
+        },
+        {
+          "tag": "A",
+          "name": "내 원서",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"내 원서\""
+        },
+        {
+          "tag": "A",
+          "name": "서비스 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"서비스 상태\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "현재 상태 다시 확인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"현재 상태 다시 확인\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리방침",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리방침\""
+        },
+        {
+          "tag": "A",
+          "name": "개인정보 처리 위탁",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"개인정보 처리 위탁\""
+        }
+      ],
+      "problems": [],
+      "title": "공통정보 — 원서 작성 | 원서로",
+      "liveRegions": [
+        "찾을 수 없습니다 작성하신 내용은 보관되어 있습니다. 처음부터 다시 작성하지 않으셔도 됩니다. 마지막 저장 확인할 수 없습니다 서버가 확인한 상태 지금은 확인할 수 없습니다. 연결되면 \"현재 상태 다시 확인\" 을 눌러 주십시오. 요청번호 92497bbd2a7f382b86ebf1cb0e825e8a 현재 상태 다시 확인"
+      ]
+    }
+  ]
+}

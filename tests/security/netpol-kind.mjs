@@ -1,6 +1,6 @@
 // NetworkPolicy 기본 차단 — kind 두 대학에서 워크로드별 출구 행렬 (T-M5-01, docs/13 단계 2, D-45 를 다시 돌릴 수 있게)
 //
-// 사용: kind 두 클러스터(kind-univ-a·kind-univ-b)와 로컬 데이터 서비스(compose: DB 두 개·Redis, 중앙 :3000·MinIO :9000 은 없어도 된다)
+// 사용: kind 두 클러스터(kind-univ-a·kind-univ-b)와 로컬 데이터 서비스(compose: DB 두 개·Redis, 중앙 :3000·Object Storage :9000 은 없어도 된다)
 //       npm run test:security:netpol
 // 각 워크로드 파드 안에서 Node 로 TCP 연결을 시도한다.
 //   열림  = 연결됨 또는 연결 거부(상대가 없어도 네트워크는 통과했다)

@@ -78,7 +78,7 @@ export const OBJECT_STORAGE_URL = envOrDev('S3_ENDPOINT', 'http://localhost:9000
 /** 출구 허용 목록 (T-M5-07) — 자기 대학 API 와 Object Storage 만 */
 export const EGRESS = configureEgress([ADMISSION_API_URL, OBJECT_STORAGE_URL], [virtualHosted(OBJECT_STORAGE_URL)]);
 
-/** `http://minio:9000` → `*.minio:9000` — 버킷이 호스트 이름 앞에 붙는 서명 URL */
+/** `http://object-storage:9000` → `*.object-storage:9000` — 버킷이 호스트 이름 앞에 붙는 서명 URL */
 function virtualHosted(url: string): string | null {
   try {
     const u = new URL(url);
