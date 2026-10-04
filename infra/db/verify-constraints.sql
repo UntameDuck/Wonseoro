@@ -371,6 +371,14 @@ BEGIN
                    OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'UPDATE')
                    OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'DELETE')
                    OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'TRUNCATE')
+              WHEN t.tablename IN ('privacy_request', 'fee_refund_request')
+              -- 권리 요청(0009)·전형료 반환(0010) — 앱은 넣고 읽고 결과 칸만 바꾼다(열 단위 UPDATE). 표 전체 UPDATE·지우기·비우기 없음
+              THEN NOT (has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'SELECT')
+                    AND has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'INSERT')
+                    AND has_column_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'status', 'UPDATE'))
+                   OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'UPDATE')
+                   OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'DELETE')
+                   OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'TRUNCATE')
               WHEN t.tablename IN ('audit_event', 'activation_record')
               THEN NOT has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'INSERT')
                    OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'UPDATE')
@@ -567,6 +575,40 @@ BEGIN
   ASSERT fmt, '헷갈리는 글자가 든 상담 확인번호가 들어간다';
   ASSERT upd, '상담 증적을 고칠 수 있다';
   ASSERT app_del, '앱 역할이 상담 증적을 지운다';
+END $$;
+
+-- ── 24. 권리 요청·전형료 반환 — 결정은 한 번, 결정한 것은 못 고치고, 앱 역할은 내용 칸을 못 바꾸고 못 지운다 (D-84·D-89, 0009·0010) ───
+DO $$
+DECLARE app_id uuid := gen_random_uuid(); pr varchar := 'PR-20990101-VER1FY'; fr varchar := 'FR-20990101-VER1FY';
+        pr_fixed boolean := false; pr_content boolean := false; fr_cap boolean := false; fr_fixed boolean := false; app_del boolean := false;
+BEGIN
+  INSERT INTO application (id, cycle_id, applicant_id, admission_type_id, department_id, status)
+  VALUES (app_id, '11111111-1111-1111-1111-111111111111', '4a4a4a4a-4444-4444-4444-444444444444',
+          '22222222-2222-2222-2222-222222222222', (SELECT id FROM department WHERE cycle_id = '11111111-1111-1111-1111-111111111111' LIMIT 1), 'CANCELLED');
+  INSERT INTO privacy_request (request_number, application_id, kind, due_at) VALUES (pr, app_id, 'ACCESS', now() + interval '10 days');
+  UPDATE privacy_request SET status = 'COMPLETED', decided_at = now(), decided_by = 'verifier', result_note_ciphertext = '\x00' WHERE request_number = pr;
+  BEGIN UPDATE privacy_request SET status = 'REFUSED' WHERE request_number = pr;
+  EXCEPTION WHEN insufficient_privilege THEN pr_fixed := true; END;
+  INSERT INTO fee_refund_request (request_number, application_id, reason, method, paid_amount) VALUES (fr, app_id, 'OVERPAID', 'VISIT', 50000);
+  -- 낸 금액보다 많이 돌려줄 수 없다
+  BEGIN UPDATE fee_refund_request SET status = 'APPROVED', approved_amount = 60000, decided_at = now(), decided_by = 'verifier', result_note_ciphertext = '\x00' WHERE request_number = fr;
+  EXCEPTION WHEN check_violation THEN fr_cap := true; END;
+  UPDATE fee_refund_request SET status = 'APPROVED', approved_amount = 50000, decided_at = now(), decided_by = 'verifier', result_note_ciphertext = '\x00' WHERE request_number = fr;
+  BEGIN UPDATE fee_refund_request SET approved_amount = 1 WHERE request_number = fr;
+  EXCEPTION WHEN insufficient_privilege THEN fr_fixed := true; END;
+  SET LOCAL ROLE kadmission_app;
+  BEGIN UPDATE privacy_request SET kind = 'DELETION' WHERE request_number = pr;
+  EXCEPTION WHEN insufficient_privilege THEN pr_content := true; END;
+  BEGIN DELETE FROM fee_refund_request WHERE request_number = fr;
+  EXCEPTION WHEN insufficient_privilege THEN app_del := true; END;
+  RESET ROLE;
+  RAISE NOTICE '24. 권리 요청·전형료 반환 결정 한 번·금액 상한·내용 고정·앱 삭제 불가: %',
+    CASE WHEN pr_fixed AND pr_content AND fr_cap AND fr_fixed AND app_del THEN 'PASS' ELSE 'FAIL' END;
+  ASSERT pr_fixed, '회신한 권리 요청을 고칠 수 있다';
+  ASSERT pr_content, '앱 역할이 권리 요청 내용을 바꾼다';
+  ASSERT fr_cap, '낸 금액보다 많은 반환이 승인된다';
+  ASSERT fr_fixed, '결정한 반환 신청을 고칠 수 있다';
+  ASSERT app_del, '앱 역할이 반환 신청을 지운다';
 END $$;
 
 ROLLBACK;
