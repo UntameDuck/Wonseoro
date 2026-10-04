@@ -119,6 +119,13 @@ async function cli() {
     test: 'M4 외부 부하·정합성 인수 게이트',
     at: new Date().toISOString(),
     profile,
+    execution: {
+      environment: summary?.metadata?.environment ?? null,
+      approval: summary?.metadata?.approval ?? null,
+      startedAt: summary?.metadata?.startedAt ?? null,
+      durationMs: Number.isFinite(Number(summary?.state?.testRunDurationMs)) ? Number(summary.state.testRunDurationMs) : null,
+      users: testedUsers,
+    },
     sourceSummary: path.relative(ROOT, summaryPath).replaceAll('\\', '/'),
     testSet: { users: applicationIds.length, applicationIdSetSha256: createHash('sha256').update([...applicationIds].sort().join('\n')).digest('hex') },
     passed: blockers.length === 0,

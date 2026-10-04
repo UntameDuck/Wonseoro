@@ -223,6 +223,18 @@ npm run ops:dr-acceptance -- --file=deploy/pilot/<대학>-dr.yaml
 
 성공 JSON만으로 자동 완료하지 않는다. SRE·DBA·입학처가 백업 객체 보존·Kubernetes/DB 이벤트·원시 부하 결과·대조 큐를 표본 확인하고 승인한 뒤 M4/M5 태스크를 갱신한다.
 
+### 8.4 T-M4-30·31·32·36·41 — M Profile 부하 캠페인 종료 게이트
+
+개별 `ops:load-acceptance`가 k6 threshold와 DB 정합성을 판정한 뒤 [빈 캠페인 파일](../deploy/pilot/load-campaign.example.yaml)에 다섯 결과 경로를 연결한다.
+
+```powershell
+npm run ops:load-campaign-acceptance -- --file=deploy/pilot/<대학>-load-campaign.yaml
+```
+
+게이트는 Baseline 500, Expected 1,500, Deadline 3,000 VU+1,000 RPS, 70% Failover 1,050 VU, 6시간 Soak 결과가 같은 환경·승인에서 실행됐는지 다시 확인한다. 각 결과의 합성 사용자 수와 실행시간, k6+DB 통과, Failover Writer 세대 검사를 읽으며 결과를 사람이 재입력하지 않는다. Soak 종료 때 API 메모리·DB 연결·Pool 대기·Outbox 지연·중앙 지연 추세가 승인 용량 안인지 책임자·원시 대시보드 증적을 요구한다.
+
+이 게이트가 성공하고 원시 k6·DB·대시보드를 표본 확인한 뒤에만 다섯 부하 태스크를 완료 처리한다. D-90의 Finalize 150/300 TPS는 전체 지원 수·첫 처리/멱등 replay 분모가 결정되지 않아 이 캠페인에 포함하지 않는다.
+
 ## 9. T-M6-15 — Sandbox→Shadow→제한 Pilot
 
 | 단계 | 데이터·외부 연계 | 진입 조건 | 종료 조건 |

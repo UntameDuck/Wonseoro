@@ -54,6 +54,8 @@
     "test:ops:pilot-readiness": "node --test scripts/ops/pilot-readiness.test.mjs",
     "ops:load-acceptance": "node scripts/ops/load-acceptance.mjs",
     "test:ops:load-acceptance": "node --test scripts/ops/load-acceptance.test.mjs",
+    "ops:load-campaign-acceptance": "node scripts/ops/load-campaign-acceptance.mjs",
+    "test:ops:load-campaign-acceptance": "node --test scripts/ops/load-campaign-acceptance.test.mjs",
     "ops:ha-preflight": "node scripts/ops/ha-preflight.mjs",
     "test:ops:ha-preflight": "node --test scripts/ops/ha-preflight.test.mjs",
     "ops:pg-sandbox-acceptance": "node scripts/ops/pg-sandbox-acceptance.mjs",

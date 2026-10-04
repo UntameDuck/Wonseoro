@@ -110,3 +110,15 @@ npm run ops:load-acceptance -- --summary=tests/load/results/raw-failover-70.json
 ```
 
 결과는 `tests/load/results/load-acceptance-*.json`이다. k6 필수 metric/threshold 누락, 버린 iteration 1개 이상, DB 정합성 문제 1건 이상, Failover 세대 불일치 중 하나라도 있으면 종료 코드 1이다. 인프라 메모리·커넥션 누수 추세와 RTO/RPO는 대시보드·HA 이벤트 증적을 Pilot YAML에 별도로 연결한다. T-M4-39의 Edge 재시도·능동 헬스체크·사용자 체감 실패/중복 0 판정은 같은 실행 결과를 `deploy/pilot/edge-failover-acceptance.example.yaml` 사본에 기록해 `npm run ops:edge-failover-acceptance -- --file=...`로 확인한다.
+
+### 6. 캠페인 종료 판정
+
+다섯 프로필의 `load-acceptance-*.json`이 모두 생기면 `deploy/pilot/load-campaign.example.yaml`을 대학별로 복사해 결과 경로와 자원 추세 증적을 채운다.
+
+```powershell
+npm run ops:load-campaign-acceptance -- --file=deploy/pilot/<대학>-load-campaign.yaml
+```
+
+이 게이트는 다섯 결과를 다시 읽어 같은 환경·승인인지, 요구 인원인지, 최소 실행시간을 채웠는지, Failover Writer 세대 검사가 있는지 확인한다. 6시간 Soak는 5시간 58분보다 짧으면 실패하며 API 메모리·DB 연결·Pool 대기·Outbox 지연·중앙 지연이 모두 승인 용량 안이라는 책임자 판정과 원시 대시보드 참조가 필요하다. 빈 양식은 프로필 0/5·자원 추세 0/5로 실패하는 것이 정상이다.
+
+**D-90의 Finalize 150/300 TPS는 이 종료 판정에 포함하지 않는다.** 전체 지원 30,000건과 총 63,000요청의 충돌, 첫 처리와 멱등 replay 분모를 노션 §08에서 확정한 뒤 별도 인수기준으로 추가한다.

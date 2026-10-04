@@ -1,0 +1,55 @@
+# 외부 CSP 부하 캠페인의 ops:load-acceptance 결과 5개가 생긴 뒤 채운다.
+# local/kind, 누락 프로필, 짧은 실행, 용량 초과, 빈 evidence는 의도적으로 실패시킨다.
+metadata:
+  universityId: ""
+  environmentId: ""
+  environmentType: csp-load-staging
+  approval: ""
+  approvedAt: ""
+  executedBy: ""
+  evidence: []
+
+results:
+  - id: baseline-500
+    file: ""
+  - id: expected-1500
+    file: ""
+  - id: deadline-3000-rps1000
+    file: ""
+  - id: failover-70
+    file: ""
+  - id: soak-6h
+    file: ""
+
+resourceTrends:
+  - id: api-memory
+    verdict: pending
+    observed: ""
+    approvedBy: ""
+    evidence: []
+  - id: db-connections
+    verdict: pending
+    observed: ""
+    approvedBy: ""
+    evidence: []
+  - id: pool-wait
+    verdict: pending
+    observed: ""
+    approvedBy: ""
+    evidence: []
+  - id: outbox-lag
+    verdict: pending
+    observed: ""
+    approvedBy: ""
+    evidence: []
+  - id: central-lag
+    verdict: pending
+    observed: ""
+    approvedBy: ""
+    evidence: []
+
+finalDecision:
+  status: pending
+  approvedAt: ""
+  approvedBy: ""
+  evidence: []

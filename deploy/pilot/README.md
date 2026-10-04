@@ -57,3 +57,14 @@ npm run ops:dr-acceptance -- --file=deploy/pilot/<대학>-dr.yaml
 ```
 
 게이트는 사건 시각에서 RTO·RPO를 다시 계산해 각각 15분·1분을 넘으면 실패시킨다. Writer 세대가 정확히 1 증가하고 옛 Writer가 거절되는지, DNS/Edge 전환과 현재 Writer 기준 Failback이 끝났는지, 복구 검증 건너뜀이 0인지, 유실·중복·미복구 순번·대조 예외가 모두 0인지도 요구한다. 로컬 덤프 복구는 이 양식의 대체 증적이 아니다.
+
+## 외부 M Profile 부하 캠페인 종료
+
+`load-campaign.example.yaml`은 개별 `ops:load-acceptance` 결과 5개를 하나의 승인 캠페인으로 묶는 양식이다. 결과 파일을 직접 다시 읽으므로 사람이 프로필 성공 여부나 실행시간을 옮겨 적지 않는다.
+
+```powershell
+Copy-Item deploy/pilot/load-campaign.example.yaml deploy/pilot/<대학>-load-campaign.yaml
+npm run ops:load-campaign-acceptance -- --file=deploy/pilot/<대학>-load-campaign.yaml
+```
+
+500·1,500·3,000 VU+1,000 RPS·70% Failover·6시간 Soak가 같은 환경·승인 참조여야 한다. 30분 프로필은 29분, Deadline은 19분, Soak는 5시간 58분 미만이면 실패한다. Failover 결과에는 Writer 세대 판정이 필요하고, API 메모리·DB 연결·Pool 대기·Outbox 지연·중앙 지연 추세가 모두 승인 용량 안이어야 한다. D-90의 Finalize 150/300 TPS는 결정 전이라 이 캠페인 완료에 포함하지 않는다.
