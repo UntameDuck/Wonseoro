@@ -10,7 +10,7 @@
 
 | 노션 문서 | 첨부 이름 | 저장소 파일 | 바이트 | SHA-256 | 근거 |
 |---|---|---|---|---|---|
-| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.8.0) | 97,219 | `60ec63269f7e8dcce7c544885fa30b96a445f6fdf53431507e434223df4616b4` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 · D-78 |
+| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.9.0) | 104,819 | `7caedf5ba4a0cb2ade67f205d05b0118e448e3824f4779c746844001fa941b53` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 · D-78 · D-79 |
 | [§04 CloudEvents](https://app.notion.com/p/3df75ab5debe81d68e37fabd3678dcc4) | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | 6,104 | `3ed7ec8a340c50f6e7de25b2c3322ffd7c6b4914fd046afdc67a2efea699ca02` | D-47 · T-M5-51 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` (v1.2) | 4,036 | `1aaef0db712e1d9a15da41fb86b7832a3da8c6decfdcd5992a57bb071e5b1975` | D-44 · D-49 · D-52 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` (v1.5, 차트 렌더링 — RBAC 6종·내부 상호 TLS·서류 워커 출구) | 40,216 | `28c54fbdb2e83edc849526c06c7158017110fa0e24a3b3cbfe8f525febf2b315` | D-44 · D-52 · D-68 · D-69 |
@@ -82,6 +82,19 @@ B11 대응에 더한다:
 > 장애 공지는 중앙이 아니라 **각 대학 Data Plane**이 소유한다. 대학 DB의 추가 전용 `service_incident` 원장에 지원자용 제목·안내, 영향 수준(`NOTICE`·`DEGRADED`·`OUTAGE`), 시작/예상 해제 시각, 발행·해제 담당자를 남긴다. 공개 상태 API는 대학 이름·전체 상태·활성 공지만 반환하며 내부 원인·구성·개인정보는 반환하지 않는다. 따라서 중앙이 끊겨도 대학 API가 살아 있는 동안 대학별 안내는 유지된다.
 > 운영자 `operator`만 공지를 발행·해제할 수 있고, 변경 요청은 멱등 키·5분 이내 Step-up·감사 체인을 거친다. 공지 삭제나 본문 덮어쓰기는 허용하지 않고 해제만 한다. 지원자 웹은 모든 화면의 전역 배너와 `/status`에서 같은 공개 상태를 보여 준다.
 
+### §01 운영 리스크 — B11 자동 증적번호·PII 최소 Support View (D-79)
+
+B11 대응에 더한다:
+
+> 상담원은 **이름·생년월일·연락처·원서 UUID 로 원서를 찾지 않는다.** 접수번호, 또는 원서마다 대학 DB 가 만드는 **상담 확인번호**(Crockford base32 10자,
+> 화면 표기 `XXXXX-XXXXX`, 원서가 사는 동안 바뀌지 않음)로 찾는다. 지원자는 자기 상태 확인·검토·접수 완료·장애 안내 화면에서 이 번호를 본다.
+> 응답은 **허용 목록으로만** 만든다 — 증적번호·조회 시각·대학/모집 이름·원서 상태와 한 줄 안내·마지막 저장·접수 여부/접수번호/접수 시각·결제 상태/금액/요청·확인 시각·
+> 서류 상태별 개수·중앙 반영(대기·완료)·처리 이력(동작·결과·시각, 행위자 없음)·마감 시각·활성 장애 공지·상담 안내 문장. 원서 항목 값·공통원서·서류 종류/파일 이름·
+> 이름/연락처·내부 식별자·결제사 거래번호·전형/모집단위는 응답에 없다(화면에서 숨기는 것이 아니다).
+> 조회할 때마다 **증적번호** `SR-YYYYMMDD-XXXXXX`(한국 날짜)를 만들고, 그 순간 보인 응답 전체와 SHA-256 을 추가 전용 `support_lookup` 에 남긴다(담당자·문의 분류·찾은 번호 종류).
+> 같은 트랜잭션에서 원서 감사 체인에 `SUPPORT_LOOKUP` 을 잇는다 — 지원자의 처리 이력에 "상담 조회" 로 보인다. 증적번호로 그때 안내한 내용을 그대로 다시 열고 무결성을 확인한다.
+> 문의 분류는 고르는 값(접수 여부·결제·서류·장애 중·그 밖)이며 자유 문장을 받지 않는다(상담원이 개인정보를 기록에 적지 않게). 상담 담당 역할은 비밀번호+OTP 로그인만 요구하고 Step-up 은 두지 않는다.
+
 ### §02 PostgreSQL ERD
 
 첨부 DDL(`0001_init.sql` v1.2)은 그대로 두고 본문 「정합성 규칙」 아래에 더한다 (D-70 — 저장소 마이그레이션 `0003_field_encryption.sql`, 중앙 `0004_vault_encryption.sql`):
@@ -93,6 +106,7 @@ B11 대응에 더한다:
 > DB 비상 접속 기록 `break_glass_access(db_user, valid_until, issued_at)` — 추가만(트리거), 앱은 읽지도 쓰지도 않는다(저장소 마이그레이션 0004, D-72).
 > Outbox 보관 `outbox_event_archive` — `created_at` 월별 파티션, 영수증 열을 펼쳐 둔다. 전송·확인이 끝나고 7일 지난 이벤트를 옮기되 원서마다 마지막 순번은 남긴다(순번이 이어진다).
 > 13개월이 지난 달은 파티션째 지운다(§01 B7 디스크 고갈 방지). 바로 쓰는 `outbox_event` 는 유니크(aggregate_id, aggregate_sequence) 때문에 파티션하지 않는다(저장소 마이그레이션 0005, D-74).
+> 상담 확인번호 `application.support_code`(Crockford base32 10자, 유니크, 바꿀 수 없음)와 상담 증적 `support_lookup(evidence_number, application_id, lookup_kind, reason, agent_id, looked_up_at, snapshot, snapshot_hash)` — 추가만(트리거), 앱은 넣고 읽기만(저장소 마이그레이션 `0008_support_view.sql`, D-79).
 > 장애 공지 원장 `service_incident` 는 대학 Data Plane에 둔다(저장소 마이그레이션 `0007_service_incident.sql`, D-78). 상태는 `ACTIVE`에서 `RESOLVED`로만 바뀌고 제목·안내·수준·시각·발행자는 수정하지 못한다. 앱 역할에는 조회·추가·해제용 UPDATE만 주며 DELETE·TRUNCATE 권한은 주지 않는다.
 
 v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
@@ -119,6 +133,9 @@ v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
 > **2026-10-03 v1.7.0** — 지금 모집·전형·모집단위 조회를 공개(`security: []`)로. 누구에게나 같은 공개 정보이고 로그인 전 화면·운영 콘솔이 보인다. 요구를 푸는 변경이라 호환이다(§A16). (D-65)
 
 > **2026-10-04 v1.8.0** — 대학 공개 상태 조회 `GET /api/v1/meta/service-status`와 운영자 장애 공지 목록·발행·해제 경로를 더했다. 공개 응답은 지원자용 정보만 포함하고, 운영 변경은 operator 범위·Step-up·멱등 키를 요구한다. 새 경로와 스키마 추가라 호환 변경이다(§A16). (D-78)
+
+> **2026-10-04 v1.9.0** — 개인정보 최소 상담 조회 `POST /admin/v1/support/lookups`·`GET /admin/v1/support/lookups/{evidenceNumber}`(새 범위 `support`), 응답 `SupportView`(허용 목록),
+> 지원자 Self-check 에 선택 필드 `supportCode`. 새 경로·범위·선택 필드 추가라 호환 변경이다(§A16). (D-79)
 
 ### §04 CloudEvents Schema
 
@@ -173,6 +190,11 @@ v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
 > security-auditor: Role·바인딩·NetworkPolicy·ServiceAccount·Pod·Deployment·PDB·이벤트 조회 — Secret·로그·exec 없음.
 > release-controller: 서명 검증된 GitOps 릴리스를 그 네임스페이스에만. break-glass: Role 만 두고 평소 바인딩 없음 — 켤 때는 끝나는 시각·사유를 함께,
 > 서명 커밋·리뷰를 거친다. RBAC 변경·exec 는 비상 역할에도 없다.
+
+「역할 정의」 표에 한 줄 더한다 (D-79 — 업무 역할이라 Kubernetes 권한·차트 변경은 없다):
+
+> support-agent(상담 담당): 개인정보 최소 상담 조회만(접수번호·상담 확인번호로 상태 확인, 증적번호로 다시 보기). Kubernetes 권한 없음. 설정·대사·증적 패키지는 열지 못한다.
+> 같은 조회를 admission-admin 도 할 수 있다(입학처가 직접 상담을 받는 경우).
 
 「Secret」 절 아래에 더한다 (D-69):
 

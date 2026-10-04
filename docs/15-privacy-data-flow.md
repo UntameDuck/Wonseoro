@@ -40,6 +40,7 @@ flowchart LR
 | 중앙 집계 DB | 접수 요약 + **목적별 가명 참조**(HMAC, 키는 금고에 없다) — 이름·연락처 없음 | 금고와 스키마·운영 DB 분리 | 운영 규칙 | `purpose-ref.ts`, D-39 |
 | 로그 | 요청번호·경로·상태 — 본문·토큰은 남기지 않고 주민번호·전화·이메일·카드 마스킹 | `StructuredLogger`, CI 검사 | 수집 측 규칙 | `check-logging.mjs`, T-M4-24 |
 | DB 비상 접속 기록 | 비상 DB 계정 이름·끝나는 시각 | 추가 전용 | DB 와 같음 | `0004_break_glass.sql`, D-72 |
+| 대학 DB `support_lookup`(상담 증적) | 상담 담당 ID·문의 분류·그 순간 상담 화면 응답(상태·시각·결제/서류 요약 — 원서 값·연락처·파일 이름 없음). 원서마다 상담 확인번호(`application.support_code`, 가명 번호) | 추가 전용 트리거·응답 해시·원서 감사 체인(`SUPPORT_LOOKUP`) | 원서와 같음 | `modules/support/*`, `0008_support_view.sql`, D-79 |
 
 ## 3. 밖으로 나가는 곳 — 위탁·Subprocessor 후보
 

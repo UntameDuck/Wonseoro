@@ -27,7 +27,7 @@
 | # | 결정 | 이유 |
 |---|---|---|
 | A1 | **로컬 발급자는 Keycloak 26.8.0**(`quay.io/keycloak/keycloak@sha256:b0f60d48…2bcc`), compose 프로필 `auth`, 포트 **18080**, `start-dev --import-realm` | 표준 OIDC(Authorization Code + PKCE)·TOTP MFA·ACR(인증 수준)·역할 클레임을 설정 파일 하나로 재현한다. 직접 만든 가짜 발급자는 MFA·step-up 을 흉내만 낸다. Dex 는 MFA 가 없다 |
-| A2 | 렐름 둘: **`wonseoro-staff`**(대학 담당자 — 비밀번호 + TOTP 필수, 역할 6종) · **`wonseoro-applicant`**(지원자 본인확인 흉내 — 실 간편인증·PASS 는 외부 기관, B/C) | 담당자와 지원자의 세션·정책·키를 섞지 않는다 |
+| A2 | 렐름 둘: **`wonseoro-staff`**(대학 담당자 — 비밀번호 + TOTP 필수, 역할 6종 → 2026-10-04 상담 담당 `support-agent` 를 더해 7종, D-79) · **`wonseoro-applicant`**(지원자 본인확인 흉내 — 실 간편인증·PASS 는 외부 기관, B/C) | 담당자와 지원자의 세션·정책·키를 섞지 않는다 |
 | A3 | **API 가 토큰을 직접 검증한다 — `AUTH_MODE=oidc` 추가**(dev-headers·gateway 는 그대로 둔다) | 차트에 gateway 가 없고, T-M3-06 의 "중앙 IAM 이 끊겨도 이미 접속한 사용자는 계속" 은 **대학 쪽 JWKS 캐시**가 있어야 성립한다 |
 | A4 | **JWKS 캐시는 `server-kit` 에 직접 둔다**(서명 검증은 `jose` 6.2.12) — 메모리 + 마지막으로 받은 키 묶음 보관, 모르는 `kid` 면 쿨다운을 두고 한 번만 다시 받기, 발급자가 죽어도 **최대 보관 시간까지 기존 키로 검증**, 키 나이 지표 | `jose` 의 원격 키 묶음은 발급자 장애 때 버틴다는 보장이 없다. 인수 시험이 "발급자 차단 중 검증 지속" 이다 |
 | A5 | **역할 매핑**: 계약 범위 → 앱 역할 — `admin` → `admission-admin`, `operator` → `admission-admin`(대사는 업무다), `auditor` → `security-auditor`. platform-viewer·sre-operator·release-controller·break-glass 는 **업무 API 권한이 없다**(K8s 전용) | 노션 06: "admission-admin: 업무 Config API만, Kubernetes 권한 없음", "security-auditor: Audit/Security Read-only". 계약 범위 이름과 역할 이름이 달라 **대장 D-N 으로 올린다**(구현 첫 커밋에서 번호) |

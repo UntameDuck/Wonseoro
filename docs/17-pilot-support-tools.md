@@ -1,8 +1,8 @@
 # Pilot 지원 도구 구현·인계
 
-> 최종 갱신: 2026-10-04 · 작업 폴더 기준 · T-M6-01·06 완료, T-M6-07 미착수
+> 최종 갱신: 2026-10-04 · T-M6-01·06·07 모두 완료 — Pilot 지원 도구의 AI 몫 끝
 
-사용자 요청에 따라 사용량이 약 10% 남으면 새 작업을 시작하지 않기로 했다. 2026-10-04 기준 사용량 11%에서 멈췄으며, 아래 변경은 검증을 마쳤지만 아직 커밋하지 않았다. 임시 웹/API 프로세스는 종료했다. 화면 시험용 PostgreSQL 컨테이너 `ui-shots-pg`는 실행 중일 수 있다.
+T-M6-01·06 은 커밋 `38b97dd`·`2531e4a`, T-M6-07 은 커밋 `314fb62` 다. 임시 웹/API 프로세스는 모두 종료했다. 화면 시험용 PostgreSQL 컨테이너 `ui-shots-pg`(:5497)와 CI 재현 DB `ci-pg`(:5499)는 실행 중일 수 있고, 둘 다 대학 마이그레이션 0001~0008 이 적용돼 있다.
 
 ## T-M6-01 전형 Schema 온보딩 — 완료
 
@@ -40,26 +40,32 @@
 - `focus-sweep-admin-chrome-1280-2026-10-03T15-13-20-868Z.json`
 - `focus-sweep-admin-chrome-320-2026-10-03T15-14-07-087Z.json`
 
-## T-M6-07 PII 최소 Support View — 다음 작업, 미착수
+## T-M6-07 PII 최소 Support View — 완료
 
-설계·코드·DB 변경을 시작하지 않았다. 이어받는 작업자는 먼저 노션 §01 B11을 다시 읽고 다음 항목이 충분히 정해졌는지 확인한다. 부족하면 구현 전에 [불일치 대장](02-spec-discrepancy-register.md)에 D-79 결정을 새로 만든다.
+설계 결정은 [D-79](02-spec-discrepancy-register.md)에 있다. 노션 B11 은 "자동 증적번호, PII 최소 Support View" 두 단어뿐이라 역할·조회 키·응답 범위·증적 형식을 새로 정했다.
 
-반드시 지킬 경계:
+- **역할** — 담당자 렐름에 `support-agent`(상담 담당)를 더하고 계약 범위 `support` 를 둔다. `support-agent`·`admission-admin` 이 연다. 비밀번호+OTP 로그인(`acr=mfa`)은 요구하고 Step-up 은 두지 않는다(장애 중 상담은 몇 분마다 이어진다). 시험 계정 `support`(`infra/auth/README.md`). Kubernetes 권한·차트 변경 없음.
+- **조회 키** — 접수번호, 또는 **상담 확인번호**(`application.support_code`, Crockford base32 10자, DB 기본값으로 모든 원서에 생김, 바꿀 수 없음). 지원자는 검토·결제 단계, 접수 완료, 장애 안내 화면에서 `XXXXX-XXXXX` 로 본다(Self-check `supportCode`). 이름·연락처·원서 UUID 로는 찾지 않는다. 없는 번호는 두 키 모두 같은 404.
+- **응답** — 허용 목록(`SupportView`)으로만 만든다: 증적번호·조회 시각·대학/모집 이름·원서 상태와 한 줄 안내·접수 여부/접수번호/시각·결제 상태/금액/요청·확인 시각·서류 상태별 개수·중앙 반영·처리 이력(행위자 없음)·마감·활성 장애 공지·상담 안내 문장. 지원자 Self-check 와 같은 문장을 쓰도록 `modules/meta/status-summary.ts` 로 모았다.
+- **자동 증적번호** — 조회마다 `SR-YYYYMMDD-XXXXXX`(한국 날짜). 그 순간 응답 전체와 SHA-256 을 추가 전용 `support_lookup` 에 남기고, 같은 트랜잭션에서 원서 감사 체인에 `SUPPORT_LOOKUP` 을 잇는다(지원자 처리 이력에 "상담 조회"). `GET …/{증적번호}` 는 그때 내용을 그대로 열고 해시로 무결성을 보인다.
+- 저장: `infra/db/migrations/0008_support_view.sql`(적용 목록 9곳 모두 갱신 — CI·보안·복구 검증 워크플로, `db:migrate`, 캡처·DAST 스크립트, kind README, `infra/db/README.md`).
+- API: `POST /admin/v1/support/lookups`(멱등 키, 문의 분류 필수 — 자유 문장 없음), `GET /admin/v1/support/lookups/{evidenceNumber}`. OpenAPI **1.9.0**.
+- 화면: 운영 콘솔 `/support`(조회·증적번호로 다시 보기, 메뉴와 첫 화면 목록에 추가).
 
-- 상담원은 원서 항목 값(`application_field_value`), 공통원서, 첨부파일, 이름·연락처를 보지 못한다.
-- 허용 후보는 원서 처리 상태, 단계별 처리 시각, 결제/서류의 개인정보 없는 요약, 중앙 동기화 안내, 자동 생성 증적번호다. **후보일 뿐 아직 계약으로 확정하지 않았다.**
-- 상담 전용 역할과 기존 operator/security-auditor 중 어느 범위를 쓸지, 원서 찾기에 사용할 개인정보 없는 조회 키, 증적번호 형식·보존 위치를 먼저 결정한다.
-- API 응답 자체에서 금지 필드를 제거한다. 화면에서 숨기는 것만으로 끝내지 않는다. BOLA·대학 경계·감사 기록 시험을 둔다.
-- 화면에는 내부 코드·UUID·설계 번호를 그대로 보이지 않는다. 완료 뒤 `npm run check:ui-copy`와 관리자 Chrome 1280/320 접근성 시험을 다시 실행한다.
+확인한 결과:
 
-권장 진행 순서:
+- DB 제약 검증 **23종** PASS(23: 상담 확인번호 고정·형식, 상담 증적 추가만, 앱 역할 삭제 불가. 17 의 표별 권한 규칙에 `support_lookup` 추가).
+- `support.integration.test` 6개(응답 키 전수가 허용 목록 안, 원서/결제 식별자·파일 이름·서류 종류·전형/모집단위 값 없음, 증적·해시·감사 체인, 다시 열기 일치, 저장본 수정·삭제 거부, 없는 번호·다른 대학 번호·원서 UUID 같은 404, 자유 문장 사유 400). 보안 선별 시험(`test:security`) 묶음에 넣었다.
+- 역할 표: guard 단위 시험 7역할 × 4범위, 실 HTTP `oidc-auth.integration` 7역할 × 5경로(상담 담당은 상담만 열림).
+- admission-api 전체(CI 재현 DB): **388개 중 385 pass · 3 skip · 0 fail**. `check:contracts`(1.9.0, 60 operations)·`check:ui-copy`(193 files)·`check-deps`·`check-logging`·`git diff --check` PASS. admin-web·frontend 운영 빌드 PASS.
+- 접근성: 관리자 Chrome 1280/320 각 13화면(상담 조회 빈 화면·결과·증적번호로 다시 보기 포함) 문제 0, 지원자 Chrome 1280/320 각 20화면 문제 0. 처음 실행에서 빈 선택지가 있는 필수 select 가 처음부터 "올바르지 않음" 으로 읽혀 필수 속성을 빼고 버튼으로 막았다.
+- 결과 파일: `tests/a11y/results/focus-sweep-admin-chrome-1280-2026-10-04T01-42-57-698Z.json`, `…-admin-chrome-320-2026-10-04T01-41-52-305Z.json`, `…-applicant-chrome-1280-2026-10-04T01-48-57-164Z.json`, `…-applicant-chrome-320-2026-10-04T01-50-12-730Z.json`.
 
-1. `AGENTS.md`, `docs/HANDOFF.md`, 노션 §01 B11, 이 문서를 읽는다.
-2. 역할·조회 키·허용 응답·증적번호 규칙을 확정하고 필요하면 D-79 및 `docs/06-notion-changeset.md`를 먼저 갱신한다.
-3. OpenAPI 계약과 보안/소유권 시험을 먼저 작성한다.
-4. admission-api의 최소 응답 서비스와 관리자 BFF/화면을 구현한다.
-5. 실 DB 통합 시험, 두 앱 빌드, 계약·문구 검사, 관리자 1280/320 접근성 검사를 실행한다.
-6. 이 문서, `HANDOFF`, `03-next-steps`, M6 마일스톤, 불일치 대장, 노션 changeset을 함께 갱신한다.
+남은 것(선택·외부):
+
+- 접수번호로 증적 패키지를 찾는 U-51 은 여전히 선택이다(감사자 화면).
+- 실제 Keycloak 로 `support` 계정 로그인 끝에서 끝까지는 돌리지 않았다 — 렐름 파일만 고쳤으므로 Keycloak 을 `up -d --force-recreate keycloak` 으로 다시 띄워야 계정이 생긴다. 역할 판정은 HTTP 시험(서명한 시험 토큰)으로 확인했다.
+- 노션 반영(§01 B11·§02 ERD·§03 첨부·§06 역할) — [06](06-notion-changeset.md).
 
 ## 재검증 명령
 
