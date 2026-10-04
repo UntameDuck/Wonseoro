@@ -3,6 +3,10 @@
 > 작성: 2026-09-30. 제출한 개발보고서 PDF 원본은 저장소에 없다. 이 문서는 **정정할 곳과 바꿀 문구**만 모은다 —
 > 제출처가 정정본·정오표를 받는 방식에 맞춰 사람이 반영한다. 반영하면 불일치 대장 D-2·D-3 의 "PDF 반영" 을 `✅ (날짜)` 로 바꾼다.
 
+제출처가 별도 정오표를 받는 경우 바로 쓸 A4 1쪽 PDF를 [output/pdf/wonseoro-submission-errata.pdf](../output/pdf/wonseoro-submission-errata.pdf)로 준비했다(2026-10-04). 원본 개발보고서를 고친 파일은 아니며, 제출·접수 확인 전에는 T-M0-08을 완료 처리하지 않는다.
+
+재생성 소스는 `scripts/docs/render-submission-errata.py`다. Windows 맑은 고딕과 번들 Python의 ReportLab으로 생성하고 Poppler 150dpi PNG 렌더링으로 표·한글·줄바꿈을 확인했다. 최종 파일은 A4 1쪽, JavaScript 없음, 암호화 없음이다.
+
 ## 정오표
 
 | # | 대장 | PDF 의 현재 서술 | 바른 서술 | 근거 |

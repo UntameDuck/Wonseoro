@@ -29,6 +29,7 @@
 > **같은 세션 — 외부 PITR·DR 수용 게이트 준비.** `ops:dr-acceptance`가 실제 CSP DR staging, 서로 다른 Primary/Standby zone과 제3 장애영역 백업, HA 사전 점검 13/13, 목표 시각 PITR·복구본 검증, 부하 중 Failover·Failback·사후 대조를 요구한다. 사건 시각으로 RTO/RPO를 다시 계산해 900초/60초를 넘으면 실패하고 Writer epoch +1·옛 Writer 거절·DNS/Edge 전환과 유실/중복/공백/예외 0을 확인한다. 단위 3개 pass·fail 0·skip 0, 빈 예시는 의도대로 실패했다. **실 DR은 실행하지 않아 T-M4-06·T-M5-60·61·64는 미완료다.** [문서 18 §8.3](18-pilot-execution-package.md#83-t-m4-06t-m5-606164--pitrdr-수용-게이트)
 > **같은 세션 — 외부 M Profile 부하 캠페인 종료 게이트 준비.** 개별 `ops:load-acceptance` 결과에 환경·승인·실행시간을 보존하고, `ops:load-campaign-acceptance`가 500·1,500·3,000 VU+1,000 RPS·70% Failover·6시간 Soak 5개를 같은 승인 환경으로 묶는다. 요구 인원·최소 실행시간·Failover Writer 세대와 API 메모리/DB 연결/Pool 대기/Outbox/중앙 지연 추세를 판정한다. 기존 개별 단위 3개 + 캠페인 단위 3개 pass·fail 0·skip 0, 빈 예시는 0/5·0/5로 실패했다. **실 CSP 부하는 실행하지 않아 T-M4-30·31·32·36·41은 미완료다. D-90 Finalize TPS는 제외했다.** [문서 18 §8.4](18-pilot-execution-package.md#84-t-m4-3031323641--m-profile-부하-캠페인-종료-게이트)
 > **같은 세션 — 실물 브라우저·수동 접근성 수용 게이트 준비.** `ops:manual-accessibility-acceptance`가 실물 Windows Firefox·iPhone Safari의 지원자 접수/OIDC/세션/키보드/확대/업로드 12칸과 데스크톱·모바일 스크린리더/200% 확대/음성 입력 4종을 건너뜀 없이 요구한다. 에뮬레이션·차단/중대 결함·미승인을 거절한다. 단위 3개 pass·fail 0·skip 0, 빈 예시는 0/2·0/12·0/4로 실패했다. **사람의 실제 실행은 없어 T-M5-47은 🟡, T-M5-48은 미완료다.** [문서 09](09-accessibility.md#실물수동-검사-실행-양식-2026-10-04)
+> **같은 세션 — 제출용 개발보고서 정오표 PDF 준비.** 원본 제출 PDF는 저장소에 없어 직접 수정하지 않았다. `scripts/docs/render-submission-errata.py`로 기술 스택·지원자 6단계·조건부 결제 후 접수 설명을 담은 A4 1쪽 [정오표](../output/pdf/wonseoro-submission-errata.pdf)를 만들고 150dpi 렌더링에서 한글·표·여백을 확인했다. JavaScript·암호화 없음. **제출처 반영·접수 확인 전이라 T-M0-08은 미완료다.** [문서 07](07-submission-errata.md)
 > **세션 마감 상태(2026-10-04, ChatGPT/Codex 로 넘김) — 넘겨받는 쪽이 먼저 볼 것**
 > 1. **push 안 함** — `origin/main` 은 G-8 `276f2b2` 까지이고 로컬은 7커밋 앞이다(G-12 `ab546ff`·G-13 `63c028d`·G-9 `e9af8e9`·G-5 `9d6745e`·DB 제약 `0b9a151`·인계 정리 `e0a2f96`·이 문서를 포함한 최신 화면 캡처 커밋). 7개 모두 작성자·커밋한 사람 `ryan-ahn-song <ryansong0805@gmail.com>`, 공동저자 줄 없음(`git log origin/main..HEAD` 로 확인). push 는 사용자 몫
 > 2. **개발 시드가 바뀌었다** — 장애인 증명서(`DISABILITY_CERT`·동의 `SENSITIVE_HEALTH`)·여권번호(`passportNumber`·동의 `PASSPORT_COLLECTION`)·지원 제한 안내(`notices.applicationRules`). `ci-pg`·`ui-shots-pg` 에는 다시 적용했다. **kind·로컬 compose DB 는 다음 시험 전에 `seed-dev.sql` 재적용**(새 마이그레이션 0009·0010 도 — `npm run db:migrate`)
@@ -341,7 +342,7 @@ Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, s
 | 항목 | 상태 |
 |---|---|
 | K-PaaS(또는 클라우드) 시험 환경 | 3,000 CCU·1,000 RPS·6시간 Soak·DB Failover 실측(T-M4-30~32·36·41)에 필요. 없음. 합성 사용자 k6 프로필·OIDC 갱신·k6+DB 사후 판정기는 [tests/load](../tests/load/README.md)에 준비됨 |
-| 제출 PDF 정정 (D-2·D-3) | 개발보고서의 "Java/Spring" 표기 → NestJS·TypeScript. 정정 문구 준비됨 — [07-submission-errata.md](07-submission-errata.md) |
+| 제출 PDF 정정 (D-2·D-3) | 개발보고서의 "Java/Spring" 표기 → NestJS·TypeScript. 정정 문구와 별도 제출용 A4 1쪽 PDF 준비됨 — [07-submission-errata.md](07-submission-errata.md). 제출·접수 확인은 사람 |
 | 노션 반영 적용 | [06-notion-changeset.md](06-notion-changeset.md) — AI 쓰기 차단 |
 | K-PaaS 착수 때 정할 것 | 노드 판정 시간(`node-monitor-grace-period`) 조정 가능 여부·zone 수·Gateway API 컨트롤러(ADR-0008, D-53) · clamd 배치(사이드카·공용 서비스)와 서명 DB 갱신 경로(D-58) · DB 서버 시각 동기 감시(D-61) |
 | 실 clamd 로 검사 확인 (D-58) | ClamAV 어댑터는 가짜 clamd 로만 시험했다. `clamav/clamav` 이미지(약 300MB+서명 DB)를 내려받아 `SCANNER_ENGINE=clamav`·`CLAMD_HOST` 로 한 번 돌려 본다 — 내려받기는 사람이 승인한다 |
