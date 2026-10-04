@@ -1,11 +1,11 @@
 # 화면 캡처
 
-> 찍은 날: **2026-10-03**(접근성 T-M5-40~47·인증 T-M5-02·10 이후 다시 찍음. 앞 판은 2026-10-01) · 로컬 **축소 환경**(한 PC, 로컬 프로세스) · 1280px 데스크톱 · 전체 페이지
-> 개발 모드 — 지원자 웹(`apps/frontend`) 19장 · 관리자 콘솔(`apps/admin-web`) 8장. **로그인 모드**(본인확인·관리자 로그인) — 8장(28~35). 모두 35장.
-> 35장 모두 **렌더링 문구 검사**(`capture.mjs --check-copy`)를 통과했다. 검사 내용은 화면에 실제로 보이는 글에 설계 문서 번호·내부 상태 코드·ISO 시각 원문·영문 검증 문구·기호 아이콘이 없는지다. 지원자 화면은 UUID·내부 버전도 막는다.
+> 찍은 날: **2026-10-04**(개인정보·법정 고지 G-1~G-13의 AI 구현과 인증 T-M5-02·10 이후) · 로컬 **축소 환경**(한 PC, 로컬 프로세스) · 1280px 데스크톱 · 전체 페이지
+> 개발 모드 — 지원자 웹·장애 화면 22장 · 관리자 콘솔 12장. **로그인 모드**(본인확인·관리자 로그인) — 8장(28~35). 모두 42장.
+> 새로 찍은 개발 모드 34장과 로그인 모드 28~34번은 **렌더링 문구 검사**(`capture.mjs --check-copy`)에서 위반이 없었다. 35번은 화면 코드가 바뀌지 않은 2026-10-03 통과본이다. 검사 내용은 화면에 실제로 보이는 글에 설계 문서 번호·내부 상태 코드·ISO 시각 원문·영문 검증 문구·기호 아이콘이 없는지다. 지원자 화면은 UUID·내부 버전도 막는다.
 > 다시 찍는 방법은 아래 [「다시 찍기」](#다시-찍기)에 있다. 스크립트는 `scripts/screenshots/`에 있다.
 > 처음 찍은 판(2026-09-30)과 그때 찾은 결함 U-1~U-11 은 git 이력에 있다. 결함은 [08-ui-production-readiness.md](../08-ui-production-readiness.md) 의 U-1~U-59 로 옮겨 모두 고쳤다(U-51 도 2026-10-04 끝).
-> **2026-10-04 지원자 01~14 다시 찍음** — 시드의 위법 「자기소개」 필수 문항을 「학적 변동 사항」으로 바꿨고(문서 10 G-1), 검토·결제(09)·접수 완료(10)에 상담 확인번호(T-M6-07)가 보인다. 렌더링 문구 검사 통과. 같은 날 다시 찍은 판은 바닥글에 대학 고지(처리방침·위탁·보호책임자)와 검토·결제(09)·접수증(11)에 전형료 반환 안내가 보인다(G-4·G-6, D-80). 그 뒤 원서 동의(D-81)를 넣고 한 번 더 찍었다 — 1단계(04) 맨 위 수집·이용·학생부 제공 동의, 검증 오류(06)에 빠진 동의. **콘솔·장애 화면(admin·failure·login)은 이 변경 전 판이다** — 바닥글 고지가 없다
+> **2026-10-04 전체 갱신** — 접수 홈 지원 제한 확인(D-86), 3단계 여권번호 별도 동의(D-88), 4단계 장애인 증명서 별도 동의(D-85), 원서의 개인정보 권리·전형료 반환 카드와 신청 화면(D-84·D-89), 콘솔 처리 큐를 실제 요청번호로 이어 찍었다. 중앙·대학 장애 화면과 콘솔 20~27, 로그인 28~34도 다시 찍었다. 캡처 자동화에서 대조 예외용 원서의 필수 동의 누락과 증적 입력의 옛 라벨을 함께 고쳤다.
 
 ## 어떤 조건에서 찍었나
 
@@ -38,14 +38,17 @@
 | [04-apply-step1-common](applicant/04-apply-step1-common.png) | 원서 1단계 공통정보 | 경로 "홈 › 2027 수시 › 원서로대학교 › 공통정보". 마감 배너 "마감 2026.12.31 18:00 (서버 시각 기준)" · 6단계 표시 |
 | [05-apply-step2-program](applicant/05-apply-step2-program.png) | 2단계 대학·전형 | 대학·전형·모집단위·전형료 |
 | [06-apply-validation-errors](applicant/06-apply-validation-errors.png) | 검토 전 검증 오류 | "출신 고등학교를 입력해 주십시오." — 항목 이름으로 쓴 한국어 문장, 누르면 그 칸으로 간다(공통원서를 쓰지 않은 두 번째 지원자) |
-| [07-apply-step3-extra](applicant/07-apply-step3-extra.png) | 3단계 추가정보 | 전형 양식으로 그린 입력칸(내신 성적·학적 변동 사항 — 자기소개서는 받지 않는다) · 항목 안내 · 글자 수 · 자동저장 완료 시각 |
-| [08-apply-step4-documents](applicant/08-apply-step4-documents.png) | 4단계 서류 | 형식·크기 안내("PDF 최대 10MB · JPG·PNG 최대 5MB") · 파일 선택 버튼 · 검사가 끝나면 업로드 칸도 "업로드·검사 완료" |
+| [07-apply-step3-extra](applicant/07-apply-step3-extra.png) | 3단계 추가정보 | 내신 성적·학적 변동 사항과 **여권번호 별도 동의**. 동의한 뒤에만 여권번호 칸이 나타난다 |
+| [08-apply-step4-documents](applicant/08-apply-step4-documents.png) | 4단계 서류 | 형식·크기 안내 · 학교생활기록부 검사 완료 · **장애인 증명서 민감정보 별도 동의**와 동의 뒤 업로드 칸 |
 | [09-apply-step5-review](applicant/09-apply-step5-review.png) | 5단계 검토·결제 | 검증을 통과한 단계에만 ✓ · 누락·서류·전형료·결제 상태·서버 시각·마감 · "결제가 곧 접수" 경고 · **결제 전 확인 체크**(체크해야 결제 버튼이 열린다) |
 | [10-apply-complete](applicant/10-apply-complete.png) | 접수 완료 | 접수번호 · 접수 시각 |
 | [11-receipt](applicant/11-receipt.png) | 접수증 | 대학·모집 · 접수번호 · 접수 시각 · **전형 · 모집단위 · 상태** · "원서로대학교 입학처가 발급한 접수증". 인쇄하면 메뉴·버튼은 빠진다 |
 | [12-dashboard](applicant/12-dashboard.png) | 내 원서 | "학생부종합전형 · 컴퓨터공학과" · 접수 완료 · 조회 시각 · 카드별 동기화 시각 |
 | [13-apply-cancel-confirm](applicant/13-apply-cancel-confirm.png) | 원서 취소 | 사유 입력 · 되돌릴 수 없음 안내 |
 | [14-apply-cancelled](applicant/14-apply-cancelled.png) | 취소된 원서 | 새 원서로 다시 지원하라는 안내 |
+| [36-apply-rights-refund](applicant/36-apply-rights-refund.png) | 접수한 원서 | 맨 아래 **내 개인정보**·**전형료 반환** 카드와 각 신청 화면으로 가는 길 |
+| [37-privacy-request](applicant/37-privacy-request.png) | 개인정보 권리 요청 | 실제 열람 요청번호·받은 시각·10일 처리 기한·보낸 내용 |
+| [38-fee-refund-request](applicant/38-fee-refund-request.png) | 전형료 반환 신청 | 실제 신청번호·낸 전형료·끝 네 자리만 보이는 계좌·검토 상태 |
 
 ### 장애 중 화면
 
@@ -69,10 +72,14 @@
 | [25-reconciliation](admin/25-reconciliation.png) | 대조·예외 | "통합 조회 반영 지연 — 접수 실패 아님" · 사실 항목을 사람 말로(전송 상태·생성 시각·전송 시도) · 처리 코드·사유를 적어야 해소 |
 | [26-evidence](admin/26-evidence.png) | 증적 조회 | 조회 사유가 기록된다 · **감사 체인 끊김 없음**(D-62 수정) · 판정에 쓰인 마감 정책과 서명 · 처리 이력 · 결제·서류 |
 | [27-retention](admin/27-retention.png) | 보존기간 | 데이터 종류별 하한과 근거(법령·규정 이름) · 파기 계획만 보여 준다(실행하지 않음) |
+| [39-privacy-queue](admin/39-privacy-queue.png) | 권리 요청 처리 큐 | 요청 종류·접수번호·받은 시각·처리 기한·상태. 줄에는 요청 내용이 없다 |
+| [40-privacy-detail](admin/40-privacy-detail.png) | 권리 요청 열람·회신 | 열람 감사 안내·요청 내용·처리 결과와 지원자 안내 입력 |
+| [41-fee-refund-queue](admin/41-fee-refund-queue.png) | 전형료 반환 큐 | 신청 사유·접수번호·낸 전형료·검토 상태. 줄에는 계좌 원문이 없다 |
+| [42-fee-refund-detail](admin/42-fee-refund-detail.png) | 전형료 반환 열람·결정 | 열람 감사 안내·계좌와 신청 내용·결정과 지원자 안내 입력 |
 
 27번의 "보존 정책이 설정되지 않았습니다"는 결함이 아니다. 개발 시드 설정에 보존기간이 없어서 뜬 경고다. 대학이 설정 승인으로 넣어야 하는 값이다(D-38).
 
-## 로그인 모드 (2026-10-03, T-M5-02·10)
+## 로그인 모드 (2026-10-04, T-M5-02·10)
 
 지원자 화면은 `NEXT_PUBLIC_AUTH_MODE=oidc`, 콘솔은 `ADMIN_AUTH_MODE=oidc` 로 띄웠다(미리보기 `auth-web`·`auth-admin`·`auth-admission`·`auth-central`).
 로그인 서버는 로컬 Keycloak 26.8.0 에 원서로 로그인 테마(`infra/auth/themes/wonseoro` — 접근성 보완)를 입혔다. 로그인 서버 화면은 Keycloak 기본 틀이고, 이 PC 의 헤드리스 Chrome 이 어두운 화면 설정이라 어두운 판으로 찍혔다.
@@ -102,11 +109,12 @@ Claude 데스크톱의 미리보기는 서버를 5개까지만 띄울 수 있다
 1. bash scripts/screenshots/prepare.sh db              # 서버가 떠 있어도 된다(D-63 이후 DB 를 다시 만들어도 죽지 않는다)
 2. 띄우기: shots-central · shots-admission · shots-scanner · shots-relay · shots-web
 3. bash scripts/screenshots/prepare.sh policy
-4. node scripts/screenshots/capture.mjs applicant docs/screenshots --check-copy       # 01~14
+4. node scripts/screenshots/capture.mjs applicant docs/screenshots --check-copy       # 01~14·36~38
 5. shots-central 내림 → capture.mjs central-down … (15~17) → shots-central 띄움
 6. shots-admission 내림 → capture.mjs admission-down … (18~19) → shots-admission 띄움
 7. shots-relay 내림 → capture.mjs seed-recon → prepare.sh recon → prepare.sh config
-8. shots-scanner 내림 → shots-admin 띄움 → capture.mjs admin … (20~27)
+8. shots-scanner 내림 → shots-admin 띄움 → capture.mjs admin … (20~27·39~42)
+   # 후반만 다시 찍을 때: capture.mjs admin-tail … (26·27·39~42)
 9. 모두 내리고 docker rm -f ui-shots-pg
 10. 로그인 모드(28~35): 로컬 발급자(--profile auth)·CI 재현 DB(:5499) → auth-admission · auth-central · auth-web · auth-admin 띄우기
     → node scripts/screenshots/capture.mjs auth docs/screenshots --check-copy   # 재인증 창 5분을 실제로 기다린다(약 7분)

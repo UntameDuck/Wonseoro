@@ -2,7 +2,7 @@
 //
 // 사용: node scripts/screenshots/capture.mjs <단계> [출력 폴더=docs/screenshots] [--check-copy]
 //   --check-copy  찍는 화면마다 보이는 글을 검사한다 — 설계 번호·내부 코드·UUID·ISO 시각·영문 검증 문구 (T-M5-56)
-//   단계: applicant | central-down | admission-down | seed-recon | admin | auth
+//   단계: applicant | central-down | admission-down | seed-recon | admin | admin-tail | auth
 //   순서·서버 준비는 docs/screenshots/README.md 「다시 찍기」.
 //   auth  로그인 모드(28~35) — 미리보기 `auth-admission`·`auth-central`·`auth-web`(:3001)·`auth-admin`(:4100)과 로컬 발급자(:18080).
 //         관리자 재인증 안내를 찍으려고 로그인 뒤 5분(재인증 창)을 실제로 기다린다 — 약 7분
@@ -315,12 +315,19 @@ async function applicant() {
   await waitText('3. 추가정보');
   await fill('학적 변동 사항', '없음');
   await fill('내신 성적', '1.8');
+  // 고유식별정보는 별도 동의 뒤에만 입력칸이 나타난다(D-88). 최신 캡처에는 동의와 칸을 함께 남긴다.
+  await evaluate(`document.getElementById('consent-PASSPORT_COLLECTION')?.click()`);
+  await waitFor(`!!document.getElementById('field-passportNumber')`, '여권번호 칸');
+  await fill('여권번호(외국인 지원자)', 'M12345678');
   await sleep(16_500); // 자동저장 Debounce 15초
   await waitText('저장 완료', 20_000);
-  await shot('applicant/07-apply-step3-extra', '원서 3단계 추가정보 — 전형 양식(JSON Schema)으로 그린 입력칸·자동저장');
+  await shot('applicant/07-apply-step3-extra', '원서 3단계 추가정보 — 여권번호 별도 동의 뒤 입력칸·자동저장');
 
   await click('다음 단계');
   await waitText('4. 서류');
+  // 민감정보 서류도 별도 동의 뒤에만 업로드 칸이 나타난다(D-85).
+  await evaluate(`document.getElementById('consent-SENSITIVE_HEALTH')?.click()`);
+  await waitFor(`document.querySelectorAll('input[type=file]').length >= 2`, '장애인 증명서 올리는 칸');
   await setFile(pdf);
   await waitFor(`/업로드 완료|업로드·검사 완료/.test(document.body.innerText)`, '업로드', 40_000);
   // 검사 워커가 끝낼 때까지 화면의 "검사 상태 새로고침" 을 누른다.
@@ -330,7 +337,7 @@ async function applicant() {
   }
   await waitText('검사 완료', 5_000);
   await sleep(500);
-  await shot('applicant/08-apply-step4-documents', '원서 4단계 서류 — 직접 업로드·악성코드 검사 상태를 글로 표시');
+  await shot('applicant/08-apply-step4-documents', '원서 4단계 서류 — 장애인 증명서 별도 동의·직접 업로드·악성코드 검사 상태');
 
   await click('검토 단계로');
   await waitText('결제가 확인되면 바로 접수가 완료됩니다', 30_000); // 5단계에만 있는 문구 — 단계 표시기에는 늘 '5. 검토·결제' 가 있다
@@ -341,7 +348,7 @@ async function applicant() {
   await click('전형료 결제하고 접수');
   await waitText('접수가 완료되었습니다', 60_000);
   await sleep(1500);
-  await shot('applicant/10-apply-complete', '접수 완료 — 접수번호·접수 시각');
+  await shot('applicant/10-apply-complete', '접수 완료 — 접수번호·접수 시각·내 개인정보·전형료 반환');
 
   state.submissionHref = await evaluate(`[...document.querySelectorAll('a')].find((a) => a.textContent.trim() === '접수증 보기·인쇄')?.getAttribute('href')`);
   saveState();
@@ -353,6 +360,37 @@ async function applicant() {
   await goto(`${WEB}/dashboard`);
   await waitText('접수번호', 30_000);
   await shot('applicant/12-dashboard', '내 원서 — 중앙 요약·마지막 동기화 시각');
+
+  // 접수한 원서 화면의 권리·반환 안내 카드를 별도 장면으로 남긴다(D-84·D-89).
+  await goto(`${WEB}/apply/${state.applicationId}`, '접수가 완료되었습니다');
+  await waitText('내 개인정보');
+  await waitText('전형료 반환');
+  await shot('applicant/36-apply-rights-refund', '접수한 원서 — 내 개인정보 권리 요청·전형료 반환 안내 카드');
+
+  // 개인정보 열람 요청 — 지원자 화면과 뒤의 콘솔 큐가 같은 실제 요청을 쓴다.
+  await goto(`${WEB}/privacy/${state.applicationId}`, '아직 보낸 요청이 없습니다');
+  await evaluate(`document.getElementById('kind-ACCESS')?.click()`);
+  await fill('요청 내용', '접수한 원서와 제출 서류를 열람하고 싶습니다.');
+  await click('요청 보내기');
+  await waitText('열람 요청을 보냈습니다', 30_000);
+  state.privacyRequestNumber = await evaluate(`(document.body.innerText.match(/PR-\\d{8}-[0-9A-HJKMNP-TV-Z]{6}/) || [null])[0]`);
+  if (!state.privacyRequestNumber) throw new Error('개인정보 요청번호를 화면에서 찾지 못했다');
+  saveState();
+  await shot('applicant/37-privacy-request', '개인정보 열람 요청 — 요청번호·처리 기한·보낸 내용');
+
+  // 전형료 반환 신청 — 계좌 원문은 신청 때만 받고, 다시 보이는 목록에는 끝 네 자리만 남는다.
+  await goto(`${WEB}/refund/${state.applicationId}`, '아직 보낸 신청이 없습니다');
+  await fill('반환 사유', 'OVERPAID');
+  await fill('은행 이름', '원서은행');
+  await fill('예금주', '김지원');
+  await fill('계좌번호', '110-234-567890');
+  await fill('신청 내용', '착오로 더 낸 전형료를 돌려받고 싶습니다.');
+  await click('반환 신청');
+  await waitText('전형료 반환을 신청했습니다', 30_000);
+  state.refundRequestNumber = await evaluate(`(document.body.innerText.match(/FR-\\d{8}-[0-9A-HJKMNP-TV-Z]{6}/) || [null])[0]`);
+  if (!state.refundRequestNumber) throw new Error('전형료 반환 신청번호를 화면에서 찾지 못했다');
+  saveState();
+  await shot('applicant/38-fee-refund-request', '전형료 반환 신청 — 신청번호·가린 계좌·검토 상태');
 
   // 4. 취소 — 두 번째 지원자
   await goto(`${WEB}/`, '원서 작성 시작');
@@ -482,14 +520,38 @@ async function admin() {
   await sleep(1500);
   await shot('admin/25-reconciliation', '대조 · 예외 — 중앙 반영 확인이 없는 접수를 찾아 사람에게 넘긴다');
 
+  await adminTail();
+}
+
+/** 관리자 캡처 후반 — 중간 실패 때 앞의 승인 초안을 다시 만들지 않고 이어 찍을 수 있다. */
+async function adminTail() {
+  await goto(`${ADMIN}/`, '입학처 콘솔');
+  await operator('officer2@univ-a');
+
   await goto(`${ADMIN}/evidence`, '증적 조회');
-  await fill('원서 ID', state.applicationId);
+  await fill('접수번호 또는 원서 ID', state.applicationId);
   await fill('조회 사유', '접수 과정 확인 (화면 캡처용 시연)');
   await sleep(300);
   await click('증적 열기');
   await waitText('판정에 쓰인 마감 정책', 30_000);
   await sleep(800);
   await shot('admin/26-evidence', '증적 조회 — 한 원서의 접수 과정·마감 정책·결제·서류 재구성');
+
+  if (!state.privacyRequestNumber || !state.refundRequestNumber) {
+    throw new Error('지원자 캡처 단계의 권리 요청·전형료 반환 신청번호가 없다');
+  }
+
+  await goto(`${ADMIN}/privacy`, state.privacyRequestNumber);
+  await shot('admin/39-privacy-queue', '권리 요청 처리 큐 — 요청 종류·처리 기한·상태');
+  await click(`${state.privacyRequestNumber} 열기`);
+  await waitText('이 열람은 기록됩니다', 30_000);
+  await shot('admin/40-privacy-detail', '권리 요청 열람·회신 — 요청 내용과 처리 결과 입력');
+
+  await goto(`${ADMIN}/refunds`, state.refundRequestNumber);
+  await shot('admin/41-fee-refund-queue', '전형료 반환 큐 — 사유·낸 전형료·검토 상태');
+  await click(`${state.refundRequestNumber} 열기`);
+  await waitText('이 열람은 기록됩니다', 30_000);
+  await shot('admin/42-fee-refund-detail', '전형료 반환 신청 열람·결정 — 계좌·신청 내용·결정 입력');
 
   await goto(`${ADMIN}/retention`, '보존기간');
   await sleep(1500);
@@ -516,6 +578,8 @@ async function seedRecon() {
   await waitText('1. 공통정보', 60_000);
   await waitText('출신 고등학교');
   await sleep(500);
+  // 대조 예외용 접수도 활성 원서 동의를 받아야 결제 전 검증을 통과한다(D-81).
+  await consentAll();
   await fill('출신 고등학교', '미래고등학교');
   await fill('졸업(예정) 연도', '2027');
   await click('다음 단계');
@@ -626,7 +690,7 @@ async function auth() {
   console.log(`· 재인증 창이 지나기를 ${Math.round(wait / 1000)}초 기다린다`);
   await sleep(Math.max(0, wait));
   await goto(`${ADMIN_OIDC}/evidence`, '이 조회는 기록됩니다');
-  await fill('원서 ID', '00000000-0000-4000-8000-000000000000');
+  await fill('접수번호 또는 원서 ID', '00000000-0000-4000-8000-000000000000');
   await fill('조회 사유', '지원자 문의 — 마감 직전 제출 여부 확인');
   await click('증적 열기');
   await waitText('본인 확인을 한 번 더 해 주십시오', 30_000);
@@ -640,6 +704,7 @@ try {
   else if (PHASE === 'central-down') await centralDown();
   else if (PHASE === 'admission-down') await admissionDown();
   else if (PHASE === 'admin') await admin();
+  else if (PHASE === 'admin-tail') await adminTail();
   else if (PHASE === 'seed-recon') await seedRecon();
   else throw new Error(`알 수 없는 단계: ${PHASE}`);
   if (CHECK_COPY) {
