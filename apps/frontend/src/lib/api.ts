@@ -503,4 +503,8 @@ export const api = {
       collectionConsentVersion: string | null;
     },
   ) => call<CommonProfile>('/api/v1/profile', { method: 'PUT', body, base: 'central', subjectToken }),
+
+  /** 공통원서 삭제 — 값·대학별 제공 동의가 지워진다. 이미 만든 원서는 그대로 (계약 1.13.0, D-82) */
+  deleteProfile: (subjectToken: string) =>
+    call<{ deleted: boolean }>('/api/v1/profile', { method: 'DELETE', base: 'central', subjectToken }),
 };

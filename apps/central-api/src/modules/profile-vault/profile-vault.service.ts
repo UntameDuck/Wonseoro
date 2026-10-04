@@ -255,6 +255,22 @@ export class ProfileVaultService {
   }
 
   /**
+   * 공통원서를 지운다 — 정보주체의 삭제 요구(보호법 제36조, 문서 10 G-10, D-82 "삭제를 요청할 때까지").
+   * 금고의 값·데이터 키·대학별 제공 동의를 지운다. 발급 증적(profile_snapshot_log)은 남긴다 — 값이 없고
+   * "언제 어느 대학에 어떤 항목 코드를 내줬는가" 만 있어, 이미 만든 원서의 출처를 설명하는 기록이다.
+   * 이미 만든 대학 원서는 바뀌지 않는다(시점 Snapshot) — 그 원서의 삭제는 각 대학에 요청한다.
+   */
+  async deleteProfile(subjectToken: string): Promise<{ deleted: boolean }> {
+    const deleted = await this.db.tx(async (client) => {
+      await client.query(`DELETE FROM kadmission_vault.profile_release_consent WHERE subject_token = $1`, [subjectToken]);
+      const r = await client.query(`DELETE FROM kadmission_vault.applicant_profile WHERE subject_token = $1`, [subjectToken]);
+      return (r.rowCount ?? 0) > 0;
+    });
+    this.logger.log(`profile deleted: ${deleted ? 'yes' : 'none'}`);
+    return { deleted };
+  }
+
+  /**
    * Snapshot 발급.
    * 요청 필드 ∩ 동의 필드 ∩ 실제 보유 필드 만 나간다.
    */

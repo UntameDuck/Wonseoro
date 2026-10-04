@@ -291,6 +291,19 @@ async function applicant() {
   await keyTo('저장');
   await b.waitFor(`document.body.innerText.includes('입력을 확인해 주십시오') || document.body.innerText.includes('저장했습니다')`, '저장 결과');
   await sweep('공통원서 (저장 결과)');
+  // 공통원서 수집·이용 동의 → 저장 → 삭제 확인 칸 → 삭제 (D-82). 이 지원자는 공통원서 없이 원서를 쓴다
+  await keyTo('위 내용에 동의합니다 (필수)', ' ');
+  await keyTo('저장');
+  await b.waitFor(`document.body.innerText.includes('저장했습니다')`, '공통원서 저장');
+  await keyTo('공통원서 삭제하기');
+  const del = await focusInfo(b);
+  if (del.id !== 'profile-delete-confirm') problems.push(`공통원서 삭제: 확인 칸을 연 뒤 포커스가 "${del.name || '문서 처음'}" 에 있다`);
+  await sweep('공통원서 (삭제 확인)');
+  await keyTo('삭제 확정'); // 순회가 포커스를 옮겼다 — 확정 버튼으로 다시 가서 Enter
+  await b.waitFor(`document.body.innerText.includes('공통원서를 지웠습니다')`, '공통원서 삭제');
+  const gone = await focusInfo(b);
+  if (!gone.name.startsWith('공통원서를 지웠습니다')) problems.push(`공통원서 삭제: 지운 뒤 포커스가 "${gone.name || '문서 처음'}" 에 있다`);
+  await sweep('공통원서 (삭제 뒤)');
 
   await go(`${WEB}/apply/${applicationId}`, '1. 공통정보');
   await sweep('원서 1단계');

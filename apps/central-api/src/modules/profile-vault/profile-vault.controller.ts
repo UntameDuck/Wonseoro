@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Header, Headers, HttpCode, HttpException, Post, Put, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, Headers, HttpCode, HttpException, Post, Put, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 import { subjectOf } from '../../identity';
 import { sameUniversity } from '../../internal-auth';
@@ -92,5 +92,20 @@ export class ApplicantProfileController {
       }
       throw err;
     }
+  }
+
+  /**
+   * 공통원서 삭제 — 지원자가 언제든 지울 수 있다(보호법 제36조, 문서 10 G-10, D-82).
+   * 지운 뒤 다시 지워도 같은 결과다(deleted=false) — 멱등키가 필요 없다.
+   */
+  @Delete()
+  @HttpCode(200)
+  @Header('cache-control', 'no-store')
+  async remove(
+    @Headers('x-subject-token') devToken?: string,
+    @Headers('x-authenticated-subject') gatewayToken?: string,
+    @Req() req?: FastifyRequest,
+  ) {
+    return this.vault.deleteProfile(subjectOf({ dev: devToken, gateway: gatewayToken, oidc: req?.applicantSubject }));
   }
 }

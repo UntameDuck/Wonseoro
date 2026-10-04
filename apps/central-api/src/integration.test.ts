@@ -505,6 +505,11 @@ describe('Common Profile Vault — 목적 최소화 (v1.0 §17, v1.1 §10 §3)',
     // 공통원서 수집·이용 동의 판이 없으면 저장하지 않는다 (G-3, D-82)
     await assert.rejects(controller.replace({ fields: { contactEmail: 'me@example.kr' }, consents: [] }, subject), (e: unknown) => (e as { getStatus?: () => number }).getStatus?.() === 400);
     await controller.replace({ fields: { contactEmail: 'me@example.kr' }, consents: [], collectionConsentVersion: COMMON_PROFILE_COLLECTION_CONSENT.version }, subject);
+    // 지원자는 공통원서를 지울 수 있다 — 값·제공 동의가 사라지고, 다시 지워도 같은 결과 (G-10, D-82)
+    assert.deepEqual(await controller.remove(subject), { deleted: true });
+    assert.deepEqual((await controller.get(subject)).fields, {});
+    assert.deepEqual(await controller.remove(subject), { deleted: false });
+    await controller.replace({ fields: { contactEmail: 'me@example.kr' }, consents: [], collectionConsentVersion: COMMON_PROFILE_COLLECTION_CONSENT.version }, subject);
     const mine = await controller.get(subject);
     assert.deepEqual(mine.fields, { contactEmail: 'me@example.kr' });
     assert.ok(mine.updatedAt);

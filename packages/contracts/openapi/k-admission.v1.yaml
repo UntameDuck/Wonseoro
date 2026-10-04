@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: K-Admission University Data Plane API
-  version: 1.12.0
+  version: 1.13.0
   description: >
     Reference contract for a university-local K-Admission data plane.
     The university DB is the source of truth; central sync is not in the applicant critical path.
@@ -69,6 +69,11 @@ info:
     1.12.0 records the common profile's own collection consent (D-82, note G-3): saving the profile
     carries `collectionConsentVersion` (the current text version, otherwise 400) and the profile
     reports `collectionConsent`. Optional fields in the schema; the server enforces the value.
+
+
+    1.13.0 lets the applicant delete the common profile (`DELETE /api/v1/profile`, D-82, note G-10):
+    values, data key and per-university release consents go; the release log (field codes only)
+    stays. Applications already created keep their snapshot. New operation.
 
 
     Common rules:
@@ -1705,6 +1710,32 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CommonProfile' }
+        '400':
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags: [Central]
+      operationId: deleteMyProfile
+      x-kadmission-register: D-82
+      summary: Delete my common profile
+      description: >
+        Right to erasure (PIPA Art. 36). Deletes the stored values, the data key and all
+        per-university release consents. The release log keeps field codes only. Repeating it is
+        harmless (`deleted: false`). Applications already created are not changed.
+      parameters:
+        - $ref: '#/components/parameters/SubjectToken'
+      responses:
+        '200':
+          description: Deletion result
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deleted]
+                properties:
+                  deleted: { type: boolean, description: A stored profile existed and was removed }
         '400':
           $ref: '#/components/responses/Problem'
   /internal/v1/profile-snapshots:

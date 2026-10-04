@@ -37,6 +37,8 @@ export default function ProfilePage() {
   const [saveRun, setSaveRun] = useState(0);
   const [status, setStatus] = useState<{ tone: 'success' | 'danger' | 'warning'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  /** 삭제 확인 칸 — 되돌릴 수 없는 동작은 한 번 더 묻는다 */
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const load = useCallback(async () => {
     if (!subjectToken) return;
@@ -137,6 +139,38 @@ export default function ProfilePage() {
             : err instanceof ApiError
               ? problemText(err.problem).detail
               : '저장하지 못했습니다.',
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // 확인 칸을 열면 확정 버튼으로 포커스를 옮긴다 — 누른 버튼이 사라진다 (T-M5-41)
+  useEffect(() => {
+    if (confirmDelete) document.getElementById('profile-delete-confirm')?.focus();
+  }, [confirmDelete]);
+
+  /** 공통원서를 지운다 — 보호법 제36조 삭제 요구 (문서 10 G-10, D-82) */
+  async function removeProfile() {
+    setBusy(true);
+    try {
+      await api.deleteProfile(subjectToken ?? '');
+      setConfirmDelete(false);
+      setValues({});
+      setReleased(new Set());
+      setCollectionAgreed(false);
+      setIssues([]);
+      setProfile((prev) => (prev ? { ...prev, fields: {}, consents: [], updatedAt: null, collectionConsent: null } : prev));
+      setStatus({ tone: 'success', text: '공통원서를 지웠습니다. 이미 만든 원서는 바뀌지 않습니다 — 원서의 삭제는 그 대학에 요청해 주십시오.' });
+    } catch (err) {
+      setStatus({
+        tone: 'danger',
+        text:
+          err instanceof NetworkError
+            ? '공통원서 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주십시오.'
+            : err instanceof ApiError
+              ? problemText(err.problem).detail
+              : '지우지 못했습니다.',
       });
     } finally {
       setBusy(false);
@@ -290,6 +324,34 @@ export default function ProfilePage() {
       <Button onClick={() => void save()} disabled={busy || profile === null}>
         {busy ? '저장 중…' : '저장'}
       </Button>
+
+      {profile && profile.updatedAt && (
+        <Card title="공통원서 삭제">
+          <p style={{ marginTop: 0 }}>
+            보관한 공통원서와 대학별 제공 동의를 지웁니다. 이미 만든 원서는 바뀌지 않습니다.
+          </p>
+          {confirmDelete ? (
+            <div style={{ display: 'flex', gap: 'var(--krds-space-3)', flexWrap: 'wrap' }}>
+              <Button id="profile-delete-confirm" variant="danger" onClick={() => void removeProfile()} disabled={busy}>
+                삭제 확정
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setConfirmDelete(false);
+                  setTimeout(() => document.getElementById('profile-delete-open')?.focus(), 0);
+                }}
+              >
+                그만두기
+              </Button>
+            </div>
+          ) : (
+            <Button id="profile-delete-open" variant="secondary" onClick={() => setConfirmDelete(true)} disabled={busy}>
+              공통원서 삭제하기
+            </Button>
+          )}
+        </Card>
+      )}
     </>
   );
 }
