@@ -20,6 +20,7 @@
 > **같은 세션 — G-5 전형료 반환·면제 감액 신청 완료(D-89).** 마이그레이션 **0010** `fee_refund_request`, 지원자 `/refund/{원서}`(결제 확인 원서만 — 원서 화면 「전형료 반환」 카드), 콘솔 `/refunds`(범위 operator, 열기·결정 Step-up). 계좌는 신청할 때만 받아 원서 데이터 키로 봉함·끝 네 자리만. OpenAPI **1.19.0**. 검증: admission-api **415개 중 412 통과·3 skip·0 실패**, 보안 선별 **233 통과·skip 0**, 지원자 1280/320 각 29화면·콘솔 1280/320 각 20화면 문제 0, 키보드 완주 118키 문제 0. 접근성 순회의 **증적 열람 화면이 지금까지 늘 건너뛰어지던 시험 결함**(사유를 헤더로 보내 400 — API 는 질의 `reason`)을 고쳐 이제 실제로 돈다.
 > **DB 제약 검증은 이제 24종**(`verify-constraints.sql` — #17 앱 역할 권한 규칙에 `privacy_request`·`fee_refund_request` 를 넣었다. 넣지 않으면 열 단위 UPDATE·DELETE 없음이 규칙 밖이라 CI 의 이 검사가 실패한다. **새 표를 만들면 #17 에 그 표의 권한 규칙을 같이 넣는다**. #24 결정 한 번·금액 상한·내용 고정·앱 삭제 불가). `ci-pg` 에서 24종 PASS.
 > **2026-10-04 Codex 세션 — 남은 화면 캡처 완료.** 개발 모드 지원자·장애 22장, 콘솔 12장과 로그인 28~34번을 최신 코드로 다시 찍고 새 36~42번(원서 권리·반환 카드, 지원자 요청·신청, 콘솔 큐·상세)을 추가했다. 총 42장. 새 개발 모드 캡처의 렌더링 문구 위반 0건, 전체 빌드·`check:ui-copy` 통과. 캡처 자동화의 대조 예외 원서 필수 동의 누락과 증적 입력 옛 라벨도 고쳤다. 로그인 35번은 화면 코드가 바뀌지 않은 2026-10-03 통과본이다.
+> **2026-10-04 Codex 세션 — Pilot 외부 실행 패키지 준비.** 노션 기술설계서 §14·16·19와 운영 리스크 원본을 다시 읽어 SEV1~3 런북·D-180~D+30 9구간·War-room 5개 상황·영향평가 사전판정·Compliance 10개 영역·필수 시험 18종·Sandbox→Shadow→제한 Pilot을 [문서 18](18-pilot-execution-package.md)로 묶었다. `deploy/pilot/pilot-readiness.example.yaml`과 `npm run ops:pilot-readiness`가 기관 승인·실행 증적, 실행 환경·시각·시험 skip 수가 빠지면 실패한다. 단위 시험 3개 통과·skip 0. 빈 양식은 의도대로 0/9·0/18·0/10·0/3과 종료 코드 1. **실제 대학 승인·훈련은 하지 않아 전체 125/146·남은 21개는 그대로다.**
 > **세션 마감 상태(2026-10-04, ChatGPT/Codex 로 넘김) — 넘겨받는 쪽이 먼저 볼 것**
 > 1. **push 안 함** — `origin/main` 은 G-8 `276f2b2` 까지이고 로컬은 7커밋 앞이다(G-12 `ab546ff`·G-13 `63c028d`·G-9 `e9af8e9`·G-5 `9d6745e`·DB 제약 `0b9a151`·인계 정리 `e0a2f96`·이 문서를 포함한 최신 화면 캡처 커밋). 7개 모두 작성자·커밋한 사람 `ryan-ahn-song <ryansong0805@gmail.com>`, 공동저자 줄 없음(`git log origin/main..HEAD` 로 확인). push 는 사용자 몫
 > 2. **개발 시드가 바뀌었다** — 장애인 증명서(`DISABILITY_CERT`·동의 `SENSITIVE_HEALTH`)·여권번호(`passportNumber`·동의 `PASSPORT_COLLECTION`)·지원 제한 안내(`notices.applicationRules`). `ci-pg`·`ui-shots-pg` 에는 다시 적용했다. **kind·로컬 compose DB 는 다음 시험 전에 `seed-dev.sql` 재적용**(새 마이그레이션 0009·0010 도 — `npm run db:migrate`)
@@ -27,7 +28,7 @@
 > 4. **이 PC 는 PowerShell PATH 에 git 이 없다** — 위 「이 PC 환경 메모」의 GitHub Desktop git 경로를 쓴다
 > 5. **처음 읽을 곳** — 이 문서 맨 위(이 블록)와 아래 「바로 다음 할 일」. 노션 반영은 [06-notion-changeset.md](06-notion-changeset.md)(OpenAPI 1.19.0 바이트·SHA-256 포함)
 > 서버·DB: `ci-pg`(:5499, univ_a 0001~0010 + central 0001~0005)·`ui-shots-pg`(:5497, 0001~0010) 는 실행 중일 수 있다. 미리보기 서버는 모두 껐다.
-> **이어서 할 일** — 로컬 AI 몫과 화면 캡처까지 끝났다. 남은 것은 외부·사람 몫(03 B·C)과 노션 반영(06)이다.
+> **이어서 할 일** — 로컬 AI 몫과 화면 캡처, 외부 작업 실행 패키지까지 끝났다. 대학/CSP/PG가 정해지면 [문서 18](18-pilot-execution-package.md) 순서로 대학별 YAML을 만들어 B·C 실증을 진행한다. 그 전에는 외부·사람 몫(03 B·C)과 노션 반영(06)만 남는다.
 > **Pilot 지원 도구 기록** — T-M6-01(구조화 전형 Schema 온보딩)·T-M6-06(대학 장애 원장·공개 상태·배너)·T-M6-07(상담 확인번호·허용 목록 응답·자동 증적번호, 새 역할 `support-agent`) 상세는 [17-pilot-support-tools.md](17-pilot-support-tools.md).
 > 화면 작업은 접근성 시험을 다시 돌리고 `check:ui-copy` 를 지킨다(§2). 이번 작업의 임시 웹/API 프로세스는 모두 종료했다. 화면 시험용 PostgreSQL 컨테이너 `ui-shots-pg`는 실행 중일 수 있다.
 > 대학 DB 마이그레이션은 **0001~0010**(0009 정보주체 권리 요청 D-84 · 0010 전형료 반환 신청 D-89), 중앙은 **0001~0005** 다(`infra/db/README.md`). 대학 API 전체 시험은 실 DB에서 **415개 중 412 통과·3 skip·0 실패**, 중앙 API 41개 통과. DB 제약 검증은 **24종**.
@@ -340,6 +341,7 @@ Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, s
 | ~~values-m 커넥션 수치 (D-44 ⑦)~~ | 2026-09-30 AI 결정: Pod 당 38·예산 400 유지 |
 | 실물 Firefox·Safari 확인 (T-M5-47) | 이 PC 에 없다. 실물 Firefox(Windows)·iPhone Safari 15.4+ 로 접수 흐름을 한 번 따라가거나, 시험용 브라우저(Playwright Firefox·WebKit 약 300MB) 내려받기를 승인하면 AI 가 `tests/a11y/` 를 그 브라우저로 돌린다 — [09](09-accessibility.md#지원-브라우저-2026-10-01-ai-판단) |
 | 실제 스크린리더 청취 (T-M5-48) | NVDA·센스리더·VoiceOver 로 듣는 검사. 전 화면 점검 결과의 Tab 자리별 대본(`say`)을 대조표로 쓴다 |
+| Pilot 런북·캘린더·훈련·영향평가·Compliance·Shadow (T-M6-08~15 중 사람 몫) | 실행 절차·증적 양식·자동 누락 게이트는 [18](18-pilot-execution-package.md)과 `deploy/pilot/`에 준비했다. 대학별 사본을 채워 `npm run ops:pilot-readiness -- --file=...`가 성공해야 완료 판정 |
 
 ## 6. 전체 남은 규모
 

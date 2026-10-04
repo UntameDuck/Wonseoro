@@ -38,7 +38,7 @@
 - **앱** — `server-kit` Db 가 `WRITER_EPOCH` 를 트랜잭션마다 `SET LOCAL` 로 넘긴다(PgBouncer 트랜잭션 풀링). 트랜잭션 밖 쓰기 문장(INSERT·UPDATE·DELETE·WITH…)도 짧은 트랜잭션으로 감싼다. 거절되면 503 재시도 안내
 - **승격 순서** — `pg_promote()` → 새 Primary 에서 `promote_writer(세대+1)` → `WRITER_EPOCH` 배포. 그 사이 쓰기는 멈춘다(안전한 쪽). 운영은 `require_token` 을 켠다
 - **시험** — 실제 DB 5개(세대 일치 쓰기, 승격 뒤 옛 세대 거절·읽기 그대로, 돌아온 옛 Primary 거절, 승격 잠금·건너뛰기 거절·앱 역할 불가, require_token). require_token 시험은 커밋하지 않는 트랜잭션 안에서만 켠다(동시에 도는 다른 시험이 보지 않게)
-- **남은 것** — 차트 `database.writerEpoch` 값과 DR 런북(T-M6-08), 운영 `require_token` 켜기. 노션(D-76)
+- **남은 것** — 차트 `database.writerEpoch` 운영값과 `require_token` 켜기, [DR 런북 실행 초안](18-pilot-execution-package.md#3-t-m6-08--sev13-운영-런북)의 기관 승인·실훈련. 노션(D-76)
 
 ### T-M5-62 ✅ (2026-10-03) — 복구 검증 자동화
 

@@ -19,6 +19,7 @@
 | 11 | [07-submission-errata.md](07-submission-errata.md) | 제출 PDF 정정 문구 (D-2·D-3) |
 | 12 | [08-ui-production-readiness.md](08-ui-production-readiness.md) | 화면 제품화 — 개발 흔적·화면 결함 전수 목록(U-1~U-59)·결정·문구 검사 (T-M5-50~56) |
 | 13 | **[17-pilot-support-tools.md](17-pilot-support-tools.md)** | Pilot 지원 도구 T-M6-01·06·07 구현 기록(전형 Schema 온보딩·장애 공지·개인정보 최소 상담 조회) |
+| 14 | **[18-pilot-execution-package.md](18-pilot-execution-package.md)** | Pilot 운영 실행 패키지 — SEV1~3 런북·D-180~D+30·War-room·영향평가·Compliance·필수 시험 18종·Shadow 증적 게이트 |
 
 ## 마일스톤 (총 7단계)
 

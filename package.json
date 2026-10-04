@@ -50,6 +50,8 @@
     "test:security:clamd": "node tests/security/clamd-live.mjs",
     "ops:restore-verify": "node scripts/ops/restore-verify.mjs",
     "ops:csp-preflight": "node scripts/ops/csp-preflight.mjs",
+    "ops:pilot-readiness": "node scripts/ops/pilot-readiness.mjs",
+    "test:ops:pilot-readiness": "node --test scripts/ops/pilot-readiness.test.mjs",
     "pretest:security": "npm run build -w @wonseoro/contracts -w @wonseoro/server-kit -w @wonseoro/admission-api -w @wonseoro/document-service -w @wonseoro/central-api",
     "test:security": "node scripts/run-security-tests.mjs",
     "test:auth:issuer": "node tests/auth/local-issuer.mjs",

@@ -1,6 +1,6 @@
 # 다음 단계 (Next Steps)
 
-> 최종 갱신: **2026-10-04** — Pilot 도구 T-M6-01·06·07까지 완료했고, 개인정보·법정 고지 G-1~G-13의 AI 구현과 **최신 화면 캡처 42장**도 끝냈다. **A 목록과 태스크 밖 AI 몫은 모두 끝났다.** 남은 태스크 21개는 외부 환경·사람·기관 몫(B·C)이다. 기록은 [17-pilot-support-tools.md](17-pilot-support-tools.md), 화면은 [screenshots/README.md](screenshots/README.md).
+> 최종 갱신: **2026-10-04** — Pilot 도구 T-M6-01·06·07, 개인정보·법정 고지 G-1~G-13의 AI 구현, **최신 화면 캡처 42장**까지 끝냈다. 남은 사람 태스크의 실행 전 준비도 [18-pilot-execution-package.md](18-pilot-execution-package.md)와 `ops:pilot-readiness` 증적 게이트로 만들었다. **A 목록과 태스크 밖 AI 몫은 모두 끝났다.** 남은 태스크 21개는 실제 외부 환경·사람·기관 승인/실행이 있어야 끝난다. 완료 수는 그대로다.
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.
@@ -143,7 +143,7 @@ T-M5-40~46 ✅·47 🟡 — **[09-accessibility.md](09-accessibility.md)**. 설�
 |---|---|---|
 | **A. AI 가 이 PC 에서 끝낼 수 있다** (코드·CI·kind) | **0**(처음 21 — 모두 끝) | ~~화면 제품화 T-M5-50~56~~ ✅ · ~~접근성 T-M5-40~46~~ ✅([09](09-accessibility.md)) · ~~T-M3-03 WORM~~ ✅ · ~~T-M3-06 JWKS 캐시~~ ✅ · ~~T-M4-10 Outbox 보관~~ ✅ · ~~T-M5-01·03~09 보안 통제~~ ✅([13](13-security-controls-plan.md)) · ~~인증 T-M5-02·MFA T-M5-10~~ ✅([12](12-authentication-plan.md)) · ~~T-M5-20~29 보안 파이프라인~~ ✅([11](11-security-pipeline.md)) · ~~T-M5-62 복구 검증 자동화~~ ✅ · ~~T-M5-63 Writer fencing~~ ✅ · ~~T-M5-65 만료 경보~~ ✅([14](14-operations-automation.md)) · ~~T-M6-01 전형 Schema 온보딩~~ ✅ · ~~T-M6-06 상태 페이지·대학별 장애 배너~~ ✅(D-78, [17](17-pilot-support-tools.md)) · ~~T-M6-07 개인정보 최소 상담 화면~~ ✅(D-79, [17](17-pilot-support-tools.md)) · ~~T-M6-02 호환 시험~~ ✅ · ~~T-M6-14 온보딩 문서~~ ✅([16](16-university-onboarding.md)) · ~~T-M6-03 CSP 사전 점검~~ ✅([14](14-operations-automation.md)) · ~~T-M6-11 처리 흐름도~~ ✅([15](15-privacy-data-flow.md)) |
 | **B. 외부 환경이 있어야 한다** (K-PaaS·HA DB·PG 계약) | **12** | T-M4-06(DB HA 계층) · T-M4-30·31·32(부하 500·1,500·3,000 VU) · T-M4-36(부하 중 DB Failover) · T-M4-39 판정(Edge 재시도) · T-M4-41(6시간 Soak) · T-M5-60·61·64(Multi-AZ·PITR·DR 훈련) · T-M6-04·05(실 PG sandbox·정산 실계정) |
-| **C. 사람·기관이 해야 한다** | **9** | T-M0-08(제출 PDF 정정 — 문구 준비됨) · T-M5-47 나머지(실물 Firefox·Safari — 또는 시험용 브라우저 내려받기 승인) · T-M5-48(KWCAG 수동 검사 — 실제 스크린리더) · T-M6-08·09(런북·운영 캘린더 확정) · T-M6-10(War-room 훈련) · T-M6-12(영향평가) · T-M6-13(Compliance 실증) · T-M6-15(대학 Shadow Test) |
+| **C. 사람·기관이 해야 한다** | **9** | T-M0-08(제출 PDF 정정 — 문구 준비됨) · T-M5-47 나머지(실물 Firefox·Safari — 또는 시험용 브라우저 내려받기 승인) · T-M5-48(KWCAG 수동 검사 — 실제 스크린리더) · T-M6-08·09(런북·운영 캘린더 확정) · T-M6-10(War-room 훈련) · T-M6-12(영향평가) · T-M6-13(Compliance 실증) · T-M6-15(대학 Shadow Test). **M6 실행 초안·양식·자동 게이트는 [18](18-pilot-execution-package.md)에 준비됨** |
 
 태스크 밖에 남은 것:
 
@@ -169,6 +169,8 @@ T-M5-40~46 ✅·47 🟡 — **[09-accessibility.md](09-accessibility.md)**. 설�
 7. Pilot 도구·문서 T-M6-01·02·03·06·07·11·14 — **진행 중**: T-M6-03 ✅ CSP 사전 점검. T-M6-11 ✅ 개인정보 처리흐름도([15](15-privacy-data-flow.md)). T-M6-14 ✅ 대학 온보딩 문서([16](16-university-onboarding.md)). T-M6-02 ✅ Config 호환 시험(D-77). T-M6-01 ✅ 구조화 전형 Schema 온보딩. T-M6-06 ✅ 대학 Data Plane 장애 원장·공개 상태 API·지원자 전역 배너/상태 페이지·운영자 발행/해제(D-78, [17](17-pilot-support-tools.md)). T-M6-07 ✅ 개인정보 최소 상담 조회 — 접수번호·상담 확인번호, 허용 목록 응답, 자동 증적번호(D-79). **A 끝**
 
 A 를 다 해도 **B·C 21개**가 남는다 — K-PaaS 시험 환경·실 PG sandbox·대학 협조가 있어야 끝난다.
+
+**외부·사람 작업 착수 순서** — [18](18-pilot-execution-package.md)의 대학별 YAML을 복사해 담당·연락망 참조·접수일을 먼저 확정한다. 이후 D-180 운영주기부터 증적을 채우고 `npm run ops:pilot-readiness -- --file=...`로 누락을 막는다. 빈 예시는 운영주기 0/9·필수 시험 0/18·Compliance 0/10·Shadow 0/3으로 실패하는 것이 정상이다.
 
 ## 다음 개발 목표 (2026-09-29 설정)
 

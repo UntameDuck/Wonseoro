@@ -1,0 +1,295 @@
+# 실제 대학·전형별로 복사한 뒤 기관이 승인하거나 실행한 사실만 기록한다.
+# 빈 값·pending·빈 evidence는 의도적으로 ops:pilot-readiness를 실패시킨다.
+metadata:
+  universityId: ""
+  admissionCycle: ""
+  targetStartDate: ""
+  ownerOrganization: ""
+
+runbook:
+  status: pending
+  approvedAt: ""
+  evidence: []
+  roles:
+    - id: incident-commander
+      owner: ""
+      backupOwner: ""
+      contactRef: ""
+    - id: university-admissions
+      owner: ""
+      backupOwner: ""
+      contactRef: ""
+    - id: sre-noc
+      owner: ""
+      backupOwner: ""
+      contactRef: ""
+    - id: soc-security
+      owner: ""
+      backupOwner: ""
+      contactRef: ""
+    - id: privacy
+      owner: ""
+      backupOwner: ""
+      contactRef: ""
+    - id: helpdesk
+      owner: ""
+      backupOwner: ""
+      contactRef: ""
+    - id: pg
+      owner: ""
+      backupOwner: ""
+      contactRef: ""
+
+calendar:
+  - id: d-180~120
+    status: pending
+    owner: ""
+    evidence: []
+  - id: d-120~60
+    status: pending
+    owner: ""
+    evidence: []
+  - id: d-60~30
+    status: pending
+    owner: ""
+    evidence: []
+  - id: d-30~14
+    status: pending
+    owner: ""
+    evidence: []
+  - id: d-14~7
+    status: pending
+    owner: ""
+    evidence: []
+  - id: d-7~1
+    status: pending
+    owner: ""
+    evidence: []
+  - id: admission
+    status: pending
+    owner: ""
+    evidence: []
+  - id: d+1~7
+    status: pending
+    owner: ""
+    evidence: []
+  - id: d+7~30
+    status: pending
+    owner: ""
+    evidence: []
+
+warRoom:
+  status: pending
+  heldAt: ""
+  incidentCommander: ""
+  evidence: []
+  injects:
+    - id: finalization-outage
+      status: pending
+      result: ""
+      evidence: []
+    - id: payment-delay
+      status: pending
+      result: ""
+      evidence: []
+    - id: db-failover
+      status: pending
+      result: ""
+      evidence: []
+    - id: central-disconnect
+      status: pending
+      result: ""
+      evidence: []
+    - id: communications
+      status: pending
+      result: ""
+      evidence: []
+
+privacyImpact:
+  decision: pending
+  status: pending
+  basis: ""
+  approvedAt: ""
+  evidence: []
+
+tests:
+  - id: unit
+    status: pending
+    environment: ""
+    executedAt: ""
+    skipped: 0
+    evidence: []
+  - id: api-contract
+    status: pending
+    environment: ""
+    executedAt: ""
+    skipped: 0
+    evidence: []
+  - id: db-migration
+    status: pending
+    environment: ""
+    executedAt: ""
+    skipped: 0
+    evidence: []
+  - id: payment-sandbox-e2e
+    status: pending
+    environment: ""
+    executedAt: ""
+    skipped: 0
+    evidence: []
+  - id: browser-compatibility
+    status: pending
+    environment: ""
+    executedAt: ""
+    skipped: 0
+    evidence: []
+  - id: kwcag-manual
+    status: pending
+    environment: ""
+    executedAt: ""
+    skipped: 0
+    evidence: []
+  - id: sast-sca-secret
+    status: pending
+    environment: ""
+    executedAt: ""
+    skipped: 0
+    evidence: []
+  - id: dast-penetration
+    status: pending
+    environment: ""
+    executedAt: ""
+    skipped: 0
+    evidence: []
+  - id: container-iac-scan
+    status: pending
+    environment: ""
+    executedAt: ""
+    skipped: 0
+    evidence: []
+  - id: load
+    status: pending
+    environment: ""
+    executedAt: ""
+    skipped: 0
+    evidence: []
+  - id: soak-6h
+    status: pending
+    environment: ""
+    executedAt: ""
+    skipped: 0
+    evidence: []
+  - id: finalization-burst
+    status: pending
+    environment: ""
+    executedAt: ""
+    skipped: 0
+    evidence: []
+  - id: pod-node-chaos
+    status: pending
+    environment: ""
+    executedAt: ""
+    skipped: 0
+    evidence: []
+  - id: db-failover
+    status: pending
+    environment: ""
+    executedAt: ""
+    skipped: 0
+    evidence: []
+  - id: central-disconnect
+    status: pending
+    environment: ""
+    executedAt: ""
+    skipped: 0
+    evidence: []
+  - id: pg-timeout
+    status: pending
+    environment: ""
+    executedAt: ""
+    skipped: 0
+    evidence: []
+  - id: backup-restore
+    status: pending
+    environment: ""
+    executedAt: ""
+    skipped: 0
+    evidence: []
+  - id: dr-switch
+    status: pending
+    environment: ""
+    executedAt: ""
+    skipped: 0
+    evidence: []
+
+compliance:
+  - id: krds
+    verdict: pending
+    owner: ""
+    basis: ""
+    evidence: []
+  - id: kwcag-wcag
+    verdict: pending
+    owner: ""
+    basis: ""
+    evidence: []
+  - id: web-compatibility
+    verdict: pending
+    owner: ""
+    basis: ""
+    evidence: []
+  - id: secure-development
+    verdict: pending
+    owner: ""
+    basis: ""
+    evidence: []
+  - id: privacy-safeguards
+    verdict: pending
+    owner: ""
+    basis: ""
+    evidence: []
+  - id: isms-p
+    verdict: pending
+    owner: ""
+    basis: ""
+    evidence: []
+  - id: kcmvp
+    verdict: pending
+    owner: ""
+    basis: ""
+    evidence: []
+  - id: csap
+    verdict: pending
+    owner: ""
+    basis: ""
+    evidence: []
+  - id: stability-notice
+    verdict: pending
+    owner: ""
+    basis: ""
+    evidence: []
+  - id: service-quality
+    verdict: pending
+    owner: ""
+    basis: ""
+    evidence: []
+
+shadowTest:
+  stages:
+    - id: sandbox
+      status: pending
+      approvedBy: ""
+      completedAt: ""
+      evidence: []
+    - id: shadow
+      status: pending
+      approvedBy: ""
+      completedAt: ""
+      evidence: []
+    - id: limited-pilot
+      status: pending
+      approvedBy: ""
+      completedAt: ""
+      evidence: []
+  feedbackDisposition: ""
+  evidence: []
