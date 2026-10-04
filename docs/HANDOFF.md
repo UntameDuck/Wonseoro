@@ -21,6 +21,8 @@
 > **DB 제약 검증은 이제 24종**(`verify-constraints.sql` — #17 앱 역할 권한 규칙에 `privacy_request`·`fee_refund_request` 를 넣었다. 넣지 않으면 열 단위 UPDATE·DELETE 없음이 규칙 밖이라 CI 의 이 검사가 실패한다. **새 표를 만들면 #17 에 그 표의 권한 규칙을 같이 넣는다**. #24 결정 한 번·금액 상한·내용 고정·앱 삭제 불가). `ci-pg` 에서 24종 PASS.
 > **2026-10-04 Codex 세션 — 남은 화면 캡처 완료.** 개발 모드 지원자·장애 22장, 콘솔 12장과 로그인 28~34번을 최신 코드로 다시 찍고 새 36~42번(원서 권리·반환 카드, 지원자 요청·신청, 콘솔 큐·상세)을 추가했다. 총 42장. 새 개발 모드 캡처의 렌더링 문구 위반 0건, 전체 빌드·`check:ui-copy` 통과. 캡처 자동화의 대조 예외 원서 필수 동의 누락과 증적 입력 옛 라벨도 고쳤다. 로그인 35번은 화면 코드가 바뀌지 않은 2026-10-03 통과본이다.
 > **2026-10-04 Codex 세션 — Pilot 외부 실행 패키지 준비.** 노션 기술설계서 §14·16·19와 운영 리스크 원본을 다시 읽어 SEV1~3 런북·D-180~D+30 9구간·War-room 5개 상황·영향평가 사전판정·Compliance 10개 영역·필수 시험 18종·Sandbox→Shadow→제한 Pilot을 [문서 18](18-pilot-execution-package.md)로 묶었다. `deploy/pilot/pilot-readiness.example.yaml`과 `npm run ops:pilot-readiness`가 기관 승인·실행 증적, 실행 환경·시각·시험 skip 수가 빠지면 실패한다. 단위 시험 3개 통과·skip 0. 빈 양식은 의도대로 0/9·0/18·0/10·0/3과 종료 코드 1. **실제 대학 승인·훈련은 하지 않아 전체 125/146·남은 21개는 그대로다.**
+> **같은 세션 — M4 외부 부하 실행 준비.** 노션 §08 원본을 다시 확인하고 바이트 고정 첨부 `k6-admission.js`는 건드리지 않았다. 별도 `k6-acceptance.js`에 합성 사용자별 OIDC 토큰·원서, 500/1,500/3,000 VU+1,000 RPS·70% Failover·6시간 Soak, 장시간 토큰 갱신과 승인/HTTPS 안전장치를 넣었다. `ops:load-acceptance`는 k6 threshold·버린 iteration과 DB 정합성 7개·writer epoch를 함께 판정한다. 단위 3개 pass·skip 0, k6 6시간 프로필 inspect 통과, `ci-pg` 읽기 전용 통합 판정 통과. **원격 부하·Failover·Soak는 실행하지 않아 T-M4-30~32·36·41은 미완료다.** 실행법은 [tests/load/README](../tests/load/README.md).
+> **D-90 OPEN** — §08의 전체 지원 30,000건과 Finalize 150 TPS×5분+300 TPS×60초(63,000요청)가 충돌한다. 기존 첨부는 한 원서에 새 멱등 키를 반복해 첫 1건 뒤의 이미 접수된 응답을 실제 처리량처럼 잰다. 외부 실행 전에 첫 Finalize/멱등 replay의 분모·지속시간을 확정해야 하며, 그 전에는 Finalize p95를 완료로 세지 않는다([대장 D-90](02-spec-discrepancy-register.md), [노션 변경안](06-notion-changeset.md)).
 > **세션 마감 상태(2026-10-04, ChatGPT/Codex 로 넘김) — 넘겨받는 쪽이 먼저 볼 것**
 > 1. **push 안 함** — `origin/main` 은 G-8 `276f2b2` 까지이고 로컬은 7커밋 앞이다(G-12 `ab546ff`·G-13 `63c028d`·G-9 `e9af8e9`·G-5 `9d6745e`·DB 제약 `0b9a151`·인계 정리 `e0a2f96`·이 문서를 포함한 최신 화면 캡처 커밋). 7개 모두 작성자·커밋한 사람 `ryan-ahn-song <ryansong0805@gmail.com>`, 공동저자 줄 없음(`git log origin/main..HEAD` 로 확인). push 는 사용자 몫
 > 2. **개발 시드가 바뀌었다** — 장애인 증명서(`DISABILITY_CERT`·동의 `SENSITIVE_HEALTH`)·여권번호(`passportNumber`·동의 `PASSPORT_COLLECTION`)·지원 제한 안내(`notices.applicationRules`). `ci-pg`·`ui-shots-pg` 에는 다시 적용했다. **kind·로컬 compose DB 는 다음 시험 전에 `seed-dev.sql` 재적용**(새 마이그레이션 0009·0010 도 — `npm run db:migrate`)
@@ -332,7 +334,7 @@ Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, s
 
 | 항목 | 상태 |
 |---|---|
-| K-PaaS(또는 클라우드) 시험 환경 | 3,000 CCU·1,000 RPS·6시간 Soak·DB Failover 실측(T-M4-30~32·36·41)에 필요. 없음 |
+| K-PaaS(또는 클라우드) 시험 환경 | 3,000 CCU·1,000 RPS·6시간 Soak·DB Failover 실측(T-M4-30~32·36·41)에 필요. 없음. 합성 사용자 k6 프로필·OIDC 갱신·k6+DB 사후 판정기는 [tests/load](../tests/load/README.md)에 준비됨 |
 | 제출 PDF 정정 (D-2·D-3) | 개발보고서의 "Java/Spring" 표기 → NestJS·TypeScript. 정정 문구 준비됨 — [07-submission-errata.md](07-submission-errata.md) |
 | 노션 반영 적용 | [06-notion-changeset.md](06-notion-changeset.md) — AI 쓰기 차단 |
 | K-PaaS 착수 때 정할 것 | 노드 판정 시간(`node-monitor-grace-period`) 조정 가능 여부·zone 수·Gateway API 컨트롤러(ADR-0008, D-53) · clamd 배치(사이드카·공용 서비스)와 서명 DB 갱신 경로(D-58) · DB 서버 시각 동기 감시(D-61) |

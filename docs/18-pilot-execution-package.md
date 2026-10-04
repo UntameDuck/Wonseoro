@@ -154,11 +154,11 @@ DB 전환은 `pg_promote()` → 새 Primary의 `promote_writer(세대+1, 행위�
 | `sast-sca-secret` | SAST/SCA/Secret | Security workflow | 후보 commit 결과와 예외 승인 |
 | `dast-penetration` | DAST/Penetration | ZAP gate | Pilot 환경 DAST·기관 모의해킹 |
 | `container-iac-scan` | Container/IaC | 이미지·SBOM·서명·Admission 검사 | 배포 digest와 CSP 정책 결과 |
-| `load` | Load | `tests/load/k6-admission.js` | M Profile 3,000 동시·1,000 RPS Burst |
-| `soak-6h` | 6시간 Soak | 시나리오만 있음 | 6시간 실제 실행·누수 판정 |
+| `load` | Load | `tests/load/k6-admission.js` 원본 + `k6-acceptance.js` 실행 프로필 | M Profile 500·1,500·3,000 동시와 1,000 RPS Burst 실제 실행 |
+| `soak-6h` | 6시간 Soak | `k6-acceptance.js` 6시간 프로필·OIDC 갱신·사후 DB 게이트 | 외부 환경 실행·메모리/커넥션 추세 판정 |
 | `finalization-burst` | Finalization Burst | 동시 Finalize 100회 | Pilot 용량에서 집중구간 실측 |
 | `pod-node-chaos` | Pod/Node Failure | kind 축소 결과 | K-PaaS Edge 재시도 포함 판정 |
-| `db-failover` | DB Failover | 연결 복구 단위·축소 시험 | 70% 부하 중 실제 HA 전환 |
+| `db-failover` | DB Failover | 연결 복구 단위·축소 시험 + `failover-70` 프로필·writer epoch/DB 정합성 게이트 | 70% 부하 중 실제 HA 전환 |
 | `central-disconnect` | Central Disconnect | 로컬 2시간 실증 | Pilot 네트워크·mTLS 경로 재확인 |
 | `pg-timeout` | PG Timeout | Mock 1~30분 실증 | 실 PG Sandbox 지연·대조 |
 | `backup-restore` | Backup Restore | `npm run ops:restore-verify` | PITR/WAL 백업에서 별도 환경 복구 |

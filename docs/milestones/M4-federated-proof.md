@@ -12,6 +12,8 @@
 
 ## 진행 현황 (2026-09-30)
 
+> **2026-10-04 외부 실행 준비** — 노션 첨부와 바이트가 같아야 하는 `tests/load/k6-admission.js`는 그대로 두고, 실제 다중 합성 사용자용 `tests/load/k6-acceptance.js`를 추가했다. 500·1,500·3,000 VU+1,000 RPS·70% Failover·6시간 Soak 프로필, 장시간 OIDC 갱신, 승인/HTTPS 안전장치가 있다. `npm run ops:load-acceptance`는 k6 threshold·버린 iteration과 대학 DB의 중복 접수·중복 결제확정·접수/결제/Outbox/Reconciliation·writer epoch를 함께 판정한다. k6 구문/6시간 프로필 inspect, 판정기 단위 3개, CI 재현 DB 읽기 전용 통합 확인을 통과했다. **K-PaaS/HA DB에서 실제 부하는 실행하지 않았으므로 아래 태스크 상태는 그대로다.** [실행법](../../tests/load/README.md)
+
 | ID | 상태 | 근거 |
 |---|---|---|
 | T-M4-01 Helm 차트 | ✅ | `deploy/charts/k-admission` — values-s/m/l (s·l 은 파생값). **values-m v1.2(2026-09-30)** 를 차트에 맞췄고 runtime 첨부는 차트 렌더링 결과로 만든다(`scripts/render-runtime-attachment.mjs`, CI `--check`·`helm lint`). 노션 §05 첨부 교체는 승인 대기(D-44) |
@@ -83,18 +85,18 @@
 
 | ID | 시나리오 | 통과 기준 |
 |---|---|---|
-| T-M4-30 | 1. Baseline 500 VU 30분 | Read p95 ≤300ms |
-| T-M4-31 | 2. Expected Peak 1,500 VU 30분 | Draft Save p95 ≤500ms |
-| T-M4-32 | 3. **Deadline Flash Crowd 3,000 VU + 1,000 RPS** | 핵심 Endpoint SLO 충족 |
+| T-M4-30 | 1. Baseline 500 VU 30분 | Read p95 ≤300ms — 외부 실행 프로필·사후 DB 게이트 준비 |
+| T-M4-31 | 2. Expected Peak 1,500 VU 30분 | Draft Save p95 ≤500ms — 외부 실행 프로필·사후 DB 게이트 준비 |
+| T-M4-32 | 3. **Deadline Flash Crowd 3,000 VU + 1,000 RPS** | 핵심 Endpoint SLO 충족 — 동시 프로필·버린 iteration 0 게이트 준비 |
 | T-M4-33 | 4. 동일 Application Finalize 100회 동시 | **duplicate Submission 0** |
 | T-M4-34 | 5. PG p95 10초 / 5% timeout / callback 1~30분 지연 | 자동 정합화, double-confirm 0 |
 | T-M4-35 | 6. **Central Sync 2시간 차단** | **event loss 0**, 접수 지속 |
-| T-M4-36 | 7. Peak 70% 부하에서 DB Primary Failover | 중복 접수 0, 자동 복구 |
+| T-M4-36 | 7. Peak 70% 부하에서 DB Primary Failover | 중복 접수 0, 자동 복구 — 1,050 VU·수동 승인 Failover 창·writer epoch/정합성 게이트 준비 |
 | T-M4-37 | 8. Redis Failover / Cache 초기화 | 세션·접수 영향 확인 |
 | T-M4-38 | 9. Object Storage 지연 | 서류 외 흐름 지속 |
 | T-M4-39 | 10. API Node 강제 종료 | 무중단 |
 | T-M4-40 | 11. Bot/Abuse + 학교 NAT 정상사용자 동시 | **NAT 사용자 차단 0** (§01 B6) |
-| T-M4-41 | 12. 6시간 Soak | 메모리·커넥션 누수 없음 |
+| T-M4-41 | 12. 6시간 Soak | 메모리·커넥션 누수 없음 — 승인 VU·OIDC 갱신·정합성 게이트 준비, 추세 판정은 외부 대시보드 증적 |
 | T-M4-42 | **대학 간 장애 격리 검증** | A대 전면 장애 중 B·C대 접수 정상 |
 
 ## 태스크 상세

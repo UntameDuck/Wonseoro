@@ -21,6 +21,17 @@
 
 ## 본문 수정
 
+### 먼저 결정 — §08 Finalize 부하의 분모·데이터셋 (D-90)
+
+M Profile은 전체 지원 30,000건인데 `Finalize 150 TPS 5분 + 300 TPS 60초`는 63,000요청이다. 현재 첨부 스켈레톤은 한 원서에 새 멱등 키를 계속 보내 첫 요청 뒤의 이미 접수된 응답까지 Finalize 처리량으로 센다. 다음 네 가지를 §08에서 확정한 뒤 첨부를 교체한다.
+
+1. 150/300 TPS가 서로 다른 원서의 **첫 Finalize**인지, 첫 처리와 멱등 replay를 합한 요청률인지
+2. 서로 다른 첫 Finalize라면 63,000개 Stress 데이터셋을 허용할지, 30,000건 안에서 지속시간을 줄일지
+3. replay라면 같은 요청은 같은 `Idempotency-Key`를 다시 쓰고 첫 처리·replay를 metric tag로 분리할 것
+4. `Finalize 내부처리 p95 ≤1.5s`는 `kind:finalize_first`만으로 판정하고 duplicate Submission 0을 DB에서 대조할 것
+
+권장안은 첫 Finalize 처리량과 replay 압력을 별도 시나리오로 나누는 것이다. 결정 전에는 T-M4-32의 Finalize p95를 완료 처리하지 않는다.
+
 ### 기술설계서 v1.0 본문
 
 결제·환불 절에 더한다 (D-89):

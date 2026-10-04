@@ -1344,6 +1344,19 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 
 ---
 
+## D-90. M Profile의 Finalize 63,000요청과 전체 지원 30,000건, 단일 원서 스켈레톤의 측정 의미가 충돌한다 🔴
+
+| | |
+|---|---|
+| **발견** | 2026-10-04 (T-M4-30~32 외부 부하 실행 패키지 감사) |
+| **충돌** | 노션 §08은 M Profile을 **전체 지원 30,000건**으로 두면서 `Finalize 150 TPS 5분 + 300 TPS 60초`를 요구한다. 이를 서로 다른 실제 접수로 실행하면 45,000 + 18,000 = **63,000건**이 필요해 Profile 모수보다 크다. 첨부 `k6-admission.js`는 반대로 `TEST_PREPARED_APPLICATION_ID` 한 건에 매번 **새 멱등 키**로 150 TPS를 5분 호출한다. 첫 요청 뒤 나머지는 이미 접수된 원서 응답이라 실제 Finalize 트랜잭션 처리량·p95가 아니며, 같은 원서 100회 동시는 이미 T-M4-33이 별도로 검증한다. 현재 스켈레톤 결과로 §16의 `Finalize 내부처리 p95 ≤1.5s`를 통과 처리하면 거짓 증적이 된다 |
+| **판정** | **결정 전에는 Finalize 처리량을 완료로 세지 않는다.** T-M4-30·31과 T-M4-32의 3,000 VU+1,000 RPS 읽기/저장 부하는 새 `k6-acceptance.js`로 준비하되 Finalize는 분리한다. 권장안은 ① 최대 30,000개의 서로 다른 PAID 합성 원서로 **첫 Finalize 처리량**을 별도 측정하고(`kind:finalize_first`, p95·중복 0), ② 재시도 압력은 같은 멱등 키를 재사용하는 **Finalize replay**로 따로 측정한다. 150/300 TPS의 지속시간을 모수 안으로 줄일지, 63,000개 Stress 데이터셋을 허용할지, TPS를 요청(첫 처리+replay)으로 정의할지는 노션 §08에서 확정해야 한다 |
+| **저장소 반영** | ✅ 첨부 사본은 수정하지 않았다. [tests/load/README](../tests/load/README.md)에 미결 경고를 두고 외부 판정기는 Finalize 처리량을 자동 통과시키지 않는다. 다중 사용자 부하·Failover·Soak 프로필과 DB 정합성 게이트만 별도 추가했다 |
+| **노션 반영** | ⬜ §08 M Profile에 Finalize TPS의 분모(서로 다른 접수/재시도), 멱등 키 재사용 규칙, 데이터셋 건수·지속시간, `finalize_first` p95를 명시하고 첨부 스켈레톤을 그 결정에 맞춰 교체 — [06-notion-changeset.md](06-notion-changeset.md) |
+| **상태** | 🔴 OPEN — 외부 부하 전에 수용 기준 결정 필요. T-M4-32·M4 종료의 Finalize p95 판정은 보류 |
+
+---
+
 <!--
 신규 항목 템플릿
 
