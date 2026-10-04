@@ -1,0 +1,57 @@
+# 실물 Windows Firefox·iPhone Safari와 실제 보조기기에서 사람이 수행한 사실만 기록한다.
+# 에뮬레이션, pending, skip, 빈 evidence, 차단/중대 결함은 의도적으로 실패시킨다.
+metadata:
+  universityId: ""
+  candidateCommit: ""
+  executedAt: ""
+  tester: ""
+  evidence: []
+
+browsers:
+  - id: firefox-windows
+    status: pending
+    skipped: 0
+    realDevice: false
+    browserVersion: ""
+    osVersion: ""
+    evidence: []
+    flows:
+      - { id: applicant-journey, status: pending, skipped: 0, observed: "", evidence: [] }
+      - { id: oidc-login, status: pending, skipped: 0, observed: "", evidence: [] }
+      - { id: session-dialog, status: pending, skipped: 0, observed: "", evidence: [] }
+      - { id: keyboard-focus, status: pending, skipped: 0, observed: "", evidence: [] }
+      - { id: zoom-reflow, status: pending, skipped: 0, observed: "", evidence: [] }
+      - { id: file-upload, status: pending, skipped: 0, observed: "", evidence: [] }
+  - id: safari-ios
+    status: pending
+    skipped: 0
+    realDevice: false
+    browserVersion: ""
+    osVersion: ""
+    evidence: []
+    flows:
+      - { id: applicant-journey, status: pending, skipped: 0, observed: "", evidence: [] }
+      - { id: oidc-login, status: pending, skipped: 0, observed: "", evidence: [] }
+      - { id: session-dialog, status: pending, skipped: 0, observed: "", evidence: [] }
+      - { id: keyboard-focus, status: pending, skipped: 0, observed: "", evidence: [] }
+      - { id: zoom-reflow, status: pending, skipped: 0, observed: "", evidence: [] }
+      - { id: file-upload, status: pending, skipped: 0, observed: "", evidence: [] }
+
+assistiveTechnology:
+  - { id: screen-reader-desktop, status: pending, skipped: 0, product: "", version: "", observed: "", evidence: [] }
+  - { id: screen-reader-mobile, status: pending, skipped: 0, product: "", version: "", observed: "", evidence: [] }
+  - { id: zoom-200, status: pending, skipped: 0, product: "", version: "", observed: "", evidence: [] }
+  - { id: voice-input, status: pending, skipped: 0, product: "", version: "", observed: "", evidence: [] }
+
+defects:
+  blocking: -1
+  major: -1
+  minor: -1
+  disposition: ""
+  evidence: []
+
+finalDecision:
+  status: pending
+  approvedAt: ""
+  approvedBy: ""
+  evidence: []

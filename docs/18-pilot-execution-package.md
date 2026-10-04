@@ -235,6 +235,16 @@ npm run ops:load-campaign-acceptance -- --file=deploy/pilot/<대학>-load-campai
 
 이 게이트가 성공하고 원시 k6·DB·대시보드를 표본 확인한 뒤에만 다섯 부하 태스크를 완료 처리한다. D-90의 Finalize 150/300 TPS는 전체 지원 수·첫 처리/멱등 replay 분모가 결정되지 않아 이 캠페인에 포함하지 않는다.
 
+### 8.5 T-M5-47·48 — 실물 브라우저·수동 접근성 게이트
+
+자동 접근성 결과는 실제 보조기기 청취와 실물 브라우저 상호운용을 대신하지 않는다. [빈 수동 접근성 파일](../deploy/pilot/manual-accessibility.example.yaml)에 Windows Firefox·iPhone Safari의 지원자 접수, OIDC 로그인, 세션 대화상자, 키보드 포커스, 200% 확대/재배치, 파일 업로드를 각각 기록한다. 데스크톱/모바일 스크린리더·200% 확대·음성 입력도 실제 제품과 판, 관찰 결과, 증적을 남긴다.
+
+```powershell
+npm run ops:manual-accessibility-acceptance -- --file=deploy/pilot/<대학>-manual-a11y.yaml
+```
+
+브라우저 2/2·핵심 흐름 12/12·보조기기 4/4, 건너뜀 0, 차단/중대 결함 0이어야 한다. 경미 결함은 처분과 소유자를 남기고 대학 접근성 책임자가 최종 승인한다. 상세 대본과 판정법은 [접근성 문서](09-accessibility.md#실물수동-검사-실행-양식-2026-10-04)를 따른다.
+
 ## 9. T-M6-15 — Sandbox→Shadow→제한 Pilot
 
 | 단계 | 데이터·외부 연계 | 진입 조건 | 종료 조건 |

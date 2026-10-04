@@ -68,3 +68,14 @@ npm run ops:load-campaign-acceptance -- --file=deploy/pilot/<대학>-load-campai
 ```
 
 500·1,500·3,000 VU+1,000 RPS·70% Failover·6시간 Soak가 같은 환경·승인 참조여야 한다. 30분 프로필은 29분, Deadline은 19분, Soak는 5시간 58분 미만이면 실패한다. Failover 결과에는 Writer 세대 판정이 필요하고, API 메모리·DB 연결·Pool 대기·Outbox 지연·중앙 지연 추세가 모두 승인 용량 안이어야 한다. D-90의 Finalize 150/300 TPS는 결정 전이라 이 캠페인 완료에 포함하지 않는다.
+
+## 실물 브라우저·수동 접근성 수용 증적
+
+`manual-accessibility.example.yaml`은 T-M5-47·48의 사람 실행 양식이다. 자동 브라우저나 접근성 트리 결과로 채우지 않고, 실물 Windows Firefox·iPhone Safari와 실제 보조기기에서 검사자가 관찰한 사실만 기록한다.
+
+```powershell
+Copy-Item deploy/pilot/manual-accessibility.example.yaml deploy/pilot/<대학>-manual-a11y.yaml
+npm run ops:manual-accessibility-acceptance -- --file=deploy/pilot/<대학>-manual-a11y.yaml
+```
+
+두 브라우저에서 지원자 접수·OIDC 로그인·세션 경고 대화상자·키보드 포커스·200% 확대/재배치·파일 업로드 여섯 흐름을 각각 수행한다. 데스크톱/모바일 스크린리더, 200% 확대, 음성 입력도 실제 도구 이름·판·관찰 결과를 남긴다. 건너뜀·에뮬레이션·차단/중대 결함·미승인은 통과하지 않는다.
