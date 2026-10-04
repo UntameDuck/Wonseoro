@@ -317,7 +317,7 @@ async function applicant() {
   await sweep('원서 검증 오류');
 
   // 오류 요약 링크로 칸에 가서 채운다 — 공통원서를 쓰지 않은 지원자라 1단계 두 칸·3단계 한 칸
-  const fills = { highSchool: '한국고등학교', graduationYear: '2027', selfIntro: '공공 서비스의 장애 대응에 관심이 있어 분산 시스템을 공부하고 있습니다.' };
+  const fills = { highSchool: '한국고등학교', graduationYear: '2027', academicNote: '없음' };
   for (let i = 0; i < 5; i++) {
     const link = await b.evaluate(`document.querySelector('[role=alert] a')?.textContent?.trim() ?? null`);
     if (!link) break;

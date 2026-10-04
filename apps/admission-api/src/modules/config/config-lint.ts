@@ -28,6 +28,8 @@ export interface ConfigLintResult {
 
 /** application_field_value.field_code varchar(128). 경로·특수문자를 막는다. */
 const FIELD_CODE = /^[A-Za-z][A-Za-z0-9_]{0,127}$/;
+/** 자기소개서류 항목 — 항목 코드나 이름으로 찾는다 */
+const SELF_INTRO = /자기\s*소개|자소서|self[\s_-]*intro|personal[\s_-]*statement/i;
 /** document.document_type varchar(64). */
 const DOCUMENT_TYPE = /^[A-Z][A-Z0-9_]{0,63}$/;
 
@@ -97,6 +99,16 @@ export function lintConfig(config: unknown, typeCodes: readonly string[] | null)
         // 이미 적용된 설정은 그대로 동작한다 — 이 검사는 초안을 만들 때 돈다.
         if (untitled.length > 0) {
           errors.push(`${at}: 이름(title)이 없는 항목이 있습니다. 지원자 화면에 항목 이름으로 보일 title 을 넣어 주십시오 — ${untitled.join(', ')}`);
+        }
+        // 자기소개서는 대입 전형에서 받지 않는다(고등교육법 시행령 제35조 ①, 문서 10 G-1). 예외 전형(재외국민 등)이 있어
+        // 거절하지 않고 경고로 승인 화면에 보인다 — 승인자가 근거를 확인하고 승인한다
+        const selfIntro = Object.entries(properties)
+          .filter(([field, p]) => SELF_INTRO.test(field) || (isObject(p) && typeof p.title === 'string' && SELF_INTRO.test(p.title)))
+          .map(([field, p]) => (isObject(p) && typeof p.title === 'string' && p.title.trim() ? p.title.trim() : field));
+        if (selfIntro.length > 0) {
+          warnings.push(
+            `${at}: 자기소개서로 보이는 항목이 있습니다. 대입 전형은 자기소개서를 받지 않습니다(고등교육법 시행령 제35조) — 법령상 예외 전형이 아니면 빼 주십시오 — ${selfIntro.join(', ')}`,
+          );
         }
         const offStandard = Object.entries(properties)
           .filter(([field, p]) => isObject(p) && p['x-profile'] === true && !COMMON_PROFILE_CODES.includes(field))

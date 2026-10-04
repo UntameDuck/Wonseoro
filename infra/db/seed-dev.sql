@@ -39,6 +39,9 @@ ON CONFLICT (id) DO NOTHING;
 --   x-multiline    여러 줄 입력
 --   optionalDocuments / requiredDocuments  올릴 서류. required 는 결제(=접수) 전에 검사를 통과해야 한다
 --   documentLabels 서류 이름
+--
+-- 대입 전형은 자기소개서를 받지 않는다(고등교육법 시행령 제35조, 문서 10 G-1). 전에는 이 시드가 「자기소개」를 필수로 받았다.
+-- 설정 검사가 자기소개서류 항목을 경고한다. 여러 줄 필수 항목의 예로 「학적 변동 사항」을 둔다
 INSERT INTO config_version (id, cycle_id, version, status, config_json, config_hash,
                             created_by, approved_by_1, approved_by_2, approved_at, activated_at)
 VALUES (
@@ -51,12 +54,12 @@ VALUES (
        "EARLY": {
          "type": "object",
          "additionalProperties": false,
-         "required": ["highSchool", "graduationYear", "selfIntro"],
+         "required": ["highSchool", "graduationYear", "academicNote"],
          "properties": {
            "highSchool":      { "type": "string",  "minLength": 2, "maxLength": 100, "title": "출신 고등학교", "x-profile": true },
            "graduationYear":  { "type": "integer", "minimum": 1990, "maximum": 2030, "title": "졸업(예정) 연도", "x-profile": true },
            "gpa":             { "type": "number",  "minimum": 0, "maximum": 5, "title": "내신 성적" },
-           "selfIntro":       { "type": "string",  "minLength": 10, "maxLength": 1500, "title": "자기소개", "x-multiline": true },
+           "academicNote":    { "type": "string",  "minLength": 2, "maxLength": 1000, "title": "학적 변동 사항", "description": "전학·편입학·검정고시 등을 적습니다. 없으면 「없음」이라고 적습니다.", "x-multiline": true },
            "contactEmail":    { "type": "string",  "format": "email", "title": "이메일", "x-profile": true }
          }
        }

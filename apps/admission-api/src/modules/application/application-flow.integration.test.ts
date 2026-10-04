@@ -37,7 +37,7 @@ import { ProfileVaultClient } from './profile-vault.client';
 const CYCLE = '11111111-1111-1111-1111-111111111111';
 const TYPE = '22222222-2222-2222-2222-222222222222';
 const DEPT = '33333333-3333-3333-3333-333333333333';
-const COMPLETE = { highSchool: '원서고등학교', graduationYear: 2026, selfIntro: '열 글자를 넘는 자기소개입니다.' };
+const COMPLETE = { highSchool: '원서고등학교', graduationYear: 2026, academicNote: '열 글자를 넘는 자기소개입니다.' };
 
 let db: Db;
 let available = false;
@@ -178,7 +178,7 @@ describe('원서 상태머신이 실제 흐름에 연결된다 (D-55)', () => {
     const saved = await repo.patch({
       applicationId: id,
       expectedVersion: BigInt(before.version),
-      fields: { selfIntro: '고쳐 쓴 자기소개입니다. 열 글자 이상.' },
+      fields: { academicNote: '고쳐 쓴 자기소개입니다. 열 글자 이상.' },
       schemaVersion: 'test',
     });
     assert.equal(saved.status, 'DRAFT');
@@ -195,7 +195,7 @@ describe('원서 상태머신이 실제 흐름에 연결된다 (D-55)', () => {
     assert.equal(current.status, 'PAYMENT_PENDING');
 
     await assert.rejects(
-      repo.patch({ applicationId: id, expectedVersion: BigInt(current.version), fields: { selfIntro: '' }, schemaVersion: 't' }),
+      repo.patch({ applicationId: id, expectedVersion: BigInt(current.version), fields: { academicNote: '' }, schemaVersion: 't' }),
       problem(409, 'VERSION_CONFLICT'),
     );
   });

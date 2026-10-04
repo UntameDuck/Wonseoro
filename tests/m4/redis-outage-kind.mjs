@@ -17,7 +17,7 @@ const REDIS = 'wonseoro-dev-redis-1';
 const CYCLE = '11111111-1111-1111-1111-111111111111';
 const TYPE = '22222222-2222-2222-2222-222222222222';
 const DEPT = '33333333-3333-3333-3333-333333333333';
-const FIELDS = { highSchool: 'Redis 시험 고등학교', graduationYear: 2026, selfIntro: 'Redis 장애 중에도 접수가 되는지 봅니다.' };
+const FIELDS = { highSchool: 'Redis 시험 고등학교', graduationYear: 2026, academicNote: 'Redis 장애 중에도 접수가 되는지 봅니다.' };
 
 const result = {
   test: 'T-M4-37',

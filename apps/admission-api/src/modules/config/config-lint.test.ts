@@ -16,7 +16,7 @@ const GOOD = {
       required: ['highSchool'],
       properties: {
         highSchool: { type: 'string', maxLength: 100, title: '출신 고등학교', 'x-profile': true },
-        selfIntro: { type: 'string', maxLength: 1500, title: '자기소개' },
+        academicNote: { type: 'string', maxLength: 1500, title: '학적 사항' },
       },
     },
   },
@@ -93,5 +93,16 @@ describe('설정에서 화면 정보 만들기 (§A5, D-56)', () => {
   it('필수와 선택에 같은 서류가 있으면 필수로 본다', () => {
     const docs = documentsOf({ requiredDocuments: { A: ['X'] }, optionalDocuments: { A: ['X', 'Y'] } }, 'A');
     assert.deepEqual(docs.map((d) => [d.documentType, d.required]), [['X', true], ['Y', false]]);
+  });
+
+  it('자기소개서로 보이는 항목은 경고한다 — 거절하지는 않는다(문서 10 G-1)', () => {
+    for (const [code, title] of [['selfIntro', '지원 동기'], ['motivation', '자기소개'], ['essay', '자소서']] as const) {
+      const config = {
+        forms: { EARLY: { type: 'object', properties: { [code]: { type: 'string', title } } } },
+      };
+      const r = lintConfig(config, ['EARLY']);
+      assert.deepEqual(r.errors, []);
+      assert.ok(r.warnings.some((w) => w.includes('자기소개서') && w.includes(title)), `${code}/${title}: ${r.warnings.join(' | ')}`);
+    }
   });
 });

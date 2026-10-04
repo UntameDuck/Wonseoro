@@ -240,7 +240,7 @@ describe('추가문항 Schema Registry (v1.1 §A5)', () => {
       [CYCLE],
     );
     assert.equal(loaded.schemaVersion, rows[0]?.version);
-    assert.ok((loaded.schema.properties as Record<string, unknown>)['selfIntro']);
+    assert.ok((loaded.schema.properties as Record<string, unknown>)['academicNote']);
   });
 
   it('자동저장은 부분 입력을 허용한다 — required 를 걸지 않는다', async (t) => {
@@ -262,10 +262,10 @@ describe('추가문항 Schema Registry (v1.1 §A5)', () => {
   it('작성 도중 minLength 미달은 자동저장을 막지 않는다', async (t) => {
     if (!available) return t.skip('DATABASE_URL 없음');
     const forms = new FormSchemaService(db);
-    // selfIntro 는 minLength 10. 사용자가 "저는" 까지 쳤을 때 저장이 막히면
+    // academicNote 는 minLength 2. 사용자가 "없" 까지 쳤을 때 저장이 막히면
     // 그 필드를 영원히 채울 수 없다.
     await assert.doesNotReject(
-      forms.assertKnownFields(CYCLE, 'EARLY', { selfIntro: '저는' }),
+      forms.assertKnownFields(CYCLE, 'EARLY', { academicNote: '없' }),
       '작성 도중 값으로 저장이 실패하면 사용자가 입력을 끝낼 수 없다',
     );
   });
@@ -285,7 +285,7 @@ describe('추가문항 Schema Registry (v1.1 §A5)', () => {
     const result = await forms.validate(CYCLE, 'EARLY', {
       highSchool: '원서로고등학교',
       graduationYear: 2027,
-      selfIntro: '저는',
+      academicNote: '없',
     });
     assert.equal(result.valid, false, '자동저장에서 완화한 제약이 최종검증에서도 빠지면 안 된다');
   });
@@ -314,7 +314,7 @@ describe('추가문항 Schema Registry (v1.1 §A5)', () => {
     const result = await forms.validate(CYCLE, 'EARLY', {
       highSchool: '원서로고등학교',
       graduationYear: 2027,
-      selfIntro: '저는 분산 시스템에 관심이 있습니다.',
+      academicNote: '저는 분산 시스템에 관심이 있습니다.',
     });
     assert.deepEqual(result, { valid: true, issues: [] });
   });
@@ -511,7 +511,7 @@ describe('Evidence Package (v1.1 §A11·§C6 / §01 E)', () => {
     const serialized = JSON.stringify(pkg);
 
     // 원서 본문·첨부파일·결제수단 상세가 들어가면 안 된다.
-    for (const banned of ['selfIntro', 'pii_ciphertext', 'cardNumber', 'residentRegistration']) {
+    for (const banned of ['academicNote', 'pii_ciphertext', 'cardNumber', 'residentRegistration']) {
       assert.equal(
         serialized.includes(banned),
         false,

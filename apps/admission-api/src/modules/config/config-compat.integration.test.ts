@@ -35,7 +35,7 @@ before(async () => {
   for (const id of applicants) {
     await db.query(`INSERT INTO applicant (id, subject_token, pii_ciphertext, pii_key_version) VALUES ($1, $2, '\\x00', 'none')`, [id, `subj-compat-${id.slice(0, 8)}`]);
     const { row } = await repo().create({ cycleId: CYCLE, applicantId: id, admissionTypeId: TYPE, departmentId: DEPT });
-    await repo().patch({ applicationId: row.id, expectedVersion: BigInt(row.version), fields: { selfIntro: '열 글자를 넘는 자기소개 문장입니다', gpa: 4.1 }, schemaVersion: 'v-compat' });
+    await repo().patch({ applicationId: row.id, expectedVersion: BigInt(row.version), fields: { academicNote: '열 글자를 넘는 자기소개 문장입니다', gpa: 4.1 }, schemaVersion: 'v-compat' });
     apps.push(row.id);
   }
   // 둘째 원서는 검증을 마쳤다(READY) — 새 필수 항목이 생기면 막힌다
@@ -57,27 +57,27 @@ after(async () => {
 describe('진행 중 원서와의 호환 시험 (T-M6-02)', () => {
   it('저장된 값과 맞는 설정은 통과한다 — 작성 중 원서의 빈 필수 항목은 지원자가 채운다', async (t) => {
     if (!available) return t.skip('DB 없음');
-    const r = await checkInFlightCompatibility(db, CYCLE, form({ selfIntro: { type: 'string', maxLength: 500 }, gpa: { type: 'number' }, essay: { type: 'string' } }));
+    const r = await checkInFlightCompatibility(db, CYCLE, form({ academicNote: { type: 'string', maxLength: 500 }, gpa: { type: 'number' }, essay: { type: 'string' } }));
     assert.deepEqual(mine(r).map((b) => b.applicationId), [], '두 원서 모두 맞다');
     assert.ok(r.checked >= 2);
   });
 
   it('최대 글자 수를 줄이면 저장된 값이 어긋난 원서를 모두 찾는다', async (t) => {
     if (!available) return t.skip('DB 없음');
-    const r = await checkInFlightCompatibility(db, CYCLE, form({ selfIntro: { type: 'string', maxLength: 10 }, gpa: { type: 'number' } }));
+    const r = await checkInFlightCompatibility(db, CYCLE, form({ academicNote: { type: 'string', maxLength: 10 }, gpa: { type: 'number' } }));
     assert.equal(mine(r).length, 2);
-    assert.ok(mine(r).every((b) => b.problems.some((p) => p.includes('/selfIntro maxLength'))));
+    assert.ok(mine(r).every((b) => b.problems.some((p) => p.includes('/academicNote maxLength'))));
   });
 
   it('형식을 바꾸면(숫자 → 글자) 어긋난다', async (t) => {
     if (!available) return t.skip('DB 없음');
-    const r = await checkInFlightCompatibility(db, CYCLE, form({ selfIntro: { type: 'string' }, gpa: { type: 'string' } }));
+    const r = await checkInFlightCompatibility(db, CYCLE, form({ academicNote: { type: 'string' }, gpa: { type: 'string' } }));
     assert.equal(mine(r).length, 2);
   });
 
   it('필수 항목을 더하면 검증을 마친 원서만 막힌다(작성 중 원서는 채울 수 있다)', async (t) => {
     if (!available) return t.skip('DB 없음');
-    const r = await checkInFlightCompatibility(db, CYCLE, form({ selfIntro: { type: 'string' }, gpa: { type: 'number' }, essay: { type: 'string' } }, ['essay']));
+    const r = await checkInFlightCompatibility(db, CYCLE, form({ academicNote: { type: 'string' }, gpa: { type: 'number' }, essay: { type: 'string' } }, ['essay']));
     assert.deepEqual(mine(r).map((b) => `${b.status}:${b.problems.join(',')}`), ['READY:/ required(essay)']);
   });
 });

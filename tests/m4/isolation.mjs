@@ -23,7 +23,7 @@ const CENTRAL = 'http://localhost:3000';
 const CYCLE = '11111111-1111-1111-1111-111111111111';
 const TYPE = '22222222-2222-2222-2222-222222222222';
 const DEPT = '33333333-3333-3333-3333-333333333333';
-const FIELDS = { highSchool: '격리시험고등학교', graduationYear: 2026, selfIntro: '대학 간 장애 격리 시험용 자기소개입니다.' };
+const FIELDS = { highSchool: '격리시험고등학교', graduationYear: 2026, academicNote: '대학 간 장애 격리 시험용 자기소개입니다.' };
 
 const log = [];
 const note = (msg, extra = {}) => {

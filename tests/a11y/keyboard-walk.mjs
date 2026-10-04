@@ -295,7 +295,7 @@ async function walk() {
   await activate();
   await expectFocus('3단계로 옮긴 뒤 단계 제목', onId('step-title'));
 
-  // 6. 3단계 — 자기소개를 비워 두고 간다(검증 오류를 키보드로 고치려고)
+  // 6. 3단계 — 학적 변동 사항을 비워 두고 간다(검증 오류를 키보드로 고치려고)
   await screen('원서 3단계 추가정보', '3. 추가정보');
   await tabTo('내신 성적', named('내신 성적', { tag: 'INPUT' }));
   await typeText(b, '1.8');
@@ -322,9 +322,9 @@ async function walk() {
   await screen('검토 전 검증 오류', '입력을 확인해 주십시오');
   const issue = await tabTo('오류 요약의 항목', (i) => i.tag === 'A' && (i.inAlert ?? true), { max: 3 });
   await activate();
-  await expectFocus(`오류 요약 "${issue.name}" → 3단계 칸`, onId('field-selfIntro'));
+  await expectFocus(`오류 요약 "${issue.name}" → 3단계 칸`, onId('field-academicNote'));
   await expectErrorSpoken(issue.name);
-  await typeText(b, '공공 서비스의 장애 대응에 관심이 있어 분산 시스템을 공부하고 있습니다.');
+  await typeText(b, '없음');
   await tabTo('다음 단계', named('다음 단계', { tag: 'BUTTON' }));
   await activate();
   await expectFocus('4단계로 옮긴 뒤 단계 제목', onId('step-title'));

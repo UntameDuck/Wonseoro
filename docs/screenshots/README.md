@@ -5,6 +5,7 @@
 > 35장 모두 **렌더링 문구 검사**(`capture.mjs --check-copy`)를 통과했다. 검사 내용은 화면에 실제로 보이는 글에 설계 문서 번호·내부 상태 코드·ISO 시각 원문·영문 검증 문구·기호 아이콘이 없는지다. 지원자 화면은 UUID·내부 버전도 막는다.
 > 다시 찍는 방법은 아래 [「다시 찍기」](#다시-찍기)에 있다. 스크립트는 `scripts/screenshots/`에 있다.
 > 처음 찍은 판(2026-09-30)과 그때 찾은 결함 U-1~U-11 은 git 이력에 있다. 결함은 [08-ui-production-readiness.md](../08-ui-production-readiness.md) 의 U-1~U-59 로 옮겨 모두 고쳤다(U-51 은 선택 — T-M6-07).
+> **2026-10-04 지원자 01~14 다시 찍음** — 시드의 위법 「자기소개」 필수 문항을 「학적 변동 사항」으로 바꿨고(문서 10 G-1), 검토·결제(09)·접수 완료(10)에 상담 확인번호(T-M6-07)가 보인다. 렌더링 문구 검사 통과.
 
 ## 어떤 조건에서 찍었나
 
@@ -37,7 +38,7 @@
 | [04-apply-step1-common](applicant/04-apply-step1-common.png) | 원서 1단계 공통정보 | 경로 "홈 › 2027 수시 › 원서로대학교 › 공통정보". 마감 배너 "마감 2026.12.31 18:00 (서버 시각 기준)" · 6단계 표시 |
 | [05-apply-step2-program](applicant/05-apply-step2-program.png) | 2단계 대학·전형 | 대학·전형·모집단위·전형료 |
 | [06-apply-validation-errors](applicant/06-apply-validation-errors.png) | 검토 전 검증 오류 | "출신 고등학교를 입력해 주십시오." — 항목 이름으로 쓴 한국어 문장, 누르면 그 칸으로 간다(공통원서를 쓰지 않은 두 번째 지원자) |
-| [07-apply-step3-extra](applicant/07-apply-step3-extra.png) | 3단계 추가정보 | 전형 양식으로 그린 입력칸 · 글자 수 · 자동저장 완료 시각 |
+| [07-apply-step3-extra](applicant/07-apply-step3-extra.png) | 3단계 추가정보 | 전형 양식으로 그린 입력칸(내신 성적·학적 변동 사항 — 자기소개서는 받지 않는다) · 항목 안내 · 글자 수 · 자동저장 완료 시각 |
 | [08-apply-step4-documents](applicant/08-apply-step4-documents.png) | 4단계 서류 | 형식·크기 안내("PDF 최대 10MB · JPG·PNG 최대 5MB") · 파일 선택 버튼 · 검사가 끝나면 업로드 칸도 "업로드·검사 완료" |
 | [09-apply-step5-review](applicant/09-apply-step5-review.png) | 5단계 검토·결제 | 검증을 통과한 단계에만 ✓ · 누락·서류·전형료·결제 상태·서버 시각·마감 · "결제가 곧 접수" 경고 · **결제 전 확인 체크**(체크해야 결제 버튼이 열린다) |
 | [10-apply-complete](applicant/10-apply-complete.png) | 접수 완료 | 접수번호 · 접수 시각 |

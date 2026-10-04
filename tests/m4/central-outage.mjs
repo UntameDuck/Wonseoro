@@ -20,7 +20,7 @@ const DEPT = '33333333-3333-3333-3333-333333333333';
 const FIELDS = {
   highSchool: '중앙 단절 시험 고등학교',
   graduationYear: 2026,
-  selfIntro: '중앙 단절 중 대학 접수 지속과 Outbox 재전송 시험입니다.',
+  academicNote: '중앙 단절 중 대학 접수 지속과 Outbox 재전송 시험입니다.',
 };
 
 const result = {

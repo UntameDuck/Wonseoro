@@ -33,7 +33,7 @@ const DEPT = '33333333-3333-3333-3333-333333333333';
 const FIELDS = {
   highSchool: '중앙 단절 실제 시간 시험 고등학교',
   graduationYear: 2026,
-  selfIntro: '중앙이 끊긴 동안 대학 접수가 이어지는지 확인하는 원서입니다.',
+  academicNote: '중앙이 끊긴 동안 대학 접수가 이어지는지 확인하는 원서입니다.',
 };
 const FINALIZED = 'kr.kadmission.application.finalized.v1';
 const CANCELLED = 'kr.kadmission.application.cancelled.v1';

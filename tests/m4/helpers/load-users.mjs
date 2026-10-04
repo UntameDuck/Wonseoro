@@ -90,7 +90,7 @@ async function user(identity) {
       const key = `node-save-${randomUUID()}`;
       r = await withRetry(() => attempt(id, 'PATCH', `/api/v1/applications/${appId}`,
         { 'idempotency-key': key, 'if-match': etag, 'content-type': 'application/merge-patch+json' },
-        { fields: { highSchool: '노드 장애 시험 고등학교', graduationYear: 2026, selfIntro: `저장 ${n}` } }));
+        { fields: { highSchool: '노드 장애 시험 고등학교', graduationYear: 2026, academicNote: `저장 ${n}` } }));
       if (r.final.etag) etag = r.final.etag;
       if (r.final.status === 412) etag = (await attempt(id, 'GET', `/api/v1/applications/${appId}`)).etag ?? etag;
     }

@@ -18,7 +18,7 @@ const WITH_BOTS = process.argv[3] !== 'no-bots';
 const CYCLE = '11111111-1111-1111-1111-111111111111';
 const TYPE = '22222222-2222-2222-2222-222222222222';
 const DEPT = '33333333-3333-3333-3333-333333333333';
-const FIELDS = { highSchool: 'NAT 시험 고등학교', graduationYear: 2026, selfIntro: '같은 공인 IP 뒤에서 원서를 쓰는 정상 지원자입니다.' };
+const FIELDS = { highSchool: 'NAT 시험 고등학교', graduationYear: 2026, academicNote: '같은 공인 IP 뒤에서 원서를 쓰는 정상 지원자입니다.' };
 
 const result = {
   test: 'T-M4-40',
@@ -100,7 +100,7 @@ async function normalUser(identity, index) {
     await sleep(jitter(3_000, 5_000));
     const saved = await http(id, 'PATCH', `/api/v1/applications/${applicationId}`, {
       headers: { ...key('save'), 'if-match': etag, 'content-type': 'application/merge-patch+json' },
-      body: { fields: { ...FIELDS, selfIntro: `${FIELDS.selfIntro} (${index}-${Date.now()})` } },
+      body: { fields: { ...FIELDS, academicNote: `${FIELDS.academicNote} (${index}-${Date.now()})` } },
     });
     count('normal', 'save', saved.status, saved);
     saveMs.push(saved.ms);

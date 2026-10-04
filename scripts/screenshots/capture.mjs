@@ -294,7 +294,7 @@ async function applicant() {
 
   await click('다음 단계');
   await waitText('3. 추가정보');
-  await fill('자기소개', '공공 서비스의 장애 대응에 관심이 있어 분산 시스템을 공부하고 있습니다. 대학에서 이 분야를 더 깊이 배우고 싶습니다.');
+  await fill('학적 변동 사항', '없음');
   await fill('내신 성적', '1.8');
   await sleep(16_500); // 자동저장 Debounce 15초
   await waitText('저장 완료', 20_000);
@@ -498,7 +498,7 @@ async function seedRecon() {
   await click('다음 단계');
   await click('다음 단계');
   await waitText('3. 추가정보');
-  await fill('자기소개', '지역 공공기관의 전산 운영을 도우며 안정적인 서비스의 중요성을 배웠습니다.');
+  await fill('학적 변동 사항', '검정고시 합격(2025년 8월)');
   await click('다음 단계');
   await waitText('4. 서류');
   await click('검토 단계로');

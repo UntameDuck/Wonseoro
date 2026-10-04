@@ -28,7 +28,7 @@ import { FinalizationService } from './finalization.service';
 const CYCLE = '11111111-1111-1111-1111-111111111111';
 const TYPE = '22222222-2222-2222-2222-222222222222';
 const DEPT = '33333333-3333-3333-3333-333333333333';
-const COMPLETE = { highSchool: '원서고등학교', graduationYear: 2026, selfIntro: '열 글자를 넘는 자기소개입니다.' };
+const COMPLETE = { highSchool: '원서고등학교', graduationYear: 2026, academicNote: '열 글자를 넘는 자기소개입니다.' };
 
 let db: Db;
 let available = false;
@@ -161,7 +161,7 @@ describe('결제 = 접수 (D-42)', () => {
   it('접수할 수 없는 원서는 결제창을 열지 않는다 — 돈을 받은 뒤에 알리면 환불 사건이 된다', async (t) => {
     if (!available) return t.skip('DATABASE_URL 없음');
     const { payments } = wire();
-    const { selfIntro: _missing, ...partial } = COMPLETE;
+    const { academicNote: _missing, ...partial } = COMPLETE;
     const { id: appId, applicantId } = await seedApplication({ fields: partial });
 
     await assert.rejects(

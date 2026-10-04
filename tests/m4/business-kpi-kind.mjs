@@ -19,7 +19,7 @@ const DB = 'wonseoro-dev-postgres-univ-a-1';
 const CYCLE = '11111111-1111-1111-1111-111111111111';
 const TYPE = '22222222-2222-2222-2222-222222222222';
 const DEPT = '33333333-3333-3333-3333-333333333333';
-const FIELDS = { highSchool: 'KPI 시험 고등학교', graduationYear: 2026, selfIntro: '업무 KPI 지표 확인용 원서입니다.' };
+const FIELDS = { highSchool: 'KPI 시험 고등학교', graduationYear: 2026, academicNote: '업무 KPI 지표 확인용 원서입니다.' };
 // 세 묶음으로 나눠 스크레이프 간격을 둔다 — 히스토그램은 0 으로 미리 만들 수 없어 Pod 마다 첫 관측이 rate() 에 안 잡힌다.
 // API Pod 가 둘이라 묶음이 Pod 에 고루 가도록 여러 번 보낸다. 운영처럼 트래픽이 이어지면 첫 스크레이프 뒤로는 정상 집계된다.
 const BATCHES = [4, 4, 4];

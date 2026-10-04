@@ -26,7 +26,7 @@ const REALM = 'wonseoro-applicant';
 const CYCLE = '11111111-1111-1111-1111-111111111111';
 const TYPE = '22222222-2222-2222-2222-222222222222';
 const DEPT = '33333333-3333-3333-3333-333333333333';
-const FIELDS = { highSchool: '발급자 단절 시험 고등학교', graduationYear: 2026, selfIntro: '발급자가 멈춘 동안 이어서 접수하는 시험입니다.' };
+const FIELDS = { highSchool: '발급자 단절 시험 고등학교', graduationYear: 2026, academicNote: '발급자가 멈춘 동안 이어서 접수하는 시험입니다.' };
 const SNAPSHOT_DIR = path.join(ROOT, '.cache/auth/offline-jwks');
 
 const started = Date.now();

@@ -20,7 +20,7 @@ const DEPT = '33333333-3333-3333-3333-333333333333';
 const FIELDS = {
   highSchool: '동시 접수 시험 고등학교',
   graduationYear: 2026,
-  selfIntro: '동일 원서의 Finalize 100회 동시 요청 시험입니다.',
+  academicNote: '동일 원서의 Finalize 100회 동시 요청 시험입니다.',
 };
 
 const result = {

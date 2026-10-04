@@ -121,7 +121,7 @@ try {
       fields: {
         highSchool: 'Object Storage 장애 시험 고등학교',
         graduationYear: 2026,
-        selfIntro: '서류 저장소 장애 중에도 원서 자동저장이 지속되는지 확인합니다.',
+        academicNote: '서류 저장소 장애 중에도 원서 자동저장이 지속되는지 확인합니다.',
       },
     },
   });

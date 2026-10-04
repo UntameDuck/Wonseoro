@@ -18,7 +18,7 @@ const DEPT = '33333333-3333-3333-3333-333333333333';
 const FIELDS = {
   highSchool: 'PG 재확인 시험 고등학교',
   graduationYear: 2026,
-  selfIntro: 'PG 지연과 상태 미확정 후 자동 정합화 시험입니다.',
+  academicNote: 'PG 지연과 상태 미확정 후 자동 정합화 시험입니다.',
 };
 const BASE_VALUES = ['deploy/local/values-local.yaml', 'deploy/local/values-univ-a.yaml'];
 
