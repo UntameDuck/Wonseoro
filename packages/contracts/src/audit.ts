@@ -26,6 +26,9 @@ export const AUDIT_ACTION = [
   'SUPPORT_LOOKUP',
   /** 지원자가 원서 동의(수집·이용 등)를 하거나 거두었다 — 문안 판·해시와 함께 (D-81). */
   'CONSENT_RECORDED',
+  /** 지원자가 원서의 열람·정정·삭제·처리정지를 요청했다 / 입학처가 결과를 회신했다 — 요청번호와 함께 (D-84). */
+  'PRIVACY_REQUEST_RECEIVED',
+  'PRIVACY_REQUEST_DECIDED',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTION)[number];

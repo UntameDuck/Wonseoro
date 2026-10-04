@@ -14,3 +14,4 @@ export * from './upload';
 export * from './support';
 export * from './university-notices';
 export * from './consents';
+export * from './privacy-requests';

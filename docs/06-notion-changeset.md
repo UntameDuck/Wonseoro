@@ -10,7 +10,7 @@
 
 | 노션 문서 | 첨부 이름 | 저장소 파일 | 바이트 | SHA-256 | 근거 |
 |---|---|---|---|---|---|
-| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.14.0) | 112,947 | `c621670c1863205713e547354187f750cdec565724f79b0a041a615c15a3cde9` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 · D-78 · D-79 · D-80 · D-81 · D-82 |
+| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.15.0) | 121,828 | `e3a5fe684911ef2220a44644760ec978581fe9f84325b834105ee74abb1bf8a6` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 · D-78 · D-79 · D-80 · D-81 · D-82 · D-84 |
 | [§04 CloudEvents](https://app.notion.com/p/3df75ab5debe81d68e37fabd3678dcc4) | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | 6,104 | `3ed7ec8a340c50f6e7de25b2c3322ffd7c6b4914fd046afdc67a2efea699ca02` | D-47 · T-M5-51 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` (v1.2) | 4,036 | `1aaef0db712e1d9a15da41fb86b7832a3da8c6decfdcd5992a57bb071e5b1975` | D-44 · D-49 · D-52 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` (v1.5, 차트 렌더링 — RBAC 6종·내부 상호 TLS·서류 워커 출구) | 40,216 | `28c54fbdb2e83edc849526c06c7158017110fa0e24a3b3cbfe8f525febf2b315` | D-44 · D-52 · D-68 · D-69 |
@@ -22,6 +22,13 @@
 ## 본문 수정
 
 ### 기술설계서 v1.0 본문
+
+§17 Privacy 에 더한다 (D-84):
+
+> 정보주체 권리 요청 — 대학 원서의 열람·정정·삭제·처리정지는 지원자가 원서 화면에서 요청하고, 대학 DB 에 요청번호(`PR-YYYYMMDD-XXXXXX`)·받은 시각·
+> 법정 기한(받은 날부터 10일)과 함께 남는다. 요청 내용·회신은 원서 데이터 키로 봉한다. 입학처는 처리 큐에서 기한 순으로 보고, 한 건을 열면 담당자 열람이
+> 감사 체인에 남는다. 결과는 한 번만 회신하고(일부 처리·거절은 사유 필수), 회신은 지원자 화면에 보인다. **실제 정정·삭제·처리정지는 입학처가
+> 대학 규정과 보존 의무(접수 원서 10년 등)를 따져 한다** — 시스템이 요청만 보고 접수 원서를 지우지 않는다. 동의 철회·공통원서 삭제는 지원자가 바로 한다.
 
 §17 Privacy 에 더한다 (D-82):
 
@@ -118,6 +125,8 @@ B11 대응에 더한다:
 > Outbox 보관 `outbox_event_archive` — `created_at` 월별 파티션, 영수증 열을 펼쳐 둔다. 전송·확인이 끝나고 7일 지난 이벤트를 옮기되 원서마다 마지막 순번은 남긴다(순번이 이어진다).
 > 13개월이 지난 달은 파티션째 지운다(§01 B7 디스크 고갈 방지). 바로 쓰는 `outbox_event` 는 유니크(aggregate_id, aggregate_sequence) 때문에 파티션하지 않는다(저장소 마이그레이션 0005, D-74).
 > 상담 확인번호 `application.support_code`(Crockford base32 10자, 유니크, 바꿀 수 없음)와 상담 증적 `support_lookup(evidence_number, application_id, lookup_kind, reason, agent_id, looked_up_at, snapshot, snapshot_hash)` — 추가만(트리거), 앱은 넣고 읽기만(저장소 마이그레이션 `0008_support_view.sql`, D-79).
+> 정보주체 권리 요청 `privacy_request(request_number, application_id, kind, detail_ciphertext, status, received_at, due_at, decided_at, decided_by, result_note_ciphertext)` —
+> 같은 원서·종류의 처리 중 요청은 하나(부분 유니크), 회신은 처리 중 → 결과 한 번(트리거), 내용·받은 시각·기한 변경과 삭제는 거절, 앱은 결과 칸만 UPDATE(저장소 마이그레이션 `0009_privacy_request.sql`, D-84).
 > 장애 공지 원장 `service_incident` 는 대학 Data Plane에 둔다(저장소 마이그레이션 `0007_service_incident.sql`, D-78). 상태는 `ACTIVE`에서 `RESOLVED`로만 바뀌고 제목·안내·수준·시각·발행자는 수정하지 못한다. 앱 역할에는 조회·추가·해제용 UPDATE만 주며 DELETE·TRUNCATE 권한은 주지 않는다.
 
 v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
@@ -147,6 +156,9 @@ v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
 
 > **2026-10-04 v1.9.0** — 개인정보 최소 상담 조회 `POST /admin/v1/support/lookups`·`GET /admin/v1/support/lookups/{evidenceNumber}`(새 범위 `support`), 응답 `SupportView`(허용 목록),
 > 지원자 Self-check 에 선택 필드 `supportCode`. 새 경로·범위·선택 필드 추가라 호환 변경이다(§A16). (D-79)
+
+> **2026-10-04 v1.15.0** — 정보주체 권리 요청: 지원자 `POST·GET /api/v1/applications/{id}/privacy-requests`(같은 종류 처리 중 요청은 200 으로 그대로),
+> 입학처 `GET /admin/v1/privacy-requests`(큐)·`GET …/{requestNumber}`(열람, 재인증·감사)·`POST …/{requestNumber}/decision`(회신 한 번, 재인증). 새 오퍼레이션이라 호환 변경이다(§A16). (D-84)
 
 > **2026-10-04 v1.14.0** — 감사자 증적 패키지를 접수번호로 연다 `GET /admin/v1/evidence/by-number/{applicationNumber}`(같은 권한·재인증·사유·열람 기록). 새 오퍼레이션이라 호환 변경이다(§A16). (U-51)
 

@@ -7,7 +7,7 @@
  *   - 오류는 problem+json 으로 온다
  */
 
-import type { ApplicationConsent, UniversityNotices } from '@wonseoro/contracts';
+import type { ApplicationConsent, PrivacyRequestKind, PrivacyRequestView, UniversityNotices } from '@wonseoro/contracts';
 
 /** 원서 동의 문안과 이 원서의 동의 여부 (계약 1.11.0, D-81) */
 export type ConsentState = ApplicationConsent & { granted: boolean };
@@ -338,6 +338,18 @@ export const api = {
       idempotencyKey: newIdempotencyKey('consent'),
       applicantId,
     }),
+
+  /** 개인정보 열람·정정·삭제·처리정지 요청 — 같은 종류의 처리 중 요청이 있으면 그것이 돌아온다(200) (G-10, D-84) */
+  createPrivacyRequest: (id: string, kind: PrivacyRequestKind, detail: string, applicantId: string, key: string) =>
+    call<PrivacyRequestView>(`/api/v1/applications/${id}/privacy-requests`, {
+      method: 'POST',
+      body: detail ? { kind, detail } : { kind },
+      idempotencyKey: key,
+      applicantId,
+    }),
+
+  privacyRequests: (id: string, applicantId: string) =>
+    call<{ requests: PrivacyRequestView[]; dueDays: number }>(`/api/v1/applications/${id}/privacy-requests`, { applicantId }),
 
   cancel: (id: string, reason: string, applicantId: string, key: string) =>
     call<{ applicationId: string; status: 'CANCELLED'; cancelledAt: string; refundRequired: boolean }>(

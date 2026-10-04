@@ -37,6 +37,8 @@ const groups = [
       'apps/admission-api/dist/modules/payment/payment-reconcile.integration.test.js',
       // 상담 조회 응답 허용 목록·증적 추가 전용·대학 경계 (T-M6-07, D-79)
       'apps/admission-api/dist/modules/support/support.integration.test.js',
+      // 권리 요청 — 내용 봉함·감사에 내용 없음·회신 한 번·삭제 불가 (G-10, D-84)
+      'apps/admission-api/dist/modules/privacy/privacy-request.integration.test.js',
     ],
     env: {
       DATABASE_URL: universityUrl,

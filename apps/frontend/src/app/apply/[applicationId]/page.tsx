@@ -468,6 +468,7 @@ export default function ApplyPage({
         <a href="/" style={{ color: 'var(--krds-primary)' }}>
           접수 홈으로
         </a>
+        <PrivacyRightsLink applicationId={applicationId} />
       </Card>
     );
   }
@@ -825,7 +826,28 @@ export default function ApplyPage({
           )}
         </Card>
       )}
+
+      {app && (
+        <Card title="내 개인정보">
+          <PrivacyRightsLink applicationId={applicationId} />
+        </Card>
+      )}
     </>
+  );
+}
+
+/**
+ * 원서의 열람·정정·삭제·처리정지 요청으로 가는 길 — 접수 전·후·취소 뒤 어느 상태에서나 (문서 10 G-10, D-84).
+ * 접수 뒤에는 원서를 고칠 수 없어도 정보주체의 권리는 그대로다.
+ */
+function PrivacyRightsLink({ applicationId }: { applicationId: string }) {
+  return (
+    <p style={{ margin: 'var(--krds-space-3) 0 0' }}>
+      이 원서의 개인정보를 보여 달라거나 바로잡거나 지워 달라고 대학에 요청할 수 있습니다.{' '}
+      <a href={`/privacy/${applicationId}`} style={{ color: 'var(--krds-primary)' }}>
+        개인정보 열람·정정·삭제 요청
+      </a>
+    </p>
   );
 }
 

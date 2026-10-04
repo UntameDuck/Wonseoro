@@ -61,6 +61,8 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   INCIDENT_RESOLVED: '장애 공지 해제',
   SUPPORT_LOOKUP: '상담 조회',
   CONSENT_RECORDED: '동의 기록',
+  PRIVACY_REQUEST_RECEIVED: '개인정보 권리 요청',
+  PRIVACY_REQUEST_DECIDED: '개인정보 권리 요청 회신',
 };
 
 export const AUDIT_RESULT_LABEL: Record<'ACCEPTED' | 'REJECTED' | 'FAILED', string> = {

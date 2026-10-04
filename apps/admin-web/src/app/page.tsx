@@ -35,6 +35,9 @@ export default function Home() {
             <a href="/support">상담 조회</a> — 접수번호·상담 확인번호로 접수·결제 상태 확인 (조회마다 증적번호가 남습니다)
           </li>
           <li>
+            <a href="/privacy">권리 요청</a> — 지원자의 개인정보 열람·정정·삭제·처리정지 요청을 기한 안에 처리·회신
+          </li>
+          <li>
             <a href="/evidence">증적 조회</a> — 한 원서의 접수 과정 확인 (조회 사실이 기록됩니다)
           </li>
           <li>
@@ -50,6 +53,9 @@ interface Summary {
   pendingConfigs: number;
   pendingPolicies: number;
   openExceptions: number;
+  /** 개인정보 권리 요청 — 처리 중·기한 지남 (G-10, D-84) */
+  privacyOpen: number;
+  privacyOverdue: number;
   deadlineAt: string | null;
 }
 
@@ -60,10 +66,11 @@ function Today({ cycleId }: { cycleId: string }) {
   useEffect(() => {
     void (async () => {
       try {
-        const [configs, policies, exceptions] = await Promise.all([
+        const [configs, policies, exceptions, privacy] = await Promise.all([
           adminGet<{ versions: Array<{ status: string }> }>('config/versions', { cycleId }),
           adminGet<{ policies: Array<{ activatedAt: string | null; deadlineAt: string }> }>('deadline-policies', { cycleId }),
           adminGet<{ exceptions: unknown[] }>('reconciliation/exceptions', { state: 'OPEN' }),
+          adminGet<{ counts: { open: number; overdue: number } }>('privacy-requests', { status: 'OPEN', limit: '1' }),
         ]);
         const now = Date.now();
         const current = policies.policies
@@ -73,6 +80,8 @@ function Today({ cycleId }: { cycleId: string }) {
           pendingConfigs: configs.versions.filter((v) => v.status === 'DRAFT' || v.status === 'APPROVED').length,
           pendingPolicies: policies.policies.filter((p) => !p.activatedAt).length,
           openExceptions: exceptions.exceptions.length,
+          privacyOpen: privacy.counts.open,
+          privacyOverdue: privacy.counts.overdue,
           deadlineAt: current?.deadlineAt ?? null,
         });
         setError(null);
@@ -109,6 +118,14 @@ function Today({ cycleId }: { cycleId: string }) {
           ['승인 대기 설정', count(summary.pendingConfigs, '/config', '검토·승인하기')],
           ['승인 대기 마감 정책', count(summary.pendingPolicies, '/deadline', '검토·승인하기')],
           ['미해결 불일치', count(summary.openExceptions, '/reconciliation', '확인·해소하기')],
+          [
+            '개인정보 권리 요청',
+            count(
+              summary.privacyOpen,
+              '/privacy',
+              summary.privacyOverdue > 0 ? `처리 기한이 지난 요청 ${summary.privacyOverdue}건 포함 — 처리·회신하기` : '처리·회신하기',
+            ),
+          ],
           ['지금 적용 중인 마감', summary.deadlineAt ? kst(summary.deadlineAt) : '적용된 마감 정책 없음'],
         ]}
       />

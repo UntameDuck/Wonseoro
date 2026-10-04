@@ -1,0 +1,2165 @@
+{
+  "test": "T-M5-41 Visible Focus / Focus Order · T-M5-42 Screen Reader",
+  "environment": "축소 환경 — 로컬 전용 DB(ui-shots-pg)·개발 서버(next dev)",
+  "phase": "admin",
+  "browser": "Chrome/154.0.8037.95",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "textZoom": 1,
+  "at": "2026-10-04T07:42:40.506Z",
+  "fatal": null,
+  "screens": 16,
+  "tabStops": 285,
+  "problems": [],
+  "detail": [
+    {
+      "name": "콘솔 첫 화면 (담당자 없음)",
+      "url": "/",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 입학처 콘솔\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "장애 공지",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"장애 공지\""
+        },
+        {
+          "tag": "A",
+          "name": "상담 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"상담 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "권리 요청",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"권리 요청\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "담당자 ID",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"담당자 ID\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "지정",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"지정\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "장애 공지",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"장애 공지\""
+        },
+        {
+          "tag": "A",
+          "name": "상담 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"상담 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "권리 요청",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"권리 요청\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        }
+      ],
+      "problems": [],
+      "title": "원서로 입학처 콘솔",
+      "liveRegions": []
+    },
+    {
+      "name": "콘솔 첫 화면 (담당자 지정)",
+      "url": "/",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 입학처 콘솔\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "장애 공지",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"장애 공지\""
+        },
+        {
+          "tag": "A",
+          "name": "상담 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"상담 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "권리 요청",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"권리 요청\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"담당자 바꾸기\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "장애 공지",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"장애 공지\""
+        },
+        {
+          "tag": "A",
+          "name": "상담 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"상담 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "권리 요청",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"권리 요청\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        }
+      ],
+      "problems": [],
+      "title": "원서로 입학처 콘솔",
+      "liveRegions": []
+    },
+    {
+      "name": "설정 승인",
+      "url": "/config",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 입학처 콘솔\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "장애 공지",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"장애 공지\""
+        },
+        {
+          "tag": "A",
+          "name": "상담 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"상담 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "권리 요청",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"권리 요청\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"담당자 바꾸기\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "보기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"보기\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "지금 적용 중인 설정에서 시작",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"지금 적용 중인 설정에서 시작\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "빈 설정에서 시작",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"빈 설정에서 시작\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "초안 버전 이름",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"초안 버전 이름\" 필수 — 0 / 64자"
+        },
+        {
+          "tag": "TEXTAREA",
+          "name": "설정 내용 (고급 편집)",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"설정 내용 (고급 편집)\" 필수"
+        }
+      ],
+      "problems": [],
+      "title": "설정 승인 | 원서로 입학처 콘솔",
+      "liveRegions": []
+    },
+    {
+      "name": "전형 Schema 온보딩",
+      "url": "/config",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 입학처 콘솔\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "장애 공지",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"장애 공지\""
+        },
+        {
+          "tag": "A",
+          "name": "상담 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"상담 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "권리 요청",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"권리 요청\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"담당자 바꾸기\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "보기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"보기\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "지금 적용 중인 설정에서 시작",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"지금 적용 중인 설정에서 시작\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "빈 설정에서 시작",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"빈 설정에서 시작\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "고급 편집 내용을 구성 화면에 불러오기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"고급 편집 내용을 구성 화면에 불러오기\""
+        },
+        {
+          "tag": "SELECT",
+          "name": "구성할 전형",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"구성할 전형\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "문항 삭제",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"문항 삭제\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "화면에 보일 이름",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"화면에 보일 이름\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "연동 코드",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"연동 코드\""
+        },
+        {
+          "tag": "SELECT",
+          "name": "입력 방식",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "combobox \"입력 방식\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "최솟값",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"최솟값\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "최댓값",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"최댓값\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "필수 문항",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "checkbox \"필수 문항\" 선택 안 됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "공통원서에서 가져오기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "checkbox \"공통원서에서 가져오기\" 선택 안 됨"
+        },
+        {
+          "tag": "BUTTON",
+          "name": "문항 삭제",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"문항 삭제\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "화면에 보일 이름",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"화면에 보일 이름\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "연동 코드",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"연동 코드\""
+        },
+        {
+          "tag": "SELECT",
+          "name": "입력 방식",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "combobox \"입력 방식\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "최소 글자 수",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"최소 글자 수\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "최대 글자 수",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"최대 글자 수\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "필수 문항",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "checkbox \"필수 문항\" 선택됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "공통원서에서 가져오기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "checkbox \"공통원서에서 가져오기\" 선택됨"
+        },
+        {
+          "tag": "BUTTON",
+          "name": "문항 삭제",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"문항 삭제\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "화면에 보일 이름",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"화면에 보일 이름\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "연동 코드",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"연동 코드\""
+        },
+        {
+          "tag": "SELECT",
+          "name": "입력 방식",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "combobox \"입력 방식\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "최소 글자 수",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"최소 글자 수\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "최대 글자 수",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"최대 글자 수\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "필수 문항",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "checkbox \"필수 문항\" 선택됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "공통원서에서 가져오기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "checkbox \"공통원서에서 가져오기\" 선택 안 됨"
+        },
+        {
+          "tag": "BUTTON",
+          "name": "문항 삭제",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"문항 삭제\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "화면에 보일 이름",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"화면에 보일 이름\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "연동 코드",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"연동 코드\""
+        },
+        {
+          "tag": "SELECT",
+          "name": "입력 방식",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "combobox \"입력 방식\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "최소 글자 수",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"최소 글자 수\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "최대 글자 수",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"최대 글자 수\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "필수 문항",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "checkbox \"필수 문항\" 선택 안 됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "공통원서에서 가져오기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "checkbox \"공통원서에서 가져오기\" 선택됨"
+        },
+        {
+          "tag": "BUTTON",
+          "name": "문항 삭제",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"문항 삭제\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "화면에 보일 이름",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"화면에 보일 이름\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "연동 코드",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"연동 코드\""
+        },
+        {
+          "tag": "SELECT",
+          "name": "입력 방식",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "combobox \"입력 방식\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "최솟값",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"최솟값\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "최댓값",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"최댓값\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "필수 문항",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "checkbox \"필수 문항\" 선택됨"
+        },
+        {
+          "tag": "INPUT",
+          "name": "공통원서에서 가져오기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "checkbox \"공통원서에서 가져오기\" 선택됨"
+        },
+        {
+          "tag": "BUTTON",
+          "name": "문항 추가",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"문항 추가\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "서류 삭제",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"서류 삭제\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "화면에 보일 이름",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"화면에 보일 이름\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "연동 코드",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "textbox \"연동 코드\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "접수 전에 꼭 내야 하는 서류",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "checkbox \"접수 전에 꼭 내야 하는 서류\" 선택 안 됨"
+        },
+        {
+          "tag": "BUTTON",
+          "name": "서류 추가",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"서류 추가\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "구성 내용을 초안에 반영",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"구성 내용을 초안에 반영\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "초안 버전 이름",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"초안 버전 이름\" 필수 — 16 / 64자"
+        },
+        {
+          "tag": "TEXTAREA",
+          "name": "설정 내용 (고급 편집)",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"설정 내용 (고급 편집)\" 필수"
+        },
+        {
+          "tag": "BUTTON",
+          "name": "초안 만들기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"초안 만들기\""
+        }
+      ],
+      "problems": [],
+      "title": "설정 승인 | 원서로 입학처 콘솔",
+      "liveRegions": []
+    },
+    {
+      "name": "마감 · 연장",
+      "url": "/deadline",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 입학처 콘솔\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "장애 공지",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"장애 공지\""
+        },
+        {
+          "tag": "A",
+          "name": "상담 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"상담 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "권리 요청",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"권리 요청\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"담당자 바꾸기\""
+        }
+      ],
+      "problems": [],
+      "title": "마감 · 연장 | 원서로 입학처 콘솔",
+      "liveRegions": []
+    },
+    {
+      "name": "대조 · 예외",
+      "url": "/reconciliation",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 입학처 콘솔\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "장애 공지",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"장애 공지\""
+        },
+        {
+          "tag": "A",
+          "name": "상담 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"상담 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "권리 요청",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"권리 요청\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"담당자 바꾸기\""
+        },
+        {
+          "tag": "SELECT",
+          "name": "상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"상태\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "지금 대조 실행 (최근 48시간)",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"지금 대조 실행 (최근 48시간)\""
+        }
+      ],
+      "problems": [],
+      "title": "대조 · 예외 | 원서로 입학처 콘솔",
+      "liveRegions": [
+        "최근 48시간 대조: 검사 0건 · 새 불일치 0건 · 자동 해소 0건 · 남은 불일치 0건"
+      ]
+    },
+    {
+      "name": "장애 공지",
+      "url": "/status",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 입학처 콘솔\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "장애 공지",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"장애 공지\""
+        },
+        {
+          "tag": "A",
+          "name": "상담 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"상담 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "권리 요청",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"권리 요청\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"담당자 바꾸기\""
+        },
+        {
+          "tag": "SELECT",
+          "name": "영향 수준",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"영향 수준\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "제목",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"제목\" 필수 — 0 / 120자"
+        },
+        {
+          "tag": "TEXTAREA",
+          "name": "지원자 안내",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"지원자 안내\" 필수 — 무엇이 영향을 받고, 지원자가 지금 무엇을 해야 하는지 적습니다. 0 / 1000자"
+        },
+        {
+          "tag": "INPUT",
+          "name": "예상 정상화 시각 (선택)",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "DateTime \"예상 정상화 시각 (선택)\" — 확정할 수 없으면 비워 두십시오. 한국 시각으로 입력합니다."
+        },
+        {
+          "tag": "SELECT",
+          "name": "표시할 상태",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"표시할 상태\""
+        }
+      ],
+      "problems": [],
+      "title": "장애 공지 | 원서로 입학처 콘솔",
+      "liveRegions": []
+    },
+    {
+      "name": "증적 조회",
+      "url": "/evidence",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 입학처 콘솔\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "장애 공지",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"장애 공지\""
+        },
+        {
+          "tag": "A",
+          "name": "상담 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"상담 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "권리 요청",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"권리 요청\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"담당자 바꾸기\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "접수번호 또는 원서 ID",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"접수번호 또는 원서 ID\" 필수 — 접수번호는 접수증·상담 기록에 있는 번호입니다."
+        },
+        {
+          "tag": "TEXTAREA",
+          "name": "조회 사유",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"조회 사유\" 필수 — 예: 지원자 문의 — 마감 직전 제출 여부 확인 (민원번호 …) 0 / 300자"
+        }
+      ],
+      "problems": [],
+      "title": "증적 조회 | 원서로 입학처 콘솔",
+      "liveRegions": []
+    },
+    {
+      "name": "상담 조회",
+      "url": "/support",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 입학처 콘솔\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "장애 공지",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"장애 공지\""
+        },
+        {
+          "tag": "A",
+          "name": "상담 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"상담 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "권리 요청",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"권리 요청\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"담당자 바꾸기\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "접수번호 또는 상담 확인번호",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"접수번호 또는 상담 확인번호\" 필수 — 상담 확인번호는 지원자의 내 원서 상태 확인 화면에 있는 10자리 번호입니다. 0 / 80자"
+        },
+        {
+          "tag": "SELECT",
+          "name": "문의 분류",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"문의 분류\" — 통화 내용에 맞는 분류를 고릅니다. 고르지 않으면 조회할 수 없습니다."
+        },
+        {
+          "tag": "INPUT",
+          "name": "증적번호",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"증적번호\" 필수 — 0 / 20자"
+        }
+      ],
+      "problems": [],
+      "title": "상담 조회 | 원서로 입학처 콘솔",
+      "liveRegions": []
+    },
+    {
+      "name": "상담 조회 (결과)",
+      "url": "/support",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 입학처 콘솔\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "장애 공지",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"장애 공지\""
+        },
+        {
+          "tag": "A",
+          "name": "상담 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"상담 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "권리 요청",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"권리 요청\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"담당자 바꾸기\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "접수번호 또는 상담 확인번호",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"접수번호 또는 상담 확인번호\" 필수 — 상담 확인번호는 지원자의 내 원서 상태 확인 화면에 있는 10자리 번호입니다. 11 / 80자"
+        },
+        {
+          "tag": "SELECT",
+          "name": "문의 분류",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"문의 분류\" — 통화 내용에 맞는 분류를 고릅니다. 고르지 않으면 조회할 수 없습니다."
+        },
+        {
+          "tag": "BUTTON",
+          "name": "조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"조회\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "증적번호",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"증적번호\" 필수 — 0 / 20자"
+        }
+      ],
+      "problems": [],
+      "title": "상담 조회 | 원서로 입학처 콘솔",
+      "liveRegions": [
+        "증적번호 SR-20261004-425WM9 통화 기록에 이 번호를 적어 주십시오. 지원자에게 알려 주어도 됩니다."
+      ]
+    },
+    {
+      "name": "상담 조회 (증적번호로 다시 보기)",
+      "url": "/support",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 입학처 콘솔\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "장애 공지",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"장애 공지\""
+        },
+        {
+          "tag": "A",
+          "name": "상담 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"상담 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "권리 요청",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"권리 요청\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"담당자 바꾸기\""
+        },
+        {
+          "tag": "INPUT",
+          "name": "접수번호 또는 상담 확인번호",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"접수번호 또는 상담 확인번호\" 필수 — 상담 확인번호는 지원자의 내 원서 상태 확인 화면에 있는 10자리 번호입니다. 0 / 80자"
+        },
+        {
+          "tag": "SELECT",
+          "name": "문의 분류",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"문의 분류\" — 통화 내용에 맞는 분류를 고릅니다. 고르지 않으면 조회할 수 없습니다."
+        },
+        {
+          "tag": "INPUT",
+          "name": "증적번호",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"증적번호\" 필수 — 18 / 20자"
+        },
+        {
+          "tag": "BUTTON",
+          "name": "다시 보기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"다시 보기\""
+        }
+      ],
+      "problems": [],
+      "title": "상담 조회 | 원서로 입학처 콘솔",
+      "liveRegions": [
+        "증적번호 SR-20261004-425WM9 2026.10.04 16:43에 안내한 내용입니다. 기록 원본과 같습니다."
+      ]
+    },
+    {
+      "name": "권리 요청 처리 큐",
+      "url": "/privacy",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 입학처 콘솔\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "장애 공지",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"장애 공지\""
+        },
+        {
+          "tag": "A",
+          "name": "상담 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"상담 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "권리 요청",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"권리 요청\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"담당자 바꾸기\""
+        },
+        {
+          "tag": "SELECT",
+          "name": "보기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"보기\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "새로 고침",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"새로 고침\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "PR-20261004-RS0R4S 열기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"PR-20261004-RS0R4S 열기\""
+        }
+      ],
+      "problems": [],
+      "title": "권리 요청 | 원서로 입학처 콘솔",
+      "liveRegions": []
+    },
+    {
+      "name": "권리 요청 (열람)",
+      "url": "/privacy",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 입학처 콘솔\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "장애 공지",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"장애 공지\""
+        },
+        {
+          "tag": "A",
+          "name": "상담 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"상담 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "권리 요청",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"권리 요청\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"담당자 바꾸기\""
+        },
+        {
+          "tag": "SELECT",
+          "name": "보기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"보기\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "새로 고침",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"새로 고침\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "PR-20261004-RS0R4S 열기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"PR-20261004-RS0R4S 열기\""
+        },
+        {
+          "tag": "SELECT",
+          "name": "처리 결과",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"처리 결과\" — 결과에 따라 지원자에게 알릴 내용이 다릅니다."
+        },
+        {
+          "tag": "TEXTAREA",
+          "name": "지원자에게 보낼 결과 안내",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "textbox \"지원자에게 보낼 결과 안내\" 필수 — 지원자 화면에 그대로 보입니다. 열람이면 자료를 받는 방법, 정정·삭제면 처리한 내용을 적습니다. 회신은 한 번만 할 수 있습니다. 0 / 2000자"
+        }
+      ],
+      "problems": [],
+      "title": "권리 요청 | 원서로 입학처 콘솔",
+      "liveRegions": []
+    },
+    {
+      "name": "권리 요청 (회신 뒤)",
+      "url": "/privacy",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 입학처 콘솔\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "장애 공지",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"장애 공지\""
+        },
+        {
+          "tag": "A",
+          "name": "상담 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"상담 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "권리 요청",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"권리 요청\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"담당자 바꾸기\""
+        },
+        {
+          "tag": "SELECT",
+          "name": "보기",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "combobox \"보기\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "새로 고침",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "button \"새로 고침\""
+        }
+      ],
+      "problems": [],
+      "title": "권리 요청 | 원서로 입학처 콘솔",
+      "liveRegions": [
+        "요청번호 PR-20261004-RS0R4S — 회신했습니다. 지원자 화면에 결과가 보입니다."
+      ]
+    },
+    {
+      "name": "보존기간",
+      "url": "/retention",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 입학처 콘솔\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "장애 공지",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"장애 공지\""
+        },
+        {
+          "tag": "A",
+          "name": "상담 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"상담 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "권리 요청",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"권리 요청\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"담당자 바꾸기\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "다시 계산",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"다시 계산\""
+        }
+      ],
+      "problems": [],
+      "title": "보존기간 | 원서로 입학처 콘솔",
+      "liveRegions": []
+    },
+    {
+      "name": "콘솔 없는 화면",
+      "url": "/no-such-page",
+      "stops": [
+        {
+          "tag": "A",
+          "name": "본문 바로가기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"본문 바로가기\""
+        },
+        {
+          "tag": "A",
+          "name": "원서로 입학처 콘솔",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"원서로 입학처 콘솔\""
+        },
+        {
+          "tag": "A",
+          "name": "설정 승인",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"설정 승인\""
+        },
+        {
+          "tag": "A",
+          "name": "마감 · 연장",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"마감 · 연장\""
+        },
+        {
+          "tag": "A",
+          "name": "대조 · 예외",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"대조 · 예외\""
+        },
+        {
+          "tag": "A",
+          "name": "장애 공지",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"장애 공지\""
+        },
+        {
+          "tag": "A",
+          "name": "상담 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"상담 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "권리 요청",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"권리 요청\""
+        },
+        {
+          "tag": "A",
+          "name": "증적 조회",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"증적 조회\""
+        },
+        {
+          "tag": "A",
+          "name": "보존기간",
+          "outline": 3,
+          "contrast": 4.55,
+          "say": "link \"보존기간\""
+        },
+        {
+          "tag": "BUTTON",
+          "name": "담당자 바꾸기",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "button \"담당자 바꾸기\""
+        },
+        {
+          "tag": "A",
+          "name": "콘솔 첫 화면으로",
+          "outline": 3,
+          "contrast": 4.17,
+          "say": "link \"콘솔 첫 화면으로\""
+        }
+      ],
+      "problems": [],
+      "title": "찾을 수 없는 화면 | 원서로 입학처 콘솔",
+      "liveRegions": []
+    }
+  ]
+}

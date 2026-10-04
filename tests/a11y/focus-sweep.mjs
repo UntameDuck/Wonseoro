@@ -123,7 +123,9 @@ const REFLOW = `(() => {
 const MISSED = `(() => {
   const sel = 'a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
   const shown = (e) => { const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && !e.closest('[aria-hidden=true]') && !(e.closest('details:not([open])') && e.tagName !== 'SUMMARY'); };
-  const missed = [...document.querySelectorAll(sel)].filter((e) => shown(e) && e.dataset.sweep === undefined && !e.closest('nextjs-portal'))
+  // 같은 이름의 라디오 묶음은 Tab 자리 하나다 — 묶음 안은 화살표로 옮긴다(브라우저 기본·WAI-ARIA 라디오 그룹). 묶음 중 하나에 닿았으면 된다
+  const radioReached = (e) => e.type === 'radio' && e.name && [...document.getElementsByName(e.name)].some((r) => r.dataset.sweep !== undefined);
+  const missed = [...document.querySelectorAll(sel)].filter((e) => shown(e) && e.dataset.sweep === undefined && !radioReached(e) && !e.closest('nextjs-portal'))
     .map((e) => e.tagName + ' "' + (e.innerText || e.getAttribute('aria-label') || e.name || '').trim().slice(0, 40) + '"');
   const positive = [...document.querySelectorAll('[tabindex]')].filter((e) => Number(e.getAttribute('tabindex')) > 0).map((e) => e.tagName);
   return { missed, positive };
@@ -304,6 +306,22 @@ async function applicant() {
   const gone = await focusInfo(b);
   if (!gone.name.startsWith('공통원서를 지웠습니다')) problems.push(`공통원서 삭제: 지운 뒤 포커스가 "${gone.name || '문서 처음'}" 에 있다`);
   await sweep('공통원서 (삭제 뒤)');
+
+  // 개인정보 권리 요청 (G-10, D-84) — 종류 없이 보내 오류 → 첫 종류로 포커스 → Space 로 고르고 보낸다
+  await go(`${WEB}/privacy/${applicationId}`, '아직 보낸 요청이 없습니다');
+  await sweep('개인정보 권리 요청');
+  await keyTo('요청 보내기');
+  await b.waitFor(`document.body.innerText.includes('요청 종류를 골라 주십시오')`, '권리 요청 오류');
+  const pk = await focusInfo(b);
+  if (pk.id !== 'kind-ACCESS') problems.push(`권리 요청: 오류 뒤 포커스가 "${pk.name || '문서 처음'}" 에 있다`);
+  await sweep('개인정보 권리 요청 (오류)');
+  await b.evaluate(`document.getElementById('kind-ACCESS').focus()`);
+  await press(b, ' ');
+  await keyTo('요청 보내기');
+  await b.waitFor(`document.body.innerText.includes('열람 요청을 보냈습니다') && document.body.innerText.includes('처리 기한')`, '권리 요청 보냄');
+  const pr = await focusInfo(b);
+  if (!pr.name.startsWith('열람 요청을 보냈습니다')) problems.push(`권리 요청: 보낸 뒤 포커스가 "${pr.name || '문서 처음'}" 에 있다`);
+  await sweep('개인정보 권리 요청 (보낸 뒤)');
 
   await go(`${WEB}/apply/${applicationId}`, '1. 공통정보');
   await sweep('원서 1단계');
@@ -500,6 +518,38 @@ async function admin() {
   const s2 = await focusInfo(b);
   if (!s2.name.startsWith('증적번호')) problems.push(`상담 다시 보기: 연 뒤 포커스가 "${s2.name || '문서 처음'}" 에 있다`);
   await sweep('상담 조회 (증적번호로 다시 보기)');
+
+  // 권리 요청 처리 큐 (G-10, D-84) — 지원자 요청을 API 로 하나 만들고, 키보드로 열어 회신한다
+  const pa = newApplicant();
+  const privacyApp = await createApplication(pa);
+  const pr = await fetch(`${API}/api/v1/applications/${privacyApp}/privacy-requests`, {
+    method: 'POST',
+    headers: {
+      'x-applicant-id': pa.applicantId,
+      'x-subject-token': pa.subjectToken,
+      'content-type': 'application/json',
+      'idempotency-key': `a11y-privacy-${randomUUID()}`,
+    },
+    body: JSON.stringify({ kind: 'CORRECTION', detail: '출신 고등학교 이름을 바로잡아 주십시오.' }),
+  });
+  if (!pr.ok) throw new Error(`권리 요청 만들기 ${pr.status} ${await pr.text()}`);
+  const requestNumber = (await pr.json()).requestNumber;
+  await go(`${ADMIN}/privacy`, requestNumber);
+  await sweep('권리 요청 처리 큐');
+  await keyTo(`${requestNumber} 열기`);
+  await b.waitFor(`document.body.innerText.includes('이 열람은 기록됩니다')`, '권리 요청 열람', 30_000);
+  const p1 = await focusInfo(b);
+  if (p1.id !== 'privacy-detail-title') problems.push(`권리 요청: 연 뒤 포커스가 "${p1.name || '문서 처음'}" 에 있다`);
+  await sweep('권리 요청 (열람)');
+  await keyTo('처리 결과', 'ArrowDown');
+  await press(b, 'Tab');
+  await typeText(b, '출신 고등학교 이름을 바로잡았습니다.');
+  await keyTo('회신');
+  await b.waitFor(`document.body.innerText.includes('회신했습니다')`, '권리 요청 회신', 30_000);
+  const p2 = await focusInfo(b);
+  if (!p2.name.includes('회신했습니다')) problems.push(`권리 요청: 회신 뒤 포커스가 "${p2.name || '문서 처음'}" 에 있다`);
+  await sweep('권리 요청 (회신 뒤)');
+
   await go(`${ADMIN}/retention`, '보존기간');
   await sweep('보존기간');
   await go(`${ADMIN}/no-such-page`, '찾을 수 없는');

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: K-Admission University Data Plane API
-  version: 1.14.0
+  version: 1.15.0
   description: >
     Reference contract for a university-local K-Admission data plane.
     The university DB is the source of truth; central sync is not in the applicant critical path.
@@ -78,6 +78,12 @@ info:
 
     1.14.0 opens the evidence package by application number (U-51): same auditor scope, recent
     authentication, mandatory reason and audit as the id-based path. New operation.
+
+
+    1.15.0 adds data subject requests on a university application (D-84, note G-10): the owner asks
+    for access, correction, deletion or suspension of processing; the request gets a number and a
+    statutory due date (10 days). The admissions office works a queue, opens a request (recorded as a
+    PII view) and answers once; partial or refused answers must give the reason. New operations.
 
 
     Common rules:
@@ -424,6 +430,76 @@ paths:
         '400': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/applications/{applicationId}/privacy-requests:
+    post:
+      tags: [Applications]
+      operationId: createPrivacyRequest
+      x-kadmission-register: D-84
+      description: >
+        Ask the university to give access to, correct, delete or stop processing the personal data of
+        this application. Accepted in any application state. The free text is sealed with the
+        application's data key. An open request of the same kind is returned as is (200) instead of a
+        second one. Audited (PRIVACY_REQUEST_RECEIVED, without the text). Owner only.
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind]
+              properties:
+                kind: { $ref: '#/components/schemas/PrivacyRequestKind' }
+                detail:
+                  type: string
+                  maxLength: 1000
+                  description: What to show, correct, delete or stop. Required for CORRECTION.
+      responses:
+        '201':
+          description: Request received
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrivacyRequest' }
+        '200':
+          description: An open request of the same kind already exists
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrivacyRequest' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    get:
+      tags: [Applications]
+      operationId: listPrivacyRequests
+      x-kadmission-register: D-84
+      description: The owner's requests on this application with the university's answers, newest first.
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+      responses:
+        '200':
+          description: Requests
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [requests, dueDays]
+                properties:
+                  requests:
+                    type: array
+                    items: { $ref: '#/components/schemas/PrivacyRequest' }
+                  dueDays: { type: integer, description: Statutory days to answer }
+        '404': { $ref: '#/components/responses/Problem' }
         '429':
           $ref: '#/components/responses/RateLimited'
   /api/v1/applications/{applicationId}/cancel:
@@ -850,6 +926,98 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+  /admin/v1/privacy-requests:
+    get:
+      tags: [Admin]
+      operationId: listPrivacyRequestQueue
+      x-kadmission-register: D-84
+      description: >
+        Data subject request queue. OPEN (default) is ordered by due date, DONE by answer time. Rows
+        carry no request text; counts are open, overdue and due within three days.
+      security: [{ oidc: [admin] }]
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [OPEN, DONE, ALL], default: OPEN }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 500, default: 200 }
+      responses:
+        '200':
+          description: Queue
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, counts]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/PrivacyQueueItem' }
+                  counts:
+                    type: object
+                    required: [open, overdue, dueSoon]
+                    properties:
+                      open: { type: integer }
+                      overdue: { type: integer }
+                      dueSoon: { type: integer }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /admin/v1/privacy-requests/{requestNumber}:
+    get:
+      tags: [Admin]
+      operationId: getPrivacyRequest
+      x-kadmission-register: D-84
+      description: >
+        Opens one request with the applicant's text. Requires recent authentication and appends
+        ADMIN_VIEWED_PII to the application's audit chain.
+      security: [{ oidc: [admin] }]
+      parameters:
+        - $ref: '#/components/parameters/PrivacyRequestNumber'
+      responses:
+        '200':
+          description: Request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrivacyQueueItem' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /admin/v1/privacy-requests/{requestNumber}/decision:
+    post:
+      tags: [Admin]
+      operationId: decidePrivacyRequest
+      x-kadmission-register: D-84
+      description: >
+        Answers the request once. The note is shown to the applicant as written; PARTIALLY_COMPLETED
+        and REFUSED need a reason of at least 10 characters. A second answer is 409. Requires recent
+        authentication; audited (PRIVACY_REQUEST_DECIDED, with whether it was late).
+      security: [{ oidc: [admin] }]
+      parameters:
+        - $ref: '#/components/parameters/PrivacyRequestNumber'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [outcome, note]
+              properties:
+                outcome: { type: string, enum: [COMPLETED, PARTIALLY_COMPLETED, REFUSED] }
+                note: { type: string, minLength: 1, maxLength: 2000 }
+      responses:
+        '200':
+          description: Answered request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrivacyQueueItem' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /admin/v1/config/active:
     get:
       tags: [Admin]
@@ -1846,6 +2014,11 @@ components:
       name: paymentId
       required: true
       schema: { type: string, format: uuid }
+    PrivacyRequestNumber:
+      in: path
+      name: requestNumber
+      required: true
+      schema: { type: string, pattern: '^PR-[0-9]{8}-[0-9A-HJKMNP-TV-Z]{6}$' }
     IdempotencyKey:
       in: header
       name: Idempotency-Key
@@ -2565,6 +2738,36 @@ components:
               at: { type: string, format: date-time }
               what: { type: string }
               result: { type: string }
+    PrivacyRequestKind:
+      type: string
+      enum: [ACCESS, CORRECTION, DELETION, SUSPENSION]
+      description: Access, correction, deletion or suspension of processing (Personal Information Protection Act arts. 35-37).
+    PrivacyRequest:
+      type: object
+      required: [requestNumber, kind, status, detail, receivedAt, dueAt, decidedAt, resultNote]
+      properties:
+        requestNumber: { type: string, pattern: '^PR-[0-9]{8}-[0-9A-HJKMNP-TV-Z]{6}$' }
+        kind: { $ref: '#/components/schemas/PrivacyRequestKind' }
+        status: { type: string, enum: [RECEIVED, COMPLETED, PARTIALLY_COMPLETED, REFUSED] }
+        detail: { type: [string, 'null'] }
+        receivedAt: { type: string, format: date-time }
+        dueAt: { type: string, format: date-time, description: Statutory due time (10 days after receipt) }
+        decidedAt: { type: [string, 'null'], format: date-time }
+        resultNote: { type: [string, 'null'], description: The university's answer as written }
+    PrivacyQueueItem:
+      allOf:
+        - $ref: '#/components/schemas/PrivacyRequest'
+        - type: object
+          required: [applicationNumber, supportCode, applicationStatus, decidedBy, daysLeft, overdue]
+          properties:
+            applicationNumber: { type: [string, 'null'], description: Null before submission }
+            supportCode: { type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{10}$' }
+            applicationStatus:
+              type: string
+              enum: [DRAFT, READY, PAYMENT_PENDING, PAID, FINALIZING, FINALIZED, CANCELLED, EXPIRED]
+            decidedBy: { type: [string, 'null'] }
+            daysLeft: { type: integer, description: Days until the due date in Korean dates (negative when past) }
+            overdue: { type: boolean }
     SupportReason:
       type: string
       enum: [STATUS, PAYMENT, DOCUMENT, INCIDENT, OTHER]

@@ -18,6 +18,7 @@ const NAV: Array<[string, string]> = [
   ['/reconciliation', '대조 · 예외'],
   ['/status', '장애 공지'],
   ['/support', '상담 조회'],
+  ['/privacy', '권리 요청'],
   ['/evidence', '증적 조회'],
   ['/retention', '보존기간'],
 ];

@@ -47,7 +47,7 @@ try {
   execFileSync('docker', ['run', '-d', '--rm', '--name', PG, '-e', 'POSTGRES_USER=wonseoro', '-e', 'POSTGRES_PASSWORD=wonseoro', '-e', 'POSTGRES_DB=univ_a', '-p', '5498:5432', 'postgres:16-alpine'], { stdio: 'ignore' });
   for (let i = 0; i < 60 && spawnSync('docker', ['exec', PG, 'pg_isready', '-U', 'wonseoro', '-d', 'univ_a']).status !== 0; i++) await sleep(1000);
   await sleep(2000);
-  for (const f of ['migrations/0001_init.sql', 'migrations/0002_db_roles.sql', 'migrations/0003_field_encryption.sql', 'migrations/0004_break_glass.sql', 'migrations/0005_outbox_archive.sql', 'migrations/0006_writer_fence.sql', 'migrations/0007_service_incident.sql', 'migrations/0008_support_view.sql', 'dev-roles.sql', 'seed-dev.sql', 'ci-seed-deadline.sql']) psql(`infra/db/${f}`);
+  for (const f of ['migrations/0001_init.sql', 'migrations/0002_db_roles.sql', 'migrations/0003_field_encryption.sql', 'migrations/0004_break_glass.sql', 'migrations/0005_outbox_archive.sql', 'migrations/0006_writer_fence.sql', 'migrations/0007_service_incident.sql', 'migrations/0008_support_view.sql', 'migrations/0009_privacy_request.sql', 'dev-roles.sql', 'seed-dev.sql', 'ci-seed-deadline.sql']) psql(`infra/db/${f}`);
   console.log('✔ DB 준비 (dast-pg :5498)');
 
   const tokens = path.join(OUT, 'tokens');

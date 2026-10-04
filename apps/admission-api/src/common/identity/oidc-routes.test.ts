@@ -147,11 +147,12 @@ describe('운영 API 권한 — 계약 범위와 같다 (T-M5-10, STRIDE E-03)',
     assert.deepEqual(wrong, []);
   });
 
-  it('재인증(Step-up) 경로 — 승인·활성화·되돌리기·연장·대사 예외 해결·증적 열람', () => {
+  it('재인증(Step-up) 경로 — 승인·활성화·되돌리기·연장·대사 예외 해결·증적 열람·권리 요청 열람/회신', () => {
     const stepUp = admin.filter((r) => r.stepUp).map((r) => `${r.method} ${r.url}`).sort();
     assert.deepEqual(stepUp, [
       'GET /admin/v1/evidence/applications/:applicationId',
       'GET /admin/v1/evidence/by-number/:applicationNumber',
+      'GET /admin/v1/privacy-requests/:requestNumber',
       'POST /admin/v1/config/versions/:configId/activate',
       'POST /admin/v1/config/versions/:configId/approve',
       'POST /admin/v1/config/versions/:configId/rollback',
@@ -160,6 +161,7 @@ describe('운영 API 권한 — 계약 범위와 같다 (T-M5-10, STRIDE E-03)',
       'POST /admin/v1/deadline-policies/extensions',
       'POST /admin/v1/incidents',
       'POST /admin/v1/incidents/:incidentId/resolve',
+      'POST /admin/v1/privacy-requests/:requestNumber/decision',
       'POST /admin/v1/reconciliation/:exceptionId/resolve',
     ]);
   });
