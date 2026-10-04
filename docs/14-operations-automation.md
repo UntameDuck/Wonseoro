@@ -1,7 +1,7 @@
 # 운영 자동화 — 만료 경보·WORM·복구 검증·Writer fencing
 
 > 기준일: 2026-10-04 · 대상 태스크: **T-M5-65**(인증서·Secret 만료 사전 경보) · **T-M3-03**(감사 기록 WORM 물리 분리) ·
-> **T-M5-62**(복구 검증 자동화) · **T-M5-63**(Writer fencing·Promotion lock)
+> **T-M5-62**(복구 검증 자동화) · **T-M5-63**(Writer fencing·Promotion lock) · 외부 실행 준비 **T-M4-06·T-M5-60·61·64**(HA·PITR·DR 사전 점검)
 >
 > 설계 원본: 노션 §01 B9(만료 30/14/7/3/1일, rotation drill)·A11(감사 분리 저장소)·B10(월별 자동 복구 + checksum·row-count·업무 불변식)·A10(Split-brain 방지, 단일 Writer).
 
@@ -61,6 +61,27 @@
   - 권장: Gateway API(ingress-nginx 은퇴 D-53) · 메트릭 API(HPA) · 볼륨 확장
   - 사람: 저장 데이터 암호화(KMS)·백업 소산·KCMVP·Object Lock 지원·노드 장애 판정 시간 — API 로 알 수 없어 질문으로 남긴다
 - **kind-univ-a 결과(축소 환경)** — 필수 7개 중 5개 충족. 없는 것: zone 2개(단일 노드), LoadBalancer(kind 에는 없다 — NodePort 로 대신). NetworkPolicy 는 정책 전 `open` → 정책 뒤 `timeout` 으로 실제로 막힘. 권장 셋 없음(Gateway API·메트릭 API·볼륨 확장)
+
+### 외부 PostgreSQL HA 사전 점검 — T-M4-06·T-M5-60·61·64 실행 준비 (2026-10-04)
+
+- **`scripts/ops/ha-preflight.mjs`**(`npm run ops:ha-preflight`) — Primary·Standby 관리자 주소에 각각 **읽기 전용 트랜잭션**으로 접속한다. URL·자격증명은 결과에 쓰지 않는다
+  - 역할: Primary는 `pg_is_in_recovery=false`, Standby는 `true`
+  - 계보·격리: 같은 PostgreSQL major와 `system_identifier`, 다른 서버 주소
+  - 복제: Primary의 `pg_stat_replication`에 `streaming` + `sync|quorum` 1개 이상, 기관이 정한 허용 WAL 지연 byte 이하, Standby `pg_stat_wal_receiver=streaming`, `hot_standby=on`
+  - PITR 준비: `archive_mode=on|always`, 실제 archive command 설정. 명령 문자열은 비밀이 섞일 수 있어 결과에 남기지 않고 설정 여부만 기록
+  - 단일 Writer: 운영 `writer_fence.require_token=true`, 승인 실행계획의 예상 epoch와 일치
+- **의도적으로 자동 판정하지 않는 것** — 서로 다른 zone이라는 CSP 증적, 백업/WAL 원격 소산, 실제 백업의 목표시각 PITR, 부하 중 Failover와 전체 DR의 RTO/RPO, DNS/Edge·옛 Writer fencing·사후 Reconciliation. 이 다섯 가지는 사람 증적으로 결과에 항상 남는다
+- **검증** — 판정기 단위 3개 통과·건너뜀 0. 이 PC의 서로 독립된 Primary DB 두 개를 Primary/Standby처럼 넣은 음성 대조는 자동 13개 중 7개만 통과하고 역할·계보·동기복제·WAL receiver·archive·writer token 6개를 정확히 실패했다. **운영 HA 환경 실행은 아직 없다**
+
+외부 실행 예시:
+
+```powershell
+$env:PRIMARY_DATABASE_URL = 'postgresql://통제된-관리계정@primary/대학DB'
+$env:STANDBY_DATABASE_URL = 'postgresql://통제된-관리계정@standby/대학DB'
+npm run ops:ha-preflight -- --environment=pilot-staging-a --approval=기관-티켓 --expected-writer-epoch=1 --max-replay-lag-bytes=기관-승인값
+```
+
+자동 점검 통과는 HA/PITR/DR 태스크 완료가 아니라 **실훈련 진입 조건**이다.
 
 ### T-M6-02 ✅ (2026-10-03) — Config 호환 시험 (D-77)
 

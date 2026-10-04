@@ -63,7 +63,7 @@
 | T-M4-03 | 대학별 values 분리 | §05, §01 A5 | UNIV-A/B/C, **code fork 0** |
 | T-M4-04 | K-PaaS 또는 kind 2~3 클러스터 | §05 | 대학별 독립 Data Plane 기동 |
 | T-M4-05 | GitOps Pull 배포 | v1.0 §13.1 | 중앙에서 Push하지 않음, Signed Artifact Pull |
-| T-M4-06 | DB를 클러스터 밖 HA 계층으로 | §05 | Primary/Standby, PITR |
+| T-M4-06 | DB를 클러스터 밖 HA 계층으로 | §05 | Primary/Standby, PITR — 역할·동기복제·계보·WAL·archive·writer epoch 읽기 전용 사전 점검 준비(`ops:ha-preflight`), 외부 배치·실증 대기 |
 | T-M4-07 | **Admission Peak Mode** | §01 B1·C4 | D-1 사전확장, minReplica 상향, 비핵심 Job 억제 |
 | T-M4-08 | HPA 커스텀 지표 | §05 | CPU뿐 아니라 RPS/Latency/Queue |
 | T-M4-09 | PgBouncer 계열 Pooler | §01 B2 | Connection Storm 차단, 전체 budget 고정 |

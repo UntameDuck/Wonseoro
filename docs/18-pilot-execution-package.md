@@ -158,7 +158,7 @@ DB 전환은 `pg_promote()` → 새 Primary의 `promote_writer(세대+1, 행위�
 | `soak-6h` | 6시간 Soak | `k6-acceptance.js` 6시간 프로필·OIDC 갱신·사후 DB 게이트 | 외부 환경 실행·메모리/커넥션 추세 판정 |
 | `finalization-burst` | Finalization Burst | 동시 Finalize 100회 | Pilot 용량에서 집중구간 실측 |
 | `pod-node-chaos` | Pod/Node Failure | kind 축소 결과 | K-PaaS Edge 재시도 포함 판정 |
-| `db-failover` | DB Failover | 연결 복구 단위·축소 시험 + `failover-70` 프로필·writer epoch/DB 정합성 게이트 | 70% 부하 중 실제 HA 전환 |
+| `db-failover` | DB Failover | `ops:ha-preflight` 역할·동기복제·WAL·writer token 사전 점검 + `failover-70` 프로필·writer epoch/DB 정합성 게이트 | 70% 부하 중 실제 HA 전환 |
 | `central-disconnect` | Central Disconnect | 로컬 2시간 실증 | Pilot 네트워크·mTLS 경로 재확인 |
 | `pg-timeout` | PG Timeout | Mock 1~30분 실증 | 실 PG Sandbox 지연·대조 |
 | `backup-restore` | Backup Restore | `npm run ops:restore-verify` | PITR/WAL 백업에서 별도 환경 복구 |
