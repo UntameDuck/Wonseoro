@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: K-Admission University Data Plane API
-  version: 1.11.0
+  version: 1.12.0
   description: >
     Reference contract for a university-local K-Admission data plane.
     The university DB is the source of truth; central sync is not in the applicant critical path.
@@ -64,6 +64,11 @@ info:
     this application's state, the applicant records them with `PUT .../consents` or at creation
     (`consents`), each record keeps the text version and its SHA-256, a missing required consent is a
     validation issue `CONSENT_REQUIRED` and blocks the payment intent. New path and optional fields.
+
+
+    1.12.0 records the common profile's own collection consent (D-82, note G-3): saving the profile
+    carries `collectionConsentVersion` (the current text version, otherwise 400) and the profile
+    reports `collectionConsent`. Optional fields in the schema; the server enforces the value.
 
 
     Common rules:
@@ -1685,6 +1690,12 @@ paths:
                       fieldCodes:
                         type: array
                         items: { type: string }
+                collectionConsentVersion:
+                  type: [string, 'null']
+                  x-kadmission-register: D-82
+                  description: >
+                    Version of the common profile collection-and-use text the applicant agreed to (1.12.0).
+                    Anything but the current version is refused with 400 — the profile is not stored.
       responses:
         '200':
           description: Saved profile
@@ -2294,6 +2305,16 @@ components:
                 items: { type: string }
               grantedAt: { type: string, format: date-time }
         updatedAt: { type: [string, 'null'], format: date-time }
+        collectionConsent:
+          x-kadmission-register: D-82
+          description: Agreement to the current collection-and-use text, or null when it must be asked again (1.12.0)
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [version, consentedAt]
+              properties:
+                version: { type: string }
+                consentedAt: { type: string, format: date-time }
     ClockReading:
       type: object
       description: This Pod's clock against the DB clock — the authority for submission time (§A2, §A9)

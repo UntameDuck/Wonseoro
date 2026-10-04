@@ -7,6 +7,8 @@ import { ProfileRejection, ProfileVaultService, SnapshotRequest } from './profil
 interface ProfileBody {
   fields?: unknown;
   consents?: unknown;
+  /** 동의한 공통원서 수집·이용 문안 판 (G-3, D-82) */
+  collectionConsentVersion?: unknown;
 }
 
 /**
@@ -73,7 +75,7 @@ export class ApplicantProfileController {
   ) {
     const subjectToken = subjectOf({ dev: devToken, gateway: gatewayToken, oidc: req?.applicantSubject });
     try {
-      return await this.vault.replaceProfile(subjectToken, body?.fields ?? {}, body?.consents);
+      return await this.vault.replaceProfile(subjectToken, body?.fields ?? {}, body?.consents, body?.collectionConsentVersion ?? null);
     } catch (err) {
       if (err instanceof ProfileRejection) {
         throw new HttpException(

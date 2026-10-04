@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { COMMON_PROFILE_COLLECTION_CONSENT } from '@wonseoro/contracts';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -164,7 +165,7 @@ describe('중앙 OIDC 인증 — HTTP (T-M5-02 단계 4)', () => {
     if (!available) return ctx.skip(SKIP);
     const me = await token(`oidc-me-${randomUUID()}`);
     const other = `oidc-other-${randomUUID()}`;
-    const saved = await call('PUT', '/api/v1/profile', me, { body: { fields: { contactEmail: 'me@example.kr' }, consents: [] } });
+    const saved = await call('PUT', '/api/v1/profile', me, { body: { fields: { contactEmail: 'me@example.kr' }, consents: [], collectionConsentVersion: COMMON_PROFILE_COLLECTION_CONSENT.version } });
     assert.equal(saved.status, 200, JSON.stringify(saved.json));
     const mine = await call('GET', '/api/v1/profile', me);
     assert.equal((mine.json.fields as Record<string, unknown>)?.contactEmail, 'me@example.kr');

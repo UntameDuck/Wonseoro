@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { COMMON_PROFILE_FIELDS, commonProfileProblem, problemText } from '@wonseoro/contracts';
+import { COMMON_PROFILE_COLLECTION_CONSENT, COMMON_PROFILE_FIELDS, commonProfileProblem, problemText } from '@wonseoro/contracts';
 import { Alert, Button, Card, DescriptionList, ErrorSummary, Field } from '@wonseoro/krds';
 import { Breadcrumb } from '../../krds/navigation';
 import { SlowNotice } from '../../krds/status';
@@ -28,7 +28,9 @@ export default function ProfilePage() {
 
   const [profile, setProfile] = useState<CommonProfile | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
-  const [university, setUniversity] = useState<{ id: string; name: string } | null>(null);
+  const [university, setUniversity] = useState<{ id: string; name: string; privacyPolicyUrl?: string } | null>(null);
+  /** 공통원서 수집·이용 동의 체크 (G-3, D-82) */
+  const [collectionAgreed, setCollectionAgreed] = useState(false);
   const [released, setReleased] = useState<Set<string>>(new Set());
   const [issues, setIssues] = useState<Array<{ path: string; message: string }>>([]);
   /** 저장을 누를 때마다 오류 요약을 새로 그려 포커스를 다시 받게 한다 (T-M5-40) */
@@ -41,7 +43,11 @@ export default function ProfilePage() {
     // 동의를 받을 대학 — 이 화면을 연 대학 접수 서버의 대학이다.
     try {
       const { data } = await api.currentCycle();
-      setUniversity({ id: data.universityId, name: data.universityName ?? data.universityId });
+      setUniversity({
+        id: data.universityId,
+        name: data.universityName ?? data.universityId,
+        ...(data.notices?.privacyPolicyUrl ? { privacyPolicyUrl: data.notices.privacyPolicyUrl } : {}),
+      });
     } catch {
       setUniversity(null);
     }
@@ -49,6 +55,7 @@ export default function ProfilePage() {
       const { data } = await api.profile(subjectToken);
       setProfile(data);
       setValues(Object.fromEntries(Object.entries(data.fields).map(([k, v]) => [k, String(v)])));
+      setCollectionAgreed(data.collectionConsent?.version === COMMON_PROFILE_COLLECTION_CONSENT.version);
       setStatus(null);
     } catch (err) {
       setProfile(null);
@@ -95,6 +102,8 @@ export default function ProfilePage() {
       if (problem) problems.push({ path: f.code, message: problem });
       fields[f.code] = value;
     }
+    // 공통원서는 운영기관이 받는 개인정보다 — 수집·이용 동의가 있어야 저장한다 (보호법 제15조, D-82)
+    if (!collectionAgreed) problems.unshift({ path: 'collectionConsent', message: '공통원서 개인정보 수집·이용에 동의해 주십시오.' });
     setIssues(problems);
     setSaveRun((n) => n + 1);
     if (problems.length > 0) return;
@@ -112,7 +121,11 @@ export default function ProfilePage() {
 
     setBusy(true);
     try {
-      const { data } = await api.saveProfile(subjectToken ?? '', { fields, consents });
+      const { data } = await api.saveProfile(subjectToken ?? '', {
+        fields,
+        consents,
+        collectionConsentVersion: collectionAgreed ? COMMON_PROFILE_COLLECTION_CONSENT.version : null,
+      });
       setProfile(data);
       setStatus({ tone: 'success', text: `저장했습니다 (${formatKst(data.updatedAt)}). 새로 만드는 원서부터 반영됩니다.` });
     } catch (err) {
@@ -156,6 +169,46 @@ export default function ProfilePage() {
       {status && <Alert tone={status.tone} title={status.text} focusKey={status} />}
       <ErrorSummary key={saveRun} issues={issues} />
 
+      {/* 공통원서 자체의 수집·이용 동의 — 대학 제공 동의와 따로 받는다 (G-3, D-82) */}
+      <Card title={COMMON_PROFILE_COLLECTION_CONSENT.title}>
+        <div
+          role="region"
+          aria-label={`${COMMON_PROFILE_COLLECTION_CONSENT.title} 전문`}
+          tabIndex={0}
+          style={{
+            whiteSpace: 'pre-wrap',
+            padding: 'var(--krds-space-3)',
+            border: '1px solid var(--krds-border)',
+            borderRadius: 'var(--krds-radius)',
+            fontSize: 'var(--krds-text-sm)',
+            maxHeight: '12rem',
+            overflowY: 'auto',
+          }}
+        >
+          {COMMON_PROFILE_COLLECTION_CONSENT.text}
+        </div>
+        <label htmlFor="field-collectionConsent" style={{ display: 'flex', gap: 'var(--krds-space-2)', alignItems: 'flex-start', marginTop: 'var(--krds-space-2)' }}>
+          <input
+            id="field-collectionConsent"
+            type="checkbox"
+            checked={collectionAgreed}
+            aria-invalid={issues.some((i) => i.path === 'collectionConsent') ? true : undefined}
+            aria-describedby={issues.some((i) => i.path === 'collectionConsent') ? 'field-collectionConsent-error' : undefined}
+            onChange={(e) => {
+              setCollectionAgreed(e.target.checked);
+              setIssues((prev) => prev.filter((i) => i.path !== 'collectionConsent'));
+            }}
+            style={{ width: 24, height: 24, marginTop: 0 }}
+          />
+          <span>위 내용에 동의합니다 (필수)</span>
+        </label>
+        {issues.some((i) => i.path === 'collectionConsent') && (
+          <p id="field-collectionConsent-error" style={{ margin: 'var(--krds-space-1) 0 0', color: 'var(--krds-danger)', fontSize: 'var(--krds-text-sm)' }}>
+            공통원서 개인정보 수집·이용에 동의해 주십시오.
+          </p>
+        )}
+      </Card>
+
       <Card title="기본 정보">
         {COMMON_PROFILE_FIELDS.map((f) => (
           <Field
@@ -196,6 +249,25 @@ export default function ProfilePage() {
               </label>
             ))}
           </fieldset>
+          {/* 제3자 제공 고지 — 제공받는 자·목적·항목·보유기간·거부권 (보호법 제17조 ②, G-3, D-82) */}
+          <DescriptionList
+            items={[
+              ['제공받는 자', university.name],
+              ['이용 목적', '이 대학 입학전형 원서 작성'],
+              ['제공 항목', released.size > 0 ? COMMON_PROFILE_FIELDS.filter((f) => released.has(f.code)).map((f) => f.title).join(', ') : '고른 항목 없음'],
+              [
+                '보유 기간',
+                university.privacyPolicyUrl ? (
+                  <span key="keep">
+                    이 대학의 원서 보존 기준에 따릅니다 — <a href={university.privacyPolicyUrl}>개인정보 처리방침</a>
+                  </span>
+                ) : (
+                  '이 대학의 원서 보존 기준에 따릅니다'
+                ),
+              ],
+              ['거부할 권리', '동의하지 않아도 됩니다. 고르지 않은 항목은 원서에서 직접 입력합니다.'],
+            ]}
+          />
         </Card>
       )}
 

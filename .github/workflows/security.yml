@@ -206,6 +206,7 @@ jobs:
           psql "$CENTRAL_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/central/0002_vault.sql
           psql "$CENTRAL_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/central/0003_summary_names.sql
           psql "$CENTRAL_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/central/0004_vault_encryption.sql
+          psql "$CENTRAL_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/central/0005_profile_collection_consent.sql
       - name: 선별 보안 시험 통과·건너뜀 0 강제
         run: npm run test:security
       - name: 서비스 간 상호 TLS 실증 — 실제 TLS·개발 PKI(openssl)·중앙·대학 API·Relay (T-M5-05, D-69)

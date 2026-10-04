@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { COMMON_PROFILE_COLLECTION_CONSENT } from '@wonseoro/contracts';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { after, before, describe, it } from 'node:test';
 import { HttpException } from '@nestjs/common';
@@ -501,7 +502,9 @@ describe('Common Profile Vault — 목적 최소화 (v1.0 §17, v1.1 §10 §3)',
     if (!available) return t.skip('DATABASE_URL 없음');
     const controller = new ApplicantProfileController(new ProfileVaultService(db));
     const subject = token();
-    await controller.replace({ fields: { contactEmail: 'me@example.kr' }, consents: [] }, subject);
+    // 공통원서 수집·이용 동의 판이 없으면 저장하지 않는다 (G-3, D-82)
+    await assert.rejects(controller.replace({ fields: { contactEmail: 'me@example.kr' }, consents: [] }, subject), (e: unknown) => (e as { getStatus?: () => number }).getStatus?.() === 400);
+    await controller.replace({ fields: { contactEmail: 'me@example.kr' }, consents: [], collectionConsentVersion: COMMON_PROFILE_COLLECTION_CONSENT.version }, subject);
     const mine = await controller.get(subject);
     assert.deepEqual(mine.fields, { contactEmail: 'me@example.kr' });
     assert.ok(mine.updatedAt);

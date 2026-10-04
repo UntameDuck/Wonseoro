@@ -281,6 +281,7 @@ async function applicant() {
   await fill('졸업(예정) 연도', '2027');
   await fill('이메일', 'applicant@example.com');
   await fill('휴대전화', '010-1234-5678');
+  await check('위 내용에 동의합니다 (필수)'); // 공통원서 수집·이용 동의 (D-82)
   for (const f of ['출신 고등학교', '졸업(예정) 연도', '이메일']) await check(f);
   await click('저장');
   await waitText('저장했습니다');

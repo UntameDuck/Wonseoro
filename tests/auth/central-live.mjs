@@ -123,6 +123,7 @@ try {
   const put = await call(CENTRAL, 'PUT', '/api/v1/profile', t, {
     fields: { highSchool: school, graduationYear: 2026 },
     consents: [{ universityId: UNIV, fieldCodes: ['highSchool', 'graduationYear'] }],
+    collectionConsentVersion: '2026-v1', // 공통원서 수집·이용 문안 판 (D-82)
   });
   check(put.status === 200, `중앙: 실제 로그인 토큰으로 공통원서 저장·이 대학 동의 (${put.status})`);
   const mine = await call(CENTRAL, 'GET', '/api/v1/profile', t);

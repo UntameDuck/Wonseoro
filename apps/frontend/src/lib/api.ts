@@ -252,6 +252,8 @@ export interface CommonProfile {
   fields: Record<string, string | number>;
   consents: Array<{ universityId: string; universityName?: string | null; fieldCodes: string[]; grantedAt: string }>;
   updatedAt: string | null;
+  /** 공통원서 수집·이용 동의 — 지금 판에 동의했으면 (D-82). 옛 서버면 없다 */
+  collectionConsent?: { version: string; consentedAt: string } | null;
 }
 
 export interface Submission {
@@ -497,6 +499,8 @@ export const api = {
     body: {
       fields: Record<string, string | number | null>;
       consents: Array<{ universityId: string; fieldCodes: string[] }>;
+      /** 동의한 공통원서 수집·이용 문안 판 — 없으면 저장하지 않는다 (D-82) */
+      collectionConsentVersion: string | null;
     },
   ) => call<CommonProfile>('/api/v1/profile', { method: 'PUT', body, base: 'central', subjectToken }),
 };

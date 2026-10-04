@@ -1,0 +1,628 @@
+{
+  "test": "T-M5-40 키보드 전용 접수 완주 (+ T-M5-41 포커스 · T-M5-42 스크린리더 재료 · T-M5-43/44 가로 스크롤)",
+  "input": "keyboard",
+  "environment": "축소 환경 — 로컬 전용 DB(ui-shots-pg)·개발 서버(next dev)·Mock PG·Mock 검사 엔진",
+  "browser": "Chrome/154.0.8037.93",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "textZoom": 1,
+  "at": "2026-10-04T02:55:33.077Z",
+  "seconds": 33,
+  "completed": true,
+  "applicationNumber": "2027-UNIV-A-5AT83GMXEF",
+  "applicant": {
+    "applicantId": "e4c4081e-96d7-4366-b720-3d6e06538c5f",
+    "subjectToken": "subj-kbd-1791082530338"
+  },
+  "applicationId": "fbcfb64d-de68-46f6-abf8-c503a651ac0c",
+  "keyPresses": 105,
+  "mouseEvents": 0,
+  "fatal": null,
+  "problems": [],
+  "screens": [
+    {
+      "name": "접수 홈",
+      "url": "/",
+      "stops": [
+        {
+          "name": "본문 바로가기",
+          "tag": "A",
+          "visible": true
+        },
+        {
+          "name": "전형",
+          "tag": "SELECT",
+          "visible": true
+        },
+        {
+          "name": "모집단위",
+          "tag": "SELECT",
+          "visible": true
+        },
+        {
+          "name": "시연 지원자 채우기",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "지원자 식별자",
+          "tag": "INPUT",
+          "type": "text",
+          "visible": true
+        },
+        {
+          "name": "공통원서 가명 토큰",
+          "tag": "INPUT",
+          "type": "text",
+          "visible": true
+        },
+        {
+          "name": "공통원서 작성·제공 동의",
+          "tag": "A",
+          "visible": true
+        }
+      ],
+      "horizontalScroll": false,
+      "title": "원서로 — 대학입학 원서접수"
+    },
+    {
+      "name": "공통원서",
+      "url": "/profile",
+      "stops": [
+        {
+          "name": "본문 바로가기",
+          "tag": "A",
+          "visible": true
+        },
+        {
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "tag": "A",
+          "visible": true
+        },
+        {
+          "name": "공통원서",
+          "tag": "A",
+          "visible": true
+        },
+        {
+          "name": "내 원서",
+          "tag": "A",
+          "visible": true
+        },
+        {
+          "name": "서비스 상태",
+          "tag": "A",
+          "visible": true
+        },
+        {
+          "name": "홈",
+          "tag": "A",
+          "visible": true
+        },
+        {
+          "name": "공통원서 개인정보 수집·이용 전문",
+          "tag": "DIV",
+          "visible": true
+        },
+        {
+          "name": "위 내용에 동의합니다 (필수)",
+          "tag": "INPUT",
+          "type": "checkbox",
+          "visible": true
+        },
+        {
+          "name": "출신 고등학교",
+          "tag": "INPUT",
+          "type": "text",
+          "visible": true
+        },
+        {
+          "name": "졸업(예정) 연도",
+          "tag": "INPUT",
+          "type": "number",
+          "visible": true
+        },
+        {
+          "name": "이메일",
+          "tag": "INPUT",
+          "type": "email",
+          "visible": true
+        },
+        {
+          "name": "휴대전화",
+          "tag": "INPUT",
+          "type": "text",
+          "visible": true
+        },
+        {
+          "name": "출신 고등학교",
+          "tag": "INPUT",
+          "type": "checkbox",
+          "visible": true
+        },
+        {
+          "name": "졸업(예정) 연도",
+          "tag": "INPUT",
+          "type": "checkbox",
+          "visible": true
+        },
+        {
+          "name": "이메일",
+          "tag": "INPUT",
+          "type": "checkbox",
+          "visible": true
+        },
+        {
+          "name": "휴대전화",
+          "tag": "INPUT",
+          "type": "checkbox",
+          "visible": true
+        },
+        {
+          "name": "개인정보 처리방침",
+          "tag": "A",
+          "visible": true
+        },
+        {
+          "name": "저장",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "입력을 확인해 주십시오 (1건) 이메일 형식이 올바르지 않습니다.",
+          "tag": "DIV",
+          "visible": true
+        },
+        {
+          "name": "이메일 형식이 올바르지 않습니다.",
+          "tag": "A",
+          "visible": true
+        },
+        {
+          "name": "이메일",
+          "tag": "INPUT",
+          "type": "email",
+          "visible": true
+        },
+        {
+          "name": "휴대전화",
+          "tag": "INPUT",
+          "type": "text",
+          "visible": true
+        },
+        {
+          "name": "출신 고등학교",
+          "tag": "INPUT",
+          "type": "checkbox",
+          "visible": true
+        },
+        {
+          "name": "졸업(예정) 연도",
+          "tag": "INPUT",
+          "type": "checkbox",
+          "visible": true
+        },
+        {
+          "name": "이메일",
+          "tag": "INPUT",
+          "type": "checkbox",
+          "visible": true
+        },
+        {
+          "name": "휴대전화",
+          "tag": "INPUT",
+          "type": "checkbox",
+          "visible": true
+        },
+        {
+          "name": "개인정보 처리방침",
+          "tag": "A",
+          "visible": true
+        },
+        {
+          "name": "저장",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "홈",
+          "tag": "A",
+          "visible": true
+        }
+      ],
+      "horizontalScroll": false,
+      "title": "공통원서 | 원서로"
+    },
+    {
+      "name": "접수 홈 (본인확인 뒤)",
+      "url": "/",
+      "stops": [
+        {
+          "name": "전형",
+          "tag": "SELECT",
+          "visible": true
+        },
+        {
+          "name": "모집단위",
+          "tag": "SELECT",
+          "visible": true
+        },
+        {
+          "name": "시연 지원자 채우기",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "지원자 식별자",
+          "tag": "INPUT",
+          "type": "text",
+          "visible": true
+        },
+        {
+          "name": "공통원서 가명 토큰",
+          "tag": "INPUT",
+          "type": "text",
+          "visible": true
+        },
+        {
+          "name": "공통원서 작성·제공 동의",
+          "tag": "A",
+          "visible": true
+        },
+        {
+          "name": "원서 작성 시작",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        }
+      ],
+      "horizontalScroll": false,
+      "title": "원서로 — 대학입학 원서접수"
+    },
+    {
+      "name": "원서 1단계 공통정보",
+      "url": "/apply/fbcfb64d-de68-46f6-abf8-c503a651ac0c",
+      "stops": [
+        {
+          "name": "홈",
+          "tag": "A",
+          "visible": true
+        },
+        {
+          "name": "개인정보 수집·이용 전문",
+          "tag": "DIV",
+          "visible": true
+        },
+        {
+          "name": "위 내용에 동의합니다 (필수)",
+          "tag": "INPUT",
+          "type": "checkbox",
+          "visible": true
+        },
+        {
+          "name": "학교생활기록부·수능 성적 온라인 제공 전문",
+          "tag": "DIV",
+          "visible": true
+        },
+        {
+          "name": "위 내용에 동의합니다 (필수)",
+          "tag": "INPUT",
+          "type": "checkbox",
+          "visible": true
+        },
+        {
+          "name": "출신 고등학교",
+          "tag": "INPUT",
+          "type": "text",
+          "visible": true
+        },
+        {
+          "name": "이메일",
+          "tag": "INPUT",
+          "type": "email",
+          "visible": true
+        },
+        {
+          "name": "졸업(예정) 연도",
+          "tag": "INPUT",
+          "type": "number",
+          "visible": true
+        },
+        {
+          "name": "다음 단계",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "이 원서 취소하기",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "취소 사유",
+          "tag": "INPUT",
+          "type": "text",
+          "visible": true
+        },
+        {
+          "name": "그만두기",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "이 원서 취소하기",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "다음 단계",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "2. 대학·전형",
+          "tag": "H2",
+          "visible": true
+        }
+      ],
+      "horizontalScroll": false,
+      "title": "공통정보 — 원서 작성 | 원서로"
+    },
+    {
+      "name": "원서 2단계 대학·전형",
+      "url": "/apply/fbcfb64d-de68-46f6-abf8-c503a651ac0c",
+      "stops": [
+        {
+          "name": "이전",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "다음 단계",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "3. 추가정보",
+          "tag": "H2",
+          "visible": true
+        }
+      ],
+      "horizontalScroll": false,
+      "title": "대학·전형 — 원서 작성 | 원서로"
+    },
+    {
+      "name": "원서 3단계 추가정보",
+      "url": "/apply/fbcfb64d-de68-46f6-abf8-c503a651ac0c",
+      "stops": [
+        {
+          "name": "내신 성적",
+          "tag": "INPUT",
+          "type": "number",
+          "visible": true
+        },
+        {
+          "name": "학적 변동 사항",
+          "tag": "TEXTAREA",
+          "visible": true
+        },
+        {
+          "name": "이전",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "다음 단계",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "4. 서류",
+          "tag": "H2",
+          "visible": true
+        }
+      ],
+      "horizontalScroll": false,
+      "title": "추가정보 — 원서 작성 | 원서로"
+    },
+    {
+      "name": "원서 4단계 서류",
+      "url": "/apply/fbcfb64d-de68-46f6-abf8-c503a651ac0c",
+      "stops": [
+        {
+          "name": "파일 선택",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "이전",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "검사 상태 새로고침",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "검토 단계로",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "입력을 확인해 주십시오 (1건) 학적 변동 사항을 입력해 주십시오.",
+          "tag": "DIV",
+          "visible": true
+        }
+      ],
+      "horizontalScroll": false,
+      "title": "서류 — 원서 작성 | 원서로"
+    },
+    {
+      "name": "검토 전 검증 오류",
+      "url": "/apply/fbcfb64d-de68-46f6-abf8-c503a651ac0c",
+      "stops": [
+        {
+          "name": "학적 변동 사항을 입력해 주십시오.",
+          "tag": "A",
+          "visible": true
+        },
+        {
+          "name": "학적 변동 사항",
+          "tag": "TEXTAREA",
+          "visible": true
+        },
+        {
+          "name": "이전",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "다음 단계",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "4. 서류",
+          "tag": "H2",
+          "visible": true
+        },
+        {
+          "name": "파일 선택",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "이전",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "검사 상태 새로고침",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "검토 단계로",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "5. 검토·결제",
+          "tag": "H2",
+          "visible": true
+        }
+      ],
+      "horizontalScroll": false,
+      "title": "서류 — 원서 작성 | 원서로"
+    },
+    {
+      "name": "원서 5단계 검토·결제",
+      "url": "/apply/fbcfb64d-de68-46f6-abf8-c503a651ac0c",
+      "stops": [
+        {
+          "name": "결제 후에는 원서를 수정하거나 취소할 수 없다는 것을 확인했습니다.",
+          "tag": "INPUT",
+          "type": "checkbox",
+          "visible": true
+        },
+        {
+          "name": "이전",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "전형료 결제하고 접수",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        },
+        {
+          "name": "접수 완료",
+          "tag": "H2",
+          "visible": true
+        }
+      ],
+      "horizontalScroll": false,
+      "title": "검토·결제 — 원서 작성 | 원서로"
+    },
+    {
+      "name": "접수 완료",
+      "url": "/apply/fbcfb64d-de68-46f6-abf8-c503a651ac0c",
+      "stops": [
+        {
+          "name": "접수증 보기·인쇄",
+          "tag": "A",
+          "visible": true
+        }
+      ],
+      "horizontalScroll": false,
+      "title": "최종제출 — 원서 작성 | 원서로"
+    },
+    {
+      "name": "접수증",
+      "url": "/receipt/80654b32-7d51-4aab-97a3-9eed3ba5d1a1",
+      "stops": [
+        {
+          "name": "본문 바로가기",
+          "tag": "A",
+          "visible": true
+        },
+        {
+          "name": "원서로 · 원서로대학교 2027 수시",
+          "tag": "A",
+          "visible": true
+        },
+        {
+          "name": "공통원서",
+          "tag": "A",
+          "visible": true
+        },
+        {
+          "name": "내 원서",
+          "tag": "A",
+          "visible": true
+        },
+        {
+          "name": "서비스 상태",
+          "tag": "A",
+          "visible": true
+        },
+        {
+          "name": "인쇄",
+          "tag": "BUTTON",
+          "type": "button",
+          "visible": true
+        }
+      ],
+      "horizontalScroll": false,
+      "title": "접수증 | 원서로"
+    }
+  ]
+}

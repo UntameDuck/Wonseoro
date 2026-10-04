@@ -237,6 +237,10 @@ async function walk() {
   await b.waitFor(`location.pathname === '/profile'`, '공통원서 이동');
   await screen('공통원서', '기본 정보');
   await b.waitFor(`[...document.querySelectorAll('button')].some((x) => x.textContent.trim() === '저장' && !x.disabled)`, '공통원서 불러오기');
+  // 공통원서 수집·이용 동의 — 전문 영역을 지나 체크를 Space 로 (D-82)
+  await tabTo('공통원서 수집·이용 동의', named('위 내용에 동의합니다 (필수)', { type: 'checkbox' }));
+  await activate(' ');
+  if (!(await focusInfo(b)).checked) problem('Space 로 공통원서 수집·이용 동의가 체크되지 않는다');
   for (const [label, value] of [
     ['출신 고등학교', '한국고등학교'],
     ['졸업(예정) 연도', '2027'],

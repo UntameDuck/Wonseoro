@@ -1,6 +1,6 @@
 import { HttpException, Injectable, Logger } from '@nestjs/common';
-import { randomBytes, randomUUID } from 'node:crypto';
-import { commonProfileProblem } from '@wonseoro/contracts';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { COMMON_PROFILE_COLLECTION_CONSENT, commonProfileProblem } from '@wonseoro/contracts';
 import { Db, FieldKeyUnavailable, fieldKeyRing, openJson, sealJson } from '@wonseoro/server-kit';
 
 export interface SnapshotRequest {
@@ -16,6 +16,8 @@ export interface ApplicantProfile {
   fields: Record<string, unknown>;
   consents: Array<{ universityId: string; universityName: string | null; fieldCodes: string[]; grantedAt: string }>;
   updatedAt: string | null;
+  /** 공통원서 수집·이용 동의 — 지금 판에 동의했으면 판·시각 (G-3, D-82). 옛 판이면 다시 받는다 */
+  collectionConsent: { version: string; consentedAt: string } | null;
 }
 
 export class ProfileRejection extends Error {
@@ -157,8 +159,18 @@ export class ProfileVaultService {
           ).rows.map((u) => [u.id, u.name]),
         )
       : new Map<string, string>();
+    const collection = await this.db.query<{ v: string | null; at: Date | null }>(
+      `SELECT collection_consent_version AS v, collection_consented_at AS at
+         FROM kadmission_vault.applicant_profile WHERE subject_token = $1`,
+      [subjectToken],
+    );
+    const c0 = collection.rows[0];
     return {
       fields: stored.fields,
+      collectionConsent:
+        c0?.v === COMMON_PROFILE_COLLECTION_CONSENT.version && c0.at
+          ? { version: c0.v, consentedAt: c0.at.toISOString() }
+          : null,
       consents: consents.rows.map((c) => ({
         universityId: c.university_id,
         universityName: names.get(c.university_id) ?? null,
@@ -181,7 +193,13 @@ export class ProfileVaultService {
     subjectToken: string,
     fields: unknown,
     consents: unknown,
+    // 서비스를 직접 부르는 시험은 지금 판 동의로 본다. HTTP 는 본문 값을 그대로 넘긴다(없으면 null → 거절)
+    collectionConsentVersion: unknown = COMMON_PROFILE_COLLECTION_CONSENT.version,
   ): Promise<ApplicantProfile> {
+    // 공통원서는 운영기관이 받는 개인정보다 — 저장할 때마다 지금 판 수집·이용 문안에 동의해야 한다 (보호법 제15조, G-3, D-82)
+    if (collectionConsentVersion !== COMMON_PROFILE_COLLECTION_CONSENT.version) {
+      throw new ProfileRejection('공통원서 개인정보 수집·이용에 동의해 주십시오.');
+    }
     const clean = validateFields(fields);
     const grants = validateConsents(consents, new Set(Object.keys(clean)));
 
@@ -192,12 +210,26 @@ export class ProfileVaultService {
 
     await this.db.tx(async (client) => {
       await client.query(
-        `INSERT INTO kadmission_vault.applicant_profile (subject_token, fields, fields_ciphertext, wrapped_dek, key_version)
-         VALUES ($1, '{}'::jsonb, $2, $3, $4)
+        `INSERT INTO kadmission_vault.applicant_profile
+           (subject_token, fields, fields_ciphertext, wrapped_dek, key_version,
+            collection_consent_version, collection_consent_hash, collection_consented_at)
+         VALUES ($1, '{}'::jsonb, $2, $3, $4, $5, $6, now())
          ON CONFLICT (subject_token) DO UPDATE
            SET fields = '{}'::jsonb, fields_ciphertext = EXCLUDED.fields_ciphertext, wrapped_dek = EXCLUDED.wrapped_dek,
-               key_version = EXCLUDED.key_version, updated_at = now()`,
-        [subjectToken, sealed, wrapped, kekId],
+               key_version = EXCLUDED.key_version, updated_at = now(),
+               collection_consent_version = EXCLUDED.collection_consent_version,
+               collection_consent_hash = EXCLUDED.collection_consent_hash,
+               collection_consented_at = CASE
+                 WHEN kadmission_vault.applicant_profile.collection_consent_version = EXCLUDED.collection_consent_version
+                 THEN kadmission_vault.applicant_profile.collection_consented_at ELSE now() END`,
+        [
+          subjectToken,
+          sealed,
+          wrapped,
+          kekId,
+          COMMON_PROFILE_COLLECTION_CONSENT.version,
+          createHash('sha256').update(COMMON_PROFILE_COLLECTION_CONSENT.text).digest('hex'),
+        ],
       );
       for (const g of grants) {
         await client.query(
