@@ -4,6 +4,7 @@ import '@wonseoro/krds/tokens.css';
 import { CycleBadge } from '../krds/cycle-badge';
 import { SessionTimeout } from '../krds/session-timeout';
 import { ServiceIncidentBanner } from '../krds/service-status';
+import { UniversityFooterNotices } from '../krds/university-notices';
 
 /**
  * 화면마다 제목이 다르다 — "검토·결제 — 원서 작성 | 원서로". 탭·스크린리더·방문 기록이 화면을 구별한다
@@ -92,9 +93,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             color: 'var(--krds-fg-muted)',
           }}
         >
-          {/* 설계 설명("원본은 대학 서버")을 두지 않는다. 운영기관·문의처·개인정보처리방침은 대학 설정에 값이
-              생기면 여기 둔다 — 지어낸 연락처를 넣지 않는다 (T-M5-50, 08 결정 12) */}
+          {/* 설계 설명("원본은 대학 서버")을 두지 않는다. 처리방침·위탁·보호책임자·문의처는 대학 설정(notices)에 값이
+              있을 때만 — 지어낸 연락처를 넣지 않는다 (T-M5-50, 08 결정 12, D-80) */}
           <p style={{ margin: 0 }}>원서로 · 대학입학 원서접수</p>
+          <UniversityFooterNotices />
         </footer>
         {/* 세션 만료 5분 전 경고·연장 (T-M5-45) */}
         <SessionTimeout />

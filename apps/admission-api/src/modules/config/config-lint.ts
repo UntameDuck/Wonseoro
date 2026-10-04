@@ -1,6 +1,12 @@
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
-import { COMMON_PROFILE_CODES } from '@wonseoro/contracts';
+import {
+  COMMON_PROFILE_CODES,
+  UNIVERSITY_NOTICE_KEYS,
+  UNIVERSITY_NOTICE_MAX,
+  UNIVERSITY_NOTICE_REQUIRED,
+  UNIVERSITY_NOTICE_URL_KEYS,
+} from '@wonseoro/contracts';
 import { LEGACY_PROFILE_FIELDS } from './form-schema.service';
 
 /**
@@ -19,6 +25,7 @@ import { LEGACY_PROFILE_FIELDS } from './form-schema.service';
  *   requiredDocuments[전형코드]   접수 전 검사를 통과해야 하는 서류 종류
  *   optionalDocuments[전형코드]   받되 요구하지 않는 서류 종류
  *   documentLabels[서류종류]      화면에 보일 서류 이름
+ *   notices                       지원자 고지 — 처리방침·위탁·보호책임자·문의처 주소/문구, 전형료 반환 안내 (문서 10 G-4·G-6, D-80)
  *   retention                     보존 정책 — 따로 검사한다(validateRetention)
  */
 export interface ConfigLintResult {
@@ -32,6 +39,14 @@ const FIELD_CODE = /^[A-Za-z][A-Za-z0-9_]{0,127}$/;
 const SELF_INTRO = /자기\s*소개|자소서|self[\s_-]*intro|personal[\s_-]*statement/i;
 /** document.document_type varchar(64). */
 const DOCUMENT_TYPE = /^[A-Z][A-Z0-9_]{0,63}$/;
+
+function isHttpsUrl(v: string): boolean {
+  try {
+    return new URL(v).protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
 
 function isObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -146,6 +161,37 @@ export function lintConfig(config: unknown, typeCodes: readonly string[] | null)
           errors.push(`${key}.${code}: 서류 종류 ${t} 는 대문자·숫자·_ 64자 이하여야 합니다.`);
         }
       }
+    }
+  }
+  // ── notices ─────────────────────────────────────────────────────────
+  // 처리방침·보호책임자·전형료 반환 안내는 법정 고지다. 없어도 접수는 돌지만 지원자에게 알릴 길이 없다 —
+  // 승인 화면에 경고로 보인다. 값이 있으면 형식을 지켜야 한다(오류) (D-80)
+  if (config.notices === undefined) {
+    warnings.push('notices: 지원자 고지가 없습니다 — 개인정보 처리방침·보호책임자·전형료 반환 안내가 지원자 화면에 나오지 않습니다.');
+  } else if (!isObject(config.notices)) {
+    errors.push('notices 는 고지 이름별 문구 객체여야 합니다.');
+  } else {
+    const notices = config.notices;
+    for (const [key, value] of Object.entries(notices)) {
+      if (!(UNIVERSITY_NOTICE_KEYS as readonly string[]).includes(key)) {
+        warnings.push(`notices.${key}: 알 수 없는 고지입니다. 지원자 화면에 나오지 않습니다.`);
+        continue;
+      }
+      const k = key as (typeof UNIVERSITY_NOTICE_KEYS)[number];
+      if (typeof value !== 'string' || !value.trim()) {
+        errors.push(`notices.${key}: 비어 있지 않은 문구여야 합니다.`);
+        continue;
+      }
+      if (value.length > UNIVERSITY_NOTICE_MAX[k]) {
+        errors.push(`notices.${key}: ${UNIVERSITY_NOTICE_MAX[k]}자 이하로 적어 주십시오.`);
+      }
+      if (UNIVERSITY_NOTICE_URL_KEYS.includes(k) && !isHttpsUrl(value.trim())) {
+        errors.push(`notices.${key}: https 로 시작하는 주소여야 합니다.`);
+      }
+    }
+    const missing = UNIVERSITY_NOTICE_REQUIRED.filter((k) => typeof notices[k] !== 'string' || !(notices[k] as string).trim());
+    if (missing.length > 0) {
+      warnings.push(`notices: 법정 고지가 빠졌습니다 — ${missing.join(', ')}`);
     }
   }
   if (config.documentLabels !== undefined) {

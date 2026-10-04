@@ -10,7 +10,7 @@
 
 | 노션 문서 | 첨부 이름 | 저장소 파일 | 바이트 | SHA-256 | 근거 |
 |---|---|---|---|---|---|
-| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.9.0) | 104,819 | `7caedf5ba4a0cb2ade67f205d05b0118e448e3824f4779c746844001fa941b53` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 · D-78 · D-79 |
+| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.10.0) | 105,865 | `97077c6918789fe5bbb8453a93ba785cabb55cd8972b6a1fd568bd24e457f8b5` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 · D-78 · D-79 · D-80 |
 | [§04 CloudEvents](https://app.notion.com/p/3df75ab5debe81d68e37fabd3678dcc4) | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | 6,104 | `3ed7ec8a340c50f6e7de25b2c3322ffd7c6b4914fd046afdc67a2efea699ca02` | D-47 · T-M5-51 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` (v1.2) | 4,036 | `1aaef0db712e1d9a15da41fb86b7832a3da8c6decfdcd5992a57bb071e5b1975` | D-44 · D-49 · D-52 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` (v1.5, 차트 렌더링 — RBAC 6종·내부 상호 TLS·서류 워커 출구) | 40,216 | `28c54fbdb2e83edc849526c06c7158017110fa0e24a3b3cbfe8f525febf2b315` | D-44 · D-52 · D-68 · D-69 |
@@ -137,6 +137,8 @@ v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
 > **2026-10-04 v1.9.0** — 개인정보 최소 상담 조회 `POST /admin/v1/support/lookups`·`GET /admin/v1/support/lookups/{evidenceNumber}`(새 범위 `support`), 응답 `SupportView`(허용 목록),
 > 지원자 Self-check 에 선택 필드 `supportCode`. 새 경로·범위·선택 필드 추가라 호환 변경이다(§A16). (D-79)
 
+> **2026-10-04 v1.10.0** — 지금 모집 응답에 선택 필드 `notices`(개인정보 처리방침·위탁 공개 주소, 보호책임자, 문의처, 전형료 반환 안내 — 2인 승인된 설정에서). 선택 필드 추가라 호환 변경이다(§A16). (D-80)
+
 ### §04 CloudEvents Schema
 
 - `subjectRef` 절의 패턴 `^[A-Za-z0-9_-]{1,64}[.][A-Za-z0-9_-]{43}$` → `^[A-Za-z0-9_-]{1,16}[.][A-Za-z0-9_-]{43}$`,
@@ -236,6 +238,11 @@ v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
 ### §07 KRDS 와이어프레임
 
 첨부 교체만. 본문 결제 문구는 2026-09-27 에 이미 D-42 로 고쳤다.
+
+「화면 원칙」 에 더한다 (D-80):
+
+> 법정 고지는 대학 설정(`notices`, 2인 승인)에서 온다 — 모든 화면 바닥글에 개인정보 처리방침(굵게)·처리 위탁·보호책임자·문의처,
+> 검토·결제 화면과 접수증에 전형료 반환 사유·금액·방법. 값이 없으면 그리지 않는다(지어낸 연락처·문안 없음). 원서 양식은 자기소개서를 받지 않는다(설정 검사가 경고).
 
 ### §08 부하·장애·복구 테스트
 

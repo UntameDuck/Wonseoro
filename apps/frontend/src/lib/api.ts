@@ -7,6 +7,7 @@
  *   - 오류는 problem+json 으로 온다
  */
 
+import type { UniversityNotices } from '@wonseoro/contracts';
 import { OIDC_MODE, accessToken, refresh } from './auth';
 import { expireNow, touchSession } from './session';
 
@@ -397,6 +398,8 @@ export const api = {
       admissionYear: number;
       name: string;
       closesAt: string;
+      /** 대학 고지 — 처리방침·위탁·보호책임자·문의처·전형료 반환(계약 1.10.0). 값이 있는 것만 온다 */
+      notices?: UniversityNotices;
     }>('/api/v1/admission-cycles/current'),
 
   admissionTypes: (cycleId: string) =>

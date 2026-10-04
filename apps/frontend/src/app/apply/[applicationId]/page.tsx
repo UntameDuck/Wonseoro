@@ -7,6 +7,7 @@ import { SchemaForm, type JsonSchema } from '../../../krds/schema-form';
 import { DocumentStatusList, FileUpload } from '../../../krds/file-upload';
 import { Breadcrumb, STEPS, StepIndicator, type StepNo } from '../../../krds/navigation';
 import { DeadlineBanner, FailureNotice, OperatingModeBanner, RateLimitNotice, SaveStatus, SlowNotice } from '../../../krds/status';
+import { FeeRefundNotice } from '../../../krds/university-notices';
 import {
   ApiError,
   NetworkError,
@@ -94,6 +95,8 @@ export default function ApplyPage({
     typeName: string;
     departmentName: string;
     feeAmount: number;
+    /** 전형료 반환 안내 — 대학 설정에 있을 때만 (G-4, D-80) */
+    feeRefund?: string;
   } | null>(null);
 
   // 원서를 불러오기 전에는 전형을 모른다. 그때는 마감을 판단하지 않는다.
@@ -196,6 +199,7 @@ export default function ApplyPage({
           typeName: t?.name ?? '-',
           departmentName: d?.name ?? '-',
           feeAmount: t?.feeAmount ?? 0,
+          ...(cycle.data.notices?.feeRefund ? { feeRefund: cycle.data.notices.feeRefund } : {}),
         });
       } catch {
         setCatalog(null);
@@ -642,6 +646,8 @@ export default function ApplyPage({
                 : []),
             ]}
           />
+          {/* 전형료 반환 사유·금액·방법 — 응시원서에 구체적으로(고등교육법 시행령 제42조의3, 문서 10 G-4) */}
+          <FeeRefundNotice text={catalog?.feeRefund} />
           {/* 결제가 곧 제출이다 (D-42). 복구 불가능한 동작 직전에 알린다. (§07) */}
           {!payment && (
             <Alert tone="warning" title="결제가 확인되면 바로 접수가 완료됩니다">

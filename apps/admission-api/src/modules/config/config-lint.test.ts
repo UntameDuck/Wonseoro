@@ -23,6 +23,11 @@ const GOOD = {
   requiredDocuments: { EARLY: ['TRANSCRIPT'] },
   optionalDocuments: { EARLY: ['AWARD'] },
   documentLabels: { TRANSCRIPT: '학교생활기록부', AWARD: '수상 실적' },
+  notices: {
+    privacyPolicyUrl: 'https://univ.example/privacy',
+    privacyOfficer: '입학처 개인정보 보호 담당',
+    feeRefund: '착오로 더 낸 전형료는 더 낸 금액을 돌려드립니다.',
+  },
 };
 
 describe('Config Linter (§A5)', () => {
@@ -104,5 +109,23 @@ describe('설정에서 화면 정보 만들기 (§A5, D-56)', () => {
       assert.deepEqual(r.errors, []);
       assert.ok(r.warnings.some((w) => w.includes('자기소개서') && w.includes(title)), `${code}/${title}: ${r.warnings.join(' | ')}`);
     }
+  });
+
+  it('지원자 고지 — 없으면 경고, 빠진 법정 고지는 경고, 형식이 틀리면 오류 (G-4·G-6, D-80)', () => {
+    const { notices: _n, ...without } = GOOD;
+    assert.ok(lintConfig(without, ['EARLY']).warnings.some((w) => w.startsWith('notices:')));
+
+    const partial = lintConfig({ ...GOOD, notices: { privacyPolicyUrl: 'https://univ.example/privacy' } }, ['EARLY']);
+    assert.deepEqual(partial.errors, []);
+    assert.ok(partial.warnings.some((w) => w.includes('privacyOfficer') && w.includes('feeRefund')));
+
+    const bad = lintConfig(
+      { ...GOOD, notices: { ...GOOD.notices, privacyPolicyUrl: 'http://univ.example/privacy', contact: '', feeRefund: 'x'.repeat(2001) } },
+      ['EARLY'],
+    );
+    assert.ok(bad.errors.some((e) => e.includes('notices.privacyPolicyUrl') && e.includes('https')));
+    assert.ok(bad.errors.some((e) => e.includes('notices.contact')));
+    assert.ok(bad.errors.some((e) => e.includes('notices.feeRefund')));
+    assert.ok(lintConfig({ ...GOOD, notices: 'x' }, ['EARLY']).errors.some((e) => e.startsWith('notices')));
   });
 });

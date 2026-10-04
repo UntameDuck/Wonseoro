@@ -12,3 +12,4 @@ export * from './problem-text';
 export * from './josa';
 export * from './upload';
 export * from './support';
+export * from './university-notices';

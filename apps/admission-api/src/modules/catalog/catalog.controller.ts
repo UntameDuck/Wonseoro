@@ -1,4 +1,5 @@
 import { Controller, Get, Header, Query } from '@nestjs/common';
+import { pickUniversityNotices } from '@wonseoro/contracts';
 import { Db } from '@wonseoro/server-kit';
 import { ProblemException } from '../../common/problem/problem.exception';
 
@@ -29,6 +30,13 @@ export class CatalogController {
     const r = rows[0];
     // 진행 중인 모집이 없는 것은 입력 오류가 아니다 — 계약대로 404.
     if (!r) throw ProblemException.notFound('진행 중인 모집이 없습니다.');
+    // 지원자 고지(처리방침·위탁·보호책임자·문의처·전형료 반환) — 2인 승인으로 적용된 설정에서만, 알려진 문구만 (D-80)
+    const notices = await this.db.query<{ notices: unknown }>(
+      `SELECT config_json->'notices' AS notices FROM config_version
+        WHERE cycle_id = $1 AND status = 'ACTIVE'
+        ORDER BY activated_at DESC NULLS LAST LIMIT 1`,
+      [r.id],
+    );
     return {
       id: String(r.id),
       universityId: String(r.university_id),
@@ -39,6 +47,7 @@ export class CatalogController {
       opensAt: (r.opens_at as Date).toISOString(),
       closesAt: (r.closes_at as Date).toISOString(),
       status: String(r.status),
+      notices: pickUniversityNotices(notices.rows[0]?.notices),
     };
   }
 

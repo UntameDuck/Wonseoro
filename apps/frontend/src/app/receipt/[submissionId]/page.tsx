@@ -5,6 +5,7 @@ import { Alert, Button, Card, DescriptionList, cycleTitle } from '@wonseoro/krds
 import { ApiError, NetworkError, api } from '../../../lib/api';
 import { loadSession } from '../../../lib/session';
 import { formatKst } from '../../../lib/use-deadline';
+import { FeeRefundNotice } from '../../../krds/university-notices';
 import { APPLICATION_STATUS_LABEL, labelOf, problemText } from '@wonseoro/contracts';
 
 /**
@@ -27,6 +28,7 @@ export default function ReceiptPage({ params }: { params: Promise<{ submissionId
   } | null>(null);
   const [university, setUniversity] = useState<string | null>(null);
   const [universityName, setUniversityName] = useState<string | null>(null);
+  const [feeRefund, setFeeRefund] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -45,6 +47,7 @@ export default function ReceiptPage({ params }: { params: Promise<{ submissionId
       }
       const cycle = await api.currentCycle().catch(() => null);
       if (cycle?.data.universityName) setUniversityName(cycle.data.universityName);
+      if (cycle?.data.notices?.feeRefund) setFeeRefund(cycle.data.notices.feeRefund);
       if (cycle) setUniversity(`${cycle.data.universityName ?? '대학 정보 확인 중'} · ${cycleTitle(cycle.data.admissionYear, cycle.data.name)}`);
     })();
   }, [submissionId, applicantId]);
@@ -84,6 +87,8 @@ export default function ReceiptPage({ params }: { params: Promise<{ submissionId
         {universityName ? `${universityName} 입학처` : '대학 입학처'}가 발급한 접수증입니다. 접수 내용은 이 입학처에
         문의해 주십시오.
       </p>
+      {/* 전형료 반환 안내 — 접수증에도 남긴다(인쇄본에 포함, 문서 10 G-4) */}
+      <FeeRefundNotice text={feeRefund} level={2} />
       <div className="krds-no-print">
         <Button onClick={() => window.print()}>인쇄</Button>
       </div>

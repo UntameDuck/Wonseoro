@@ -42,6 +42,8 @@ ON CONFLICT (id) DO NOTHING;
 --
 -- 대입 전형은 자기소개서를 받지 않는다(고등교육법 시행령 제35조, 문서 10 G-1). 전에는 이 시드가 「자기소개」를 필수로 받았다.
 -- 설정 검사가 자기소개서류 항목을 경고한다. 여러 줄 필수 항목의 예로 「학적 변동 사항」을 둔다
+--   notices        지원자 고지(D-80) — 처리방침·위탁 주소, 보호책임자, 전형료 반환 안내. 주소는 예약 도메인(.test)이고
+--                  반환 안내는 고등교육법 시행령 제42조의3 을 옮긴 예시다. 대학은 입학처·법무가 승인한 문안으로 바꾼다
 INSERT INTO config_version (id, cycle_id, version, status, config_json, config_hash,
                             created_by, approved_by_1, approved_by_2, approved_at, activated_at)
 VALUES (
@@ -65,7 +67,13 @@ VALUES (
        }
      },
      "optionalDocuments": { "EARLY": ["TRANSCRIPT"] },
-     "documentLabels": { "TRANSCRIPT": "학교생활기록부" }
+     "documentLabels": { "TRANSCRIPT": "학교생활기록부" },
+     "notices": {
+       "privacyPolicyUrl": "https://www.univ-a.test/privacy",
+       "processorsUrl": "https://www.univ-a.test/privacy#processors",
+       "privacyOfficer": "원서로대학교 입학처 개인정보 보호 담당",
+       "feeRefund": "전형료는 다음의 경우 돌려드립니다.\n1. 착오로 더 낸 경우: 더 낸 금액\n2. 대학의 사정으로 전형에 응시하지 못한 경우: 낸 금액 전부\n3. 천재지변, 질병·사고로 인한 입원, 본인 사망으로 응시하지 못한 경우: 낸 금액 전부\n4. 단계별 전형에서 앞 단계에 불합격한 경우: 응시하지 않은 단계의 전형료\n돌려드리는 방법: 지원자가 알려 준 계좌로 이체합니다. 이체 수수료를 뺀 금액을 돌려드리며, 수수료가 돌려드릴 금액 이상이면 돌려드리지 않을 수 있습니다. 전형을 마친 뒤 남은 전형료는 다음 해 4월 30일까지 돌려드립니다."
+     }
    }'::jsonb,
   'dev-hash',
   'dev-seed',

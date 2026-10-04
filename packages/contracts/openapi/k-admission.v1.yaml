@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: K-Admission University Data Plane API
-  version: 1.9.0
+  version: 1.10.0
   description: >
     Reference contract for a university-local K-Admission data plane.
     The university DB is the source of truth; central sync is not in the applicant critical path.
@@ -51,6 +51,12 @@ info:
     on the self-check (`supportCode`, additive); every lookup issues an evidence number and keeps the
     exact response. The response is an allow-list: no form values, common profile, documents, names,
     contacts, internal identifiers or provider references. New paths, a new scope and an optional field.
+
+
+    1.10.0 adds university notices to the current cycle (D-80, notes G-4 and G-6 of the privacy and
+    legal notice review): privacy policy and processor disclosure links, the privacy officer, the
+    admissions contact and the application fee refund terms, taken from the approved configuration.
+    Optional field only.
 
 
     Common rules:
@@ -1777,6 +1783,19 @@ components:
         opensAt: { type: string, format: date-time }
         closesAt: { type: string, format: date-time }
         status: { type: string, enum: [DRAFT, OPEN, CLOSED, ARCHIVED] }
+        notices:
+          type: object
+          x-kadmission-register: D-80
+          description: >
+            Legal notices from the approved configuration (1.10.0). Only keys that are set appear;
+            the client draws nothing for a missing one rather than inventing a contact.
+          additionalProperties: false
+          properties:
+            privacyPolicyUrl: { type: string, format: uri, maxLength: 500 }
+            processorsUrl: { type: string, format: uri, maxLength: 500 }
+            privacyOfficer: { type: string, maxLength: 200 }
+            contact: { type: string, maxLength: 200 }
+            feeRefund: { type: string, maxLength: 2000, description: Refund grounds, amounts and method }
     AdmissionType:
       type: object
       required: [id, code, name, feeAmount]
