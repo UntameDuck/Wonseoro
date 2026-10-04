@@ -1,0 +1,44 @@
+#!/bin/sh
+# 커밋 작성자 규칙 — GitHub 기여자 그래프에 저장소 주인(ryan-ahn-song) 말고 다른 사람이 들어가지 않게 한다.
+# 켜기(클론마다 한 번): git config core.hooksPath .githooks
+#
+# 막는 것
+#   - 작성자(author)·커밋한 사람(committer) 이메일이 허용 목록 밖
+#   - 커밋 메시지의 Co-authored-by / Signed-off-by 줄(사람·AI 모두) — GitHub 가 공동 작성자로 센다
+
+ALLOWED="ryansong0805@gmail.com 166101804+ryan-ahn-song@users.noreply.github.com"
+# GitHub 웹에서 고치거나 합친 커밋은 "커밋한 사람" 이 GitHub 자신이다 — 기여자로 세지 않으므로 커밋한 사람에만 허용한다
+COMMITTER_EXTRA="noreply@github.com"
+
+email_of() {
+  git var "$1" 2>/dev/null | sed -n 's/.*<\(.*\)>.*/\1/p'
+}
+
+allowed() {
+  for a in $ALLOWED; do
+    [ "$1" = "$a" ] && return 0
+  done
+  return 1
+}
+
+allowed_committer() {
+  [ "$1" = "$COMMITTER_EXTRA" ] && return 0
+  allowed "$1"
+}
+
+author=$(email_of GIT_AUTHOR_IDENT)
+committer=$(email_of GIT_COMMITTER_IDENT)
+
+if ! allowed "$author" || ! allowed_committer "$committer"; then
+  echo "커밋 거절: 작성자 이메일이 허용 목록 밖이다 (author=$author, committer=$committer)." >&2
+  echo "  git config user.name \"ryan-ahn-song\"" >&2
+  echo "  git config user.email \"ryansong0805@gmail.com\"" >&2
+  exit 1
+fi
+
+if grep -qiE '^[[:space:]]*(co-authored-by|signed-off-by)[[:space:]]*:' "$1"; then
+  echo "커밋 거절: 메시지에 Co-authored-by / Signed-off-by 줄이 있다 — 지우고 다시 커밋한다." >&2
+  exit 1
+fi
+
+exit 0

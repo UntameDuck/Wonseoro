@@ -62,6 +62,23 @@ npm run check:contracts && npm run check:ui-copy
 
 **화면·접근성 시험** — 전용 DB(`bash scripts/screenshots/prepare.sh db`, :5497)와 로컬 서버 다섯을 띄운 뒤 `node tests/a11y/focus-sweep.mjs applicant|admin --width=1280|320`, `node tests/a11y/keyboard-walk.mjs`. 서버별 실행 명령은 `.claude/launch.json` 의 `shots-*` 항목에 있다(Claude 도구 설정 파일이지만 명령은 그대로 쓸 수 있다 — 예: `node --env-file=scripts/screenshots/env/admission.env apps/admission-api/dist/main.js`). 지원자 시험은 `shots-central`·`shots-admission`·`shots-scanner`·`shots-web`·`shots-relay`, 관리자 시험은 `shots-admission`·`shots-admin`.
 
+### 커밋 작성자 규칙 — 반드시 지킨다 (사용자 지침, 2026-10-04)
+
+저장소 주인은 **GitHub 기여자 그래프에 자기 말고 다른 사람(사람·AI 모두)이 들어가지 않기**를 바란다. GitHub 는 커밋의 **작성자 이메일**로 기여자를 정하고, `Co-authored-by:` 줄이 있으면 그 사람도 공동 작성자로 센다. push 한 기기·계정은 기여자 집계에 들어가지 않는다.
+
+- 작성자·커밋한 사람은 언제나 **`ryan-ahn-song <ryansong0805@gmail.com>`**(GitHub 계정 `ryan-ahn-song`, 옛 이름 UntameDuck — 저장소 주소 `UntameDuck/Wonseoro` 의 UntameDuck 은 조직이다). 2026-10-04 기준 기여자는 `ryan-ahn-song` 한 명(커밋 188개 전부)
+- 클론한 뒤 저장소 폴더 안에서 한 번(**`--global` 은 쓰지 않는다** — 남의 기기라면 주인의 다른 작업을 바꾸게 된다):
+  ```bash
+  git config user.name "ryan-ahn-song"
+  git config user.email "ryansong0805@gmail.com"
+  git config commit.gpgsign false
+  git config core.hooksPath .githooks
+  ```
+- 커밋 메시지에 `Co-authored-by:`·`Signed-off-by:` 줄을 넣지 않는다 — AI 도구가 자동으로 붙이는 줄도 지운다. `--author` 로 다른 사람을 지정하지 않는다
+- **강제 장치** `.githooks/` — `commit-msg` 는 허용 이메일 밖의 작성자·공동저자 줄이 있는 커밋을, `pre-push` 는 올라갈 커밋 전부를 다시 보고 어긋나면 push 를 거절한다. 허용 이메일은 `ryansong0805@gmail.com` 과 같은 계정의 noreply 주소 둘뿐이다. 훅은 `core.hooksPath` 를 켜야 돈다 — 끄거나 `--no-verify` 로 건너뛰지 않는다
+- push 전 확인: `git log origin/main..HEAD --format='%an <%ae> | %cn <%ce>%n%b---'` — 모든 줄이 위 신원이고 공동저자 줄이 없어야 한다. push 하지 않은 어긋난 커밋은 `git rebase origin/main --exec 'git commit --amend --no-edit --reset-author'` 로 고친다. **이미 push 한 커밋은 강제 push 로 고치지 않고** 주인에게 보고한다
+- 보고 끝에 "올린 커밋 N개, 작성자 모두 ryan-ahn-song <ryansong0805@gmail.com>, 공동저자 줄 없음" 을 확인 결과와 함께 적는다
+
 ### 작업 방식 (사용자가 정한 것)
 
 - 묻지 말고 최선안으로 결정·진행하고 결과를 보고한다. 작업마다 끝에 문서(HANDOFF·03·대장·06 등)를 갱신한다

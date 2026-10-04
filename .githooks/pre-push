@@ -1,0 +1,51 @@
+#!/bin/sh
+# push 직전 마지막 확인 — 올라갈 커밋마다 작성자·커밋한 사람 이메일과 공동저자 줄을 본다.
+# commit-msg 훅을 거치지 않은 커밋(다른 기기·훅을 끈 상태·rebase 결과)도 여기서 걸린다.
+# 켜기(클론마다 한 번): git config core.hooksPath .githooks
+
+ALLOWED="ryansong0805@gmail.com 166101804+ryan-ahn-song@users.noreply.github.com"
+# GitHub 웹에서 고치거나 합친 커밋은 "커밋한 사람" 이 GitHub 자신이다 — 기여자로 세지 않으므로 커밋한 사람에만 허용한다
+COMMITTER_EXTRA="noreply@github.com"
+ZERO=0000000000000000000000000000000000000000
+
+allowed() {
+  for a in $ALLOWED; do
+    [ "$1" = "$a" ] && return 0
+  done
+  return 1
+}
+
+allowed_committer() {
+  [ "$1" = "$COMMITTER_EXTRA" ] && return 0
+  allowed "$1"
+}
+
+fail=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ "$local_sha" = "$ZERO" ] && continue   # 브랜치 삭제
+  if [ "$remote_sha" = "$ZERO" ]; then
+    range="$local_sha --not --remotes"
+  else
+    range="$remote_sha..$local_sha"
+  fi
+  for c in $(git rev-list $range); do
+    ae=$(git log -1 --format=%ae "$c")
+    ce=$(git log -1 --format=%ce "$c")
+    if ! allowed "$ae" || ! allowed_committer "$ce"; then
+      echo "push 거절: $(git log -1 --format='%h %s' "$c") — 작성자 $ae / 커밋한 사람 $ce" >&2
+      fail=1
+    fi
+    if git log -1 --format=%B "$c" | grep -qiE '^[[:space:]]*(co-authored-by|signed-off-by)[[:space:]]*:'; then
+      echo "push 거절: $(git log -1 --format='%h %s' "$c") — 메시지에 Co-authored-by / Signed-off-by 줄" >&2
+      fail=1
+    fi
+  done
+done
+
+if [ "$fail" -ne 0 ]; then
+  echo "아직 push 하지 않은 커밋이면 고친 뒤 다시 push 한다:" >&2
+  echo "  git rebase origin/main --exec 'git commit --amend --no-edit --reset-author'" >&2
+  echo "이미 push 한 커밋은 강제 push 로 고치지 말고 저장소 주인에게 알린다." >&2
+  exit 1
+fi
+exit 0
