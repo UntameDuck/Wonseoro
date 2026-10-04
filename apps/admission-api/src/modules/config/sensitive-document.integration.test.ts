@@ -120,3 +120,24 @@ describe('민감정보 서류 별도 동의 (G-8, D-85)', () => {
     assert.equal((await issuePaths()).includes('/consents/SENSITIVE_HEALTH'), false);
   });
 });
+
+describe('지원 제한 고지 확인 (G-12, D-86)', () => {
+  it('원서 작성 전 확인은 그때 문안의 해시와 함께 원서 감사 체인에 남는다', async (t) => {
+    if (!available) return t.skip('DB 없음');
+    const { rows } = await db.query<{ rules: string | null }>(
+      `SELECT config_json->'notices'->>'applicationRules' AS rules FROM config_version
+        WHERE cycle_id = $1 AND status = 'ACTIVE' ORDER BY activated_at DESC NULLS LAST LIMIT 1`,
+      [CYCLE],
+    );
+    if (!rows[0]?.rules) return t.skip('개발 시드가 옛 판 — seed-dev.sql 을 다시 적용한다');
+    const recorded = await services().consents.acknowledgeRules({ applicationId, applicantId, cycleId: CYCLE });
+    assert.equal(recorded, true);
+    const audit = await db.query<{ action: string; hash: string }>(
+      `SELECT action, details_redacted->>'textHash' AS hash FROM audit_event WHERE application_id = $1 ORDER BY occurred_at DESC LIMIT 1`,
+      [applicationId],
+    );
+    assert.equal(audit.rows[0]?.action, 'APPLICATION_RULES_ACKNOWLEDGED');
+    const { createHash } = await import('node:crypto');
+    assert.equal(audit.rows[0]?.hash, createHash('sha256').update(rows[0].rules.trim()).digest('hex'));
+  });
+});

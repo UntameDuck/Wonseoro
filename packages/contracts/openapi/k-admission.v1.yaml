@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: K-Admission University Data Plane API
-  version: 1.16.0
+  version: 1.17.0
   description: >
     Reference contract for a university-local K-Admission data plane.
     The university DB is the source of truth; central sync is not in the applicant critical path.
@@ -91,6 +91,11 @@ info:
     applicant gives before uploading it. Upload intents for such a document are refused (400) until
     that consent is given, and validation reports CONSENT_REQUIRED while the document is attached
     without it. Optional field; behaviour applies only to configurations that mark documents.
+
+
+    1.17.0 adds the application-limits notice (D-86, note G-12): `notices.applicationRules` is shown
+    before an application is created and the create request may carry `rulesAcknowledged`, recorded
+    with the text hash. Optional fields.
 
 
     Common rules:
@@ -2110,6 +2115,14 @@ components:
             privacyOfficer: { type: string, maxLength: 200 }
             contact: { type: string, maxLength: 200 }
             feeRefund: { type: string, maxLength: 2000, description: Refund grounds, amounts and method }
+            applicationRules:
+              type: string
+              maxLength: 2000
+              x-kadmission-register: D-86
+              description: >
+                Application limits (early round count, one per regular-round group, no regular round
+                after an early-round admission, no double registration) and their consequence, shown
+                and acknowledged before an application is created (1.17.0).
     AdmissionType:
       type: object
       required: [id, code, name, feeAmount]
@@ -2139,6 +2152,12 @@ components:
           x-kadmission-register: D-81
           description: Consent codes the applicant agreed to before creating (current text versions)
           items: { type: string, pattern: '^[A-Z][A-Z0-9_]{0,63}$' }
+        rulesAcknowledged:
+          type: boolean
+          x-kadmission-register: D-86
+          description: >
+            The applicant acknowledged `notices.applicationRules` before creating. A new application
+            records APPLICATION_RULES_ACKNOWLEDGED with the SHA-256 of that text (1.17.0).
     UpdateApplicationRequest:
       type: object
       properties:

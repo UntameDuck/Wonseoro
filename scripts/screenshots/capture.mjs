@@ -113,6 +113,11 @@ async function goto(url, readyText) {
   await sleep(600);
 }
 
+/** 지원 제한 고지 확인(D-86) — 접수 홈의 체크가 있으면 켠다. 확인해야 "원서 작성 시작" 이 열린다 */
+async function ackRules() {
+  await evaluate(`(() => { const c = document.getElementById('rules-ack'); if (c && !c.checked) c.click(); return true; })()`);
+}
+
 /** 버튼·링크를 글자로 찾아 누른다. */
 async function click(text, selector = 'button, a') {
   const r = await evaluate(`(() => {
@@ -289,7 +294,9 @@ async function applicant() {
 
   // 3. 원서 작성 시작
   await goto(`${WEB}/`, '원서 작성 시작');
+  await ackRules();
   await waitFor(`[...document.querySelectorAll('button')].some((b) => b.textContent.trim() === '원서 작성 시작' && !b.disabled)`, '세션 복원');
+  await ackRules();
   await click('원서 작성 시작');
   await waitFor(`location.pathname.startsWith('/apply/')`, '원서 화면 이동', 60_000);
   state.applicationId = await evaluate(`location.pathname.split('/')[2]`);
@@ -351,7 +358,9 @@ async function applicant() {
   await goto(`${WEB}/`, '원서 작성 시작');
   await setSession(APPLICANT_2);
   await goto(`${WEB}/`, '원서 작성 시작');
+  await ackRules();
   await waitFor(`[...document.querySelectorAll('button')].some((b) => b.textContent.trim() === '원서 작성 시작' && !b.disabled)`, '세션 복원 2');
+  await ackRules();
   await click('원서 작성 시작');
   await waitFor(`location.pathname.startsWith('/apply/')`, '원서 화면 이동 2', 60_000);
   state.cancelledApplicationId = await evaluate(`location.pathname.split('/')[2]`);
@@ -496,7 +505,9 @@ async function seedRecon() {
     await goto(`${WEB}/apply/${state.reconApplicationId}`);
   } else {
     await goto(`${WEB}/`, '원서 작성 시작');
+    await ackRules();
     await waitFor(`[...document.querySelectorAll('button')].some((b) => b.textContent.trim() === '원서 작성 시작' && !b.disabled)`, '세션 복원');
+    await ackRules();
     await click('원서 작성 시작');
     await waitFor(`location.pathname.startsWith('/apply/')`, '원서 화면 이동', 60_000);
     state.reconApplicationId = await evaluate(`location.pathname.split('/')[2]`);
@@ -586,6 +597,7 @@ async function auth() {
       await send('Fetch.continueRequest', { requestId: e.requestId });
     }
   });
+  await ackRules();
   await click('원서 작성 시작');
   await waitText('본인확인 다시 하기');
   await send('Fetch.disable');

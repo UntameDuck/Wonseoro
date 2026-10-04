@@ -634,6 +634,8 @@ async function applicantOidc() {
   await b.waitFor(`document.body.innerText.includes('입력을 확인해 주십시오') || document.body.innerText.includes('저장했습니다')`, '공통원서 저장 결과');
 
   await go(`${WEB_OIDC}/`, '본인확인을 마쳤습니다');
+  // 지원 제한 고지 확인(D-86) — 확인해야 시작 버튼이 열린다
+  if (await b.evaluate(`!!document.getElementById('rules-ack')`)) await keyTo('위 지원 제한을 확인했습니다', ' ');
   await keyTo('원서 작성 시작');
   await b.waitFor(`location.pathname.startsWith('/apply/') && document.body.innerText.includes('1. 공통정보')`, '원서 1단계', 60_000);
   await sweep('원서 1단계 (본인확인 모드)');

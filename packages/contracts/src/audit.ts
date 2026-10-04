@@ -29,6 +29,8 @@ export const AUDIT_ACTION = [
   /** 지원자가 원서의 열람·정정·삭제·처리정지를 요청했다 / 입학처가 결과를 회신했다 — 요청번호와 함께 (D-84). */
   'PRIVACY_REQUEST_RECEIVED',
   'PRIVACY_REQUEST_DECIDED',
+  /** 지원자가 원서 작성 전에 지원 제한(지원 횟수·이중등록 금지 등) 고지를 확인했다 — 문안 해시와 함께 (D-86). */
+  'APPLICATION_RULES_ACKNOWLEDGED',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTION)[number];

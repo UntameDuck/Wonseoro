@@ -69,6 +69,13 @@ export default function Home() {
   /** 요청 한도 — 이 시각까지 "원서 작성 시작" 을 쉰다 (T-M5-46) */
   const [rateLimit, setRateLimit] = useState<{ until: number; traceId?: string; over: boolean; reauth: boolean } | null>(null);
   const endRateLimit = useCallback(() => setRateLimit((r) => (r ? { ...r, over: true } : r)), []);
+  /**
+   * 지원 제한 고지 — 수시 지원 횟수·이중등록 금지 등을 **원서 작성 전에** 알리고 확인받는다(시행령 제42조, 문서 10 G-12, D-86).
+   * 대학 설정에 문안이 있을 때만 그리고, 확인해야 원서를 시작한다. 확인은 원서를 만들 때 서버가 문안 해시와 함께 기록한다.
+   */
+  const [rules, setRules] = useState<string | null>(null);
+  const [rulesChecked, setRulesChecked] = useState(false);
+  const rulesPending = rules !== null && !rulesChecked;
 
   const loadCatalog = useCallback(async () => {
     setLoading(true);
@@ -80,6 +87,7 @@ export default function Home() {
         api.departments(c.id),
       ]);
       setCycle(c);
+      setRules(c.notices?.applicationRules ?? null);
       setTypes(t);
       setDepartments(d);
       setTypeId(t[0]?.id ?? '');
@@ -110,7 +118,7 @@ export default function Home() {
     setRateLimit(null);
     try {
       const { data } = await api.createApplication(
-        { cycleId: cycle.id, admissionTypeId: typeId, departmentId },
+        { cycleId: cycle.id, admissionTypeId: typeId, departmentId, ...(rules !== null && rulesChecked ? { rulesAcknowledged: true } : {}) },
         { applicantId, subjectToken },
       );
       saveSession({ applicantId, subjectToken, applicationId: data.id });
@@ -182,6 +190,44 @@ export default function Home() {
             </p>
           )}
 
+          {rules !== null && (
+            <section aria-labelledby="rules-title" style={{ marginBottom: 'var(--krds-space-5)' }}>
+              <h3 id="rules-title" style={{ margin: '0 0 var(--krds-space-2)', fontSize: 'var(--krds-text-lg)' }}>
+                지원 전 확인
+              </h3>
+              <div
+                role="region"
+                aria-label="지원 제한 안내 전문"
+                tabIndex={0}
+                style={{
+                  maxHeight: '12rem',
+                  overflowY: 'auto',
+                  whiteSpace: 'pre-wrap',
+                  padding: 'var(--krds-space-3)',
+                  border: '1px solid var(--krds-border)',
+                  borderRadius: 'var(--krds-radius)',
+                  background: 'var(--krds-bg)',
+                  fontSize: 'var(--krds-text-sm)',
+                }}
+              >
+                {rules}
+              </div>
+              <label
+                htmlFor="rules-ack"
+                style={{ display: 'flex', gap: 'var(--krds-space-2)', alignItems: 'flex-start', marginTop: 'var(--krds-space-2)' }}
+              >
+                <input
+                  id="rules-ack"
+                  type="checkbox"
+                  checked={rulesChecked}
+                  onChange={(e) => setRulesChecked(e.target.checked)}
+                  style={{ width: 24, height: 24, marginTop: 0, flex: 'none' }}
+                />
+                <span>위 지원 제한을 확인했습니다</span>
+              </label>
+            </section>
+          )}
+
           <IdentitySection
             applicantId={applicantId}
             subjectToken={subjectToken}
@@ -217,11 +263,17 @@ export default function Home() {
               // 본인확인 모드는 로그인했는지만, 개발 모드는 식별자·가명 토큰을 넣었는지 본다
               (OIDC_MODE ? applicantId !== OIDC_SESSION : applicantId.length < 8 || !subjectToken) ||
               !typeId ||
-              !departmentId
+              !departmentId ||
+              rulesPending
             }
           >
             {busy ? '원서를 준비하는 중…' : '원서 작성 시작'}
           </Button>
+          {rulesPending && (
+            <p style={{ margin: 'var(--krds-space-2) 0 0', fontSize: 'var(--krds-text-sm)', color: 'var(--krds-fg-muted)' }}>
+              지원 전 확인에 체크하시면 원서를 시작할 수 있습니다.
+            </p>
+          )}
         </Card>
       )}
     </>

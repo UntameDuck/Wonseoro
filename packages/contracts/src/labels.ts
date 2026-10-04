@@ -63,6 +63,7 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   CONSENT_RECORDED: '동의 기록',
   PRIVACY_REQUEST_RECEIVED: '개인정보 권리 요청',
   PRIVACY_REQUEST_DECIDED: '개인정보 권리 요청 회신',
+  APPLICATION_RULES_ACKNOWLEDGED: '지원 제한 확인',
 };
 
 export const AUDIT_RESULT_LABEL: Record<'ACCEPTED' | 'REJECTED' | 'FAILED', string> = {

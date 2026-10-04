@@ -30,6 +30,8 @@ interface CreateBody {
   departmentId?: string;
   /** 원서를 만들 때 함께 하는 동의 코드 — 지금 판 문안에 대한 것 (G-2, D-81) */
   consents?: unknown;
+  /** 접수 홈에서 지원 제한 고지를 확인했다 (G-12, D-86) */
+  rulesAcknowledged?: unknown;
 }
 
 interface PatchBody {
@@ -96,6 +98,11 @@ export class ApplicationController {
         changes: consentCodes.map((code) => ({ code, granted: true })),
         ...this.context(req),
       });
+    }
+
+    // 원서 작성 전에 지원 제한 고지를 확인했다 — 새로 만든 원서에만 남긴다(재시도는 같은 확인) (G-12, D-86)
+    if (created && body.rulesAcknowledged === true) {
+      await this.consents.acknowledgeRules({ applicationId: row.id, applicantId, cycleId, ...this.context(req) });
     }
 
     // 재시도로 기존 원서를 돌려준 경우는 200 이다. 새로 만든 경우만 201.

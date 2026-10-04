@@ -275,7 +275,8 @@ export const api = {
     call<ServerTime>(`/api/v1/meta/time?admissionCycleId=${encodeURIComponent(cycleId)}`),
 
   createApplication: (
-    body: { cycleId: string; admissionTypeId: string; departmentId: string },
+    /** rulesAcknowledged — 접수 홈의 지원 제한 고지를 확인했다 (계약 1.17.0, D-86) */
+    body: { cycleId: string; admissionTypeId: string; departmentId: string; rulesAcknowledged?: boolean },
     who: { applicantId: string; subjectToken?: string },
   ) =>
     call<Application>('/api/v1/applications', {

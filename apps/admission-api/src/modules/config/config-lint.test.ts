@@ -30,6 +30,7 @@ const GOOD = {
     privacyPolicyUrl: 'https://univ.example/privacy',
     privacyOfficer: '입학처 개인정보 보호 담당',
     feeRefund: '착오로 더 낸 전형료는 더 낸 금액을 돌려드립니다.',
+    applicationRules: '수시모집은 최대 6회까지 지원할 수 있습니다. 위반하면 입학이 무효가 됩니다.',
   },
 };
 

@@ -274,6 +274,12 @@ async function walk() {
   await activate();
   await b.waitFor(`location.pathname === '/'`, '홈 이동');
   await screen('접수 홈 (본인확인 뒤)', '원서 작성 시작');
+  // 지원 제한 고지(D-86) — 원서 작성 전에 확인해야 시작 버튼이 열린다. 전문 영역을 지나 체크를 Space 로
+  if (await b.evaluate(`!!document.getElementById('rules-ack')`)) {
+    await tabTo('지원 제한 확인', named('위 지원 제한을 확인했습니다', { type: 'checkbox' }));
+    await activate(' ');
+    if (!(await focusInfo(b)).checked) problem('Space 로 지원 제한 확인이 체크되지 않는다');
+  }
   await b.waitFor(`[...document.querySelectorAll('button')].some((x) => x.textContent.trim() === '원서 작성 시작' && !x.disabled)`, '세션 복원');
   await tabTo('원서 작성 시작', named('원서 작성 시작', { tag: 'BUTTON' }));
   await activate();

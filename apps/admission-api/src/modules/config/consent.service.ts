@@ -53,6 +53,34 @@ export class ConsentService {
   }
 
   /**
+   * 원서 작성 전 지원 제한 고지(`notices.applicationRules`)를 확인했다고 남긴다 — 문안 SHA-256 과 함께 (시행령 제42조, D-86).
+   * 화면은 확인 체크 없이 원서를 시작하지 않는다. 서버는 기록만 한다 — 고지가 없는 설정·API 로 원서를 만드는 길(부하·시험 도구)을
+   * 막지 않으려는 것이다. 고지가 없으면 남기지 않는다(확인할 글이 없다).
+   */
+  async acknowledgeRules(input: { applicationId: string; applicantId: string; cycleId: string; traceId?: string; sourceIp?: string }): Promise<boolean> {
+    const { rows } = await this.db.query<{ rules: unknown }>(
+      `SELECT config_json->'notices'->'applicationRules' AS rules FROM config_version
+        WHERE cycle_id = $1 AND status = 'ACTIVE' ORDER BY activated_at DESC NULLS LAST LIMIT 1`,
+      [input.cycleId],
+    );
+    const text = typeof rows[0]?.rules === 'string' ? (rows[0].rules as string).trim() : '';
+    if (!text) return false;
+    await this.db.tx((client) =>
+      this.audit.record(client, {
+        applicationId: input.applicationId,
+        actorType: 'APPLICANT',
+        actorId: input.applicantId,
+        action: 'APPLICATION_RULES_ACKNOWLEDGED',
+        result: 'ACCEPTED',
+        ...(input.traceId ? { traceId: input.traceId } : {}),
+        ...(input.sourceIp ? { sourceIp: input.sourceIp } : {}),
+        details: { textHash: createHash('sha256').update(text).digest('hex') },
+      }),
+    );
+    return true;
+  }
+
+  /**
    * 민감정보 서류를 올리기 전에 — 그 서류의 별도 동의(지금 판)가 있어야 한다 (보호법 제23조 ① 1, D-85).
    * 화면은 동의하기 전에는 올리는 칸을 보이지 않는다. 이것은 다른 길로 들어온 요청을 막는다.
    */

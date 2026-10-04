@@ -15,9 +15,14 @@ export interface UniversityNotices {
   contact?: string;
   /** 전형료 반환 사유·금액·방법 — 고등교육법 시행령 제42조의3, 응시원서에 구체적으로 */
   feeRefund?: string;
+  /**
+   * 지원 제한 — 수시 지원 횟수·정시 군별 지원·수시 합격자 정시 지원 금지·이중등록 금지와 위반 시 입학 무효, 대교협 지원 자료 제출
+   * (고등교육법 시행령 제42조·제42조의2, 문서 10 G-12, D-86). 원서 작성 **전에** 접수 홈에서 보이고 확인을 받는다
+   */
+  applicationRules?: string;
 }
 
-export const UNIVERSITY_NOTICE_KEYS = ['privacyPolicyUrl', 'processorsUrl', 'privacyOfficer', 'contact', 'feeRefund'] as const;
+export const UNIVERSITY_NOTICE_KEYS = ['privacyPolicyUrl', 'processorsUrl', 'privacyOfficer', 'contact', 'feeRefund', 'applicationRules'] as const;
 export type UniversityNoticeKey = (typeof UNIVERSITY_NOTICE_KEYS)[number];
 
 /** 고지마다 받는 글자 수 상한 */
@@ -27,13 +32,14 @@ export const UNIVERSITY_NOTICE_MAX: Record<UniversityNoticeKey, number> = {
   privacyOfficer: 200,
   contact: 200,
   feeRefund: 2000,
+  applicationRules: 2000,
 };
 
 /** 주소 고지 — https 만(지원자를 평문 주소로 보내지 않는다) */
 export const UNIVERSITY_NOTICE_URL_KEYS: readonly UniversityNoticeKey[] = ['privacyPolicyUrl', 'processorsUrl'];
 
 /** 운영 전에 반드시 있어야 하는 고지 — 없으면 설정 검사가 경고한다 */
-export const UNIVERSITY_NOTICE_REQUIRED: readonly UniversityNoticeKey[] = ['privacyPolicyUrl', 'privacyOfficer', 'feeRefund'];
+export const UNIVERSITY_NOTICE_REQUIRED: readonly UniversityNoticeKey[] = ['privacyPolicyUrl', 'privacyOfficer', 'feeRefund', 'applicationRules'];
 
 /** 설정 값에서 알려진 고지만, 문자열만 꺼낸다 — 공개 응답에 다른 키가 섞이지 않게 */
 export function pickUniversityNotices(value: unknown): UniversityNotices {
