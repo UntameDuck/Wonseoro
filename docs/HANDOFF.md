@@ -1,6 +1,8 @@
 # 인수인계 — 다음 작업자(사람·AI 공통)가 먼저 읽는 문서
 
-> 작성: 2026-09-29 · **최종 갱신 2026-10-04** · 모든 변경은 `main` 에 커밋했다(원격 push·원격 CI 는 아직 — 사람이 push 하면 CI 가 돈다)
+> 작성: 2026-09-29 · **최종 갱신 2026-10-04** · 모든 변경은 GitHub `main`(UntameDuck/Wonseoro)에 push 했다 — 원격 CI 결과는 GitHub Actions 에서 확인한다
+>
+> **다른 컴퓨터·다른 AI 도구(Codex 등)로 이어받는다면 먼저 [§0 새 환경에서 시작하기](#0-새-환경에서-시작하기--다른-컴퓨터다른-ai-도구) 를 따른다.**
 >
 > **2026-10-03 세션 정리(다른 도구가 이어받을 때 여기부터)** — 이 날 끝낸 것: 보안 통제 단계 3~6(필드 암호화·Vault·break-glass·실 clamd, D-70~D-73),
 > Outbox 보관(T-M4-10, D-74), 운영 자동화(만료 경보 T-M5-65·WORM T-M3-03 D-75·복구 검증 T-M5-62·Writer fencing T-M5-63 D-76),
@@ -18,6 +20,53 @@
 > 세부는 링크를 따라간다. 이 문서와 다른 문서가 어긋나면 **다른 문서가 맞고, 이 문서를 고친다.**
 
 ---
+
+## 0. 새 환경에서 시작하기 — 다른 컴퓨터·다른 AI 도구
+
+이 문서의 §3 은 처음 개발한 Windows PC 기준이다(C 드라이브 용량, `E:\DockerData` 경로, Claude 도구의 heredoc 함정). 다른 컴퓨터에서는 그 항목을 무시하고 아래를 따른다.
+
+### 필요한 도구와, 없을 때 못 하는 것
+
+| 도구 | 쓰는 곳 | 없으면 |
+|---|---|---|
+| Node 22.12 이상(`.nvmrc`) · npm · 인터넷 | 설치·빌드·모든 시험 | 시작할 수 없다 |
+| Docker(또는 PostgreSQL 16 직접 설치) | DB 통합 시험·DB 제약 검증·보안 선별 시험 | **통합 시험이 실패가 아니라 "건너뜀(skip)" 으로 끝난다** — 통과처럼 보여도 검증이 아니다 |
+| Chrome 또는 Chromium | 접근성 시험(`tests/a11y/`)·화면 캡처 | 화면을 고친 뒤 규칙(§2·AGENTS)상 돌려야 하는 접근성 시험을 못 한다 |
+| 노션 읽기 | 설계 원본 대조 | 저장소 문서(02 대장·06 변경안·milestones)로 대신한다. 노션 쓰기는 원래 사람 몫이다 |
+| kind·Helm·kubectl·Keycloak·Vault·MinIO | kind 실증·로그인 끝에서 끝·보안 통제 실증 | 지금 다음 작업(G-10·G-8)에는 필요 없다. 그 시험을 다시 돌릴 때만 |
+
+**못 돌린 검증은 반드시 보고한다.** "시험 통과" 라고 쓰기 전에 출력의 `skipped`(건너뜀) 수를 본다. 대학 API 의 정상 건너뜀은 **3개**뿐이다 — 그보다 많으면 DB 가 안 붙은 것이다. DB·브라우저가 없어 못 돌린 시험은 무엇을 못 돌렸는지 문서와 보고에 그대로 적는다.
+
+### 처음 세팅 순서
+
+```bash
+npm ci
+npm run build -w @wonseoro/contracts -w @wonseoro/server-kit
+
+# CI 재현 DB — 순서의 원본은 .github/workflows/ci.yml 의 integration 잡이다
+docker run -d --name ci-pg -e POSTGRES_USER=wonseoro -e POSTGRES_PASSWORD=wonseoro -e POSTGRES_DB=univ_a -p 5499:5432 postgres:16-alpine
+export ADMIN=postgresql://wonseoro:wonseoro@localhost:5499
+for f in migrations/0001_init.sql migrations/0002_db_roles.sql migrations/0003_field_encryption.sql migrations/0004_break_glass.sql migrations/0005_outbox_archive.sql migrations/0006_writer_fence.sql migrations/0007_service_incident.sql migrations/0008_support_view.sql dev-roles.sql verify-constraints.sql seed-dev.sql ci-seed-deadline.sql; do psql "$ADMIN/univ_a" -v ON_ERROR_STOP=1 -f infra/db/$f; done
+psql "$ADMIN/univ_a" -c 'CREATE DATABASE central'
+for f in 0001_init.sql 0002_vault.sql 0003_summary_names.sql 0004_vault_encryption.sql 0005_profile_collection_consent.sql; do psql "$ADMIN/central" -v ON_ERROR_STOP=1 -f infra/db/central/$f; done
+
+# 대학 API — 기대값: 395개 중 392 통과·3 건너뜀·0 실패 (2026-10-04)
+DATABASE_URL=postgresql://kadmission_app:kadmission_app_dev@localhost:5499/univ_a DATABASE_ADMIN_URL=$ADMIN/univ_a UNIVERSITY_ID=UNIV-A npm run test -w @wonseoro/admission-api
+# 중앙 API — 기대값: 41개 통과, 건너뜀 0 (중앙 시험은 관리자 계정 주소로 돈다)
+DATABASE_URL=$ADMIN/central npm run test -w @wonseoro/central-api
+# 정적 검사
+npm run check:contracts && npm run check:ui-copy
+```
+
+`psql` 이 없으면 `docker exec -i ci-pg psql -U wonseoro -d univ_a -v ON_ERROR_STOP=1 < infra/db/<파일>` 로 같은 일을 한다.
+
+**화면·접근성 시험** — 전용 DB(`bash scripts/screenshots/prepare.sh db`, :5497)와 로컬 서버 다섯을 띄운 뒤 `node tests/a11y/focus-sweep.mjs applicant|admin --width=1280|320`, `node tests/a11y/keyboard-walk.mjs`. 서버별 실행 명령은 `.claude/launch.json` 의 `shots-*` 항목에 있다(Claude 도구 설정 파일이지만 명령은 그대로 쓸 수 있다 — 예: `node --env-file=scripts/screenshots/env/admission.env apps/admission-api/dist/main.js`). 지원자 시험은 `shots-central`·`shots-admission`·`shots-scanner`·`shots-web`·`shots-relay`, 관리자 시험은 `shots-admission`·`shots-admin`.
+
+### 작업 방식 (사용자가 정한 것)
+
+- 묻지 말고 최선안으로 결정·진행하고 결과를 보고한다. 작업마다 끝에 문서(HANDOFF·03·대장·06 등)를 갱신한다
+- 삭제·전역 설정 변경·되돌리기 어려운 일은 사용자 확인 뒤에. 애매한 지시는 질문으로 읽는다
+- 보고·문서·커밋은 한국어, 커밋에 AI 공동저자 줄을 넣지 않는다
 
 ## 1. 30초 요약
 

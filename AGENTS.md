@@ -3,9 +3,13 @@
 이 저장소를 이어받는 AI(또는 사람)는 **[docs/HANDOFF.md](docs/HANDOFF.md) 를 먼저 읽는다.**
 지킬 규칙(§2), 이 PC 환경의 함정(§3), 다음 작업과 실행 방법(§4)이 거기 있다.
 
+**다른 컴퓨터에서 처음 시작한다면 HANDOFF §0(필요한 도구·세팅 순서·못 돌린 검증 보고 규칙)부터.**
+
 요점만:
 
 - 문서·커밋·보고는 **한국어**. 커밋에 AI 공동저자 줄을 넣지 않는다
+- 묻지 말고 최선안으로 결정·진행하고 결과를 보고한다. 작업마다 끝에 문서를 갱신한다. 삭제·전역 설정 변경·되돌리기 어려운 일만 사용자 확인 뒤에
+- "시험 통과" 는 건너뜀(skipped) 수까지 보고 말한다 — DB 없이 돌면 통합 시험이 건너뜀으로 끝난다(대학 API 정상 건너뜀은 3개). 못 돌린 검증은 그대로 보고한다
 - 노션 기술설계서가 설계 원본이다. 어긋나면 먼저 `docs/02-spec-discrepancy-register.md` 에 `D-N` 으로 올린다
 - 노션 첨부 사본(`deploy/charts/k-admission/values-m.yaml`, `deploy/platform/policies/*`, `tests/load/k6-admission.js`, `docs/spec-assets/*`, `infra/db/migrations/0001_init.sql`, `packages/contracts/openapi/k-admission.v1.yaml`, `packages/contracts/events/*.json`)은 노션과 바이트가 같아야 한다
 - 노션 페이지 수정은 페이지마다 사용자 확인. **AI 의 노션 쓰기는 권한 분류기가 막는다** — 변경안은 `docs/06-notion-changeset.md` 로 준비한다. 지금 첨부 5종은 저장소가 노션보다 앞선다
