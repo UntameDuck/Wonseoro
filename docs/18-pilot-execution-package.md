@@ -166,6 +166,27 @@ DB 전환은 `pg_promote()` → 새 Primary의 `promote_writer(세대+1, 행위�
 
 각 결과에 환경, 실행 시각, 건너뜀 수, 원시 증적을 기록한다. “시험 통과”는 건너뜀을 숨기는 표현으로 쓰지 않는다.
 
+### 8.1 T-M6-04·05 — 실 PG Sandbox 수용 게이트
+
+PG 사업자·가맹점 Sandbox 계정·어댑터가 정해지기 전에는 벤더 API 형식이나 성공 수치를 추정하지 않는다. 정해진 뒤 [빈 PG 증적 파일](../deploy/pilot/pg-sandbox-acceptance.example.yaml)을 대학별로 복사해 다음 명령으로 판정한다.
+
+```powershell
+npm run ops:pg-sandbox-acceptance -- --file=deploy/pilot/<대학>-pg-sandbox.yaml
+```
+
+| 구분 | 필수 시험 ID | 확인할 사실 |
+|---|---|---|
+| 결제 생성 | `intent-unique` | 서로 다른 요청이 서로 다른 PG 거래를 만들고, 같은 원서의 결제창 재개는 새 거래를 만들지 않음 |
+| 서버 확인 | `server-verification`·`amount-verification` | 클라이언트·콜백의 성공 문구를 믿지 않고 서버가 PG 상태와 금액을 다시 확인 |
+| 콜백 | `invalid-callback-signature`·`callback-server-reverification`·`callback-replay` | 잘못된 서명 거절, 유효 콜백 뒤 서버 재조회, 같은 이벤트 재전송의 멱등 처리 |
+| 복구 | `closed-window-recovery`·`pending-unknown-retry` | 결제창을 닫거나 확인이 늦어도 재결제를 만들지 않고 워커가 최종 상태를 회복 |
+| 취소 | `approved-cancellation` | 승인된 Sandbox 거래를 사람 승인 절차로 취소하고 PG·로컬 상태가 일치 |
+| 정산 | `matched`·`local-only`·`provider-only`·`status-mismatch`·`amount-mismatch` | 정상 일치와 네 불일치 유형이 각각 대조 큐에서 검출·소유·해소됨 |
+
+모든 행은 실제 실행 시각, 관찰 결과, 증적 참조, 거래 식별자 **집합의 SHA-256**, 건너뜀 수를 가진다. Mock PG는 거절하고 건너뜀은 0건만 허용한다. 마지막으로 미처리 정산 예외·중복 승인·승인 후 미접수 건이 모두 0인지 별도 증적으로 확인한다. 거래번호·가맹점 번호·키·토큰·콜백 비밀은 저장소에 넣지 않는다.
+
+이 게이트를 준비했다는 사실은 T-M6-04·05 완료가 아니다. `PaymentProviderPort` 구현과 운영 선택값, 대학·PG 실행 승인, 실제 Sandbox 원장까지 있어야 한다.
+
 ## 9. T-M6-15 — Sandbox→Shadow→제한 Pilot
 
 | 단계 | 데이터·외부 연계 | 진입 조건 | 종료 조건 |

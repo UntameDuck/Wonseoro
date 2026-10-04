@@ -30,14 +30,16 @@
 > **2026-10-04 작업 기록 (2)** — T-M6-07 완료(D-79): 상담원은 이름·연락처가 아니라 접수번호·상담 확인번호(원서마다 DB 가 만드는 10자)로 찾고, 응답은 허용 목록(상태·시각·결제/서류 요약·중앙 반영·안내 문장)으로만 만든다. 조회마다 증적번호(`SR-YYYYMMDD-XXXXXX`)와 그 순간 응답·해시를 추가 전용 기록에 남기고 원서 감사 체인에 잇는다. 새 역할 `support-agent`·범위 `support`, OpenAPI 1.9.0, DB 제약 23종, admission-api 388개(385 pass·3 skip·0 fail), 관리자 1280/320 각 13화면·지원자 1280/320 각 20화면 접근성 문제 0. **Pilot 지원 도구의 AI 몫 끝**([17](../17-pilot-support-tools.md)).
 >
 > **2026-10-04 작업 기록 (3)** — 남은 사람·기관 태스크의 실행 전 준비를 [18](../18-pilot-execution-package.md)로 묶었다. 노션 §14·16·19를 다시 읽어 SEV1 11단계, 운영주기 9구간, 필수 시험 18종, Compliance 10개 영역을 고정했고 War-room·영향평가·Shadow 실행 절차를 연결했다. `npm run ops:pilot-readiness`는 승인·실행 증적과 시험 건너뜀 수가 빠지면 종료 코드 1이다. **대학 승인·훈련·실증은 하지 않았으므로 T-M6-08·09·10·12·13·15는 미완료 그대로다.**
+>
+> **2026-10-04 작업 기록 (4)** — 실 PG 계약 뒤 T-M6-04·05를 닫을 수용 게이트를 준비했다. `npm run ops:pg-sandbox-acceptance`는 실제 `pg-sandbox`, 대학·PG 승인, 결제 9종·정산 5종, 건너뜀 0건, 사후 예외 0건과 재현 가능한 증적을 요구하며 Mock 결과를 거절한다. 단위시험 3개 통과·실패 0·건너뜀 0, 빈 양식은 결제 0/9·정산 0/5로 의도대로 실패했다. **PG 사업자·실계정·어댑터가 없으므로 T-M6-04·05는 미완료 그대로다.**
 
 | ID | 태스크 | 담당 | 근거 노션 | 인수기준 |
 |---|---|---|---|---|
 | T-M6-01 | 전형 Schema 온보딩 도구 | 송리안 | §01 A5 | 신규 대학 추가가 Config만으로 가능 — ✅ 2026-10-03 구조화 전형·문항·서류 편집 + 빈 Config 시작 |
 | T-M6-02 | Config Linter + Compatibility Test | 송리안 | §01 A5 | 잘못된 Config가 Production 반영 불가 — ✅ 2026-10-03 진행 중 원서 호환 시험·적용 거절(D-77) |
 | T-M6-03 | CSP Conformance Preflight | 송리안 | §01 A8 | StorageClass·IngressClass·KMS·LB capability 검사 — ✅ 2026-10-03 `scripts/ops/csp-preflight.mjs`([14](../14-operations-automation.md)) |
-| T-M6-04 | 실 PG Sandbox 연동 | 송리안 | v1.0 §5.5 | Mock Provider를 Adapter 교체만으로 대체 |
-| T-M6-05 | PG Reconciliation 실계정 검증 | 송리안 | §01 B4 | 정산 대조 |
+| T-M6-04 | 실 PG Sandbox 연동 | 송리안 | v1.0 §5.5 | Mock Provider를 Adapter 교체만으로 대체 — 결제·콜백·복구 9종 수용 게이트 준비, 계약 PG·실행 대기([18 §8.1](../18-pilot-execution-package.md#81-t-m6-0405--실-pg-sandbox-수용-게이트)) |
+| T-M6-05 | PG Reconciliation 실계정 검증 | 송리안 | §01 B4 | 정산 대조 — 일치·로컬만·PG만·상태/금액 불일치 5종과 사후 예외 0건 게이트 준비, 실계정 대기([18 §8.1](../18-pilot-execution-package.md#81-t-m6-0405--실-pg-sandbox-수용-게이트)) |
 | T-M6-06 | Status Page + 대학별 Incident Banner | 권민준 | §01 B11 | 장애 시 고객센터 폭주 완화 — ✅ 2026-10-04 대학별 장애 원장·공개 상태 API·전역 배너·운영자 발행/해제(D-78, OpenAPI 1.8.0) |
 | T-M6-07 | PII 최소 Support View | 권민준 | §01 B11 | 상담원이 원서 본문을 못 보게 — ✅ 2026-10-04 접수번호·상담 확인번호 조회, 허용 목록 응답, 자동 증적번호·감사 체인(D-79, OpenAPI 1.9.0) |
 | T-M6-08 | 운영 런북 (SEV1~3) | 공동 | v1.0 §14.3 | Detect→IC 지정→변경동결→격리→Failover→통보→공지→증적보존→복구검증→Reconciliation→Postmortem — 실행 초안·증적 게이트 준비, 기관 승인 대기([18](../18-pilot-execution-package.md)) |

@@ -24,6 +24,7 @@
 > **같은 세션 — M4 외부 부하 실행 준비.** 노션 §08 원본을 다시 확인하고 바이트 고정 첨부 `k6-admission.js`는 건드리지 않았다. 별도 `k6-acceptance.js`에 합성 사용자별 OIDC 토큰·원서, 500/1,500/3,000 VU+1,000 RPS·70% Failover·6시간 Soak, 장시간 토큰 갱신과 승인/HTTPS 안전장치를 넣었다. `ops:load-acceptance`는 k6 threshold·버린 iteration과 DB 정합성 7개·writer epoch를 함께 판정한다. 단위 3개 pass·skip 0, k6 6시간 프로필 inspect 통과, `ci-pg` 읽기 전용 통합 판정 통과. **원격 부하·Failover·Soak는 실행하지 않아 T-M4-30~32·36·41은 미완료다.** 실행법은 [tests/load/README](../tests/load/README.md).
 > **D-90 OPEN** — §08의 전체 지원 30,000건과 Finalize 150 TPS×5분+300 TPS×60초(63,000요청)가 충돌한다. 기존 첨부는 한 원서에 새 멱등 키를 반복해 첫 1건 뒤의 이미 접수된 응답을 실제 처리량처럼 잰다. 외부 실행 전에 첫 Finalize/멱등 replay의 분모·지속시간을 확정해야 하며, 그 전에는 Finalize p95를 완료로 세지 않는다([대장 D-90](02-spec-discrepancy-register.md), [노션 변경안](06-notion-changeset.md)).
 > **같은 세션 — 외부 PostgreSQL HA 사전 점검 준비.** `ops:ha-preflight`가 Primary/Standby에 읽기 전용으로 접속해 역할·동기 streaming·같은 계보/다른 주소·WAL 지연·archive·운영 writer token/epoch 13개를 본다. 단위 3개 pass·skip 0. 독립 Primary 둘을 넣은 로컬 음성 대조는 의도대로 7/13만 통과하고 6개를 실패했다. zone·원격 백업·실 PITR·실 RTO/RPO·DNS/Edge/Reconciliation은 사람 증적으로 남긴다. **실 HA에서는 실행하지 않아 T-M4-06·T-M5-60·61·64는 미완료다.** [문서 14](14-operations-automation.md)
+> **같은 세션 — 실 PG Sandbox 수용 게이트 준비.** `ops:pg-sandbox-acceptance`가 실제 `pg-sandbox`와 대학·PG 승인, 결제·콜백·복구 9종, 정산 일치·불일치 5종, 건너뜀 0건, 미처리 예외·중복 승인·승인 후 미접수 0건을 요구한다. Mock PG와 거래/가맹점 원문은 거절하고 식별자 집합 SHA-256·통제된 증적 참조만 남긴다. 단위 3개 pass·fail 0·skip 0, 빈 예시는 의도대로 결제 0/9·정산 0/5와 종료 코드 1. **실 PG 계약·어댑터·실행은 없어 T-M6-04·05는 미완료다.** [문서 18 §8.1](18-pilot-execution-package.md#81-t-m6-0405--실-pg-sandbox-수용-게이트)
 > **세션 마감 상태(2026-10-04, ChatGPT/Codex 로 넘김) — 넘겨받는 쪽이 먼저 볼 것**
 > 1. **push 안 함** — `origin/main` 은 G-8 `276f2b2` 까지이고 로컬은 7커밋 앞이다(G-12 `ab546ff`·G-13 `63c028d`·G-9 `e9af8e9`·G-5 `9d6745e`·DB 제약 `0b9a151`·인계 정리 `e0a2f96`·이 문서를 포함한 최신 화면 캡처 커밋). 7개 모두 작성자·커밋한 사람 `ryan-ahn-song <ryansong0805@gmail.com>`, 공동저자 줄 없음(`git log origin/main..HEAD` 로 확인). push 는 사용자 몫
 > 2. **개발 시드가 바뀌었다** — 장애인 증명서(`DISABILITY_CERT`·동의 `SENSITIVE_HEALTH`)·여권번호(`passportNumber`·동의 `PASSPORT_COLLECTION`)·지원 제한 안내(`notices.applicationRules`). `ci-pg`·`ui-shots-pg` 에는 다시 적용했다. **kind·로컬 compose DB 는 다음 시험 전에 `seed-dev.sql` 재적용**(새 마이그레이션 0009·0010 도 — `npm run db:migrate`)
@@ -31,7 +32,7 @@
 > 4. **이 PC 는 PowerShell PATH 에 git 이 없다** — 위 「이 PC 환경 메모」의 GitHub Desktop git 경로를 쓴다
 > 5. **처음 읽을 곳** — 이 문서 맨 위(이 블록)와 아래 「바로 다음 할 일」. 노션 반영은 [06-notion-changeset.md](06-notion-changeset.md)(OpenAPI 1.19.0 바이트·SHA-256 포함)
 > 서버·DB: `ci-pg`(:5499, univ_a 0001~0010 + central 0001~0005)·`ui-shots-pg`(:5497, 0001~0010) 는 실행 중일 수 있다. 미리보기 서버는 모두 껐다.
-> **이어서 할 일** — 로컬 AI 몫과 화면 캡처, 외부 작업 실행 패키지까지 끝났다. 대학/CSP/PG가 정해지면 [문서 18](18-pilot-execution-package.md) 순서로 대학별 YAML을 만들어 B·C 실증을 진행한다. 그 전에는 외부·사람 몫(03 B·C)과 노션 반영(06)만 남는다.
+> **이어서 할 일** — 로컬 AI 몫과 화면 캡처, 외부 작업 실행 패키지까지 끝났다. 대학/CSP/PG가 정해지면 [문서 18](18-pilot-execution-package.md) 순서로 대학별 YAML을 만들어 B·C 실증을 진행한다. 실 PG는 `deploy/pilot/pg-sandbox-acceptance.example.yaml` 사본을 채워 `npm run ops:pg-sandbox-acceptance -- --file=...`로 판정한다. 그 전에는 외부·사람 몫(03 B·C)과 노션 반영(06)만 남는다.
 > **Pilot 지원 도구 기록** — T-M6-01(구조화 전형 Schema 온보딩)·T-M6-06(대학 장애 원장·공개 상태·배너)·T-M6-07(상담 확인번호·허용 목록 응답·자동 증적번호, 새 역할 `support-agent`) 상세는 [17-pilot-support-tools.md](17-pilot-support-tools.md).
 > 화면 작업은 접근성 시험을 다시 돌리고 `check:ui-copy` 를 지킨다(§2). 이번 작업의 임시 웹/API 프로세스는 모두 종료했다. 화면 시험용 PostgreSQL 컨테이너 `ui-shots-pg`는 실행 중일 수 있다.
 > 대학 DB 마이그레이션은 **0001~0010**(0009 정보주체 권리 요청 D-84 · 0010 전형료 반환 신청 D-89), 중앙은 **0001~0005** 다(`infra/db/README.md`). 대학 API 전체 시험은 실 DB에서 **415개 중 412 통과·3 skip·0 실패**, 중앙 API 41개 통과. DB 제약 검증은 **24종**.
@@ -344,6 +345,7 @@ Docker Desktop AI Inference 엔진은 이 프로젝트에서 쓰지 않으며, s
 | ~~values-m 커넥션 수치 (D-44 ⑦)~~ | 2026-09-30 AI 결정: Pod 당 38·예산 400 유지 |
 | 실물 Firefox·Safari 확인 (T-M5-47) | 이 PC 에 없다. 실물 Firefox(Windows)·iPhone Safari 15.4+ 로 접수 흐름을 한 번 따라가거나, 시험용 브라우저(Playwright Firefox·WebKit 약 300MB) 내려받기를 승인하면 AI 가 `tests/a11y/` 를 그 브라우저로 돌린다 — [09](09-accessibility.md#지원-브라우저-2026-10-01-ai-판단) |
 | 실제 스크린리더 청취 (T-M5-48) | NVDA·센스리더·VoiceOver 로 듣는 검사. 전 화면 점검 결과의 Tab 자리별 대본(`say`)을 대조표로 쓴다 |
+| 실 PG Sandbox·정산(T-M6-04·05) | 계약 PG 어댑터·Sandbox 계정·대학/PG 승인이 필요하다. 결제 9종·정산 5종 증적 양식과 `ops:pg-sandbox-acceptance` 게이트는 [18 §8.1](18-pilot-execution-package.md#81-t-m6-0405--실-pg-sandbox-수용-게이트)에 준비됨 |
 | Pilot 런북·캘린더·훈련·영향평가·Compliance·Shadow (T-M6-08~15 중 사람 몫) | 실행 절차·증적 양식·자동 누락 게이트는 [18](18-pilot-execution-package.md)과 `deploy/pilot/`에 준비했다. 대학별 사본을 채워 `npm run ops:pilot-readiness -- --file=...`가 성공해야 완료 판정 |
 
 ## 6. 전체 남은 규모

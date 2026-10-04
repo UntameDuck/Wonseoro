@@ -1,0 +1,131 @@
+# 실제 계약 PG Sandbox에서 실행한 뒤 대학·전형별 사본에만 사실을 기록한다.
+# Mock 결과, pending, skip, 빈 evidence는 의도적으로 ops:pg-sandbox-acceptance를 실패시킨다.
+# 거래번호·가맹점 번호·키·토큰은 넣지 말고 정렬한 식별자 집합의 SHA-256만 기록한다.
+metadata:
+  universityId: ""
+  admissionCycle: ""
+  provider: ""
+  environmentType: pg-sandbox
+  environmentId: ""
+  adapterVersion: ""
+  deploymentRef: ""
+  merchantAccountRefHash: ""
+  syntheticDataOnly: true
+  executedAt: ""
+  approvedBy: ""
+  evidence: []
+
+approval:
+  status: pending
+  approvedAt: ""
+  scope: ""
+  evidence: []
+
+paymentCases:
+  - id: intent-unique
+    status: pending
+    skipped: 0
+    executedAt: ""
+    observed: ""
+    transactionSetHash: ""
+    evidence: []
+  - id: server-verification
+    status: pending
+    skipped: 0
+    executedAt: ""
+    observed: ""
+    transactionSetHash: ""
+    evidence: []
+  - id: amount-verification
+    status: pending
+    skipped: 0
+    executedAt: ""
+    observed: ""
+    transactionSetHash: ""
+    evidence: []
+  - id: invalid-callback-signature
+    status: pending
+    skipped: 0
+    executedAt: ""
+    observed: ""
+    transactionSetHash: ""
+    evidence: []
+  - id: callback-server-reverification
+    status: pending
+    skipped: 0
+    executedAt: ""
+    observed: ""
+    transactionSetHash: ""
+    evidence: []
+  - id: callback-replay
+    status: pending
+    skipped: 0
+    executedAt: ""
+    observed: ""
+    transactionSetHash: ""
+    evidence: []
+  - id: closed-window-recovery
+    status: pending
+    skipped: 0
+    executedAt: ""
+    observed: ""
+    transactionSetHash: ""
+    evidence: []
+  - id: pending-unknown-retry
+    status: pending
+    skipped: 0
+    executedAt: ""
+    observed: ""
+    transactionSetHash: ""
+    evidence: []
+  - id: approved-cancellation
+    status: pending
+    skipped: 0
+    executedAt: ""
+    observed: ""
+    transactionSetHash: ""
+    evidence: []
+
+reconciliationCases:
+  - id: matched
+    status: pending
+    skipped: 0
+    executedAt: ""
+    observed: ""
+    transactionSetHash: ""
+    evidence: []
+  - id: local-only
+    status: pending
+    skipped: 0
+    executedAt: ""
+    observed: ""
+    transactionSetHash: ""
+    evidence: []
+  - id: provider-only
+    status: pending
+    skipped: 0
+    executedAt: ""
+    observed: ""
+    transactionSetHash: ""
+    evidence: []
+  - id: status-mismatch
+    status: pending
+    skipped: 0
+    executedAt: ""
+    observed: ""
+    transactionSetHash: ""
+    evidence: []
+  - id: amount-mismatch
+    status: pending
+    skipped: 0
+    executedAt: ""
+    observed: ""
+    transactionSetHash: ""
+    evidence: []
+
+finalState:
+  checkedAt: ""
+  openReconciliationExceptions: -1
+  duplicateConfirmedPayments: -1
+  unfinalizedConfirmedPayments: -1
+  evidence: []

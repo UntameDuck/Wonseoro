@@ -56,6 +56,8 @@
     "test:ops:load-acceptance": "node --test scripts/ops/load-acceptance.test.mjs",
     "ops:ha-preflight": "node scripts/ops/ha-preflight.mjs",
     "test:ops:ha-preflight": "node --test scripts/ops/ha-preflight.test.mjs",
+    "ops:pg-sandbox-acceptance": "node scripts/ops/pg-sandbox-acceptance.mjs",
+    "test:ops:pg-sandbox-acceptance": "node --test scripts/ops/pg-sandbox-acceptance.test.mjs",
     "pretest:security": "npm run build -w @wonseoro/contracts -w @wonseoro/server-kit -w @wonseoro/admission-api -w @wonseoro/document-service -w @wonseoro/central-api",
     "test:security": "node scripts/run-security-tests.mjs",
     "test:auth:issuer": "node tests/auth/local-issuer.mjs",

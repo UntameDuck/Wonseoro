@@ -22,3 +22,16 @@ npm run ops:pilot-readiness -- --file=deploy/pilot/<대학>-<전형>.yaml
 판정 결과는 `tests/ops/results/pilot-readiness-<대학>-<시각>.json`에 남고, 하나라도 빠지면 종료 코드 1이다. 사람이 `passed: true`로 직접 적는 칸은 없다.
 
 실행 절차와 각 증적의 의미는 [Pilot 운영·검증 실행 패키지](../../docs/18-pilot-execution-package.md)를 따른다.
+
+## 실 PG Sandbox 수용 증적
+
+`pg-sandbox-acceptance.example.yaml`은 T-M6-04·05를 실제 계약 계정에서 닫기 위한 별도 양식이다. PG 사업자와 어댑터가 정해진 뒤 대학별로 복사한다.
+
+```powershell
+Copy-Item deploy/pilot/pg-sandbox-acceptance.example.yaml deploy/pilot/<대학>-pg-sandbox.yaml
+npm run ops:pg-sandbox-acceptance -- --file=deploy/pilot/<대학>-pg-sandbox.yaml
+```
+
+결제 9종과 정산 5종이 모두 실제 `pg-sandbox`에서 통과하고 건너뜀이 0건이어야 한다. `mock-pg`는 거절한다. 거래번호·가맹점 번호는 원문으로 남기지 않고, 정렬한 식별자 집합의 소문자 SHA-256만 `transactionSetHash`·`merchantAccountRefHash`에 기록한다. 비밀키·콜백 비밀·토큰은 어떤 경우에도 Git에 넣지 않는다.
+
+빈 예시는 결제 0/9·정산 0/5로 실패하는 것이 정상이다. 성공 결과가 생겨도 담당자가 원시 PG 장부·애플리케이션 감사 기록·정산 예외를 표본 대조한 뒤에만 M6 태스크를 완료 처리한다.
