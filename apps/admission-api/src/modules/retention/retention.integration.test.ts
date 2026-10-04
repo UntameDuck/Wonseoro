@@ -104,8 +104,8 @@ describe('보존정책은 설정 승인 절차를 탄다 (v1.1 §A15·§A14)', (
     assert.equal(plan.configured, true);
     assert.deepEqual(plan.problems, []);
 
-    assert.equal(byCode.DOCUMENT_FILE!.status, 'DUE');
-    assert.equal(byCode.DOCUMENT_FILE!.purge, 'OBJECT');
+    assert.equal(byCode.DOCUMENT_FILE_UNSUBMITTED!.status, 'DUE');
+    assert.equal(byCode.DOCUMENT_FILE_UNSUBMITTED!.purge, 'OBJECT');
     assert.equal(byCode.APPLICATION_UNSUBMITTED!.status, 'DUE');
     assert.equal(byCode.APPLICATION_UNSUBMITTED!.purge, 'CONTENT', '행은 지우지 않는다 — 감사 체인이 참조한다');
     assert.equal(byCode.APPLICATION_SUBMITTED!.status, 'RETAINED');

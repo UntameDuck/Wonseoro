@@ -52,6 +52,13 @@ const INSTITUTION = {
   basis: '각 대학 개인정보처리방침·입시업무 규정',
 } as const;
 
+const ADMISSION_RECORD_FLOOR = {
+  kind: 'LEGAL',
+  days: 3650,
+  basis:
+    '공공기록물 관리에 관한 법률 · 대학 기록물 보존기간 책정기준 가이드(국가기록원, 2021) 입시관리업무 10년 · 대학입학전형기본사항',
+} as const;
+
 export const RETENTION_CATEGORIES = {
   APPLICATION_UNSUBMITTED: {
     label: '접수되지 않은 원서 (작성 중·취소·만료)',
@@ -65,27 +72,39 @@ export const RETENTION_CATEGORIES = {
     anchor: 'CYCLE_CLOSED',
     // 대학입학전형기본사항이 입시 기록물을 공공기록물법·국가기록원 가이드에 따라 보존하라고 하고,
     // 가이드의 "입시관리업무" 단위과제가 10년이다. 결제·동의 기록은 아래 정합성 규칙으로 따라온다.
-    // 서류·신원은 접수·미접수가 한 항목이라 여기 하한을 걸면 미접수자 정보까지 10년 붙잡힌다
-    // (개인정보보호법 제21조 — 목적 달성 시 파기). 항목을 나눈 뒤에 건다. (D-38)
-    floor: {
-      kind: 'LEGAL',
-      days: 3650,
-      basis:
-        '공공기록물 관리에 관한 법률 · 대학 기록물 보존기간 책정기준 가이드(국가기록원, 2021) 입시관리업무 10년 · 대학입학전형기본사항',
-    },
+    floor: ADMISSION_RECORD_FLOOR,
     purge: 'CONTENT',
     personal: true,
   },
-  APPLICANT_PII: {
-    label: '지원자 신원정보 (암호화 저장분)',
+  // 신원·서류는 접수·미접수로 나눈다(문서 10 G-13, D-87). 한 항목이면 접수분 10년 하한이 미접수자 정보까지
+  // 10년 붙잡는다(개인정보보호법 제21조 — 목적 달성 시 파기, 제21조 ③ 분리 보관).
+  APPLICANT_PII_UNSUBMITTED: {
+    label: '지원자 신원정보 — 접수하지 않은 지원자 (암호화 저장분)',
     anchor: 'CYCLE_CLOSED',
     floor: INSTITUTION,
     purge: 'CONTENT',
     personal: true,
   },
-  DOCUMENT_FILE: {
-    label: '제출 서류 파일',
+  APPLICANT_PII_SUBMITTED: {
+    label: '지원자 신원정보 — 접수한 지원자 (암호화 저장분)',
     anchor: 'CYCLE_CLOSED',
+    // 접수 원서가 누구의 것인지가 원서 기록물의 일부다 — 접수 원서와 같은 하한. 아래 정합성 규칙이 원서보다 먼저 지우지 못하게 한다
+    floor: ADMISSION_RECORD_FLOOR,
+    purge: 'CONTENT',
+    personal: true,
+  },
+  DOCUMENT_FILE_UNSUBMITTED: {
+    label: '제출 서류 파일 — 접수하지 않은 원서',
+    anchor: 'CYCLE_CLOSED',
+    floor: INSTITUTION,
+    purge: 'OBJECT',
+    personal: true,
+  },
+  DOCUMENT_FILE_SUBMITTED: {
+    label: '제출 서류 파일 — 접수한 원서',
+    anchor: 'CYCLE_CLOSED',
+    // 서류 파일까지 10년인지는 대학 기록관리 규정이 정한다(문서 10 §7-6) — 하한을 지어내지 않고 명시하게 한다.
+    // 파일을 지워도 해시는 DB 에 남아 "무엇이 제출됐는가" 는 증명된다
     floor: INSTITUTION,
     purge: 'OBJECT',
     personal: true,
@@ -232,6 +251,14 @@ export function validateRetention(input: unknown): RetentionProblem[] {
     problems.push({
       category: 'PAYMENT_RECORD',
       message: `결제 기록(${payment}일)이 접수 원서(${submitted}일)보다 먼저 파기됩니다. 접수 증적이 깨집니다.`,
+    });
+  }
+  // 접수한 지원자의 신원은 접수 원서보다 먼저 사라지면 안 된다 — 남은 원서가 누구의 것인지 알 수 없게 된다 (D-87)
+  const submittedPii = days.APPLICANT_PII_SUBMITTED;
+  if (submittedPii !== undefined && submitted !== undefined && submittedPii < submitted) {
+    problems.push({
+      category: 'APPLICANT_PII_SUBMITTED',
+      message: `접수한 지원자 신원정보(${submittedPii}일)가 접수 원서(${submitted}일)보다 먼저 파기됩니다. 원서가 누구의 것인지 알 수 없게 됩니다.`,
     });
   }
 

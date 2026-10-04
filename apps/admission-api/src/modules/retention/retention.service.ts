@@ -136,13 +136,23 @@ export class RetentionService {
       APPLICATION_SUBMITTED: `SELECT count(*) AS n FROM application
                                WHERE cycle_id = $1 AND status = 'FINALIZED'`,
       // 다른 모집에도 원서가 있는 지원자의 신원은 이 모집 때문에 지울 수 없다.
-      APPLICANT_PII: `SELECT count(DISTINCT a.applicant_id) AS n FROM application a
+      // 이 모집에 접수한 원서가 하나라도 있으면 "접수한 지원자" 다 — 접수·미접수를 나눠 센다 (D-87)
+      APPLICANT_PII_UNSUBMITTED: `SELECT count(DISTINCT a.applicant_id) AS n FROM application a
                        WHERE a.cycle_id = $1
+                         AND NOT EXISTS (SELECT 1 FROM application f
+                                          WHERE f.applicant_id = a.applicant_id AND f.cycle_id = $1 AND f.status = 'FINALIZED')
                          AND NOT EXISTS (SELECT 1 FROM application o
                                           WHERE o.applicant_id = a.applicant_id
                                             AND o.cycle_id <> $1)`,
-      DOCUMENT_FILE: `SELECT count(*) AS n FROM document d JOIN application a ON a.id = d.application_id
-                       WHERE a.cycle_id = $1 AND d.status <> 'DELETED'`,
+      APPLICANT_PII_SUBMITTED: `SELECT count(DISTINCT a.applicant_id) AS n FROM application a
+                       WHERE a.cycle_id = $1 AND a.status = 'FINALIZED'
+                         AND NOT EXISTS (SELECT 1 FROM application o
+                                          WHERE o.applicant_id = a.applicant_id
+                                            AND o.cycle_id <> $1)`,
+      DOCUMENT_FILE_UNSUBMITTED: `SELECT count(*) AS n FROM document d JOIN application a ON a.id = d.application_id
+                       WHERE a.cycle_id = $1 AND a.status <> 'FINALIZED' AND d.status <> 'DELETED'`,
+      DOCUMENT_FILE_SUBMITTED: `SELECT count(*) AS n FROM document d JOIN application a ON a.id = d.application_id
+                       WHERE a.cycle_id = $1 AND a.status = 'FINALIZED' AND d.status <> 'DELETED'`,
       PAYMENT_RECORD: `SELECT count(*) AS n FROM payment p JOIN application a ON a.id = p.application_id
                         WHERE a.cycle_id = $1`,
       CONSENT_RECORD: `SELECT count(*) AS n FROM consent_record c JOIN application a ON a.id = c.application_id

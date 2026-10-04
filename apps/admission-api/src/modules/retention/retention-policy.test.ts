@@ -30,12 +30,25 @@ describe('보존 정책 검증 (v1.1 §A15)', () => {
       PAYMENT_RECORD: { days: 1825 },
       CONSENT_RECORD: { days: 1825 },
     });
-    assert.deepEqual(problems.map((p) => p.category).sort(), ['CONSENT_RECORD', 'PAYMENT_RECORD']);
+    // 동의 기록은 10년 하한이 걸린 개인정보 항목마다(접수 원서·접수한 지원자 신원) 문제를 낸다
+    assert.deepEqual([...new Set(problems.map((p) => p.category))].sort(), ['CONSENT_RECORD', 'PAYMENT_RECORD']);
+  });
+
+  it('신원·서류는 접수·미접수로 나뉜다 — 미접수자 정보는 10년 하한에 묶이지 않는다 (문서 10 G-13, D-87)', () => {
+    // 접수하지 않은 지원자의 신원·서류는 짧게 둘 수 있다
+    assert.deepEqual(validateRetention({ ...VALID_RETENTION, APPLICANT_PII_UNSUBMITTED: { days: 30 }, DOCUMENT_FILE_UNSUBMITTED: { days: 30 } }), []);
+    // 접수한 지원자의 신원은 접수 원서와 같은 10년 하한
+    assert.deepEqual(codes({ ...VALID_RETENTION, APPLICANT_PII_SUBMITTED: { days: 1825 } }), ['APPLICANT_PII_SUBMITTED']);
+    // 원서를 더 오래 두면 신원도 그만큼 — 원서가 누구의 것인지 잃지 않는다
+    const longer = codes({ ...VALID_RETENTION, APPLICATION_SUBMITTED: { days: 5000 }, PAYMENT_RECORD: { days: 5000 }, CONSENT_RECORD: { days: 5000 } });
+    assert.deepEqual(longer, ['APPLICANT_PII_SUBMITTED']);
+    // 옛 한 항목 이름은 더는 받지 않는다 — 나눈 두 항목을 각각 명시한다
+    assert.ok(codes({ ...VALID_RETENTION, APPLICANT_PII: { days: 365 } }).includes('APPLICANT_PII'));
   });
 
   it('빠진 항목을 기본값으로 채우지 않는다 — 명시해야 한다', () => {
-    const { DOCUMENT_FILE: _omit, ...rest } = VALID_RETENTION;
-    assert.deepEqual(codes(rest), ['DOCUMENT_FILE']);
+    const { DOCUMENT_FILE_UNSUBMITTED: _omit, ...rest } = VALID_RETENTION;
+    assert.deepEqual(codes(rest), ['DOCUMENT_FILE_UNSUBMITTED']);
   });
 
   it('감사 기록·적용 기록에는 보존기간을 정할 수 없다', () => {
@@ -47,10 +60,10 @@ describe('보존 정책 검증 (v1.1 §A15)', () => {
 
   it('모르는 데이터 종류와 잘못된 값은 거절한다', () => {
     assert.ok(codes({ ...VALID_RETENTION, CHAT_LOG: { days: 30 } }).includes('CHAT_LOG'));
-    assert.ok(codes({ ...VALID_RETENTION, DOCUMENT_FILE: { days: 0 } }).includes('DOCUMENT_FILE'));
-    assert.ok(codes({ ...VALID_RETENTION, DOCUMENT_FILE: { days: 1.5 } }).includes('DOCUMENT_FILE'));
+    assert.ok(codes({ ...VALID_RETENTION, DOCUMENT_FILE_UNSUBMITTED: { days: 0 } }).includes('DOCUMENT_FILE_UNSUBMITTED'));
+    assert.ok(codes({ ...VALID_RETENTION, DOCUMENT_FILE_UNSUBMITTED: { days: 1.5 } }).includes('DOCUMENT_FILE_UNSUBMITTED'));
     // 일 대신 초를 넣는 식의 단위 착각.
-    assert.ok(codes({ ...VALID_RETENTION, DOCUMENT_FILE: { days: 31_536_000 } }).includes('DOCUMENT_FILE'));
+    assert.ok(codes({ ...VALID_RETENTION, DOCUMENT_FILE_UNSUBMITTED: { days: 31_536_000 } }).includes('DOCUMENT_FILE_UNSUBMITTED'));
     assert.deepEqual(codes([]), ['*']);
   });
 
@@ -69,8 +82,8 @@ describe('보존 정책 검증 (v1.1 §A15)', () => {
       ADMIN_ACCESS_LOG: { days: 30 },
       AUDIT_EVENT: { days: 10 },
     });
-    // 법정 미달 1 + 불변 1 + 누락 6
-    assert.equal(problems.length, 8);
+    // 법정 미달 1 + 불변 1 + 누락 8 (신원·서류를 접수·미접수로 나눠 항목이 둘 늘었다, D-87)
+    assert.equal(problems.length, 10);
   });
 });
 
@@ -78,16 +91,16 @@ describe('보존기간 변경의 위험도 (Diff)', () => {
   it('줄이면 파기가 앞당겨진다 — DESTRUCTIVE', () => {
     const diff = diffConfig(
       { retention: VALID_RETENTION },
-      { retention: { ...VALID_RETENTION, DOCUMENT_FILE: { days: 180 } } },
+      { retention: { ...VALID_RETENTION, DOCUMENT_FILE_UNSUBMITTED: { days: 180 } } },
     );
     assert.equal(diff.destructive.length, 1);
-    assert.equal(diff.destructive[0]!.path, 'retention.DOCUMENT_FILE.days');
+    assert.equal(diff.destructive[0]!.path, 'retention.DOCUMENT_FILE_UNSUBMITTED.days');
   });
 
   it('늘리는 것은 되돌릴 수 있다 — INFO', () => {
     const diff = diffConfig(
       { retention: VALID_RETENTION },
-      { retention: { ...VALID_RETENTION, DOCUMENT_FILE: { days: 730 } } },
+      { retention: { ...VALID_RETENTION, DOCUMENT_FILE_UNSUBMITTED: { days: 730 } } },
     );
     assert.equal(diff.destructive.length, 0);
     assert.equal(diff.changes[0]!.risk, 'INFO');

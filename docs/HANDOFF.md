@@ -15,7 +15,8 @@
 > **이 PC(Windows 10, `D:\Project-Local\wonseoro`) 환경 메모** — PowerShell PATH 에 git 이 없다. GitHub Desktop 의 git 을 쓴다: `C:\Users\ARK CLOUD\AppData\Local\GitHubDesktop\app-3.6.3\resources\app\git\cmd\git.exe`(`check:contracts` 의 HEAD~1 호환 검사도 git 이 PATH 에 있어야 돈다 — `$env:PATH = "<그 폴더>;$env:PATH"`). `ci-pg` 에 **`central` DB 가 없어 중앙 보안 시험 33개가 건너뜀으로 끝나고 있었다** — 2026-10-04 HANDOFF §0 순서대로 만들고 중앙 0001~0005 를 적용했다. `ci-pg`·`ui-shots-pg` 에는 0009 를 적용했다. PowerShell 의 `<` 는 입력 재지정이 안 된다 — SQL 은 `docker cp 파일 컨테이너:/tmp/x.sql` 뒤 `psql -f` 로(파이프는 한글이 깨진다).
 > **같은 세션 — G-8 민감정보 서류 별도 동의 완료(D-85).** 설정 `sensitiveDocuments`, 4단계 별도 동의 뒤 업로드, 서류가 있으면 동의 필수. OpenAPI **1.16.0**. **개발 시드가 바뀌었다**(선택 서류 `DISABILITY_CERT`·동의 `SENSITIVE_HEALTH`) — `ci-pg`·`ui-shots-pg` 에는 다시 적용했다. kind·로컬 compose DB 는 다음 시험 전에 `seed-dev.sql` 재적용. 검증: admission-api **407개 중 404 통과·3 skip·0 실패**, 지원자 1280/320 각 26화면 문제 0, 키보드 완주 109키 문제 0.
 > **같은 세션 — G-12 지원 제한 고지 완료(D-86).** 접수 홈 「지원 전 확인」(대학 고지 `notices.applicationRules`) 체크 뒤에만 원서 시작, 확인은 감사에 문안 해시. OpenAPI **1.17.0**. 시드에 문안이 더해졌다(`ci-pg`·`ui-shots-pg` 재적용함). **화면으로 원서를 시작하는 스크립트는 체크를 켜야 한다** — 키보드 완주·순회·캡처(`ackRules`)는 고쳤다. 검증: admission-api **408개 중 405 통과·3 skip·0 실패**, 지원자 1280/320 각 26화면 문제 0, 키보드 완주 114키 문제 0. 캡처 스크립트(`capture.mjs`)는 고쳤지만 이번에 돌리지 않았다.
-> **이어서 할 일** — 아래 「바로 다음 할 일」. 개인정보 G 목록의 높음 항목은 모두 끝났다. 남은 AI 몫 후보는 03 의 G-5·G-13·G-9·화면 캡처 다시 찍기. 그 밖은 외부·사람 몫(03 B·C)과 노션 반영(06).
+> **같은 세션 — G-13 보존 항목 분리 완료(D-87).** `APPLICANT_PII`·`DOCUMENT_FILE` → 접수·미접수 4항목(`*_UNSUBMITTED`·`*_SUBMITTED`). 접수 신원은 10년 하한·원서보다 먼저 파기 금지. **옛 항목 이름은 이제 설정 검사가 거절한다** — 보존 설정을 쓰는 대학 설정·시험은 새 이름 넷을 명시한다. 검증: admission-api **409개 중 406 통과·3 skip·0 실패**, 보안 229 통과·skip 0, 콘솔 1280/320 각 16화면 문제 0.
+> **이어서 할 일** — 아래 「바로 다음 할 일」. 개인정보 G 목록의 높음 항목은 모두 끝났다. 남은 AI 몫 후보는 03 의 G-5·G-9·화면 캡처 다시 찍기. 그 밖은 외부·사람 몫(03 B·C)과 노션 반영(06).
 > **Pilot 지원 도구 기록** — T-M6-01(구조화 전형 Schema 온보딩)·T-M6-06(대학 장애 원장·공개 상태·배너)·T-M6-07(상담 확인번호·허용 목록 응답·자동 증적번호, 새 역할 `support-agent`) 상세는 [17-pilot-support-tools.md](17-pilot-support-tools.md).
 > 화면 작업은 접근성 시험을 다시 돌리고 `check:ui-copy` 를 지킨다(§2). 이번 작업의 임시 웹/API 프로세스는 모두 종료했다. 화면 시험용 PostgreSQL 컨테이너 `ui-shots-pg`는 실행 중일 수 있다.
 > 대학 DB 마이그레이션은 **0001~0009**(0009 정보주체 권리 요청, D-84), 중앙은 **0001~0005** 다(`infra/db/README.md`). 대학 API 전체 시험은 실 DB에서 **394개 중 391 통과·3 skip·0 실패**, 중앙 API 41개 통과(2026-10-04 D-82 뒤). DB 제약 검증은 **23종**.
@@ -55,7 +56,7 @@ for f in migrations/0001_init.sql migrations/0002_db_roles.sql migrations/0003_f
 psql "$ADMIN/univ_a" -c 'CREATE DATABASE central'
 for f in 0001_init.sql 0002_vault.sql 0003_summary_names.sql 0004_vault_encryption.sql 0005_profile_collection_consent.sql; do psql "$ADMIN/central" -v ON_ERROR_STOP=1 -f infra/db/central/$f; done
 
-# 대학 API — 기대값: 408개 중 405 통과·3 건너뜀·0 실패 (2026-10-04, D-86 뒤 — seed-dev.sql 이 최신이어야 민감정보·지원 제한 시험 4개가 건너뜀 없이 돈다)
+# 대학 API — 기대값: 409개 중 406 통과·3 건너뜀·0 실패 (2026-10-04, D-87 뒤 — seed-dev.sql 이 최신이어야 민감정보·지원 제한 시험 4개가 건너뜀 없이 돈다)
 DATABASE_URL=postgresql://kadmission_app:kadmission_app_dev@localhost:5499/univ_a DATABASE_ADMIN_URL=$ADMIN/univ_a UNIVERSITY_ID=UNIV-A npm run test -w @wonseoro/admission-api
 # 중앙 API — 기대값: 41개 통과, 건너뜀 0 (중앙 시험은 관리자 계정 주소로 돈다)
 DATABASE_URL=$ADMIN/central npm run test -w @wonseoro/central-api
