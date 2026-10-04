@@ -90,8 +90,8 @@ export default function EvidencePage() {
 
   const block = !operator
     ? '담당자를 먼저 지정해 주십시오. 누가 열람했는지 기록에 남습니다.'
-    : !/^[0-9a-f-]{36}$/i.test(applicationId.trim())
-      ? '원서 ID(UUID)를 입력해 주십시오.'
+    : applicationId.trim().length === 0
+      ? '접수번호나 원서 ID 를 입력해 주십시오.'
       : reason.trim().length < 5
         ? '조회 사유를 구체적으로 입력해 주십시오.'
         : null;
@@ -100,7 +100,12 @@ export default function EvidencePage() {
     setBusy(true);
     setPkg(null);
     try {
-      setPkg(await adminGet<EvidencePackage>(`evidence/applications/${applicationId.trim()}`, { reason }));
+      // 원서 ID(UUID) 가 아니면 접수번호로 찾는다 — 지원자·상담 기록이 가진 번호는 접수번호다 (U-51)
+      const key = applicationId.trim();
+      const path = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key)
+        ? `evidence/applications/${key}`
+        : `evidence/by-number/${encodeURIComponent(key)}`;
+      setPkg(await adminGet<EvidencePackage>(path, { reason }));
       setError(null);
     } catch (err) {
       setError(describe(err));
@@ -116,7 +121,7 @@ export default function EvidencePage() {
         <Alert tone="info" title="이 조회는 기록됩니다">
           누가 언제 어떤 사유로 이 원서의 증적을 열람했는지 감사 체인에 남습니다.
         </Alert>
-        <Field label="원서 ID" value={applicationId} onChange={setApplicationId} required />
+        <Field label="접수번호 또는 원서 ID" hint="접수번호는 접수증·상담 기록에 있는 번호입니다." value={applicationId} onChange={setApplicationId} required />
         <Field label="조회 사유" value={reason} onChange={setReason} required multiline maxLength={300} hint="예: 지원자 문의 — 마감 직전 제출 여부 확인 (민원번호 …)" />
         <Button disabled={busy || block !== null} onClick={() => void load()}>
           증적 열기

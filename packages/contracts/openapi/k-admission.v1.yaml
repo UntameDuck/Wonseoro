@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: K-Admission University Data Plane API
-  version: 1.13.0
+  version: 1.14.0
   description: >
     Reference contract for a university-local K-Admission data plane.
     The university DB is the source of truth; central sync is not in the applicant critical path.
@@ -74,6 +74,10 @@ info:
     1.13.0 lets the applicant delete the common profile (`DELETE /api/v1/profile`, D-82, note G-10):
     values, data key and per-university release consents go; the release log (field codes only)
     stays. Applications already created keep their snapshot. New operation.
+
+
+    1.14.0 opens the evidence package by application number (U-51): same auditor scope, recent
+    authentication, mandatory reason and audit as the id-based path. New operation.
 
 
     Common rules:
@@ -1349,6 +1353,38 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/EvidencePackage' }
         '400':
+          $ref: '#/components/responses/Problem'
+  /admin/v1/evidence/by-number/{applicationNumber}:
+    get:
+      tags: [Admin]
+      operationId: getEvidencePackageByNumber
+      x-kadmission-register: D-24
+      description: >
+        Same as getEvidencePackage, found by the application number the applicant or the support
+        record carries. Unknown numbers answer 404. Viewing is audited with the viewer and the reason.
+      security: [{ oidc: [auditor] }]
+      parameters:
+        - in: path
+          name: applicationNumber
+          required: true
+          schema: { type: string, maxLength: 80 }
+        - in: query
+          name: reason
+          required: true
+          description: Purpose of access. Empty → 400.
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Evidence package
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EvidencePackage' }
+        '400':
+          $ref: '#/components/responses/Problem'
+        '404':
           $ref: '#/components/responses/Problem'
   /admin/v1/retention/matrix:
     get:

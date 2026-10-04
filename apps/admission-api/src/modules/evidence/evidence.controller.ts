@@ -4,6 +4,7 @@ import { CACHE_CONTROL_PII } from '@wonseoro/contracts';
 import { AdminGuard } from '../../common/identity/admin.guard';
 import { AdminScope, StepUp } from '../../common/identity/admin-scope';
 import { adminFrom } from '../../common/identity/identity';
+import { ProblemException } from '../../common/problem/problem.exception';
 import { EvidenceService } from './evidence.service';
 
 /**
@@ -31,6 +32,22 @@ export class EvidenceController {
     @Req() req: FastifyRequest,
     @Query('reason') reason?: string,
   ) {
+    return this.evidence.generate(applicationId, adminFrom(req).adminId, reason ?? '');
+  }
+
+  /** 접수번호로 연다 — 같은 권한·재인증·사유·열람 기록 (U-51, 계약 getEvidencePackageByNumber) */
+  @Get('by-number/:applicationNumber')
+  @StepUp()
+  @Header('cache-control', CACHE_CONTROL_PII)
+  async getByNumber(
+    @Param('applicationNumber') applicationNumber: string,
+    @Req() req: FastifyRequest,
+    @Query('reason') reason?: string,
+  ) {
+    if (!(reason ?? '').trim()) {
+      throw ProblemException.validationFailed('조회 사유를 입력해야 합니다. 증적 열람은 기록으로 남습니다.');
+    }
+    const applicationId = await this.evidence.applicationIdByNumber(applicationNumber);
     return this.evidence.generate(applicationId, adminFrom(req).adminId, reason ?? '');
   }
 }

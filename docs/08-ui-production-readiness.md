@@ -171,7 +171,7 @@ U-1 ~ U-11 은 화면 캡처 때 찾은 결함이다(원문 [screenshots/README.
 | # | 범주 | 위치 | 지금 | 바꿀 방향 | 태스크 |
 |---|---|---|---|---|---|
 | U-50 | 다 | `:168`·`:176-207` | 원문이 많다. 제목 "Timeline"(영문), 행위·결과·주체(`APPLICATION_CREATED`·`ACCEPTED`·`APPLICANT`), 적용 종류(`ACTIVATE`), 결제(`CONFIRMED`), 서류(`TRANSCRIPT · AVAILABLE`) | "처리 이력"으로 바꾸고 사람 말 사전(결정 3)을 쓴다. 서류 이름은 현재 설정의 `documentLabels`에서 읽는다. 원문은 뒤에 작게 둔다 · ✅ 2026-10-01 | T-M5-51 |
-| U-51 | 다 | `:67-70` | 원서 UUID 로만 찾는다 | **선택.** 접수번호로도 찾는다(관리자 API 추가). T-M6-07 과 함께 · ⏭ T-M6-07 로 넘김(선택) | T-M5-56 |
+| U-51 | 다 | `:67-70` | 원서 UUID 로만 찾는다 | **선택.** 접수번호로도 찾는다(관리자 API 추가). T-M6-07 과 함께 · ✅ 2026-10-04 `GET /admin/v1/evidence/by-number/{접수번호}`(같은 권한·재인증·사유·열람 기록, OpenAPI 1.14.0), 콘솔 입력칸이 접수번호·원서 ID 를 다 받는다 | T-M5-56 |
 
 ### 보존기간 (`admin-web/src/app/retention/page.tsx` · `packages/contracts/src/retention.ts`)
 

@@ -151,6 +151,7 @@ describe('운영 API 권한 — 계약 범위와 같다 (T-M5-10, STRIDE E-03)',
     const stepUp = admin.filter((r) => r.stepUp).map((r) => `${r.method} ${r.url}`).sort();
     assert.deepEqual(stepUp, [
       'GET /admin/v1/evidence/applications/:applicationId',
+      'GET /admin/v1/evidence/by-number/:applicationNumber',
       'POST /admin/v1/config/versions/:configId/activate',
       'POST /admin/v1/config/versions/:configId/approve',
       'POST /admin/v1/config/versions/:configId/rollback',

@@ -232,4 +232,12 @@ describe('개인정보 최소 상담 조회 (T-M6-07, D-79)', () => {
       (e: unknown) => e instanceof ProblemException && e.getStatus() === 404,
     );
   });
+
+  it('감사자는 접수번호로 증적 패키지를 연다 — 없는 번호는 404 (U-51)', async (t) => {
+    if (!available) return t.skip('DB 없음');
+    const { EvidenceService } = await import('../evidence/evidence.service');
+    const evidence = new EvidenceService(db, new AuditService(), {} as never); // 번호 찾기는 DB 만 쓴다
+    assert.equal(await evidence.applicationIdByNumber(doneNumber.toLowerCase()), doneApp);
+    await assert.rejects(evidence.applicationIdByNumber('2099-UNIV-A-NOPE'), (e: unknown) => e instanceof ProblemException && e.getStatus() === 404);
+  });
 });

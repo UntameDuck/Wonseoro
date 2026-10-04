@@ -459,7 +459,7 @@ async function admin() {
   const applicationId = candidate?.ok ? candidateId : null;
   if (!applicationId) console.log('… keyboard-walk 완주 결과가 없어 증적 열람 화면은 건너뛴다');
   if (applicationId) {
-    await keyTo('원서 ID', 'Tab');
+    await keyTo('접수번호 또는 원서 ID', 'Tab');
     await press(b, 'Tab', { shift: true });
     await typeText(b, applicationId);
     await press(b, 'Tab');

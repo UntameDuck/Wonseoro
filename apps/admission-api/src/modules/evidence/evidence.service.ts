@@ -123,6 +123,20 @@ export class EvidenceService {
   /**
    * @param reason 조회 사유. 비워둘 수 없다 — 누가 왜 봤는지가 남아야 한다.
    */
+  /**
+   * 접수번호로 원서를 찾는다 — 감사자가 지원자·상담 기록에서 받는 번호는 접수번호다(U-51). 없으면 404.
+   * 원서 식별자를 응답 밖으로 내지 않으려는 상담 조회(D-79)와 달리 증적 패키지는 감사자용이라 식별자를 싣는다.
+   */
+  async applicationIdByNumber(applicationNumber: string): Promise<string> {
+    const { rows } = await this.db.query<{ application_id: string }>(
+      `SELECT application_id FROM submission WHERE upper(application_number) = upper($1)`,
+      [applicationNumber.trim()],
+    );
+    const id = rows[0]?.application_id;
+    if (!id) throw ProblemException.notFound('이 접수번호로 접수된 원서가 없습니다.');
+    return id;
+  }
+
   async generate(
     applicationId: string,
     viewer: string,
