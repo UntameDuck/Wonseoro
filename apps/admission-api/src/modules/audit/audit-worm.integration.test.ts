@@ -4,7 +4,8 @@ import { after, before, describe, it } from 'node:test';
 import { DeleteObjectCommand, HeadObjectCommand, PutObjectRetentionCommand, S3Client } from '@aws-sdk/client-s3';
 import { Db } from '@wonseoro/server-kit';
 import { breakGlass } from '../../test-support/break-glass';
-import { S3WormStore, exportAuditSegment, verifyAuditWorm } from './audit-worm';
+import { Client } from 'pg';
+import { S3WormStore, exportAuditSegment, exportGrantSegment, verifyAllWorm, verifyAuditWorm, verifyGrantWorm } from './audit-worm';
 
 /**
  * 감사 기록 WORM — 실제 S3 호환 Object Lock 으로 (T-M3-03, D-75)
@@ -102,5 +103,49 @@ describe('감사 기록 WORM (T-M3-03)', () => {
     assert.ok(r.alteredInDb.includes(ids[0] as string), '고친 기록');
     assert.ok(r.missingInDb.includes(ids[1] as string), '지운 기록');
     assert.ok(!r.alteredInDb.includes(ids[2] as string) && !r.missingInDb.includes(ids[2] as string), '손대지 않은 기록은 그대로');
+  });
+
+  it('권한 변경 기록도 순번으로 이어 내보내고, 트리거를 끄고 고치거나 지운 줄을 WORM 과 맞춰 찾아낸다 (G-15, D-91)', async (t) => {
+    if (!available) return t.skip('DB·Object Storage 없음');
+    const run = randomUUID().slice(0, 8);
+    for (let i = 0; i < 2; i++) {
+      await db.query(
+        `INSERT INTO access_grant_log (source, source_event_id, occurred_at, action, change_kind, subject, roles, row_hash)
+         VALUES ('IDP', $1, now(), 'BASELINE', 'BASELINE', $2, ARRAY['support-agent'], '')`,
+        [`worm-it:${run}:${i}`, `worm-${run}`],
+      );
+    }
+    const mine = (await db.query<{ seq: string }>(`SELECT seq::text FROM access_grant_log WHERE subject = $1 ORDER BY seq`, [`worm-${run}`])).rows.map((r) => r.seq);
+    const opts = { university: UNIV, batch: 100_000, retentionDays: 1 };
+    const first = await exportGrantSegment(db, store, opts);
+    assert.ok(first.key && first.exported >= 2);
+    assert.match(first.key, /^access-grants\/.+\/\d{4}-\d{2}-\d{2}\/\d{12}\.ndjson$/);
+    const body = (await store.get(first.key)).toString('utf8');
+    for (const s of mine) assert.ok(body.includes(`"seq":"${s}"`));
+    // 이어 내보내면 앞 조각의 순번은 다시 나가지 않는다
+    const again = await exportGrantSegment(db, store, opts);
+    if (again.key) assert.ok(!(await store.get(again.key)).toString('utf8').includes(`"seq":"${mine[0]}"`));
+    const clean = await verifyGrantWorm(db, store, UNIV);
+    assert.deepEqual([...clean.alteredInDb, ...clean.missingInDb].filter((s) => mine.includes(s)), []);
+
+    // 슈퍼유저가 트리거를 끄고 고치거나 지운 것 — 트랜잭션 안에서 보고 되돌린다(추가 전용 표를 시험이 실제로 망가뜨리지 않게)
+    const su = new Client({ connectionString: process.env.DATABASE_ADMIN_URL ?? process.env.DATABASE_URL, options: '-c search_path=kadmission,public' });
+    await su.connect();
+    try {
+      await su.query('BEGIN');
+      await su.query(`SET LOCAL session_replication_role = replica`);
+      await su.query(`UPDATE access_grant_log SET roles = ARRAY['break-glass'] WHERE seq = $1`, [mine[0]]);
+      await su.query(`DELETE FROM access_grant_log WHERE seq = $1`, [mine[1]]);
+      const r = await verifyGrantWorm(su, store, UNIV);
+      assert.ok(r.alteredInDb.includes(mine[0] as string), '고친 줄');
+      assert.ok(r.missingInDb.includes(mine[1] as string), '지운 줄');
+      // 정기 대조(스케줄러)가 쓰는 묶음 — 두 기록을 함께 본다
+      const all = await verifyAllWorm(su, store, UNIV);
+      assert.ok(all['access-grants'].missingInDb.includes(mine[1] as string));
+      assert.ok(all.audit.segments >= 1);
+    } finally {
+      await su.query('ROLLBACK');
+      await su.end();
+    }
   });
 });

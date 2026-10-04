@@ -182,7 +182,100 @@ export async function verifyAuditWorm(db: Queryable, store: WormStore, universit
   return result;
 }
 
-/** 5분마다·리더 하나 — 다 내보낼 때까지 조각을 잇는다(한 번에 최대 20조각) */
+/* ── 권한 부여·변경·말소 기록 (G-15, D-91 — 0011 access_grant_log) ─────────────
+ * DB 의 추가 전용·해시 체인은 슈퍼유저가 트리거를 끄고 지우면 "지워졌다" 는 알아도 되찾지 못한다 — 감사 기록과 같이 WORM 조각으로 밖에 둔다.
+ * 순번은 잠금 안에서 커밋 순서대로 매겨지므로 안정화 대기 없이 순번으로 잇는다. 보관은 법정 하한 3년보다 짧게 두지 않는다.
+ */
+export const GRANT_WORM_MIN_DAYS = 1095;
+
+interface GrantRow extends Record<string, unknown> {
+  seq: string;
+  recorded: string;
+  row_hash: string;
+}
+
+const GRANT_COLUMNS = `seq::text, source, source_event_id, to_char(occurred_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS occurred,
+  action, change_kind, subject, roles, actor, details, to_char(recorded_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS recorded, prev_hash, row_hash`;
+
+/** 마지막으로 내보낸 순번 — 가장 늦은 날짜 접두어의 가장 큰 키(순번은 12자리로 채워 글자 순서 = 숫자 순서) */
+async function grantCursorOf(store: WormStore, university: string): Promise<number> {
+  const days = (await store.list(`access-grants/${university}/`, '/')).sort();
+  for (let i = days.length - 1; i >= 0; i--) {
+    const last = (await store.list(days[i] as string)).filter((k) => k.endsWith('.ndjson')).sort().at(-1);
+    const m = last ? /\/(\d{12})\.ndjson$/.exec(last) : null;
+    if (m) return Number(m[1]);
+  }
+  return 0;
+}
+
+export async function exportGrantSegment(
+  db: Queryable,
+  store: WormStore,
+  o: { university: string; batch: number; retentionDays: number },
+): Promise<{ exported: number; key: string | null }> {
+  const cursor = await grantCursorOf(store, o.university);
+  // 정렬은 표의 숫자 순번으로 — 결과 열 seq 는 글자라 그대로 정렬하면 "99" 가 "140" 뒤에 온다
+  const { rows } = await db.query<GrantRow>(
+    `SELECT ${GRANT_COLUMNS} FROM access_grant_log g WHERE g.seq > $1 ORDER BY g.seq LIMIT $2`,
+    [cursor, o.batch],
+  );
+  if (rows.length === 0) return { exported: 0, key: null };
+  const last = rows.at(-1) as GrantRow;
+  const key = `access-grants/${o.university}/${last.recorded.slice(0, 10)}/${last.seq.padStart(12, '0')}.ndjson`;
+  const body = Buffer.from(rows.map((r) => JSON.stringify(r)).join('\n') + '\n', 'utf8');
+  await store.put(key, body, new Date(Date.now() + o.retentionDays * 86_400_000));
+  exported.add(rows.length, { log: 'access-grants' });
+  return { exported: rows.length, key };
+}
+
+/** WORM 조각 전부를 DB 와 맞춘다 — 순번으로 */
+export async function verifyGrantWorm(db: Queryable, store: WormStore, university: string): Promise<WormVerifyResult> {
+  const keys = (await store.list(`access-grants/${university}/`)).filter((k) => k.endsWith('.ndjson')).sort();
+  const result: WormVerifyResult = { segments: keys.length, checked: 0, missingInDb: [], alteredInDb: [] };
+  for (const key of keys) {
+    const archived = (await store.get(key)).toString('utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l) as GrantRow);
+    const { rows } = await db.query<GrantRow>(`SELECT ${GRANT_COLUMNS} FROM access_grant_log WHERE seq = ANY($1::bigint[])`, [archived.map((r) => r.seq)]);
+    const live = new Map(rows.map((r) => [r.seq, r]));
+    for (const a of archived) {
+      result.checked++;
+      const d = live.get(a.seq);
+      if (!d) result.missingInDb.push(a.seq);
+      else if (JSON.stringify(d) !== JSON.stringify(a)) result.alteredInDb.push(a.seq);
+    }
+  }
+  return result;
+}
+
+/* ── 정기 대조 — WORM 조각과 DB 가 다르면(지워졌거나 고쳐졌으면) 지표로 알린다 ──────────────
+ * 경보 규칙: deploy/platform/observability/expiry-rules.yaml 의 AuditWormMismatch·AuditWormVerifyStale.
+ * 지운 줄·고친 줄의 ID 는 로그에만(지표 이름표에 싣지 않는다 — 수가 끝없이 늘 수 있다).
+ */
+const verifyState: Record<'audit' | 'access-grants', { missing: number; altered: number }> = {
+  audit: { missing: 0, altered: 0 },
+  'access-grants': { missing: 0, altered: 0 },
+};
+let lastVerifiedAt = 0;
+const meter = metrics.getMeter('k-admission.audit');
+meter
+  .createObservableGauge('audit_worm_verify_mismatches', { description: 'WORM 조각과 다른 DB 기록 수 — 지워짐(missing)·고쳐짐(altered) (D-75·D-91)' })
+  .addCallback((r) => {
+    for (const [log, s] of Object.entries(verifyState)) {
+      r.observe(s.missing, { log, kind: 'missing' });
+      r.observe(s.altered, { log, kind: 'altered' });
+    }
+  });
+meter
+  .createObservableGauge('audit_worm_verify_last_success_seconds', { description: '마지막으로 WORM 대조를 끝낸 시각(유닉스 초)' })
+  .addCallback((r) => {
+    if (lastVerifiedAt) r.observe(lastVerifiedAt / 1000);
+  });
+
+/** 감사 기록·권한 변경 기록의 WORM 조각 전부를 DB 와 맞춘다 */
+export async function verifyAllWorm(db: Queryable, store: WormStore, university: string): Promise<Record<'audit' | 'access-grants', WormVerifyResult>> {
+  return { audit: await verifyAuditWorm(db, store, university), 'access-grants': await verifyGrantWorm(db, store, university) };
+}
+
+/** 5분마다·리더 하나 — 다 내보낼 때까지 조각을 잇는다(한 번에 최대 20조각). 권한 변경 기록도 같은 주기에. 대조는 따로(기본 하루) */
 @Injectable()
 export class AuditWormScheduler implements OnModuleInit, OnApplicationShutdown {
   static readonly LOCK = 'audit:worm';
@@ -201,10 +294,42 @@ export class AuditWormScheduler implements OnModuleInit, OnApplicationShutdown {
     if (S3.autoCreateBucket) await this.store.ensureBucket().catch((e: Error) => this.logger.warn(`WORM 버킷 준비 실패: ${e.message}`));
     this.timer = setInterval(() => void this.safeTick(), AUDIT_WORM.intervalMs);
     this.timer.unref();
+    if (AUDIT_WORM.verifyIntervalMs > 0) {
+      this.verifyTimer = setInterval(() => void this.safeVerify(), AUDIT_WORM.verifyIntervalMs);
+      this.verifyTimer.unref();
+    }
   }
 
   onApplicationShutdown(): void {
     if (this.timer) clearInterval(this.timer);
+    if (this.verifyTimer) clearInterval(this.verifyTimer);
+  }
+
+  private verifyTimer: NodeJS.Timeout | null = null;
+
+  private async safeVerify(): Promise<void> {
+    try {
+      await this.verify();
+    } catch (err) {
+      this.logger.warn(`audit worm verify failed (${describeFailure(err)})`);
+    }
+  }
+
+  /** 리더 하나가 대조하고 지표를 바꾼다. 다르면 지운·고친 ID 를 로그에 남긴다 */
+  async verify(): Promise<Record<'audit' | 'access-grants', WormVerifyResult> | null> {
+    const store = this.store;
+    if (!store || shouldSuspendNonCriticalJobs(this.peakMode)) return null;
+    return withLeaderLock(this.db, `${AuditWormScheduler.LOCK}:verify`, async () => {
+      const r = await verifyAllWorm(this.db, store, UNIVERSITY_ID);
+      for (const log of ['audit', 'access-grants'] as const) {
+        verifyState[log] = { missing: r[log].missingInDb.length, altered: r[log].alteredInDb.length };
+        if (r[log].missingInDb.length || r[log].alteredInDb.length) {
+          this.logger.error(`WORM 대조 불일치(${log}) — 지워짐 ${r[log].missingInDb.slice(0, 20).join(',')} · 고쳐짐 ${r[log].alteredInDb.slice(0, 20).join(',')}`);
+        }
+      }
+      lastVerifiedAt = Date.now();
+      return r;
+    });
   }
 
   private async safeTick(): Promise<void> {
@@ -223,6 +348,13 @@ export class AuditWormScheduler implements OnModuleInit, OnApplicationShutdown {
       let total = 0;
       for (let i = 0; i < 20; i++) {
         const r = await exportAuditSegment(this.db, store, { university: UNIVERSITY_ID, ...AUDIT_WORM });
+        total += r.exported;
+        if (r.exported < AUDIT_WORM.batch) break;
+      }
+      for (let i = 0; i < 20; i++) {
+        // 감사 기록 보관을 3년보다 짧게 정했어도 권한 변경 기록은 법정 하한까지 잠근다
+        const retentionDays = Math.max(AUDIT_WORM.retentionDays, GRANT_WORM_MIN_DAYS);
+        const r = await exportGrantSegment(this.db, store, { university: UNIVERSITY_ID, batch: AUDIT_WORM.batch, retentionDays });
         total += r.exported;
         if (r.exported < AUDIT_WORM.batch) break;
       }

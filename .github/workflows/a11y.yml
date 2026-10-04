@@ -1,0 +1,68 @@
+# 접근성 자동 시험 (T-M5-40~46, docs/09-accessibility.md) — 지금까지 로컬에서만 돌던 것을 CI 에서도 돌린다.
+# 서버 여섯(중앙·대학·서류 워커·중계기·지원자 웹·콘솔)과 전용 DB(ui-shots-pg :5497)·Object Storage 가 필요해 무겁다 —
+# 매주 한 번과 수동 실행만. 화면을 고친 PR 은 로컬에서 같은 시험을 돌린다(AGENTS.md). 결과 JSON 은 산출물로 남긴다.
+# 모두 축소 환경(개발 서버 next dev·Mock PG·Mock 검사 엔진) 결과다.
+name: a11y
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 18 * * 0' # 매주 월요일 03:00 (한국 시간)
+
+permissions:
+  contents: read
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w @wonseoro/contracts -w @wonseoro/server-kit
+      - run: npm run build -w @wonseoro/admission-api -w @wonseoro/central-api -w @wonseoro/document-service -w @wonseoro/event-relay
+      - name: Object Storage(서류 업로드)
+        run: docker compose -f infra/compose/docker-compose.dev.yml up -d object-storage
+      - name: 전용 DB — 스키마·개발 시드
+        run: bash scripts/screenshots/prepare.sh db
+      - name: 서버 여섯
+        run: |
+          mkdir -p .cache/a11y-logs
+          run() { name=$1; shift; nohup node "$@" > ".cache/a11y-logs/$name.log" 2>&1 & }
+          run central --env-file=scripts/screenshots/env/central.env apps/central-api/dist/main.js
+          run admission --env-file=scripts/screenshots/env/admission.env apps/admission-api/dist/main.js
+          run scanner --env-file=scripts/screenshots/env/scanner.env apps/document-service/dist/main.js
+          run relay --env-file=scripts/screenshots/env/relay.env apps/event-relay/dist/main.js
+          run web --env-file=scripts/screenshots/env/web.env node_modules/next/dist/bin/next dev apps/frontend -p 4001
+          run admin --env-file=scripts/screenshots/env/admin.env node_modules/next/dist/bin/next dev apps/admin-web -p 4101
+          for p in 3100 3101 3102 3103 4001 4101; do
+            for i in $(seq 1 90); do curl -s -o /dev/null "http://localhost:$p/" && break; sleep 2; done
+          done
+          # next dev 는 첫 요청에 화면을 엮는다 — 시험의 첫 화면이 시간 초과로 실패하지 않게 미리 한 번
+          curl -s -o /dev/null --max-time 180 http://localhost:4001/ || true
+          curl -s -o /dev/null --max-time 180 http://localhost:4101/ || true
+      - name: 마감 정책·설정 초안(콘솔 검토 화면용)
+        run: bash scripts/screenshots/prepare.sh policy && bash scripts/screenshots/prepare.sh config
+      - name: 키보드 완주
+        run: CHROME="$(command -v google-chrome)" node tests/a11y/keyboard-walk.mjs
+      - name: 지원자 전 화면 — 1280·320
+        run: |
+          CHROME="$(command -v google-chrome)" node tests/a11y/focus-sweep.mjs applicant --width=1280
+          CHROME="$(command -v google-chrome)" node tests/a11y/focus-sweep.mjs applicant --width=320
+      - name: 콘솔 전 화면 — 1280·320
+        run: |
+          CHROME="$(command -v google-chrome)" node tests/a11y/focus-sweep.mjs admin --width=1280
+          CHROME="$(command -v google-chrome)" node tests/a11y/focus-sweep.mjs admin --width=320
+      - name: 결과
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a11y-results
+          path: |
+            tests/a11y/results/*.json
+            .cache/a11y-logs/
+          retention-days: 30

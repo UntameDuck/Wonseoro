@@ -64,3 +64,38 @@ serverFiles:
             labels: { severity: warning }
             annotations:
               summary: "플랫폼 CA 만료 지표가 없다 — 만료 경보가 꺼진 것과 같다"
+
+      # 감사 기록·권한 변경 기록 WORM 대조(D-75·D-91) — 대학 API 가 하루마다 조각과 DB 를 맞춘다(AUDIT_WORM_VERIFY_INTERVAL_MS).
+      # 다르면 DB 슈퍼유저가 트리거를 끄고 지우거나 고친 것이다 — 원래 값은 WORM 조각에 있다(지운·고친 ID 는 API 로그)
+      - name: k-admission-audit-worm-verify
+        rules:
+          - alert: AuditWormMismatch
+            expr: max by (namespace, log, kind) (audit_worm_verify_mismatches) > 0
+            for: 1m
+            labels: { severity: critical, page: "true" }
+            annotations:
+              summary: "{{ $labels.namespace }} {{ $labels.log }} 기록이 WORM 조각과 다르다({{ $labels.kind }}) — 감사 기록 변조 대응(보안 담당·문서 19)"
+          - alert: AuditWormVerifyStale
+            expr: time() - max by (namespace) (audit_worm_verify_last_success_seconds) > 2 * 86400
+            for: 30m
+            labels: { severity: warning }
+            annotations:
+              summary: "{{ $labels.namespace }} WORM 대조가 이틀 넘게 끝나지 않았다 — 버킷 접근·대학 API 리더를 본다"
+
+      # 권한 부여·변경·말소 기록 수집(G-15, D-91 — 차트 accessGrantSync CronJob, 1시간마다).
+      # 멈춘 채 로그인 서버의 관리 이벤트 보관기간이 지나면 "누가 바꿨는지" 가 사라진다(대조 기록은 남지만 바꾼 사람 모름).
+      # kube-state-metrics 지표다 — 로컬 축소 스택(prometheus-values.yaml)은 kube-state-metrics 를 꺼 두어 여기서는 울리지 않는다
+      - name: k-admission-access-grant-sync
+        rules:
+          - alert: AccessGrantSyncStale
+            expr: time() - max by (namespace, cronjob) (kube_cronjob_status_last_successful_time{cronjob=~".+-access-grant-sync"}) > 3 * 3600
+            for: 10m
+            labels: { severity: warning }
+            annotations:
+              summary: "{{ $labels.namespace }} 권한 변경 기록 수집이 3시간 넘게 성공하지 못했다 — 관리 이벤트(세부 포함)가 꺼졌거나 수집 클라이언트·DB 연결을 본다"
+          - alert: AccessGrantSyncFailing
+            expr: max by (namespace) (kube_job_status_failed{job_name=~".+-access-grant-sync-.+"}) > 0
+            for: 5m
+            labels: { severity: warning }
+            annotations:
+              summary: "{{ $labels.namespace }} 권한 변경 기록 수집 Job 이 실패했다 — 종료 코드 1 은 관리 이벤트 꺼짐 또는 해시 체인 끊김"

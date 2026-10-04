@@ -1,0 +1,64 @@
+# 개인정보 유출등 사건 기록 — 시작 양식 (개인정보 보호법 제34조, 시행령 제39·40조, 문서 19)
+# 사본을 만들어 채우고 판정한다: npm run ops:breach-notice-acceptance -- --file=<사본>
+# 이 빈 양식은 의도대로 실패한다. 개인정보(이름·연락처)는 적지 않는다 — 수와 증적 참조만.
+metadata:
+  universityId: <대학 ID>
+  incidentId: "<사건 번호 — 예: BR-2026-001>"
+  privacyOfficer: <개인정보 보호책임자 — 직위·부서>
+
+discovery:
+  # 유출등을 "알게 된" 시각 — 통지·신고 72시간은 여기서부터 센다
+  discoveredAt: <ISO 시각>
+  occurredFrom: <ISO 시각>
+  occurredTo: <ISO 시각>
+  # 경로 — 예: 담당자 계정 탈취 / 내부자 열람 / DB·백업 유출 / 잘못 보냄
+  route: <경로>
+  # 외부로부터의 불법 접근인가(시행령 제40조 ① 3) — true / false
+  externalIntrusion: null
+  scope:
+    # npm run ops:breach-scope 결과 — 영향받은 정보주체 수, 민감정보·고유식별정보 포함 여부
+    applicants: null
+    sensitive: null
+    uniqueIdentifier: null
+    evidence: []
+
+containment:
+  # 피해 확산 방지·최소화 조치(제34조 ③) — 예: 탈취 계정 사용 중지·권한 회수, 접속 경로 차단, 유출본 회수·삭제 요청
+  actions: []
+  evidence: []
+
+notification:
+  # written(서면등 — 전자우편·문자 등) / substitute(연락처를 알 수 없어 홈페이지 30일 이상 게시로 갈음)
+  method: <written|substitute>
+  sentAt: <ISO 시각>
+  recipients: null
+  # 제34조 ① 1~6. 1·2호를 아직 확인하지 못했으면 pending 으로 두고 confirmedSoFar·followUps 를 채운다(시행령 제39조 ②)
+  items:
+    leakedItems: <유출등이 된 개인정보의 항목>
+    whenAndHow: <유출등이 된 시점과 그 경위>
+    selfProtection: <정보주체가 피해를 줄이려고 할 수 있는 방법>
+    responseAndRemedy: <대학의 대응조치와 피해 구제절차>
+    contactDepartment: <피해 신고를 받는 부서와 연락처>
+    legalRights: <손해배상·법정손해배상 청구, 분쟁조정 등 법적 권리와 행사 방법>
+    other: ""
+  confirmedSoFar: ""
+  followUps: []
+  # 72시간을 넘겼으면 — urgent-containment(긴급 조치) / force-majeure(천재지변 등 부득이한 사유), 해소 시각
+  delay: {}
+  substitute: {}
+  evidence: []
+
+report:
+  # 신고 대상(1천 명 이상·민감/고유식별·외부 불법 접근)이면 sent 또는 exempted(회수·삭제로 권익 침해 가능성이 현저히 낮아짐 — 근거 필수)
+  status: <sent|exempted|not-required>
+  agency: <PIPC|KISA>
+  reportedAt: <ISO 시각>
+  followUps: []
+  delay: {}
+  exemption: {}
+  evidence: []
+
+finalDecision:
+  status: <approved>
+  approvedBy: <보호책임자>
+  approvedAt: <ISO 시각>

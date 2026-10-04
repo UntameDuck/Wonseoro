@@ -252,6 +252,8 @@ export const AUDIT_WORM = {
   settleSeconds: envInt('AUDIT_WORM_SETTLE_SECONDS', 120, { min: 0, max: 3600 }),
   batch: envInt('AUDIT_WORM_BATCH', 5000, { min: 1, max: 100_000 }),
   retentionDays: envInt('AUDIT_WORM_RETENTION_DAYS', 1825, { min: 1, max: 3650 }),
+  // WORM 조각과 DB 를 맞춰 보는 주기(감사 기록·권한 변경 기록) — 0 이면 끈다. 결과는 지표 audit_worm_verify_* 로 경보
+  verifyIntervalMs: envInt('AUDIT_WORM_VERIFY_INTERVAL_MS', 86_400_000, { min: 0, max: 7 * 86_400_000 }),
 } as const;
 
 /**

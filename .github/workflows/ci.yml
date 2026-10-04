@@ -30,6 +30,8 @@ jobs:
       - run: npm run test:m4:observability
       # GitOps가 서명 검증·namespace 한정 권한·대학별 values를 우회하지 않는지 확인한다 (T-M4-05)
       - run: npm run test:m4:gitops
+      # 외부 실증·사건 판정 게이트(Pilot·부하·HA·PG·Edge·DR·수동 접근성·유출 통지)가 빈 양식을 통과시키지 않는지 (D-90~D-92)
+      - run: npm run test:ops:external-gates
       # 노션 §05 runtime 첨부가 차트 렌더링 결과와 같은지, 차트가 lint 를 통과하는지 (D-44)
       - uses: azure/setup-helm@v4
         with:

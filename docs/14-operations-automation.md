@@ -29,7 +29,14 @@
   - 대조 `verifyAuditWorm` — 조각과 DB 를 맞춰 **지워진 기록·고쳐진 기록**을 돌려준다
 - **설정** — `AUDIT_WORM_BUCKET`(운영 필수 — 없으면 기동 거부, 개발은 비우면 끔), 차트 `objectStorage.auditWormBucket`. 버킷은 IaC 가 Object Lock 을 켜서 만든다(개발은 `S3_AUTO_CREATE_BUCKET`)
 - **시험** — 실제 S3 호환 Object Storage 3개: 내보내기·이어서 겹치지 않음, 보관 중 잠긴 객체 버전 지우기·보관 단축 거절(COMPLIANCE), 슈퍼유저가 트리거를 끄고 고친 기록·지운 기록을 찾는다. 저장소가 없으면 건너뛴다. D-83 로컬 RustFS 교체 뒤 **3개 모두 skip 없이 통과**했다(2026-10-04)
-- **남은 것** — 대조를 정기 작업·경보로(지금은 함수·시험). 운영 버킷 IaC. 노션(D-75)
+- **정기 대조(2026-10-05)** — 대학 API 리더가 하루마다(`AUDIT_WORM_VERIFY_INTERVAL_MS`, 0 이면 끔) 감사 기록·권한 변경 기록의 조각 전부를 DB 와 맞춰 지표 `audit_worm_verify_mismatches{log,kind}`·`audit_worm_verify_last_success_seconds` 를 낸다. 경보 `AuditWormMismatch`(즉시·호출)·`AuditWormVerifyStale`(이틀). 지운·고친 ID 는 API 로그에만. 화면 시험 DB 로 스케줄러 경로를 한 번 돌려 내보내기 679줄·불일치 0 을 확인했다(그때 만든 로컬 버킷 `audit-worm-verify-once-*` 의 권한 변경 기록 조각은 3년 잠긴다 — 로컬 RustFS 에 남는다). 조각이 많아지면 하루 대조가 무거워진다 — 운영 규모에서 주기·범위를 다시 정한다
+- **남은 것** — 운영 버킷 IaC. 노션(D-75)
+- **권한 변경 기록(2026-10-05, G-15·D-91)** — 같은 스케줄러가 `access_grant_log` 도 순번으로 이어 `access-grants/<대학>/<날짜>/<순번 12자리>.ndjson` 으로 내보낸다(보관은 감사 WORM 보관과 1095일 중 긴 쪽). 대조 `verifyGrantWorm`. 시험 1개 추가(모두 4개 통과)
+
+### 권한 부여·변경·말소 기록 수집 (2026-10-05, G-15·D-91)
+
+- **작업** — 차트 `accessGrantSync` CronJob(1시간마다, `dist/tools/access-grant-sync.js`): 로그인 서버 관리 이벤트를 옮기고 실제 권한과 대조, 해시 체인 검증. 관리 이벤트가 꺼져 있거나 체인이 끊기면 종료 코드 1
+- **경보** — `expiry-rules.yaml` 의 `AccessGrantSyncStale`(마지막 성공 3시간 넘음)·`AccessGrantSyncFailing`(Job 실패). kube-state-metrics 지표라 로컬 축소 스택(kube-state-metrics 끔)에서는 울리지 않는다. YAML 파싱만 확인했고 promtool 문법 검사는 못 했다(로컬에 Prometheus 이미지 없음)
 
 ### T-M5-63 ✅ (2026-10-03) — Writer fencing·승격 잠금 (D-76)
 
