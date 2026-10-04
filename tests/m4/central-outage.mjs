@@ -90,7 +90,7 @@ async function applyFlow(label) {
   const identity = { 'x-applicant-id': applicantId, 'x-subject-token': subjectToken };
   const created = await http(API, 'POST', '/api/v1/applications', {
     headers: { ...identity, 'idempotency-key': `m4-35-create-${randomUUID()}` },
-    body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT },
+    body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT, consents: ['APPLICATION_COLLECTION', 'SCHOOL_RECORD_PROVISION'] },
   });
   if (created.status !== 201) return { ok: false, step: 'create', response: created };
   const applicationId = created.json.id;

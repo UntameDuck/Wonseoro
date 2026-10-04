@@ -90,7 +90,7 @@ async function normalUser(identity, index) {
   const id = headersOf(identity);
   await sleep(jitter(0, 5_000)); // 한꺼번에 몰리지 않고 몇 초에 걸쳐 들어온다
   const created = await http(id, 'POST', '/api/v1/applications', { headers: key('create'),
-    body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT } });
+    body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT, consents: ['APPLICATION_COLLECTION', 'SCHOOL_RECORD_PROVISION'] } });
   count('normal', 'create', created.status, created);
   const applicationId = created.json?.id;
   if (!applicationId) return;
@@ -123,7 +123,7 @@ async function normalUser(identity, index) {
 async function probeBot(identity) {
   const id = headersOf(identity);
   const own = (await http(id, 'POST', '/api/v1/applications', { headers: key('bot-create'),
-    body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT } })).json?.id;
+    body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT, consents: ['APPLICATION_COLLECTION', 'SCHOOL_RECORD_PROVISION'] } })).json?.id;
   while (Date.now() < deadline) {
     const tick = Array.from({ length: 20 }, () => http(id, 'GET', `/api/v1/applications/${randomUUID()}`)
       .then((r) => count('bot', 'probeOthers', r.status)));
@@ -136,14 +136,14 @@ async function probeBot(identity) {
 async function floodBot(identity) {
   const id = headersOf(identity);
   const own = (await http(id, 'POST', '/api/v1/applications', { headers: key('bot-create'),
-    body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT } })).json?.id;
+    body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT, consents: ['APPLICATION_COLLECTION', 'SCHOOL_RECORD_PROVISION'] } })).json?.id;
   while (Date.now() < deadline) {
     const tick = Array.from({ length: 20 }, () => http(id, 'PATCH', `/api/v1/applications/${own}`, {
       headers: { ...key('bot-save'), 'if-match': '"0"', 'content-type': 'application/merge-patch+json' }, body: { fields: FIELDS },
     }).then((r) => count('bot', 'saveFlood', r.status)));
     for (let k = 0; k < 2; k += 1) {
       tick.push(http(id, 'POST', '/api/v1/applications', { headers: key('bot-create'),
-        body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT } }).then((r) => count('bot', 'createFlood', r.status)));
+        body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT, consents: ['APPLICATION_COLLECTION', 'SCHOOL_RECORD_PROVISION'] } }).then((r) => count('bot', 'createFlood', r.status)));
     }
     await Promise.all([...tick, sleep(1_000)]);
   }

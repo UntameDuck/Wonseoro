@@ -12,6 +12,7 @@ import { serverClock, serverNow } from '../../common/time/server-clock';
 import { finalizedEventData } from '../../common/central/central-events';
 import { AuditService } from '../audit/audit.service';
 import { DeadlineService } from '../deadline/deadline.service';
+import { ConsentService } from '../config/consent.service';
 import { FormSchemaService } from '../config/form-schema.service';
 import { PaymentRow, PaymentService } from '../payment/payment.service';
 
@@ -84,6 +85,8 @@ export class FinalizationService implements OnModuleInit {
     private readonly deadline: DeadlineService,
     private readonly forms: FormSchemaService,
     private readonly audit: AuditService,
+    // 수동 조립하는 시험은 5개만 넘긴다 — 같은 DB·감사로 만든다
+    private readonly consents: ConsentService = new ConsentService(db, audit),
   ) {}
 
   /**
@@ -189,6 +192,14 @@ export class FinalizationService implements OnModuleInit {
         `원서에 누락되거나 잘못된 항목이 있습니다: ${validation.issues
           .map((i) => i.path)
           .join(', ')}`,
+      );
+    }
+
+    // 필수 동의(개인정보 수집·이용 등). 없으면 결제창도 열지 않는다 — 돈을 받은 뒤 동의를 못 받으면 접수할 수 없다 (G-2, D-81)
+    const missingConsents = await this.consents.missingRequired(applicationId, app.cycleId);
+    if (missingConsents.length > 0) {
+      throw ProblemException.unprocessable(
+        `필수 동의를 하지 않았습니다: ${missingConsents.map((i) => i.message).join(' ')}`,
       );
     }
 

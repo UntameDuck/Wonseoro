@@ -7,7 +7,10 @@
  *   - 오류는 problem+json 으로 온다
  */
 
-import type { UniversityNotices } from '@wonseoro/contracts';
+import type { ApplicationConsent, UniversityNotices } from '@wonseoro/contracts';
+
+/** 원서 동의 문안과 이 원서의 동의 여부 (계약 1.11.0, D-81) */
+export type ConsentState = ApplicationConsent & { granted: boolean };
 import { OIDC_MODE, accessToken, refresh } from './auth';
 import { expireNow, touchSession } from './session';
 
@@ -325,6 +328,15 @@ export const api = {
     ),
 
   /** 접수 전 취소. 사유가 필요하다. 확인된 결제가 있으면 대학이 환불을 처리한다. (D-7) */
+  /** 동의하거나 거둔다 — 작성 중·작성 완료 원서만 (D-81) */
+  recordConsents: (id: string, consents: Array<{ code: string; granted: boolean }>, applicantId: string) =>
+    call<{ consents: ConsentState[] }>(`/api/v1/applications/${id}/consents`, {
+      method: 'PUT',
+      body: { consents },
+      idempotencyKey: newIdempotencyKey('consent'),
+      applicantId,
+    }),
+
   cancel: (id: string, reason: string, applicantId: string, key: string) =>
     call<{ applicationId: string; status: 'CANCELLED'; cancelledAt: string; refundRequired: boolean }>(
       `/api/v1/applications/${id}/cancel`,
@@ -383,6 +395,8 @@ export const api = {
       profileFields?: string[];
       /** 이 전형이 받는 서류 */
       documents?: DocumentSpec[];
+      /** 원서 동의 — 1단계 맨 위에 그린다(옛 서버면 없다) */
+      consents?: ConsentState[];
     }>(`/api/v1/applications/${id}/form-schema`, { applicantId }),
 
   submission: (id: string, applicantId: string) =>

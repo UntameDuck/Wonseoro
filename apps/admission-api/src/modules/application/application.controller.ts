@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Req,
   Res,
 } from '@nestjs/common';
@@ -19,6 +20,7 @@ import { UNIVERSITY_ID } from '../../config';
 import { applicantFrom } from '../../common/identity/identity';
 import { Ownership } from '../../common/identity/ownership.service';
 import { FormSchemaService } from '../config/form-schema.service';
+import { ConsentService } from '../config/consent.service';
 import { DeadlineService } from '../deadline/deadline.service';
 import { ApplicationRepository, ApplicationRow } from './application.repository';
 
@@ -26,6 +28,8 @@ interface CreateBody {
   cycleId?: string;
   admissionTypeId?: string;
   departmentId?: string;
+  /** 원서를 만들 때 함께 하는 동의 코드 — 지금 판 문안에 대한 것 (G-2, D-81) */
+  consents?: unknown;
 }
 
 interface PatchBody {
@@ -47,6 +51,7 @@ export class ApplicationController {
     private readonly deadline: DeadlineService,
     private readonly forms: FormSchemaService,
     private readonly ownership: Ownership,
+    private readonly consents: ConsentService,
   ) {}
 
   @Post()
@@ -81,6 +86,17 @@ export class ApplicationController {
       universityId: UNIVERSITY_ID,
       ...this.context(req),
     });
+
+    // 만들면서 한 동의 — 지금 판 문안에 대한 것만. 재시도(200)여도 다시 기록해 같은 결과다 (G-2, D-81)
+    const consentCodes = Array.isArray(body.consents) ? body.consents.filter((c): c is string => typeof c === 'string') : [];
+    if (consentCodes.length > 0) {
+      await this.consents.record({
+        applicationId: row.id,
+        applicantId,
+        changes: consentCodes.map((code) => ({ code, granted: true })),
+        ...this.context(req),
+      });
+    }
 
     // 재시도로 기존 원서를 돌려준 경우는 200 이다. 새로 만든 경우만 201.
     reply.status(created ? 201 : 200);
@@ -186,7 +202,10 @@ export class ApplicationController {
     if (!row) throw ProblemException.validationFailed('존재하지 않는 원서입니다.');
 
     const fields = await this.repo.fields(applicationId);
-    const result = await this.forms.validate(row.cycleId, row.admissionTypeCode, fields);
+    const checked = await this.forms.validate(row.cycleId, row.admissionTypeCode, fields);
+    // 필수 동의가 빠졌으면 입력 오류와 함께 모아 준다 — 오류 요약이 1단계 동의 칸으로 데려간다 (G-2, D-81)
+    const consentIssues = await this.consents.missingRequired(applicationId, row.cycleId);
+    const result = { valid: checked.valid && consentIssues.length === 0, issues: [...consentIssues, ...checked.issues] };
 
     // 통과하면 작성 완료(READY), 저장 뒤 설정이 바뀌어 더는 맞지 않으면 작성 중(DRAFT)으로. (D-55)
     // 상태가 바뀌면 버전도 오른다 — 화면이 이어서 저장할 수 있게 새 ETag 를 준다.
@@ -201,6 +220,28 @@ export class ApplicationController {
       deadlineAt: snapshot.deadlineAt,
       deadlinePolicyVersion: snapshot.deadlinePolicyVersion,
     };
+  }
+
+  /**
+   * 동의하거나 거둔다 — 작성 중·작성 완료 원서만. 계약: OpenAPI recordApplicationConsents (G-2, D-81)
+   * 거두면 최종 검증·결제 전 확인이 막는다. 응답은 지금 판 문안과 이 원서의 동의 여부.
+   */
+  @Put(':applicationId/consents')
+  @Header('cache-control', CACHE_CONTROL_PII)
+  async recordConsents(
+    @Param('applicationId') applicationId: string,
+    @Body() body: { consents?: unknown },
+    @Req() req: FastifyRequest,
+  ) {
+    const { applicantId } = applicantFrom(req);
+    await this.ownership.assertApplication(applicationId, applicantId);
+    const changes = Array.isArray(body?.consents)
+      ? body.consents
+          .filter((c): c is { code: string; granted: boolean } =>
+            !!c && typeof c === 'object' && typeof (c as { code?: unknown }).code === 'string' && typeof (c as { granted?: unknown }).granted === 'boolean')
+          .map((c) => ({ code: c.code, granted: c.granted }))
+      : [];
+    return { consents: await this.consents.record({ applicationId, applicantId, changes, ...this.context(req) }) };
   }
 
   private async present(row: ApplicationRow, fields: Record<string, unknown>) {

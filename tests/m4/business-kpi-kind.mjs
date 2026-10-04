@@ -89,7 +89,7 @@ async function flow(i) {
   });
 
   const created = await http('POST', '/api/v1/applications', { headers: { ...id, ...key('create') },
-    body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT } });
+    body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT, consents: ['APPLICATION_COLLECTION', 'SCHOOL_RECORD_PROVISION'] } });
   const applicationId = created.json?.id;
   const fresh = await http('GET', `/api/v1/applications/${applicationId}`, { headers: id });
   const saved = await patch(fresh.etag, { fields: FIELDS });

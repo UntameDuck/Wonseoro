@@ -3,6 +3,8 @@ import { AdminController } from './admin.controller';
 import { ConfigVersionService } from './config-version.service';
 import { FormSchemaController } from './form-schema.controller';
 import { FormSchemaService } from './form-schema.service';
+import { ConsentService } from './consent.service';
+import { AuditModule } from '../audit/audit.module';
 import { DeadlineModule } from '../deadline/deadline.module';
 import { DeadlinePolicyRepository } from '../deadline/deadline-policy.repository';
 
@@ -12,9 +14,9 @@ import { DeadlinePolicyRepository } from '../deadline/deadline-policy.repository
  */
 @Module({
   // 마감 임박 구간 잠금(Freeze)이 활성 마감정책을 근거로 판정한다. (§A14)
-  imports: [DeadlineModule],
+  imports: [DeadlineModule, AuditModule],
   controllers: [FormSchemaController, AdminController],
-  providers: [FormSchemaService, ConfigVersionService, DeadlinePolicyRepository],
-  exports: [FormSchemaService, ConfigVersionService, DeadlinePolicyRepository],
+  providers: [FormSchemaService, ConfigVersionService, DeadlinePolicyRepository, ConsentService],
+  exports: [FormSchemaService, ConfigVersionService, DeadlinePolicyRepository, ConsentService],
 })
 export class ConfigRegistryModule {}

@@ -279,6 +279,13 @@ async function walk() {
   // 4. 1단계 — 취소 칸을 열고 닫아 포커스가 돌아오는지 본다
   await screen('원서 1단계 공통정보', '1. 공통정보');
   await waitText('출신 고등학교');
+  // 원서 동의 — 전문 영역(키보드로 스크롤)을 지나 체크를 Space 로. 체크마다 서버에 남는다 (D-81)
+  for (let i = 0; i < 2; i++) {
+    await tabTo('원서 동의 체크', named('위 내용에 동의합니다 (필수)', { type: 'checkbox' }));
+    await activate(' ');
+    await sleep(500);
+    if (!(await focusInfo(b)).checked) problem('Space 로 원서 동의가 체크되지 않는다');
+  }
   await tabTo('이 원서 취소하기', named('이 원서 취소하기', { tag: 'BUTTON' }));
   await activate();
   await expectFocus('취소 칸을 연 뒤 취소 사유', onId('cancel-reason'));

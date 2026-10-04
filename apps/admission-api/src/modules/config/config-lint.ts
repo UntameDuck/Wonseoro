@@ -2,6 +2,9 @@ import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import {
   COMMON_PROFILE_CODES,
+  CONSENT_CODE,
+  CONSENT_LIMITS,
+  RESERVED_CONSENT_CODES,
   UNIVERSITY_NOTICE_KEYS,
   UNIVERSITY_NOTICE_MAX,
   UNIVERSITY_NOTICE_REQUIRED,
@@ -25,6 +28,7 @@ import { LEGACY_PROFILE_FIELDS } from './form-schema.service';
  *   requiredDocuments[전형코드]   접수 전 검사를 통과해야 하는 서류 종류
  *   optionalDocuments[전형코드]   받되 요구하지 않는 서류 종류
  *   documentLabels[서류종류]      화면에 보일 서류 이름
+ *   consents                      원서 동의 문안 — 코드·제목·전문·필수 여부·판 (문서 10 G-2·G-11, D-81)
  *   notices                       지원자 고지 — 처리방침·위탁·보호책임자·문의처 주소/문구, 전형료 반환 안내 (문서 10 G-4·G-6, D-80)
  *   retention                     보존 정책 — 따로 검사한다(validateRetention)
  */
@@ -163,6 +167,41 @@ export function lintConfig(config: unknown, typeCodes: readonly string[] | null)
       }
     }
   }
+  // ── consents ────────────────────────────────────────────────────────
+  // 원서 수집·이용 동의는 법정 절차다(보호법 제15·22조). 없으면 경고, 형식이 틀리면 거절 (D-81)
+  if (config.consents === undefined) {
+    warnings.push('consents: 원서 동의 문안이 없습니다 — 지원자에게 개인정보 수집·이용 동의를 받지 않습니다.');
+  } else if (!Array.isArray(config.consents)) {
+    errors.push('consents 는 동의 문안 배열이어야 합니다.');
+  } else {
+    const seen = new Set<string>();
+    config.consents.forEach((c, i) => {
+      const at = `consents[${i}]`;
+      if (!isObject(c)) {
+        errors.push(`${at}: 동의 문안 객체여야 합니다.`);
+        return;
+      }
+      if (typeof c.code !== 'string' || !CONSENT_CODE.test(c.code)) {
+        errors.push(`${at}.code: 대문자로 시작하는 대문자·숫자·_ 64자 이하여야 합니다.`);
+      } else if (RESERVED_CONSENT_CODES.includes(c.code)) {
+        errors.push(`${at}.code: ${c.code} 는 공통원서 제공 기록이 쓰는 코드입니다.`);
+      } else if (seen.has(c.code)) {
+        errors.push(`${at}.code: ${c.code} 가 두 번 나옵니다.`);
+      } else {
+        seen.add(c.code);
+      }
+      for (const key of ['title', 'text', 'version'] as const) {
+        const v = c[key];
+        if (typeof v !== 'string' || !v.trim()) errors.push(`${at}.${key}: 비어 있지 않은 문구여야 합니다.`);
+        else if (v.length > CONSENT_LIMITS[key]) errors.push(`${at}.${key}: ${CONSENT_LIMITS[key]}자 이하로 적어 주십시오.`);
+      }
+      if (c.required !== undefined && typeof c.required !== 'boolean') errors.push(`${at}.required: 참/거짓이어야 합니다.`);
+    });
+    if (!config.consents.some((c) => isObject(c) && c.required === true)) {
+      warnings.push('consents: 필수 동의가 없습니다 — 개인정보 수집·이용 동의는 원서 접수에 필요한 필수 동의입니다.');
+    }
+  }
+
   // ── notices ─────────────────────────────────────────────────────────
   // 처리방침·보호책임자·전형료 반환 안내는 법정 고지다. 없어도 접수는 돌지만 지원자에게 알릴 길이 없다 —
   // 승인 화면에 경고로 보인다. 값이 있으면 형식을 지켜야 한다(오류) (D-80)

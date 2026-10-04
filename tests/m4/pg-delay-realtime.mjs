@@ -81,7 +81,7 @@ async function startPayment() {
   const subjectToken = `subj-m4-34rt-${applicantId.slice(0, 8)}`;
   sql(`INSERT INTO applicant (id, subject_token, pii_ciphertext, pii_key_version) VALUES ('${applicantId}','${subjectToken}','\\x00','v1')`);
   const id = { 'x-applicant-id': applicantId, 'x-subject-token': subjectToken };
-  const created = await http('POST', '/api/v1/applications', { headers: { ...id, 'idempotency-key': `m4-34rt-create-${randomUUID()}` }, body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT } });
+  const created = await http('POST', '/api/v1/applications', { headers: { ...id, 'idempotency-key': `m4-34rt-create-${randomUUID()}` }, body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT, consents: ['APPLICATION_COLLECTION', 'SCHOOL_RECORD_PROVISION'] } });
   if (created.status !== 201) throw new Error(`create ${created.status}`);
   const saved = await http('PATCH', `/api/v1/applications/${created.json.id}`, {
     headers: { ...id, 'idempotency-key': `m4-34rt-save-${randomUUID()}`, 'if-match': created.etag, 'content-type': 'application/merge-patch+json' },

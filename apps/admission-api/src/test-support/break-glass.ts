@@ -30,6 +30,9 @@ export async function breakGlass<T>(fn: (client: Client) => Promise<T>): Promise
     await client.query(
       `DELETE FROM kadmission.application_field_value v WHERE NOT EXISTS (SELECT 1 FROM kadmission.application a WHERE a.id = v.application_id)`,
     );
+    await client.query(
+      `DELETE FROM kadmission.consent_record c WHERE NOT EXISTS (SELECT 1 FROM kadmission.application a WHERE a.id = c.application_id)`,
+    );
     await client.query('COMMIT');
     return result;
   } catch (err) {

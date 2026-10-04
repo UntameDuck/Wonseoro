@@ -165,7 +165,7 @@ async function call(api, method, url, token, { body, headers = {} } = {}) {
 async function applyFlow(api, token) {
   const t0 = Date.now();
   const out = { steps: {} };
-  const made = await call(api, 'POST', '/api/v1/applications', token, { body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT } });
+  const made = await call(api, 'POST', '/api/v1/applications', token, { body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT, consents: ['APPLICATION_COLLECTION', 'SCHOOL_RECORD_PROVISION'] } });
   out.steps.create = made.status;
   if (made.status !== 201) return out;
   const id = made.json.id;

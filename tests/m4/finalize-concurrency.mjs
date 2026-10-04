@@ -75,7 +75,7 @@ try {
 
   const created = await http('POST', '/api/v1/applications', {
     headers: { ...identity, 'idempotency-key': `m4-33-create-${randomUUID()}` },
-    body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT },
+    body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT, consents: ['APPLICATION_COLLECTION', 'SCHOOL_RECORD_PROVISION'] },
   });
   if (created.status !== 201) throw new Error(`application create failed: ${created.status}`);
   const applicationId = created.json.id;

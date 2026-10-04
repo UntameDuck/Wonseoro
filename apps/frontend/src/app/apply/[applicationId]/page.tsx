@@ -8,8 +8,10 @@ import { DocumentStatusList, FileUpload } from '../../../krds/file-upload';
 import { Breadcrumb, STEPS, StepIndicator, type StepNo } from '../../../krds/navigation';
 import { DeadlineBanner, FailureNotice, OperatingModeBanner, RateLimitNotice, SaveStatus, SlowNotice } from '../../../krds/status';
 import { FeeRefundNotice } from '../../../krds/university-notices';
+import { ConsentPanel } from '../../../krds/consent-panel';
 import {
   ApiError,
+  type ConsentState,
   NetworkError,
   type Application,
   type DocumentSpec,
@@ -66,6 +68,7 @@ export default function ApplyPage({
   /** 공통원서에서 온 항목(1단계)과 이 전형이 받는 서류(4단계). 둘 다 대학 설정에서 온다. (D-56) */
   const [profileFields, setProfileFields] = useState<string[]>([]);
   const [documents, setDocuments] = useState<DocumentSpec[]>([]);
+  const [consents, setConsents] = useState<ConsentState[]>([]);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelOpen, setCancelOpen] = useState(false);
   /** 결제 전 확인 체크 (U-55) */
@@ -215,6 +218,7 @@ export default function ApplyPage({
         setSchema(data.schema as JsonSchema);
         setProfileFields(data.profileFields ?? []);
         setDocuments(data.documents ?? []);
+        setConsents(data.consents ?? []);
       })
       .catch(() => setSchema(null));
   }, [applicationId, applicantId]);
@@ -230,6 +234,23 @@ export default function ApplyPage({
   const fieldErrors = Object.fromEntries(
     issues.filter((i) => fieldOf(i.path)).map((i) => [fieldOf(i.path), i.message]),
   );
+  /** 동의 칸 옆 오류 — 오류 요약의 "…에 동의해 주십시오" 와 같은 문장 */
+  const consentErrors = Object.fromEntries(
+    issues.filter((i) => i.path.startsWith('/consents/')).map((i) => [i.path.slice('/consents/'.length), i.message]),
+  );
+
+  /** 동의를 바꾸면 서버에 바로 남긴다 — 그 칸의 오류는 지운다. 실패하면 체크를 되돌리고 알린다 */
+  async function changeConsent(code: string, granted: boolean) {
+    setConsents((prev) => prev.map((c) => (c.code === code ? { ...c, granted } : c)));
+    try {
+      const { data } = await api.recordConsents(applicationId, [{ code, granted }], applicantId);
+      setConsents(data.consents);
+      setIssues((prev) => prev.filter((i) => i.path !== `/consents/${code}`));
+    } catch (err) {
+      setConsents((prev) => prev.map((c) => (c.code === code ? { ...c, granted: !granted } : c)));
+      setNotice({ tone: 'warning', title: '동의를 저장하지 못했습니다', body: err instanceof ApiError ? problemText(err.problem).detail : '잠시 후 다시 시도해 주십시오.' });
+    }
+  }
   const documentLabel = (type: string) => documents.find((d) => d.documentType === type)?.label ?? type;
 
   /** 서류 검사 상태를 다시 읽는다. self-check 가 상태와 안내문구를 함께 준다. */
@@ -274,8 +295,12 @@ export default function ApplyPage({
     focusAfterRender(focusId);
   }
 
-  /** 오류 요약에서 누른 칸으로 간다 — 공통원서 항목은 1단계, 나머지는 3단계에 있다. */
+  /** 오류 요약에서 누른 칸으로 간다 — 동의·공통원서 항목은 1단계, 나머지는 3단계에 있다. */
   function selectIssue(path: string) {
+    if (path.startsWith('/consents/')) {
+      goTo(1, `consent-${path.slice('/consents/'.length)}`);
+      return;
+    }
     const code = fieldOf(path);
     // 단계를 그린 뒤에 그 칸에 포커스한다
     goTo(commonCodes.includes(code) ? 1 : 3, `field-${code}`);
@@ -496,6 +521,8 @@ export default function ApplyPage({
           <p style={{ marginTop: 0, color: 'var(--krds-fg-muted)', fontSize: 'var(--krds-text-sm)' }}>
             공통원서에서 가져온 정보입니다. 동의하신 항목만 이 대학으로 전달됩니다.
           </p>
+          {/* 원서 동의 — 공통정보보다 먼저(문서 10 G-2, D-81) */}
+          <ConsentPanel consents={consents} errors={consentErrors} disabled={!editable} onChange={(code, granted) => void changeConsent(code, granted)} />
           <SchemaForm
             schema={schema}
             values={fields}

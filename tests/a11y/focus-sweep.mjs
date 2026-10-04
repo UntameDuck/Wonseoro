@@ -242,7 +242,7 @@ async function createApplication(a) {
   const r = await fetch(`${API}/api/v1/applications`, {
     method: 'POST',
     headers: { ...h, 'content-type': 'application/json', 'idempotency-key': `sweep-${randomUUID()}` },
-    body: JSON.stringify({ cycleId: cycle.id, admissionTypeId: types[0].id, departmentId: depts[0].id }),
+    body: JSON.stringify({ cycleId: cycle.id, admissionTypeId: types[0].id, departmentId: depts[0].id, consents: ['APPLICATION_COLLECTION', 'SCHOOL_RECORD_PROVISION'] }),
   });
   if (!r.ok) throw new Error(`원서 만들기 ${r.status} ${await r.text()}`);
   return (await r.json()).id;
@@ -318,11 +318,18 @@ async function applicant() {
 
   // 오류 요약 링크로 칸에 가서 채운다 — 공통원서를 쓰지 않은 지원자라 1단계 두 칸·3단계 한 칸
   const fills = { highSchool: '한국고등학교', graduationYear: '2027', academicNote: '없음' };
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 8; i++) {
     const link = await b.evaluate(`document.querySelector('[role=alert] a')?.textContent?.trim() ?? null`);
     if (!link) break;
     await keyTo(link);
-    const code = (await focusInfo(b)).id.replace('field-', '');
+    const focusedId = (await focusInfo(b)).id;
+    // 동의 오류는 그 체크로 데려간다 — Space 로 동의한다 (D-81)
+    if (focusedId.startsWith('consent-')) {
+      await press(b, ' ');
+      await sleep(500);
+      continue;
+    }
+    const code = focusedId.replace('field-', '');
     if (!fills[code]) throw new Error(`채울 값을 모르는 칸: ${code}`);
     await typeText(b, fills[code]);
   }

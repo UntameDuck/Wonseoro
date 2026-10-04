@@ -42,6 +42,7 @@ ON CONFLICT (id) DO NOTHING;
 --
 -- 대입 전형은 자기소개서를 받지 않는다(고등교육법 시행령 제35조, 문서 10 G-1). 전에는 이 시드가 「자기소개」를 필수로 받았다.
 -- 설정 검사가 자기소개서류 항목을 경고한다. 여러 줄 필수 항목의 예로 「학적 변동 사항」을 둔다
+--   consents       원서 동의 문안(D-81) — 수집·이용(필수)·학생부·수능 온라인 제공 확인(필수). 예시 문안이다 — 대학은 법무가 승인한 문안·보유기간으로 바꾼다
 --   notices        지원자 고지(D-80) — 처리방침·위탁 주소, 보호책임자, 전형료 반환 안내. 주소는 예약 도메인(.test)이고
 --                  반환 안내는 고등교육법 시행령 제42조의3 을 옮긴 예시다. 대학은 입학처·법무가 승인한 문안으로 바꾼다
 INSERT INTO config_version (id, cycle_id, version, status, config_json, config_hash,
@@ -68,6 +69,7 @@ VALUES (
      },
      "optionalDocuments": { "EARLY": ["TRANSCRIPT"] },
      "documentLabels": { "TRANSCRIPT": "학교생활기록부" },
+     "consents": [{"code": "APPLICATION_COLLECTION", "title": "개인정보 수집·이용", "required": true, "version": "2027-v1", "text": "원서로대학교는 입학전형을 위해 아래와 같이 개인정보를 수집·이용합니다.\n수집 목적: 입학전형 진행, 합격자 발표와 등록, 전형료 반환, 입시 관련 연락\n수집 항목: 출신 고등학교, 졸업(예정) 연도, 내신 성적, 학적 변동 사항, 이메일, 제출 서류, 전형료 결제 기록\n보유 기간: 접수한 원서는 10년(대학 기록물 보존 기준), 접수하지 않은 원서는 모집이 끝난 뒤 지체 없이 파기\n동의를 거부할 권리가 있습니다. 다만 동의하지 않으면 원서를 접수할 수 없습니다."}, {"code": "SCHOOL_RECORD_PROVISION", "title": "학교생활기록부·수능 성적 온라인 제공", "required": true, "version": "2027-v1", "text": "입학전형을 위해 학교생활기록부와 대학수학능력시험 성적을 관계 기관(한국대학교육협의회·한국교육과정평가원)에서 온라인으로 제공받습니다(초·중등교육법 제30조의6).\n제공받은 자료는 입학전형 목적으로만 쓰고 다른 목적으로 쓰지 않습니다.\n온라인 제공이 되지 않는 지원자(검정고시·해외 고교 등)는 모집요강에 따라 서류를 따로 냅니다."}],
      "notices": {
        "privacyPolicyUrl": "https://www.univ-a.test/privacy",
        "processorsUrl": "https://www.univ-a.test/privacy#processors",

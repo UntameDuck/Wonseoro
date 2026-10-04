@@ -72,7 +72,7 @@ async function applyFlow(name) {
   const steps = {};
   const created = await http('POST', `${u.api}/api/v1/applications`, {
     headers: { ...h, 'idempotency-key': key('create') },
-    body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT },
+    body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT, consents: ['APPLICATION_COLLECTION', 'SCHOOL_RECORD_PROVISION'] },
   });
   steps.create = created.status || created.error;
   if (created.status !== 201) return { ok: false, steps };

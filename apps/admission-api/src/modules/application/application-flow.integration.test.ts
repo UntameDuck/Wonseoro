@@ -7,6 +7,7 @@ import { PostgresIdempotencyStore } from '../../common/idempotency/postgres-idem
 import { ProblemException } from '../../common/problem/problem.exception';
 import { DependencyBreakers } from '../../common/resilience/dependency-breakers';
 import { ClockMonitor, serverClock } from '../../common/time/server-clock';
+import { grantActiveConsents } from '../../test-support/consents';
 import { breakGlass } from '../../test-support/break-glass';
 import { ActivationRecorder } from '../activation/activation-recorder';
 import { ActivationSigner } from '../activation/activation-signer';
@@ -90,6 +91,7 @@ async function seedApplication(opts: { status?: string; fields?: Record<string, 
     [id, CYCLE, applicantId, TYPE, DEPT, opts.status ?? 'DRAFT'],
   );
   apps.push(id);
+  await grantActiveConsents(db, id, CYCLE);
   for (const [code, value] of Object.entries(opts.fields ?? COMPLETE)) {
     await db.query(
       `INSERT INTO application_field_value (id, application_id, field_code, schema_version, value_json)

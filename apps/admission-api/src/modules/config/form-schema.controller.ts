@@ -6,6 +6,7 @@ import { applicantFrom } from '../../common/identity/identity';
 import { Ownership } from '../../common/identity/ownership.service';
 import { ProblemException } from '../../common/problem/problem.exception';
 import { FormSchemaService } from './form-schema.service';
+import { ConsentService } from './consent.service';
 
 /**
  * 추가문항 스키마 조회 — 기술설계서 v1.1 §A5
@@ -25,6 +26,7 @@ export class FormSchemaController {
     private readonly db: Db,
     private readonly forms: FormSchemaService,
     private readonly ownership: Ownership,
+    private readonly consents: ConsentService,
   ) {}
 
   @Get(':applicationId/form-schema')
@@ -56,6 +58,8 @@ export class FormSchemaController {
       schema,
       profileFields,
       documents,
+      // 원서 동의 문안과 이 원서의 동의 여부 — 1단계 맨 위에 그린다 (G-2, D-81, 계약 1.11.0)
+      consents: await this.consents.state(applicationId, found.cycle_id),
     };
   }
 }

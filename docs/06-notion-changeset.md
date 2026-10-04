@@ -10,7 +10,7 @@
 
 | 노션 문서 | 첨부 이름 | 저장소 파일 | 바이트 | SHA-256 | 근거 |
 |---|---|---|---|---|---|
-| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.10.0) | 105,865 | `97077c6918789fe5bbb8453a93ba785cabb55cd8972b6a1fd568bd24e457f8b5` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 · D-78 · D-79 · D-80 |
+| [§03 OpenAPI](https://app.notion.com/p/3df75ab5debe81588b56fcd81e7b3856) | `k-admission-openapi.yaml` | `packages/contracts/openapi/k-admission.v1.yaml` (v1.11.0) | 109,220 | `df127cce4287832ce476f53c3b9ebf2ac1bea659d92343d263f2663c03323f9b` | D-51 · D-55 ~ D-61 · T-M5-51 · T-M5-56 · D-65 · D-78 · D-79 · D-80 · D-81 |
 | [§04 CloudEvents](https://app.notion.com/p/3df75ab5debe81d68e37fabd3678dcc4) | `k-admission-cloudevents-schemas.json` | `packages/contracts/events/k-admission-cloudevents.schema.json` | 6,104 | `3ed7ec8a340c50f6e7de25b2c3322ffd7c6b4914fd046afdc67a2efea699ca02` | D-47 · T-M5-51 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-values-m.yaml` | `deploy/charts/k-admission/values-m.yaml` (v1.2) | 4,036 | `1aaef0db712e1d9a15da41fb86b7832a3da8c6decfdcd5992a57bb071e5b1975` | D-44 · D-49 · D-52 |
 | [§05 Helm](https://app.notion.com/p/3df75ab5debe811cac32ec1c98d50d59) | `k-admission-runtime.yaml` | `deploy/platform/policies/runtime.yaml` (v1.5, 차트 렌더링 — RBAC 6종·내부 상호 TLS·서류 워커 출구) | 40,216 | `28c54fbdb2e83edc849526c06c7158017110fa0e24a3b3cbfe8f525febf2b315` | D-44 · D-52 · D-68 · D-69 |
@@ -22,6 +22,12 @@
 ## 본문 수정
 
 ### 기술설계서 v1.0 본문
+
+§8.3 「동의 기록」 에 더한다 (D-81):
+
+> 원서 동의(개인정보 수집·이용, 학생부·수능 온라인 제공 등)의 문안은 전형 설정 `consents`(코드·제목·전문·필수 여부·판)로 2인 승인한다.
+> 동의는 원서마다 (원서, 코드, 판) 한 줄과 문안 SHA-256 으로 남고, 동의·철회마다 감사 기록을 남긴다. 문안 판이 바뀌면 다시 받는다.
+> 필수 동의가 없으면 최종 검증 오류이고 결제창을 열지 않는다. 결제를 시작한 원서는 동의를 바꿀 수 없다.
 
 §5.6 상태머신 (D-55) — 전이 설명에 더한다:
 
@@ -136,6 +142,9 @@ v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:
 
 > **2026-10-04 v1.9.0** — 개인정보 최소 상담 조회 `POST /admin/v1/support/lookups`·`GET /admin/v1/support/lookups/{evidenceNumber}`(새 범위 `support`), 응답 `SupportView`(허용 목록),
 > 지원자 Self-check 에 선택 필드 `supportCode`. 새 경로·범위·선택 필드 추가라 호환 변경이다(§A16). (D-79)
+
+> **2026-10-04 v1.11.0** — 원서 동의: `PUT /api/v1/applications/{id}/consents`, 원서 생성 요청의 선택 필드 `consents`, 형식 조회 응답의 `consents`(문안·이 원서의 동의 여부),
+> 검증 오류 코드 `CONSENT_REQUIRED`. 새 경로·선택 필드라 호환 변경이다(§A16). (D-81)
 
 > **2026-10-04 v1.10.0** — 지금 모집 응답에 선택 필드 `notices`(개인정보 처리방침·위탁 공개 주소, 보호책임자, 문의처, 전형료 반환 안내 — 2인 승인된 설정에서). 선택 필드 추가라 호환 변경이다(§A16). (D-80)
 

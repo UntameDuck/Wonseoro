@@ -73,7 +73,7 @@ async function withRetry(fn) {
 async function user(identity) {
   const id = { 'x-applicant-id': identity.applicantId, 'x-subject-token': identity.subjectToken };
   const created = await attempt(id, 'POST', '/api/v1/applications', { 'idempotency-key': `node-create-${randomUUID()}` },
-    { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT }, 30_000);
+    { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT, consents: ['APPLICATION_COLLECTION', 'SCHOOL_RECORD_PROVISION'] }, 30_000);
   const appId = created.json?.id;
   if (!appId) throw new Error(`원서 생성 실패 ${created.status} ${created.error ?? ''}`);
   let etag = (await attempt(id, 'GET', `/api/v1/applications/${appId}`, {}, undefined, 30_000)).etag;

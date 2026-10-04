@@ -48,7 +48,7 @@ const id = { 'x-applicant-id': applicantId, 'x-subject-token': subjectToken };
 
 const created = await http('POST', '/api/v1/applications', {
   headers: { ...id, 'idempotency-key': `d50-create-${randomUUID()}` },
-  body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT },
+  body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT, consents: ['APPLICATION_COLLECTION', 'SCHOOL_RECORD_PROVISION'] },
 });
 const applicationId = created.json?.id;
 const cancelled = await http('POST', `/api/v1/applications/${applicationId}/cancel`, {

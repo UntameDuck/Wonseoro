@@ -58,7 +58,7 @@ async function flow() {
   sql(`INSERT INTO applicant (id, subject_token, pii_ciphertext, pii_key_version) VALUES ('${applicantId}','${subjectToken}','\\x00','v1')`);
   const id = { 'x-applicant-id': applicantId, 'x-subject-token': subjectToken };
   const out = {};
-  const created = await http(id, 'POST', '/api/v1/applications', { headers: key('create'), body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT } });
+  const created = await http(id, 'POST', '/api/v1/applications', { headers: key('create'), body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT, consents: ['APPLICATION_COLLECTION', 'SCHOOL_RECORD_PROVISION'] } });
   out.create = created.status;
   const appId = created.json?.id;
   const fresh = await http(id, 'GET', `/api/v1/applications/${appId}`);

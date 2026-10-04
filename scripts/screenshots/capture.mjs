@@ -147,6 +147,16 @@ async function fill(label, value) {
   if (r !== 'ok') throw new Error(`입력 "${label}": ${r}`);
 }
 
+/** 원서 1단계의 동의 체크를 모두 한다 — 체크마다 서버에 기록된다(D-81) */
+async function consentAll() {
+  const n = await evaluate(`(() => {
+    const boxes = [...document.querySelectorAll('input[type=checkbox][id^="consent-"]')].filter((b) => !b.checked);
+    boxes.forEach((b) => b.click());
+    return boxes.length;
+  })()`);
+  if (n > 0) await sleep(800);
+}
+
 async function check(label) {
   const r = await evaluate(`(() => {
     const lab = [...document.querySelectorAll('label')].find((l) => l.textContent.trim() === ${JSON.stringify(label)} && l.querySelector('input[type=checkbox]'));
@@ -285,8 +295,9 @@ async function applicant() {
   saveState();
   await waitText('1. 공통정보', 60_000);
   await waitText('출신 고등학교');
+  await consentAll();
   await sleep(800);
-  await shot('applicant/04-apply-step1-common', '원서 1단계 공통정보 — 동의한 공통원서 항목이 복사된다');
+  await shot('applicant/04-apply-step1-common', '원서 1단계 공통정보 — 수집·이용 동의, 동의한 공통원서 항목이 복사된다');
 
   await click('다음 단계');
   await waitText('원서로대학교');

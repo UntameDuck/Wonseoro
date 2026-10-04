@@ -24,6 +24,8 @@ export const AUDIT_ACTION = [
   'INCIDENT_RESOLVED',
   /** 상담원이 개인정보 최소 상담 조회로 원서 상태를 봤다 — 증적번호와 함께 (T-M6-07, D-79). */
   'SUPPORT_LOOKUP',
+  /** 지원자가 원서 동의(수집·이용 등)를 하거나 거두었다 — 문안 판·해시와 함께 (D-81). */
+  'CONSENT_RECORDED',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTION)[number];

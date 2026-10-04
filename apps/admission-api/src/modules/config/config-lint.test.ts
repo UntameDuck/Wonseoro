@@ -23,6 +23,9 @@ const GOOD = {
   requiredDocuments: { EARLY: ['TRANSCRIPT'] },
   optionalDocuments: { EARLY: ['AWARD'] },
   documentLabels: { TRANSCRIPT: '학교생활기록부', AWARD: '수상 실적' },
+  consents: [
+    { code: 'APPLICATION_COLLECTION', title: '개인정보 수집·이용', text: '수집 목적: 입학전형', required: true, version: 'v1' },
+  ],
   notices: {
     privacyPolicyUrl: 'https://univ.example/privacy',
     privacyOfficer: '입학처 개인정보 보호 담당',
@@ -127,5 +130,20 @@ describe('설정에서 화면 정보 만들기 (§A5, D-56)', () => {
     assert.ok(bad.errors.some((e) => e.includes('notices.contact')));
     assert.ok(bad.errors.some((e) => e.includes('notices.feeRefund')));
     assert.ok(lintConfig({ ...GOOD, notices: 'x' }, ['EARLY']).errors.some((e) => e.startsWith('notices')));
+  });
+
+  it('원서 동의 — 없으면 경고, 필수가 없으면 경고, 형식이 틀리면 오류 (G-2, D-81)', () => {
+    const { consents: _c, ...without } = GOOD;
+    assert.ok(lintConfig(without, ['EARLY']).warnings.some((w) => w.startsWith('consents:')));
+    const optionalOnly = lintConfig({ ...GOOD, consents: [{ ...GOOD.consents[0], required: false }] }, ['EARLY']);
+    assert.deepEqual(optionalOnly.errors, []);
+    assert.ok(optionalOnly.warnings.some((w) => w.includes('필수 동의가 없습니다')));
+    const bad = lintConfig(
+      { ...GOOD, consents: [GOOD.consents[0], GOOD.consents[0], { code: 'PROFILE_SNAPSHOT', title: '', text: 'x', version: 'v1' }, { code: 'lower', title: 't', text: 'x'.repeat(4001), version: 'v1', required: 'yes' }] },
+      ['EARLY'],
+    );
+    for (const want of ['두 번', '공통원서 제공', 'title', 'consents[3].code', 'consents[3].text', 'consents[3].required']) {
+      assert.ok(bad.errors.some((e) => e.includes(want)), `${want}: ${bad.errors.join(' | ')}`);
+    }
   });
 });

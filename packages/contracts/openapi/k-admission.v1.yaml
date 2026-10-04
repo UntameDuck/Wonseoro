@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: K-Admission University Data Plane API
-  version: 1.10.0
+  version: 1.11.0
   description: >
     Reference contract for a university-local K-Admission data plane.
     The university DB is the source of truth; central sync is not in the applicant critical path.
@@ -57,6 +57,13 @@ info:
     legal notice review): privacy policy and processor disclosure links, the privacy officer, the
     admissions contact and the application fee refund terms, taken from the approved configuration.
     Optional field only.
+
+
+    1.11.0 adds application consents (D-81, notes G-2 and G-11): the approved configuration carries
+    consent texts (collection and use, school record provision); the form schema lists them with
+    this application's state, the applicant records them with `PUT .../consents` or at creation
+    (`consents`), each record keeps the text version and its SHA-256, a missing required consent is a
+    validation issue `CONSENT_REQUIRED` and blocks the payment intent. New path and optional fields.
 
 
     Common rules:
@@ -354,6 +361,55 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/applications/{applicationId}/consents:
+    put:
+      tags: [Applications]
+      operationId: recordApplicationConsents
+      x-kadmission-register: D-81
+      description: >
+        Agree to or withdraw consents of the current text versions. Only while the application is
+        DRAFT or READY (payment locks it). Each record keeps the version and the SHA-256 of the text
+        and is audited (CONSENT_RECORDED). Owner only.
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [consents]
+              properties:
+                consents:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [code, granted]
+                    properties:
+                      code: { type: string, pattern: '^[A-Z][A-Z0-9_]{0,63}$' }
+                      granted: { type: boolean }
+      responses:
+        '200':
+          description: Consent state after the change
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [consents]
+                properties:
+                  consents:
+                    type: array
+                    items: { $ref: '#/components/schemas/ApplicationConsentState' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
         '429':
           $ref: '#/components/responses/RateLimited'
   /api/v1/applications/{applicationId}/cancel:
@@ -1820,6 +1876,11 @@ components:
         cycleId: { type: string, format: uuid }
         admissionTypeId: { type: string, format: uuid }
         departmentId: { type: string, format: uuid }
+        consents:
+          type: array
+          x-kadmission-register: D-81
+          description: Consent codes the applicant agreed to before creating (current text versions)
+          items: { type: string, pattern: '^[A-Z][A-Z0-9_]{0,63}$' }
     UpdateApplicationRequest:
       type: object
       properties:
@@ -2324,6 +2385,21 @@ components:
               documentType: { type: string }
               label: { type: string }
               required: { type: boolean }
+        consents:
+          type: array
+          x-kadmission-register: D-81
+          description: Consent texts of the active configuration and whether this application agreed to the current version (1.11.0)
+          items: { $ref: '#/components/schemas/ApplicationConsentState' }
+    ApplicationConsentState:
+      type: object
+      required: [code, title, text, required, version, granted]
+      properties:
+        code: { type: string, pattern: '^[A-Z][A-Z0-9_]{0,63}$' }
+        title: { type: string, maxLength: 100 }
+        text: { type: string, maxLength: 4000, description: Purpose, items, retention, right to refuse }
+        required: { type: boolean }
+        version: { type: string, maxLength: 32 }
+        granted: { type: boolean }
     SelfCheck:
       type: object
       required: [applicationId, serverTime, deadlineAt, deadlinePolicyVersion, application,

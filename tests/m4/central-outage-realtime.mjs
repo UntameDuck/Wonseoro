@@ -124,7 +124,7 @@ async function flow(kind) {
   const record = { kind, at: new Date().toISOString(), subjectToken, steps };
   const created = await http(API, 'POST', '/api/v1/applications', {
     headers: { ...identity, 'idempotency-key': `m4-35rt-create-${randomUUID()}` },
-    body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT },
+    body: { cycleId: CYCLE, admissionTypeId: TYPE, departmentId: DEPT, consents: ['APPLICATION_COLLECTION', 'SCHOOL_RECORD_PROVISION'] },
   });
   steps.create = { status: created.status, ms: created.ms };
   if (created.status !== 201) return { ...record, ok: false };

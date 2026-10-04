@@ -60,6 +60,7 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   INCIDENT_PUBLISHED: '장애 공지 발행',
   INCIDENT_RESOLVED: '장애 공지 해제',
   SUPPORT_LOOKUP: '상담 조회',
+  CONSENT_RECORDED: '동의 기록',
 };
 
 export const AUDIT_RESULT_LABEL: Record<'ACCEPTED' | 'REJECTED' | 'FAILED', string> = {
