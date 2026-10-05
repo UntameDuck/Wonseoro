@@ -267,6 +267,8 @@ const meter = metrics.getMeter('k-admission.audit');
 meter
   .createObservableGauge('audit_worm_verify_mismatches', { description: 'WORM 조각과 다른 DB 기록 수 — 지워짐(missing)·고쳐짐(altered) (D-75·D-91)' })
   .addCallback((r) => {
+    // 대조를 켜지 않은 Pod 가 0 을 내면 "불일치 없음" 으로 읽힌다 — 재지 않은 값은 내지 않는다(business-gauges 와 같은 원칙)
+    if (!verifyEnabled && !lastVerifiedAt) return;
     for (const [log, s] of Object.entries(verifyState)) {
       r.observe(s.missing, { log, kind: 'missing' });
       r.observe(s.altered, { log, kind: 'altered' });

@@ -61,13 +61,17 @@ serverFiles:
             labels: { severity: critical, page: "true" }
             annotations:
               summary: "{{ $labels.name }} 의 DB 동적 계정이 교체되지 않는다 — 곧 DB 연결이 끊긴다"
-          # 지표 자체가 사라졌다(상호 TLS 를 켠 워크로드인데 만료를 모른다)
+          # 지표 자체가 사라졌다(상호 TLS 를 켠 워크로드인데 만료를 모른다).
+          # absent() 는 Prometheus 하나가 여러 대학을 볼 때 한 대학이라도 지표가 있으면 나머지의 누락을 못 본다 — 대학 API 가 있는
+          # (clock_offset_ms 를 내는) 대학마다 CA 만료 지표가 있는지 본다(D-93)
           - alert: CredentialExpiryUnknown
-            expr: absent(credential_expiry_timestamp_seconds{kind="ca-cert"})
+            expr: |
+              count by (namespace) (clock_offset_ms)
+                unless on (namespace) count by (namespace) (credential_expiry_timestamp_seconds{kind="ca-cert"})
             for: 30m
             labels: { severity: warning }
             annotations:
-              summary: "플랫폼 CA 만료 지표가 없다 — 만료 경보가 꺼진 것과 같다"
+              summary: "{{ $labels.namespace }} 플랫폼 CA 만료 지표가 없다 — 만료 경보가 꺼진 것과 같다(상호 TLS·인증서 지표를 본다)"
 
       # 감사 기록·권한 변경 기록 WORM 대조(D-75·D-91) — 대학 API 가 하루마다 조각과 DB 를 맞춘다(AUDIT_WORM_VERIFY_INTERVAL_MS).
       # 다르면 DB 슈퍼유저가 트리거를 끄고 지우거나 고친 것이다 — 원래 값은 WORM 조각에 있다(지운·고친 ID 는 API 로그)
@@ -95,6 +99,23 @@ serverFiles:
             labels: { severity: warning }
             annotations:
               summary: "{{ $labels.namespace }} WORM 대조가 주기의 두 배가 넘도록 끝나지 않았다 — 버킷 접근·대학 API 리더를 본다"
+
+      # 수집 대상이 응답하지 않는다(D-93) — 다른 경보는 지표가 사라지면 조용해진다. 서비스가 통째로 내려가도 울리는 것은 이것뿐이다
+      - name: k-admission-targets
+        rules:
+          - alert: ServiceAllTargetsDown
+            # 차트 기본 수집(kubernetes-pods)은 한 대학의 서비스를 같은 job 으로 묶는다 — Pod 이름표 app 까지 묶어 서비스별로 본다(app 이 없으면 job 단위)
+            expr: sum by (namespace, job, app) (up) == 0
+            for: 3m
+            labels: { severity: critical, page: "true" }
+            annotations:
+              summary: "{{ $labels.namespace }} {{ $labels.job }} {{ $labels.app }} 의 수집 대상이 모두 응답하지 않는다 — 서비스 전체 중단일 수 있다. Pod·노드·NetworkPolicy(수집 허용)를 본다"
+          - alert: ServiceTargetDown
+            expr: (up == 0) unless on (namespace, job, app) (sum by (namespace, job, app) (up) == 0)
+            for: 10m
+            labels: { severity: warning }
+            annotations:
+              summary: "{{ $labels.namespace }} {{ $labels.job }} 의 수집 대상 하나({{ $labels.instance }})가 응답하지 않는다 — 그 Pod 의 재시작·자원을 본다"
 
       # 대학 API 안의 주기 작업(대조·Outbox 보관·멱등 기록 정리, D-93) — 마지막 성공·주기·억제 여부는 모든 Pod 가 DB 기준으로 낸다.
       # 계속 실패하면 로그 경고뿐이던 것을 주기의 두 배에서 알린다. Peak Mode 억제 중에는 울리지 않는다(끝나면 5분 안에 다시 돈다)
@@ -129,6 +150,30 @@ serverFiles:
             labels: { severity: warning }
             annotations:
               summary: "{{ $labels.namespace }} 중앙이 모르는 가장 오래된 이벤트가 기준보다 오래됐다 — 접수는 계속된다. 중앙 연결·Relay·DEAD 이벤트를 본다"
+          # 중앙에서 본 쪽(§04 sync.heartbeat, D-60) — 한 대학의 심장박동이 "연결됨" 기준(HEARTBEAT_STALE_SECONDS)을 넘게 끊겼다.
+          # 그 대학 Data Plane 장애이거나 그 대학 → 중앙 길이 막힌 것이다(대학 쪽 경보가 같이 오는지 본다)
+          - alert: UniversityHeartbeatStale
+            expr: |
+              max by (namespace, university) (university_heartbeat_age_seconds)
+                > on (namespace) group_left max by (namespace) (university_heartbeat_stale_seconds)
+            for: 5m
+            labels: { severity: warning }
+            annotations:
+              summary: "중앙이 {{ $labels.university }} 의 심장박동을 기준보다 오래 받지 못했다 — 그 대학 Relay·중앙으로 가는 길·대학 쪽 경보를 본다"
+          # 중앙이 대학 이벤트 순번에서 빈 곳을 찾았는데 30분이 지나도 메워지지 않았다 — 그 대학 Outbox 의 DEAD·Relay 를 본다
+          - alert: CentralSyncGapsOpen
+            expr: max by (namespace, university) (university_sync_gaps_open) > 0
+            for: 30m
+            labels: { severity: warning }
+            annotations:
+              summary: "중앙이 {{ $labels.university }} 의 이벤트 순번 누락을 메우지 못했다 — 그 대학 Outbox(DEAD 포함)·Relay 를 본다"
+          # §10.4 고정 지표 "DB lock wait" — 잠깐의 대기는 정상이지만 10분 내내 끊기지 않으면 오래 잡힌 잠금(긴 트랜잭션·교착 직전)이다
+          - alert: DbLockWaitSustained
+            expr: max by (namespace) (db_lock_waiting_sessions) > 0
+            for: 10m
+            labels: { severity: warning }
+            annotations:
+              summary: "{{ $labels.namespace }} 행 잠금을 기다리는 앱 세션이 10분 넘게 끊기지 않는다 — pg_stat_activity 로 오래 잡은 트랜잭션을 본다"
           # DEAD = 재시도를 멈춘 이벤트 — 중앙이 끝내 모르는 접수·취소다. 대조가 OUTBOX_DEAD_LETTER 예외를 열지만 대조 주기(최대 하루)를 기다리지 않는다
           - alert: OutboxDeadEvents
             expr: max by (namespace) (outbox_dead_events) > 0
@@ -188,6 +233,15 @@ serverFiles:
             labels: { severity: critical }
             annotations:
               summary: "{{ $labels.namespace }} 필드 암호 키를 쓰지 못해({{ $labels.reason }}) 원서·공통원서를 읽지 못한다 — 키 묶음·Vault Transit 상태와 키 교체 이력을 본다(decrypt-failed 는 암호문 변조도 의심)"
+          # 모든 Pod 가 넘었다 — 대개 DB 시계가 틀린 것이다. 이 대학은 접수 확정이 전면 중단된다(Edge 가 보낼 다른 Pod 가 없다)
+          - alert: ClockOffsetExceededAllPods
+            expr: |
+              count by (namespace) (abs(clock_offset_ms) > 1000)
+                == on (namespace) count by (namespace) (clock_offset_ms)
+            for: 2m
+            labels: { severity: critical, page: "true" }
+            annotations:
+              summary: "{{ $labels.namespace }} 모든 Pod 의 시계가 DB 와 1초 넘게 어긋나 접수 확정이 전면 중단됐다 — DB 서버 시계(NTP)부터 본다"
           # 발급자 키를 쓸 수 없어(보관 한도 초과) 토큰을 판단하지 못해 거절하고 있다 — 로그인한 사람도 막힌다
           - alert: IssuerKeysUnavailable
             expr: sum by (namespace, audience) (rate(auth_decisions_total{result="unavailable"}[5m])) > 0

@@ -72,6 +72,12 @@ tests:
         values: '25200x40' # 7시간 뒤 — 두 번 연속 못 받았다
       - series: 'credential_expiry_timestamp_seconds{namespace="univ-a",kind="db-credential",name="app"}'
         values: '500x40' # 10분 안
+      - series: 'clock_offset_ms{namespace="univ-a",pod="api-1"}'
+        values: '5x40'
+      - series: 'clock_offset_ms{namespace="univ-b",pod="api-1"}'
+        values: '5x40'
+      - series: 'credential_expiry_timestamp_seconds{namespace="univ-b",kind="ca-cert",name="platform-ca"}'
+        values: '31536000x40' # 1년 — 한 대학이라도 있으면 absent() 는 다른 대학의 누락을 못 봤다
     alert_rule_test:
       - eval_time: 6m
         alertname: WorkloadCertificateNotRenewed
@@ -89,8 +95,8 @@ tests:
       - eval_time: 35m
         alertname: CredentialExpiryUnknown
         exp_alerts:
-          - exp_labels: { severity: warning, kind: ca-cert }
-            exp_annotations: { summary: "플랫폼 CA 만료 지표가 없다 — 만료 경보가 꺼진 것과 같다" }
+          - exp_labels: { severity: warning, namespace: univ-a }
+            exp_annotations: { summary: "univ-a 플랫폼 CA 만료 지표가 없다 — 만료 경보가 꺼진 것과 같다(상호 TLS·인증서 지표를 본다)" }
 
   # ── WORM 대조 — 불일치는 바로, 대조 멈춤은 이틀 ──────────────────────────
   - interval: 1m
@@ -414,3 +420,100 @@ tests:
         exp_alerts:
           - exp_labels: { severity: info, namespace: univ-a }
             exp_annotations: { summary: "univ-a 암호화 전 평문 원서 값이 아직 읽힌다 — field-keys encrypt-legacy 로 옮긴다" }
+
+  # ── 수집 대상 — 전부 내려감(호출)과 하나 내려감 ───────────────────────────
+  # univ-a admission-api: 둘 다 내려감 → 전부 / univ-b admission-api: 하나만 → 하나 / univ-c: 정상
+  - interval: 1m
+    input_series:
+      - series: 'up{namespace="univ-a",job="admission-api",instance="10.0.0.1:9464"}'
+        values: '1 0x15'
+      - series: 'up{namespace="univ-a",job="admission-api",instance="10.0.0.2:9464"}'
+        values: '1 0x15'
+      - series: 'up{namespace="univ-b",job="admission-api",instance="10.0.1.1:9464"}'
+        values: '1 0x15'
+      - series: 'up{namespace="univ-b",job="admission-api",instance="10.0.1.2:9464"}'
+        values: '1x15'
+      - series: 'up{namespace="univ-c",job="admission-api",instance="10.0.2.1:9464"}'
+        values: '1x15'
+      # univ-d: 한 job(kubernetes-pods) 안에서 접수 API 만 통째로 죽고 Relay 는 산다 → 접수 API 만 울린다
+      - series: 'up{namespace="univ-d",job="kubernetes-pods",app="admission-api",instance="10.0.3.1:9464"}'
+        values: '1 0x15'
+      - series: 'up{namespace="univ-d",job="kubernetes-pods",app="event-relay",instance="10.0.3.2:9464"}'
+        values: '1x15'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ServiceAllTargetsDown
+        exp_alerts:
+          - exp_labels: { severity: critical, page: "true", namespace: univ-a, job: admission-api }
+            exp_annotations: { summary: "univ-a admission-api  의 수집 대상이 모두 응답하지 않는다 — 서비스 전체 중단일 수 있다. Pod·노드·NetworkPolicy(수집 허용)를 본다" }
+          - exp_labels: { severity: critical, page: "true", namespace: univ-d, job: kubernetes-pods, app: admission-api }
+            exp_annotations: { summary: "univ-d kubernetes-pods admission-api 의 수집 대상이 모두 응답하지 않는다 — 서비스 전체 중단일 수 있다. Pod·노드·NetworkPolicy(수집 허용)를 본다" }
+      - eval_time: 12m
+        alertname: ServiceTargetDown
+        exp_alerts:
+          - exp_labels: { severity: warning, namespace: univ-b, job: admission-api, instance: "10.0.1.1:9464" }
+            exp_annotations: { summary: "univ-b admission-api 의 수집 대상 하나(10.0.1.1:9464)가 응답하지 않는다 — 그 Pod 의 재시작·자원을 본다" }
+
+  # ── 중앙에서 본 대학 심장박동 — 기준(180초)을 넘으면 ─────────────────────────
+  - interval: 1m
+    input_series:
+      - series: 'university_heartbeat_age_seconds{namespace="central",pod="central-1",university="UNIV-A"}'
+        values: '30+60x15'
+      - series: 'university_heartbeat_age_seconds{namespace="central",pod="central-1",university="UNIV-B"}'
+        values: '30x15'
+      - series: 'university_heartbeat_stale_seconds{namespace="central",pod="central-1"}'
+        values: '180x15'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: UniversityHeartbeatStale
+        exp_alerts: []
+      - eval_time: 12m
+        alertname: UniversityHeartbeatStale
+        exp_alerts:
+          - exp_labels: { severity: warning, namespace: central, university: UNIV-A }
+            exp_annotations: { summary: "중앙이 UNIV-A 의 심장박동을 기준보다 오래 받지 못했다 — 그 대학 Relay·중앙으로 가는 길·대학 쪽 경보를 본다" }
+  - interval: 5m
+    input_series:
+      - series: 'university_sync_gaps_open{namespace="central",pod="central-1",university="UNIV-A"}'
+        values: '0 2x12'
+      - series: 'university_sync_gaps_open{namespace="central",pod="central-1",university="UNIV-B"}'
+        values: '0x12'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: CentralSyncGapsOpen
+        exp_alerts: []
+      - eval_time: 45m
+        alertname: CentralSyncGapsOpen
+        exp_alerts:
+          - exp_labels: { severity: warning, namespace: central, university: UNIV-A }
+            exp_annotations: { summary: "중앙이 UNIV-A 의 이벤트 순번 누락을 메우지 못했다 — 그 대학 Outbox(DEAD 포함)·Relay 를 본다" }
+  # 모든 Pod 가 넘은 대학(univ-c)만 호출 — 하나만 넘은 univ-a 는 Pod 경보뿐
+  - interval: 1m
+    input_series:
+      - series: 'clock_offset_ms{namespace="univ-c",pod="api-1"}'
+        values: '1500x10'
+      - series: 'clock_offset_ms{namespace="univ-c",pod="api-2"}'
+        values: '-1200x10'
+      - series: 'clock_offset_ms{namespace="univ-a",pod="api-1"}'
+        values: '1500x10'
+      - series: 'clock_offset_ms{namespace="univ-a",pod="api-2"}'
+        values: '10x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ClockOffsetExceededAllPods
+        exp_alerts:
+          - exp_labels: { severity: critical, page: "true", namespace: univ-c }
+            exp_annotations: { summary: "univ-c 모든 Pod 의 시계가 DB 와 1초 넘게 어긋나 접수 확정이 전면 중단됐다 — DB 서버 시계(NTP)부터 본다" }
+  # DB 잠금 대기 — 10분 내내면 울림(univ-a), 오락가락하면 조용(univ-b)
+  - interval: 1m
+    input_series:
+      - series: 'db_lock_waiting_sessions{namespace="univ-a",pod="api-1"}'
+        values: '0 2x15'
+      - series: 'db_lock_waiting_sessions{namespace="univ-b",pod="api-1"}'
+        values: '0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: DbLockWaitSustained
+        exp_alerts:
+          - exp_labels: { severity: warning, namespace: univ-a }
+            exp_annotations: { summary: "univ-a 행 잠금을 기다리는 앱 세션이 10분 넘게 끊기지 않는다 — pg_stat_activity 로 오래 잡은 트랜잭션을 본다" }

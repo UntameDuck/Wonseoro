@@ -129,11 +129,16 @@ npm run ops:dr-acceptance -- --file=deploy/pilot/<대학>-dr.yaml
 | `CredentialExpiresIn1Day` | critical·호출 | 1m | {kind}/{name} 가 하루 안에 끝난다 — 지금 바꾼다 |
 | `WorkloadCertificateNotRenewed` | critical·호출 | 5m | {name} 의 워크로드 인증서가 갱신되지 않는다 — Vault PKI·네트워크를 본다 |
 | `DbCredentialNotRotated` | critical·호출 | 2m | {name} 의 DB 동적 계정이 교체되지 않는다 — 곧 DB 연결이 끊긴다 |
-| `CredentialExpiryUnknown` | warning | 30m | 플랫폼 CA 만료 지표가 없다 — 만료 경보가 꺼진 것과 같다 |
+| `CredentialExpiryUnknown` | warning | 30m | {namespace} 플랫폼 CA 만료 지표가 없다 — 만료 경보가 꺼진 것과 같다(상호 TLS·인증서 지표를 본다) |
 | `AuditWormMismatch` | critical·호출 | 1m | {namespace} {log} 기록이 WORM 조각과 다르다({kind}) — 감사 기록 변조 대응(보안 담당·문서 19) |
 | `AuditWormVerifyStale` | warning | 30m | {namespace} WORM 대조가 주기의 두 배가 넘도록 끝나지 않았다 — 버킷 접근·대학 API 리더를 본다 |
+| `ServiceAllTargetsDown` | critical·호출 | 3m | {namespace} {job} {app} 의 수집 대상이 모두 응답하지 않는다 — 서비스 전체 중단일 수 있다. Pod·노드·NetworkPolicy(수집 허용)를 본다 |
+| `ServiceTargetDown` | warning | 10m | {namespace} {job} 의 수집 대상 하나({instance})가 응답하지 않는다 — 그 Pod 의 재시작·자원을 본다 |
 | `ScheduledJobStale` | warning | 30m | {namespace} 주기 작업 {task} 이 주기의 두 배가 넘도록 끝나지 않았다 — 대학 API 로그의 실패 원인·DB 연결을 본다 |
 | `CentralSyncLagging` | warning | 5m | {namespace} 중앙이 모르는 가장 오래된 이벤트가 기준보다 오래됐다 — 접수는 계속된다. 중앙 연결·Relay·DEAD 이벤트를 본다 |
+| `UniversityHeartbeatStale` | warning | 5m | 중앙이 {university} 의 심장박동을 기준보다 오래 받지 못했다 — 그 대학 Relay·중앙으로 가는 길·대학 쪽 경보를 본다 |
+| `CentralSyncGapsOpen` | warning | 30m | 중앙이 {university} 의 이벤트 순번 누락을 메우지 못했다 — 그 대학 Outbox(DEAD 포함)·Relay 를 본다 |
+| `DbLockWaitSustained` | warning | 10m | {namespace} 행 잠금을 기다리는 앱 세션이 10분 넘게 끊기지 않는다 — pg_stat_activity 로 오래 잡은 트랜잭션을 본다 |
 | `OutboxDeadEvents` | warning | 5m | {namespace} 재시도를 멈춘 Outbox 이벤트가 있다 — 중앙이 모르는 변경이다. 운영 콘솔 「대조 · 예외」의 「통합 조회 전송을 포기한 알림」과 Relay 로그로 원인을 본다 |
 | `PaymentGatewayCircuitOpen` | critical | 5m | {namespace} 결제사 연결 회로가 열려 결제 확인이 멈췄다 — 결제는 확인 대기로 남고 대조가 넘겨받는다. 결제사 상태·출구를 본다 |
 | `DependencyCircuitOpen` | warning | 10m | {namespace} {dependency} 회로가 열려 있다 — 그 의존성으로 가는 연결·상태를 본다(중앙 회로면 접수는 계속된다, 접수 API 회로면 서류 검사가 멈춘다) |
@@ -141,6 +146,7 @@ npm run ops:dr-acceptance -- --file=deploy/pilot/<대학>-dr.yaml
 | `ScanEngineUnavailable` | critical | 5m | {namespace} 서류 검사 엔진({engine})에 닿지 못한다 — 올린 서류가 검사 대기로 남는다. 검사 엔진 상태·서명 DB 를 본다 |
 | `ClockOffsetExceeded` | critical | 2m | {namespace} {pod} 의 시계가 DB 와 1초 넘게 어긋나 이 Pod 는 접수를 확정하지 않는다 — 노드 NTP·DB 시계를 본다 |
 | `FieldKeyUnavailable` | critical | 1m | {namespace} 필드 암호 키를 쓰지 못해({reason}) 원서·공통원서를 읽지 못한다 — 키 묶음·Vault Transit 상태와 키 교체 이력을 본다(decrypt-failed 는 암호문 변조도 의심) |
+| `ClockOffsetExceededAllPods` | critical·호출 | 2m | {namespace} 모든 Pod 의 시계가 DB 와 1초 넘게 어긋나 접수 확정이 전면 중단됐다 — DB 서버 시계(NTP)부터 본다 |
 | `IssuerKeysUnavailable` | critical | 5m | {namespace} {audience} 토큰을 판단하지 못해 거절하고 있다 — 발급자(로그인 서버) 연결·공개키를 본다 |
 | `IssuerOutageGraceInUse` | warning | 5m | {namespace} {audience} 만료 토큰을 단절 유예로 받고 있다 — 발급자(로그인 서버)에 닿지 않는다 |
 | `EgressDenied` | warning | 1m | {namespace} 허용 목록 밖으로 나가려는 연결을 막았다({reason}) — 새 의존 주소의 출구 등록 누락인지, 사용자 입력 주소로 나가려 한 것(SSRF)인지 로그를 본다 |
