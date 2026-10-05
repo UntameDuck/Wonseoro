@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 import '@wonseoro/krds/tokens.css';
 import { CycleBadge } from '../krds/cycle-badge';
@@ -49,7 +50,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               flexWrap: 'wrap',
             }}
           >
-            <a
+            <Link
               href="/"
               style={{
                 fontWeight: 700,
@@ -60,17 +61,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             >
               원서로
               <CycleBadge />
-            </a>
+            </Link>
             <nav aria-label="주요 메뉴" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--krds-space-4)' }}>
-              <a href="/profile" style={{ color: 'var(--krds-primary)' }}>
+              <Link href="/profile" style={{ color: 'var(--krds-primary)' }}>
                 공통원서
-              </a>
-              <a href="/dashboard" style={{ color: 'var(--krds-primary)' }}>
+              </Link>
+              <Link href="/dashboard" style={{ color: 'var(--krds-primary)' }}>
                 내 원서
-              </a>
-              <a href="/status" style={{ color: 'var(--krds-primary)' }}>
+              </Link>
+              <Link href="/status" style={{ color: 'var(--krds-primary)' }}>
                 서비스 상태
-              </a>
+              </Link>
             </nav>
           </div>
         </header>

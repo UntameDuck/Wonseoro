@@ -8,7 +8,7 @@
 |---|---|---|
 | T-M5-20 Secret Scan | ✅ | Gitleaks 8.30.1, Git 전체 이력 실제 비밀 0 |
 | T-M5-21 SAST | ✅ | CodeQL `security-extended`, Critical 0. 후속 분석 대상 High 10·Medium 11 |
-| T-M5-22 Dependency/SCA | ✅ | 운영 의존성 Critical 0·High 2·Moderate 2 |
+| T-M5-22 Dependency/SCA | ✅ | 운영 의존성 Critical 0·High 0·Moderate 0·Low 0(2026-10-05 재검사) |
 | T-M5-23 SBOM | ✅ | SPDX 2.3, 패키지 266·관계 1,054. CI 산출물과 Release 자산 자동 첨부 |
 | T-M5-24 Container Image Scan | ✅ | 로컬·원격 5개 이미지 Critical 0 |
 | T-M5-25 IaC/K8s Manifest Scan | ✅ | 로컬·원격 Helm·Kubernetes·Dockerfile 19개 High/Critical 0 |
@@ -33,6 +33,8 @@ Trivy 0.75.0으로 운영 런타임 이미지의 OS와 라이브러리를 함께
 CI는 `.github/workflows/security.yml`의 5개 matrix 잡에서 각 이미지를 실제 빌드하고 Trivy의
 `os,library` 스캐너로 Critical이 하나라도 있으면 실패한다. `ignore-unfixed`를 켜지 않아 수정판이 없는 Critical도 숨기지 않는다.
 원격 matrix도 모두 통과했다(Actions run 36890582638).
+
+2026-10-05 재검사에서 프레임워크가 고정한 `fastify 5.11.3`과 `postcss 8.4.31`에 새 공개 취약점이 확인됐다. 루트 `overrides`로 각각 `5.12.5`, `8.5.28`을 고정했고 `npm run check:security:deps` 결과 운영 의존성은 Critical·High·Moderate·Low 모두 0이다. 보정 뒤 대학 API 447개(444 통과·3 skip), 중앙 42개, 중계 7개, 서류 12개, 보안 선별 250개(skip 0), 두 웹 운영 빌드·린트·전체 형 검사가 통과했다. 이어 Next 15.5.27·AWS SDK 3.1146.0·`pg` 8.23.1 등 패치 갱신과 Event Relay 시험 의존성 `ajv`·`ajv-formats` 명시 뒤에도 대학 API 447개(444 통과·3 skip), 중앙 42개, 중계 7개, 서류 12개, 보안 선별 250개(skip 0), 린트·전체 형 검사·운영 의존성 감사를 다시 통과했다. 개발 의존성에는 2026-10-05 현재 수정판이 없는 `braces 3.0.3`에서 비롯된 감사 항목 5개가 남지만 운영 설치(`--omit=dev`)에는 포함되지 않는다.
 
 D-83 로컬 Object Storage 교체 때 고정한 `rustfs/rustfs:1.0.1@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c`도 Trivy 0.75.0 `vuln` 스캐너(`HIGH,CRITICAL`, 수정판 없는 항목 제외)로 별도 확인했고 High/Critical 0이었다(2026-10-04). 이 이미지는 로컬 개발용이며 운영 서비스 이미지 matrix에는 넣지 않는다.
 

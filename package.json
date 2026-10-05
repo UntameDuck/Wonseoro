@@ -11,6 +11,14 @@
     "packages/*",
     "apps/*"
   ],
+  "overrides": {
+    "@nestjs/platform-fastify": {
+      "fastify": "5.12.5"
+    },
+    "next": {
+      "postcss": "8.5.28"
+    }
+  },
   "scripts": {
     "dev:infra": "docker compose -f infra/compose/docker-compose.dev.yml up -d",
     "dev:infra:down": "docker compose -f infra/compose/docker-compose.dev.yml down",
@@ -91,10 +99,14 @@
     "test:a11y:rate-limit": "node tests/a11y/rate-limit.mjs"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "3.3.7",
+    "@eslint/js": "9.39.5",
     "@nestjs/common": "^11.2.7",
+    "@types/node": "^22.9.0",
+    "eslint": "9.39.5",
+    "eslint-config-next": "15.5.27",
     "rxjs": "^7.8.2",
     "typescript": "^5.6.3",
-    "@types/node": "^22.9.0",
     "yaml": "^2.9.1"
   }
 }

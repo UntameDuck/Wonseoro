@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Button, Card, DescriptionList, ErrorSummary, Field, fieldOf, cycleTitle } from '@wonseoro/krds';
 import { PROBLEM_TEXT, formatSupportCode, problemText } from '@wonseoro/contracts';
@@ -477,9 +478,9 @@ export default function ApplyPage({
         <p style={{ marginTop: 0 }}>
           이 원서는 접수 전에 취소되었습니다. 같은 전형에 다시 지원하려면 접수 홈에서 새 원서를 만드십시오.
         </p>
-        <a href="/" style={{ color: 'var(--krds-primary)' }}>
+        <Link href="/" style={{ color: 'var(--krds-primary)' }}>
           접수 홈으로
-        </a>
+        </Link>
         <PrivacyRightsLink applicationId={applicationId} />
         {/* 취소 전에 결제가 확인됐으면 돌려받을 전형료가 있다 — 확인된 결제가 없으면 서버가 안내한다 */}
         <FeeRefundLink applicationId={applicationId} />
@@ -555,9 +556,9 @@ export default function ApplyPage({
           {commonCodes.length === 0 && (
             <p style={{ color: 'var(--krds-fg-muted)', fontSize: 'var(--krds-text-sm)' }}>
               이 전형은 공통원서에서 가져오는 항목이 없습니다.{' '}
-              <a href="/profile" style={{ color: 'var(--krds-primary)' }}>
+              <Link href="/profile" style={{ color: 'var(--krds-primary)' }}>
                 공통원서 작성
-              </a>
+              </Link>
             </p>
           )}
           <Button onClick={() => goTo(2)}>다음 단계</Button>
@@ -926,9 +927,9 @@ function PrivacyRightsLink({ applicationId }: { applicationId: string }) {
   return (
     <p style={{ margin: 'var(--krds-space-3) 0 0' }}>
       이 원서의 개인정보를 보여 달라거나 바로잡거나 지워 달라고 대학에 요청할 수 있습니다.{' '}
-      <a href={`/privacy/${applicationId}`} style={{ color: 'var(--krds-primary)' }}>
+      <Link href={`/privacy/${applicationId}`} style={{ color: 'var(--krds-primary)' }}>
         개인정보 열람·정정·삭제 요청
-      </a>
+      </Link>
     </p>
   );
 }
@@ -938,9 +939,9 @@ function FeeRefundLink({ applicationId }: { applicationId: string }) {
   return (
     <p style={{ margin: 'var(--krds-space-3) 0 0' }}>
       반환 사유가 있거나 전형료 면제·감액 대상이면 신청할 수 있습니다.{' '}
-      <a href={`/refund/${applicationId}`} style={{ color: 'var(--krds-primary)' }}>
+      <Link href={`/refund/${applicationId}`} style={{ color: 'var(--krds-primary)' }}>
         전형료 반환 신청
-      </a>
+      </Link>
     </p>
   );
 }

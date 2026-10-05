@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { COMMON_PROFILE_COLLECTION_CONSENT, COMMON_PROFILE_FIELDS, commonProfileProblem, problemText } from '@wonseoro/contracts';
 import { Alert, Button, Card, DescriptionList, ErrorSummary, Field } from '@wonseoro/krds';
@@ -182,9 +183,9 @@ export default function ProfilePage() {
     return (
       <Card title="본인확인이 필요합니다" titleLevel={1}>
         <p style={{ marginTop: 0 }}>공통원서를 작성하려면 접수 홈에서 먼저 본인확인을 해 주십시오.</p>
-        <a href="/" style={{ color: 'var(--krds-primary)' }}>
+        <Link href="/" style={{ color: 'var(--krds-primary)' }}>
           접수 홈으로
-        </a>
+        </Link>
       </Card>
     );
   }

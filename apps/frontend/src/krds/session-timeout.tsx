@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, formatTime } from '@wonseoro/krds';
 import {
@@ -133,9 +134,9 @@ export function SessionTimeout() {
               : '작성하신 원서는 마지막으로 저장된 상태로 보관되어 있습니다. '}
             다시 본인확인하면 이어서 작성할 수 있습니다.
           </p>
-          <a data-primary href="/" style={{ color: 'var(--krds-primary)', fontWeight: 700 }}>
+          <Link data-primary href="/" style={{ color: 'var(--krds-primary)', fontWeight: 700 }}>
             접수 홈에서 다시 본인확인
-          </a>
+          </Link>
         </>
       ) : (
         <>

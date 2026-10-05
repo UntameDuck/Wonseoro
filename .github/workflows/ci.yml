@@ -151,6 +151,8 @@ jobs:
       - run: npm run build -w @wonseoro/contracts
       # 지원자 웹·운영 콘솔·KRDS 공용 컴포넌트 — 전에는 지원자 웹만 검사했다
       - run: npm run typecheck -w @wonseoro/krds -w @wonseoro/frontend -w @wonseoro/admin-web
+      # Next 15.5부터 next lint가 폐기 예정이므로 두 웹 앱을 ESLint CLI로 비대화형 검사한다
+      - run: npm run lint
       # 화면 문구 — 설계 문서 번호·개발 안내·구조 설명이 화면에 나가지 않게 (T-M5-50)
       - run: npm run check:ui-copy
       # 날짜·시각 표기 — 언제나 한국 시간 (T-M5-54). 러너 시간대와 무관해야 해서 다른 시간대로 돌린다

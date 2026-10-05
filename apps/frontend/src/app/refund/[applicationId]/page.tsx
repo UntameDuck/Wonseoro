@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { type ReactNode, use, useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, DescriptionList, Field, Select } from '@wonseoro/krds';
 import {
@@ -129,9 +130,9 @@ export default function FeeRefundPage({ params }: { params: Promise<{ applicatio
       {noSession ? (
         <Card title="본인확인이 필요합니다">
           <p style={{ marginTop: 0 }}>신청하려면 접수 홈에서 먼저 본인확인을 해 주십시오.</p>
-          <a href="/" style={{ color: 'var(--krds-primary)' }}>
+          <Link href="/" style={{ color: 'var(--krds-primary)' }}>
             접수 홈으로
-          </a>
+          </Link>
         </Card>
       ) : (
         <>

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, Icon } from '@wonseoro/krds';
 import { APPLICATION_STATUS_LABEL, labelOf, problemText } from '@wonseoro/contracts';
@@ -78,9 +79,9 @@ export default function DashboardPage() {
       {noSession ? (
         <Card title="본인확인이 필요합니다">
           <p style={{ marginTop: 0 }}>내 원서를 보려면 접수 홈에서 먼저 본인확인을 해 주십시오.</p>
-          <a href="/" style={{ color: 'var(--krds-primary)' }}>
+          <Link href="/" style={{ color: 'var(--krds-primary)' }}>
             접수 홈으로
-          </a>
+          </Link>
         </Card>
       ) : failed ? (
         <Alert tone="danger" title={failed.title}>

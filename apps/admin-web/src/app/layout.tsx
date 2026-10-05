@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 import '@wonseoro/krds/tokens.css';
 import { ConsoleProvider } from '../components/console';
@@ -45,7 +46,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               flexWrap: 'wrap',
             }}
           >
-            <a
+            <Link
               href="/"
               style={{
                 fontWeight: 700,
@@ -55,14 +56,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               }}
             >
               원서로 입학처 콘솔
-            </a>
+            </Link>
             <nav aria-label="콘솔 메뉴">
               <ul style={{ display: 'flex', gap: 'var(--krds-space-4)', listStyle: 'none', margin: 0, padding: 0, flexWrap: 'wrap' }}>
                 {NAV.map(([href, label]) => (
                   <li key={href}>
-                    <a href={href} style={{ color: 'var(--krds-primary)' }}>
+                    <Link href={href} style={{ color: 'var(--krds-primary)' }}>
                       {label}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { type ReactNode, use, useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, DescriptionList, Field } from '@wonseoro/krds';
 import {
@@ -125,9 +126,9 @@ export default function PrivacyRequestPage({ params }: { params: Promise<{ appli
       {noSession ? (
         <Card title="본인확인이 필요합니다">
           <p style={{ marginTop: 0 }}>요청하려면 접수 홈에서 먼저 본인확인을 해 주십시오.</p>
-          <a href="/" style={{ color: 'var(--krds-primary)' }}>
+          <Link href="/" style={{ color: 'var(--krds-primary)' }}>
             접수 홈으로
-          </a>
+          </Link>
         </Card>
       ) : (
         <>
@@ -158,7 +159,6 @@ export default function PrivacyRequestPage({ params }: { params: Promise<{ appli
                     name="privacy-kind"
                     value={k}
                     checked={kind === k}
-                    aria-invalid={errors.kind ? true : undefined}
                     aria-describedby={errors.kind ? `kind-${k}-help kind-error` : `kind-${k}-help`}
                     onChange={() => setKind(k)}
                     style={{ width: 24, height: 24, marginTop: 0, flex: 'none' }}
