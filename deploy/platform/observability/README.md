@@ -20,6 +20,7 @@
 | `dashboards/golden-signals.json` | T-M4-21 Traffic(서비스별 RPS·Finalize TPS)·Errors·Latency·Saturation + 요청 한도 거절(`throttle_decisions`, T-M4-40) |
 | `dashboards/business-kpi.json` | T-M4-22 설계서 §15 업무 KPI 7종 + 결과별 추이 |
 | `dashboards/support.json` | T-M4-23 §10.4 마감일 고정 5종 — finalize success rate·payment verify latency·outbox backlog·DB lock wait·error rate |
+| `dashboards/operations-signals.json` | 운영 신호 — 경보 규칙이 보는 지표를 경보 기준선과 함께(주기 작업·WORM 대조 ÷ 주기, 중앙 반영 ÷ 기준, 시계 차이, 회로, 검사 대기·엔진, 토큰 판정). 패널 지표는 모두 경보에도 있어야 한다(`test:m4:observability`, D-93) |
 | `grafana-values.yaml` | 로컬 검증용 Grafana(익명 Viewer). 운영 인증·보존은 정하지 않았다 |
 
 앱이 내는 업무 지표(admission-api): 결과별 카운터 `draft_saves{outcome}`·`payment_verifications{outcome}`·
@@ -93,7 +94,7 @@ DB 연결 예산 30을 넘지 않도록 `api.autoscaling.maxReplicas=4`로만 �
 ## 만료 경보 (T-M5-65)
 
 `expiry-rules.yaml` — 인증서·자격증명 만료 30/14/7/3/1일 날짜 경보와 짧게 쓰는 것(워크로드 인증서·DB 동적 계정)의 갱신 멈춤 경보. Prometheus 를 올릴 때 `-f kpi-rules.yaml -f expiry-rules.yaml`. 지표는 서비스마다 `credential_expiry_timestamp_seconds{kind,name}`([docs/14](../../../docs/14-operations-automation.md)).
-같은 파일에 WORM 대조(`AuditWormMismatch`·`AuditWormVerifyStale`), 대학 API 주기 작업(`ScheduledJobStale` — 대조·Outbox 보관·멱등 기록 정리, 주기의 두 배), 중앙 반영(`CentralSyncLagging` — 앱 기준 `SYNC_LAG_WARN_SECONDS`, `OutboxDeadEvents`), 의존성 회로(`PaymentGatewayCircuitOpen`·`DependencyCircuitOpen`), 서류 검사 엔진(`ScanEngineUnavailable`), 시각·인증(`ClockOffsetExceeded`·`IssuerKeysUnavailable`·`IssuerOutageGraceInUse`)과 권한 변경 기록 수집(`AccessGrantSyncStale`·`AccessGrantSyncFailing`) 경보가 있다.
+같은 파일에 WORM 대조(`AuditWormMismatch`·`AuditWormVerifyStale`), 대학 API 주기 작업(`ScheduledJobStale` — 대조·Outbox 보관·멱등 기록 정리, 주기의 두 배), 중앙 반영(`CentralSyncLagging` — 앱 기준 `SYNC_LAG_WARN_SECONDS`, `OutboxDeadEvents`), 의존성 회로(`PaymentGatewayCircuitOpen`·`DependencyCircuitOpen`), 서류 검사(`ScanEngineUnavailable`·`DocumentScanStalled`), 시각·인증(`ClockOffsetExceeded`·`IssuerKeysUnavailable`·`IssuerOutageGraceInUse`)과 권한 변경 기록 수집(`AccessGrantSyncStale`·`AccessGrantSyncFailing`) 경보가 있다.
 
 ## 규칙 검사·경보 단위 시험
 
@@ -101,5 +102,6 @@ DB 연결 예산 30을 넘지 않도록 `api.autoscaling.maxReplicas=4`로만 �
 `promtool test rules tests/*.test.yaml` 을 돌린다. 두 values 가 같은 `serverFiles` 이름을 쓰면(helm 이 앞 규칙을 덮어쓴다) 실패한다.
 promtool 이 PATH 에 없으면 로컬 축소 환경과 같은 Prometheus v3.15.0 이미지(digest 고정)를 docker 로 쓴다.
 경보를 고치거나 더하면 `tests/alert-rules.test.yaml` 에 울릴 때·조용할 때를 같이 넣는다 — 안내 문구(`summary`)까지 비교한다.
+경보마다 대응 안내는 [문서 14 「경보 대응표」](../../../docs/14-operations-automation.md#경보-대응표) — `node scripts/render-alert-runbook.mjs` 로 다시 쓰고, `check:alert-rules` 가 빠진 경보를 막는다.
 KPI 비율의 정의(거절·충돌은 분모에서 뺀다, 이미 접수된 재요청은 성공, 5xx 가 없으면 오류율 0)는 `tests/kpi-rules.test.yaml` 이 값으로 본다
 (기대값은 부동소수점이 정확히 나오는 비율로 고른다 — 0.15 같은 값은 끝자리가 달라 실패한다).

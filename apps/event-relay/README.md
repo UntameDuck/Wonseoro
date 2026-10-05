@@ -10,7 +10,7 @@
 - Ordering Key: `applicationId`. sequence는 Application별 단조 증가.
 - 지수 Backoff + Jitter, 최대 재시도 초과 시 Dead Letter.
 - 중앙 ACK를 받은 이벤트만 `SENT` 처리.
-- **중앙이 장기 장애여도 Outbox는 계속 누적될 수 있어야 한다.** backlog age/size 경보, PENDING partial index, Partition/Archive로 디스크 고갈 방지 (v1.1 §B7).
+- **중앙이 장기 장애여도 Outbox는 계속 누적될 수 있어야 한다.** backlog age/size 경보(Prometheus `CentralSyncLagging`·`OutboxDeadEvents` — [경보 대응표](../../docs/14-operations-automation.md#경보-대응표)), PENDING partial index, Partition/Archive로 디스크 고갈 방지 (v1.1 §B7).
 - 전송 실패는 절대 접수 실패로 올라가지 않는다.
 - CloudEvents 확장 속성 `configversion`·`policyversion` 은 **접수 기록(submission)** 에서 읽는다 — 본문에는 없다(D-50). 접수 전 취소처럼 모르면 싣지 않는다. (D-60)
 

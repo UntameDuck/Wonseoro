@@ -17,7 +17,7 @@ const DIR = 'deploy/platform/observability';
 const rules = parse(readFileSync(`${DIR}/kpi-rules.yaml`, 'utf8')).serverFiles['recording_rules.yml'].groups
   .flatMap((g) => g.rules);
 const defined = new Set(rules.map((r) => r.record));
-const dashboards = Object.fromEntries(['golden-signals', 'business-kpi', 'support'].map((name) => [
+const dashboards = Object.fromEntries(['golden-signals', 'business-kpi', 'support', 'operations-signals'].map((name) => [
   name, JSON.parse(readFileSync(`${DIR}/dashboards/${name}.json`, 'utf8')),
 ]));
 
@@ -35,7 +35,15 @@ for (const [name, d] of Object.entries(dashboards)) {
   }
 }
 for (const r of rules) assert.doesNotMatch(r.expr, FORBIDDEN_LABELS, `${r.record}: 식별자 라벨을 쓴다`);
-assert.equal(new Set(Object.values(dashboards).map((d) => d.uid)).size, 3, '대시보드 uid 중복');
+assert.equal(new Set(Object.values(dashboards).map((d) => d.uid)).size, 4, '대시보드 uid 중복');
+
+// 운영 신호 대시보드(D-93)는 경보 근거를 보여 준다 — 패널이 쓰는 지표는 모두 경보 규칙에도 있어야 한다(대시보드와 경보가 다른 것을 보지 않게)
+const alertText = JSON.stringify(parse(readFileSync(`${DIR}/expiry-rules.yaml`, 'utf8')).serverFiles['alerting_rules.yml']);
+for (const { panel, expr } of exprs(dashboards['operations-signals'])) {
+  for (const metric of expr.match(/\b[a-z][a-z0-9_]*_(?:seconds|open|events|pending|unavailable|ms|total|suspended)\b/g) ?? []) {
+    assert.ok(alertText.includes(metric), `operations-signals/${panel}: 지표 ${metric} 를 보는 경보가 없다`);
+  }
+}
 
 // 2) 설계서 지표가 빠짐없이
 const titles = (d) => d.panels.map((p) => p.title).join('\n');
@@ -49,7 +57,7 @@ for (const fixed of ['finalize success rate', 'payment verify latency p95', 'out
 for (const signal of ['Traffic', 'Errors', 'Latency', 'Saturation']) {
   assert.match(titles(dashboards['golden-signals']), new RegExp(`^${signal} — `, 'm'), `Golden Signal ${signal} 없음 (§15)`);
 }
-console.log(`✔ 대시보드 3종·규칙 ${rules.length}개 일관성`);
+console.log(`✔ 대시보드 4종·규칙 ${rules.length}개 일관성`);
 
 // 3) 선택: 실제 Prometheus 에 던져 보기
 const liveIndex = process.argv.indexOf('--live');

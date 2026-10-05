@@ -333,3 +333,27 @@ tests:
         exp_alerts:
           - exp_labels: { severity: warning, namespace: univ-a, audience: applicant }
             exp_annotations: { summary: "univ-a applicant 만료 토큰을 단절 유예로 받고 있다 — 발급자(로그인 서버)에 닿지 않는다" }
+
+  # ── 서류 검사 정체 — 대기가 있는데 15분 넘게 끝난 검사가 없으면 ────────────────
+  # univ-a: 대기 3, 검사 0 → 울림 / univ-b: 대기 3, 검사가 계속 끝난다 → 조용 / univ-c: 대기 0 → 조용
+  - interval: 1m
+    input_series:
+      - series: 'document_scan_pending{namespace="univ-a",pod="api-1"}'
+        values: '3x60'
+      - series: 'document_scans_total{namespace="univ-a",pod="doc-1",verdict="CLEAN"}'
+        values: '5x60'
+      - series: 'document_scan_pending{namespace="univ-b",pod="api-1"}'
+        values: '3x60'
+      - series: 'document_scans_total{namespace="univ-b",pod="doc-1",verdict="CLEAN"}'
+        values: '0+1x60'
+      - series: 'document_scan_pending{namespace="univ-c",pod="api-1"}'
+        values: '0x60'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: DocumentScanStalled
+        exp_alerts: []
+      - eval_time: 40m
+        alertname: DocumentScanStalled
+        exp_alerts:
+          - exp_labels: { severity: critical, namespace: univ-a }
+            exp_annotations: { summary: "univ-a 검사 대기 서류가 있는데 검사가 끝나지 않는다 — 서류 워커 로그(대상 조회·결과 보고)·검사 엔진을 본다" }

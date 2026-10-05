@@ -31,7 +31,7 @@
 - **시험** — 실제 S3 호환 Object Storage 3개: 내보내기·이어서 겹치지 않음, 보관 중 잠긴 객체 버전 지우기·보관 단축 거절(COMPLIANCE), 슈퍼유저가 트리거를 끄고 고친 기록·지운 기록을 찾는다. 저장소가 없으면 건너뛴다. D-83 로컬 RustFS 교체 뒤 **3개 모두 skip 없이 통과**했다(2026-10-04)
 - **정기 대조(2026-10-05)** — 대학 API 리더가 하루마다(`AUDIT_WORM_VERIFY_INTERVAL_MS`, 0 이면 끔) 감사 기록·권한 변경 기록의 조각 전부를 DB 와 맞춰 지표 `audit_worm_verify_mismatches{log,kind}`·`audit_worm_verify_last_success_seconds` 를 낸다. 경보 `AuditWormMismatch`(즉시·호출)·`AuditWormVerifyStale`(이틀). 지운·고친 ID 는 API 로그에만. 화면 시험 DB 로 스케줄러 경로를 한 번 돌려 내보내기 679줄·불일치 0 을 확인했다(그때 만든 로컬 버킷 `audit-worm-verify-once-*` 의 권한 변경 기록 조각은 3년 잠긴다 — 로컬 RustFS 에 남는다). 조각이 많아지면 하루 대조가 무거워진다 — 운영 규모에서 주기·범위를 다시 정한다
 - **정기 대조가 재시작에 묶이지 않게(2026-10-05, D-93)** — 주기를 프로세스 타이머로만 세어 하루 안에 다시 뜨는 Pod 들만 있으면 대조가 돌지 않았고, 재시작하면 마지막 성공·불일치 수를 잃어 두 경보가 꺼졌다. 이제 마지막 대조 시각·불일치 수를 대학 DB `scheduled_job_run`(마이그레이션 **0012**)에 남기고, Pod 마다 10분마다 읽어 지표를 맞춘 뒤 주기가 지났으면 리더 하나가 대조한다. 앞날 시각은 믿지 않고, 프로세스가 주기만큼 대조하지 못했으면 DB 와 상관없이 대조한다(슈퍼유저가 줄을 고쳐 미뤄도). 대조를 켰는데 한 번도 끝난 적이 없으면 마지막 성공을 0 으로 낸다. 멈춤 경보는 주기 지표 `audit_worm_verify_interval_seconds` 의 두 배를 본다(주기를 사흘로 늘려도 거짓 경보가 없다).
-- **다른 주기 작업도(2026-10-05, D-93)** — D+1 자동 대조·Outbox 보관·멱등 기록 정리를 공통 도구 `common/scheduling/periodic-job.ts` 로 옮겼다: 때는 `scheduled_job_run` 의 마지막 성공으로(재시작해도 이어진다), 실패하면 남기지 않고, 모든 Pod 가 `scheduled_job_last_success_seconds{task}`·`scheduled_job_interval_seconds{task}`·`scheduled_job_suspended{task}` 를 낸다. 경보 `ScheduledJobStale`(주기의 두 배, Peak Mode 억제 중 제외, `expiry-rules.yaml`). 새 주기 작업을 만들면 이 도구를 쓴다 시험 `audit-worm.integration.test` 5개 통과·skip 0
+- **다른 주기 작업도(2026-10-05, D-93)** — D+1 자동 대조·Outbox 보관·멱등 기록 정리(그리고 결제 재확인 워커·감사 WORM 내보내기의 마지막 성공)를 공통 도구 `common/scheduling/periodic-job.ts` 로 옮겼다: 때는 `scheduled_job_run` 의 마지막 성공으로(재시작해도 이어진다), 실패하면 남기지 않고, 모든 Pod 가 `scheduled_job_last_success_seconds{task}`·`scheduled_job_interval_seconds{task}`·`scheduled_job_suspended{task}` 를 낸다. 경보 `ScheduledJobStale`(주기의 두 배, Peak Mode 억제 중 제외, `expiry-rules.yaml`). 새 주기 작업을 만들면 이 도구를 쓴다 시험 `audit-worm.integration.test` 5개 통과·skip 0
 - **경보 규칙 시험(2026-10-05, D-93)** — `npm run check:alert-rules`(CI contracts 잡): promtool check·test, 경보 12개 모두의 울릴 때·조용할 때([observability README](../deploy/platform/observability/README.md#규칙-검사경보-단위-시험)). 수집 경보 두 개의 결함(성공 뒤에도 울림·한 번도 성공 못 하면 안 울림)을 고쳤다
 - **남은 것** — 운영 버킷 IaC. 노션(D-75)
 - **권한 변경 기록(2026-10-05, G-15·D-91)** — 같은 스케줄러가 `access_grant_log` 도 순번으로 이어 `access-grants/<대학>/<날짜>/<순번 12자리>.ndjson` 으로 내보낸다(보관은 감사 WORM 보관과 1095일 중 긴 쪽). 대조 `verifyGrantWorm`. 시험 1개 추가(모두 4개 통과)
@@ -110,3 +110,36 @@ npm run ops:dr-acceptance -- --file=deploy/pilot/<대학>-dr.yaml
 - 설정 자체 검사(Config Linter)·위험도 Diff 는 있었다(D-59). 빠져 있던 것은 **진행 중 원서와의 호환** — 줄인 최대 글자 수·바뀐 형식·새 필수 항목이 이미 쓴 원서를 깨는지
 - **`modules/config/config-compat.ts`** — 적용 직전 이 주기의 진행 중 원서를 새 양식(런타임과 같은 Ajv)으로 검사. 작성 중은 저장된 값만, 검증 끝·결제 중·결제 완료는 필수까지. 하나라도 깨지면 **적용 거절**, 승인 화면(Diff)에 미리 경고(전형·항목 경로·건수)
 - **시험** — 실제 DB 4개(맞는 설정 통과, 최대 글자 수 축소·형식 변경 감지, 새 필수 항목은 검증 끝 원서만)
+
+## 경보 대응표
+
+대시보드 「K-Admission · 운영 신호 (경보 근거)」(`dashboards/operations-signals.json`)가 같은 지표를 기준선과 함께 보여 준다.
+
+**실제 Prometheus 확인(2026-10-05, 축소 환경)** — 화면 시험 env 로 대학 API 를 띄우고 Prometheus v3.15.0 컨테이너가 그 `/metrics` 를 수집하게 했다: 규칙 36개(기록 14·경보 22) 모두 오류 없이 평가, 운영 신호 대시보드 쿼리 10개 모두 성공. 기동 직후 `ScheduledJobStale` 이 대기(pending)였다가 결제 재확인(30초)·대조·Outbox 보관·멱등 정리(첫 확인 5분)가 실제로 돌아 `scheduled_job_run` 에 남자 모두 풀렸다(경보 지속 30분보다 먼저). 상호 TLS 가 없는 개발 환경이라 `CredentialExpiryUnknown` 은 대기 — 예상대로.
+
+규칙 원본은 [`deploy/platform/observability/expiry-rules.yaml`](../deploy/platform/observability/expiry-rules.yaml)(이름과 달리 모든 경보), 시험은 `tests/alert-rules.test.yaml` — `npm run check:alert-rules` 가 이 표에 모든 경보가 있는지도 본다(경보를 더하면 `node scripts/render-alert-runbook.mjs`). `{namespace}` 등은 경보 이름표. 심각도의 "호출" 은 `page: "true"`. 수치 기준은 설계서 상수·앱 설정을 그대로 쓰고 새로 만들지 않았다(D-93).
+
+| 경보 | 심각도 | 지속 | 안내(먼저 볼 것) |
+|---|---|---|---|
+| `CredentialExpiresIn30Days` | info | 10m | {kind}/{name} 가 30일 안에 끝난다 — 교체 일정을 잡는다 |
+| `CredentialExpiresIn14Days` | warning | 10m | {kind}/{name} 가 14일 안에 끝난다 |
+| `CredentialExpiresIn7Days` | warning | 10m | {kind}/{name} 가 7일 안에 끝난다 — 교체 훈련 절차로 바꾼다 |
+| `CredentialExpiresIn3Days` | critical | 5m | {kind}/{name} 가 3일 안에 끝난다 |
+| `CredentialExpiresIn1Day` | critical·호출 | 1m | {kind}/{name} 가 하루 안에 끝난다 — 지금 바꾼다 |
+| `WorkloadCertificateNotRenewed` | critical·호출 | 5m | {name} 의 워크로드 인증서가 갱신되지 않는다 — Vault PKI·네트워크를 본다 |
+| `DbCredentialNotRotated` | critical·호출 | 2m | {name} 의 DB 동적 계정이 교체되지 않는다 — 곧 DB 연결이 끊긴다 |
+| `CredentialExpiryUnknown` | warning | 30m | 플랫폼 CA 만료 지표가 없다 — 만료 경보가 꺼진 것과 같다 |
+| `AuditWormMismatch` | critical·호출 | 1m | {namespace} {log} 기록이 WORM 조각과 다르다({kind}) — 감사 기록 변조 대응(보안 담당·문서 19) |
+| `AuditWormVerifyStale` | warning | 30m | {namespace} WORM 대조가 주기의 두 배가 넘도록 끝나지 않았다 — 버킷 접근·대학 API 리더를 본다 |
+| `ScheduledJobStale` | warning | 30m | {namespace} 주기 작업 {task} 이 주기의 두 배가 넘도록 끝나지 않았다 — 대학 API 로그의 실패 원인·DB 연결을 본다 |
+| `CentralSyncLagging` | warning | 5m | {namespace} 중앙이 모르는 가장 오래된 이벤트가 기준보다 오래됐다 — 접수는 계속된다. 중앙 연결·Relay·DEAD 이벤트를 본다 |
+| `OutboxDeadEvents` | warning | 5m | {namespace} 재시도를 멈춘 Outbox 이벤트가 있다 — 중앙이 모르는 변경이다. 운영 콘솔 「대조 · 예외」의 「통합 조회 전송을 포기한 알림」과 Relay 로그로 원인을 본다 |
+| `PaymentGatewayCircuitOpen` | critical | 5m | {namespace} 결제사 연결 회로가 열려 결제 확인이 멈췄다 — 결제는 확인 대기로 남고 대조가 넘겨받는다. 결제사 상태·출구를 본다 |
+| `DependencyCircuitOpen` | warning | 10m | {namespace} {dependency} 회로가 열려 있다 — 그 의존성으로 가는 연결·상태를 본다(중앙 회로면 접수는 계속된다, 접수 API 회로면 서류 검사가 멈춘다) |
+| `DocumentScanStalled` | critical | 15m | {namespace} 검사 대기 서류가 있는데 검사가 끝나지 않는다 — 서류 워커 로그(대상 조회·결과 보고)·검사 엔진을 본다 |
+| `ScanEngineUnavailable` | critical | 5m | {namespace} 서류 검사 엔진({engine})에 닿지 못한다 — 올린 서류가 검사 대기로 남는다. 검사 엔진 상태·서명 DB 를 본다 |
+| `ClockOffsetExceeded` | critical | 2m | {namespace} {pod} 의 시계가 DB 와 1초 넘게 어긋나 이 Pod 는 접수를 확정하지 않는다 — 노드 NTP·DB 시계를 본다 |
+| `IssuerKeysUnavailable` | critical | 5m | {namespace} {audience} 토큰을 판단하지 못해 거절하고 있다 — 발급자(로그인 서버) 연결·공개키를 본다 |
+| `IssuerOutageGraceInUse` | warning | 5m | {namespace} {audience} 만료 토큰을 단절 유예로 받고 있다 — 발급자(로그인 서버)에 닿지 않는다 |
+| `AccessGrantSyncStale` | warning | 10m | {namespace} 권한 변경 기록 수집이 주기의 세 배(최소 3시간)가 넘도록 성공하지 못했다 — 관리 이벤트(세부 포함)가 꺼졌거나 수집 클라이언트·DB 연결을 본다 |
+| `AccessGrantSyncFailing` | warning | 5m | {namespace} 권한 변경 기록 수집 Job 이 실패했다 — 종료 코드 1 은 관리 이벤트 꺼짐 또는 해시 체인 끊김 |

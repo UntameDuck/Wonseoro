@@ -13,6 +13,7 @@ import { Db, describeFailure, envBool, secretOrDev } from '@wonseoro/server-kit'
 import { AUDIT_WORM, PEAK_MODE, S3, UNIVERSITY_ID } from '../../config';
 import type { Queryable } from '../../common/db/queryable';
 import { withLeaderLock } from '../../common/scheduling/leader-lock';
+import { markSuspended, recordJobSuccess, registerPeriodicJob, type PeriodicJob } from '../../common/scheduling/periodic-job';
 import { PEAK_MODE_POLICY, PeakModePolicy, shouldSuspendNonCriticalJobs } from '../../common/scheduling/peak-mode';
 
 /**
@@ -379,6 +380,8 @@ export class AuditWormScheduler implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger('audit-worm');
   private timer: NodeJS.Timeout | null = null;
   private store: S3WormStore | null = null;
+  /** 내보내기가 멈추면 그 뒤 기록은 변조 보호 밖이다 — 끝낼 때마다 마지막 성공을 남겨 ScheduledJobStale 이 본다 (D-93) */
+  private readonly exportJob: PeriodicJob = { name: 'audit-worm-export', university: UNIVERSITY_ID, intervalMs: AUDIT_WORM.intervalMs };
 
   constructor(
     private readonly db: Db,
@@ -389,6 +392,7 @@ export class AuditWormScheduler implements OnModuleInit, OnApplicationShutdown {
     if (!AUDIT_WORM.bucket || !AUDIT_WORM.autostart) return;
     this.store = S3WormStore.fromConfig(AUDIT_WORM.bucket);
     if (S3.autoCreateBucket) await this.store.ensureBucket().catch((e: Error) => this.logger.warn(`WORM 버킷 준비 실패: ${e.message}`));
+    registerPeriodicJob(this.exportJob);
     this.timer = setInterval(() => void this.safeTick(), AUDIT_WORM.intervalMs);
     this.timer.unref();
     if (AUDIT_WORM.verifyIntervalMs > 0) {
@@ -447,7 +451,9 @@ export class AuditWormScheduler implements OnModuleInit, OnApplicationShutdown {
 
   async tick(): Promise<number | null> {
     const store = this.store;
-    if (!store || shouldSuspendNonCriticalJobs(this.peakMode)) return null;
+    const suspended = shouldSuspendNonCriticalJobs(this.peakMode);
+    markSuspended(this.exportJob, suspended);
+    if (!store || suspended) return null;
     return withLeaderLock(this.db, AuditWormScheduler.LOCK, async () => {
       let total = 0;
       for (let i = 0; i < 20; i++) {
@@ -462,6 +468,7 @@ export class AuditWormScheduler implements OnModuleInit, OnApplicationShutdown {
         total += r.exported;
         if (r.exported < AUDIT_WORM.batch) break;
       }
+      await recordJobSuccess(this.db, this.exportJob, { exported: total });
       return total;
     });
   }

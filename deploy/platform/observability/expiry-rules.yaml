@@ -152,6 +152,16 @@ serverFiles:
             labels: { severity: warning }
             annotations:
               summary: "{{ $labels.namespace }} {{ $labels.dependency }} 회로가 열려 있다 — 그 의존성으로 가는 연결·상태를 본다(중앙 회로면 접수는 계속된다, 접수 API 회로면 서류 검사가 멈춘다)"
+          # 검사 대기 서류가 있는데 15분 동안 검사가 하나도 끝나지 않았다 — 엔진은 살아 있어도 대상 조회·보고가 막힌 경우까지
+          - alert: DocumentScanStalled
+            expr: |
+              (max by (namespace) (document_scan_pending) > 0)
+              unless on (namespace)
+              (sum by (namespace) (increase(document_scans_total[15m])) > 0)
+            for: 15m
+            labels: { severity: critical }
+            annotations:
+              summary: "{{ $labels.namespace }} 검사 대기 서류가 있는데 검사가 끝나지 않는다 — 서류 워커 로그(대상 조회·결과 보고)·검사 엔진을 본다"
           # 서류 검사 엔진(clamd)에 닿지 못하면 서류가 검사 대기로 남아 지원자가 다음 단계로 못 간다
           - alert: ScanEngineUnavailable
             expr: max by (namespace, engine) (scan_engine_unavailable) == 1

@@ -1,8 +1,9 @@
 import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { Db, describeFailure } from '@wonseoro/server-kit';
 import { withLeaderLock } from '../../common/scheduling/leader-lock';
+import { markSuspended, recordJobSuccess, registerPeriodicJob, type PeriodicJob } from '../../common/scheduling/periodic-job';
 import { DependencyBreakers } from '../../common/resilience/dependency-breakers';
-import { PAYMENT_RECHECK } from '../../config';
+import { PAYMENT_RECHECK, UNIVERSITY_ID } from '../../config';
 import { PaymentService } from './payment.service';
 
 export interface RecheckResult {
@@ -30,6 +31,9 @@ export interface RecheckResult {
  *   사람에게 넘긴다. 끝없이 묻는 것은 해결이 아니다.
  *
  * **CONFIRMED가 되면 자동 Finalize listener가 접수한다.** 결제 의도 생성이 제출 의사 표시다. (D-42)
+ *
+ * 주기마다 예외가 나도 로그뿐이었다 — 리더가 한 주기를 끝낼 때마다 마지막 성공을 남겨 경보 ScheduledJobStale 이 본다.
+ * 결제 회로가 열린 동안은 쉬는 것으로 표시한다(그쪽은 PaymentGatewayCircuitOpen 이 본다). (D-93)
  */
 @Injectable()
 export class PaymentRecheckWorker implements OnModuleInit, OnApplicationShutdown {
@@ -37,6 +41,7 @@ export class PaymentRecheckWorker implements OnModuleInit, OnApplicationShutdown
   private readonly logger = new Logger('payment-recheck');
   private timer: NodeJS.Timeout | null = null;
   private running = false;
+  private readonly job: PeriodicJob = { name: 'payment-recheck', university: UNIVERSITY_ID, intervalMs: PAYMENT_RECHECK.intervalMs };
 
   constructor(
     private readonly db: Db,
@@ -46,6 +51,7 @@ export class PaymentRecheckWorker implements OnModuleInit, OnApplicationShutdown
 
   onModuleInit(): void {
     if (!PAYMENT_RECHECK.autostart) return;
+    registerPeriodicJob(this.job);
     this.timer = setInterval(() => void this.safeTick(), PAYMENT_RECHECK.intervalMs);
     this.timer.unref();
   }
@@ -70,13 +76,16 @@ export class PaymentRecheckWorker implements OnModuleInit, OnApplicationShutdown
     if (this.running) return empty('LOCKED');
     // 회로가 열려 있으면 묻지 않는다. 물어도 "모른다" 만 쌓인다.
     // 반열림이면 이 주기가 탐침이 된다 — 지원자 요청이 탐침을 떠안지 않는다.
-    if (!this.breakers.paymentGateway.allowsRequest()) return empty('CIRCUIT_OPEN');
+    const circuitOpen = !this.breakers.paymentGateway.allowsRequest();
+    markSuspended(this.job, circuitOpen);
+    if (circuitOpen) return empty('CIRCUIT_OPEN');
 
     this.running = true;
     try {
       const result = await withLeaderLock(this.db, PaymentRecheckWorker.LOCK, () =>
         this.run(opts.batchSize ?? PAYMENT_RECHECK.batchSize, opts.maxAgeHours ?? PAYMENT_RECHECK.maxAgeHours),
       );
+      if (result) await recordJobSuccess(this.db, this.job, { checked: result.checked, confirmed: result.confirmed });
       return result ?? empty('LOCKED');
     } finally {
       this.running = false;
