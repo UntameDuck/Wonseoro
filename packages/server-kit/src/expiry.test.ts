@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { describe, it } from 'node:test';
+import { parse } from 'yaml';
 import { knownExpiries, recordExpiry, watchCertificateExpiry } from './expiry';
 
 const ROOT = path.resolve(__dirname, '../../..');
@@ -44,11 +45,20 @@ describe('인증서·자격증명 만료 지표 (T-M5-65)', () => {
 
   it('경보 규칙 — 30/14/7/3/1일 날짜 경보와 갱신 멈춤 경보가 같은 지표를 본다', () => {
     const text = readFileSync(path.join(ROOT, 'deploy/platform/observability/expiry-rules.yaml'), 'utf8');
-    const horizons = [...text.matchAll(/horizon: (\w+)/g)].map((m) => m[1]);
+    const document = parse(text) as {
+      serverFiles?: {
+        'alerting_rules.yml'?: {
+          groups?: Array<{ rules?: Array<{ alert?: string; expr?: string; labels?: { horizon?: string } }> }>;
+        };
+      };
+    };
+    const rules = (document.serverFiles?.['alerting_rules.yml']?.groups ?? [])
+      .flatMap((group) => group.rules ?? [])
+      .filter((rule) => rule.alert && String(rule.expr).includes('credential_expiry_timestamp_seconds'));
+    const horizons = rules.flatMap((rule) => (rule.labels?.horizon ? [rule.labels.horizon] : []));
     assert.deepEqual(horizons, ['30d', '14d', '7d', '3d', '1d']);
-    const rules = [...text.matchAll(/- alert: (\w+)\n\s+expr: (.+)/g)].map((m) => ({ alert: m[1] as string, expr: m[2] as string }));
     assert.equal(rules.length, 8);
-    for (const r of rules) assert.match(r.expr, /credential_expiry_timestamp_seconds/, r.alert);
+    for (const rule of rules) assert.match(String(rule.expr), /credential_expiry_timestamp_seconds/, rule.alert);
     assert.ok(rules.some((r) => r.alert === 'WorkloadCertificateNotRenewed') && rules.some((r) => r.alert === 'DbCredentialNotRotated'));
   });
 });

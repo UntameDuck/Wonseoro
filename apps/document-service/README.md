@@ -3,7 +3,7 @@
 담당: 송리안 · 근거: 기술설계서 v1.0 §5.4, v1.1 §B5, **ADR-0004**
 
 > **검사 워커가 동작한다.** 엔진은 `SCANNER_ENGINE` 으로 고른다 — `clamav`(clamd INSTREAM, D-58) 또는 개발용 `mock`.
-> ClamAV 어댑터는 같은 프로토콜의 가짜 clamd 로 시험했다. **실 clamd·서명 DB 로 돌린 확인은 아직 없다** (T-M5-08).
+> 단위 시험의 가짜 clamd뿐 아니라 **실 clamd 1.4·공식 서명 DB**로 EICAR·압축 안 EICAR·크기 한도·Zip/PDF 폭탄·PDF 능동 콘텐츠·정상 PDF까지 10개를 확인했다(T-M5-08, D-73, `npm run test:security:clamd`).
 
 ## 역할 분담 (ADR-0004)
 
@@ -47,9 +47,7 @@ admission-api  : CLEAN 이면 AVAILABLE, 아니면 REJECTED
 
 설정은 `.env.example` 참조.
 
-## 남은 것 (T-M5-08)
+## 운영 환경에서 정할 것
 
-- 실 clamd·서명 DB 로 확인 (`clamav/clamav` 이미지)
 - clamd 배치 — 같은 Pod 사이드카 또는 대학 공용 서비스. 서명 DB 갱신 경로(freshclam 출구)
 - 검사 지연 시 정책 — 마감 직전에 검사가 밀리면 어떻게 할지는 **업무규정**이 정한다
-- Zip Bomb·매크로 문서 판정 확인 (허용 목록이 형식 자체를 이미 막는다)

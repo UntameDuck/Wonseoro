@@ -36,6 +36,8 @@ CI는 `.github/workflows/security.yml`의 5개 matrix 잡에서 각 이미지를
 
 2026-10-05 재검사에서 프레임워크가 고정한 `fastify 5.11.3`과 `postcss 8.4.31`에 새 공개 취약점이 확인됐다. 루트 `overrides`로 각각 `5.12.5`, `8.5.28`을 고정했고 `npm run check:security:deps` 결과 운영 의존성은 Critical·High·Moderate·Low 모두 0이다. 보정 뒤 대학 API 447개(444 통과·3 skip), 중앙 42개, 중계 7개, 서류 12개, 보안 선별 250개(skip 0), 두 웹 운영 빌드·린트·전체 형 검사가 통과했다. 이어 Next 15.5.27·AWS SDK 3.1146.0·`pg` 8.23.1 등 패치 갱신과 Event Relay 시험 의존성 `ajv`·`ajv-formats` 명시 뒤에도 대학 API 447개(444 통과·3 skip), 중앙 42개, 중계 7개, 서류 12개, 보안 선별 250개(skip 0), 린트·전체 형 검사·운영 의존성 감사를 다시 통과했다. 개발 의존성에는 2026-10-05 현재 수정판이 없는 `braces 3.0.3`에서 비롯된 감사 항목 5개가 남지만 운영 설치(`--omit=dev`)에는 포함되지 않는다.
 
+같은 잠금파일은 `npm ci --ignore-scripts --dry-run`으로 재현됨을 확인했고, `.github/workflows`의 YAML 5개도 파싱을 통과했다. 설치 스크립트는 이 검사에서 일부러 실행하지 않았으며 실제 CI의 `npm ci`가 최종 확인한다.
+
 D-83 로컬 Object Storage 교체 때 고정한 `rustfs/rustfs:1.0.1@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c`도 Trivy 0.75.0 `vuln` 스캐너(`HIGH,CRITICAL`, 수정판 없는 항목 제외)로 별도 확인했고 High/Critical 0이었다(2026-10-04). 이 이미지는 로컬 개발용이며 운영 서비스 이미지 matrix에는 넣지 않는다.
 
 ## 3. T-M5-25 IaC·Kubernetes 검사

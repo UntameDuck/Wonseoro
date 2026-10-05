@@ -167,13 +167,15 @@ Dashboard 신원 없음 400
 ```
 시험      admission-api 312 (309 통과·3 건너뜀) · central-api 28 · event-relay 7 · server-kit 49 · document-service 8 = 404, 실패 0
           (CI 재현 DB — 빈 DB 에 대학 0001~0012·dev-roles·verify-constraints·seed-dev·ci-seed-deadline)
-검사      check-contracts · check-deps · check-logging · helm lint · runtime 첨부 --check · test:m4:gitops · test:m4:observability 통과
+검사      check-contracts · check:deps(루트 workspaces 9개의 운영·빌드·시험·최상위 설정 파일 직접 의존성, 단위 6개) · check-logging · helm lint · runtime 첨부 --check · test:m4:gitops · test:m4:observability 통과
 화면      축소 환경(로컬 프로세스, CI 재현 DB): 공통원서 저장(깨진 UTF-8 400) → 원서 생성(복사 항목, 토큰 불일치 403)
           → 검증 READY → 결제 의도 201·재요청 200 같은 결제·저장 409 → 새로고침 시 "결제 상태 다시 확인" → 결제 확인 → 자동 접수
           (offset 151ms SYNCED 기록) → 접수 완료·접수증 화면, 취소 원서 화면, 형식 오류 식별자 404
 발견      실제로 띄워 보다 잡은 결함 3건 — 생성자 기본값 DI 로 admission-api 가 기동하지 않음(→ AppModule 조립 시험 추가),
           중앙이 Nest JSON 파서와 충돌해 기동하지 않음, 공통원서·홈 화면의 서버·브라우저 렌더링 불일치
 ```
+
+2026-10-05 현재 HEAD에서 로깅 우회 검사(서비스 4개), 대시보드 4종·기록 규칙 14개 일치, GitOps 대학 3곳과 Peak Mode 단위 9개, runtime 첨부 40,216바이트 드리프트 없음을 다시 확인했다(건너뜀·실패 0).
 
 kind 클러스터에는 아직 이 코드로 만든 이미지를 올리지 않았다 — 다음 kind 작업 때 이미지를 다시 만들고 `infra/db/seed-dev.sql` 을 다시 적용한다(설정에 `title`·`x-profile`·서류 목록이 들어간다).
 

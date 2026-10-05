@@ -18,7 +18,7 @@
   - 짧게 쓰는 것은 정상일 때도 하루 안에 끝난다 → 날짜 대신 **갱신 멈춤** 경보. 워크로드 인증서는 남은 시간 8시간 아래(24시간짜리를 16시간째에 다시 받으므로 두 번 연속 실패), DB 계정은 10분 아래(1시간짜리를 40분째에 바꾸므로 교체 멈춤 — 끝나면 Vault 가 세션을 끊는다)
   - CA 만료 지표가 사라지면 경보(경보가 꺼진 것과 같다)
 - **교체 훈련(rotation drill)** — `npm run test:security:vault` 가 인증서 재발급(서버·클라이언트 무중단)·DB 계정 교체(40초 동안 3번, 실패 0)·Transit 키 돌리기·rewrap 을 실제로 한다. 필드 KEK 교체는 admission-api `field-cipher.integration.test`
-- **시험** — server-kit 단위 3개(인증서 파일 만료·갱신 뒤 새 시각, 임대 끝 알리기·지우기, 규칙 5단계·갱신 멈춤이 같은 지표), Vault 실증에 "실제 대학 API 가 세 종류 만료 지표를 낸다" 1개(**24개**)
+- **시험** — server-kit 단위 3개(인증서 파일 만료·갱신 뒤 새 시각, 임대 끝 알리기·지우기, 규칙 5단계·갱신 멈춤이 같은 지표), Vault 실증에 "실제 대학 API 가 세 종류 만료 지표를 낸다" 1개(**24개**). 규칙 파일에 다른 경보가 늘어도 깨지지 않도록 YAML 구조에서 `credential_expiry_timestamp_seconds`를 실제로 참조하는 8개만 골라 검사한다(2026-10-05 재검증)
 
 ### T-M3-03 ✅ (2026-10-03) — 감사 기록 WORM 물리 분리 (D-75)
 
@@ -32,14 +32,14 @@
 - **정기 대조(2026-10-05)** — 대학 API 리더가 하루마다(`AUDIT_WORM_VERIFY_INTERVAL_MS`, 0 이면 끔) 감사 기록·권한 변경 기록의 조각 전부를 DB 와 맞춰 지표 `audit_worm_verify_mismatches{log,kind}`·`audit_worm_verify_last_success_seconds` 를 낸다. 경보 `AuditWormMismatch`(즉시·호출)·`AuditWormVerifyStale`(이틀). 지운·고친 ID 는 API 로그에만. 화면 시험 DB 로 스케줄러 경로를 한 번 돌려 내보내기 679줄·불일치 0 을 확인했다(그때 만든 로컬 버킷 `audit-worm-verify-once-*` 의 권한 변경 기록 조각은 3년 잠긴다 — 로컬 RustFS 에 남는다). 조각이 많아지면 하루 대조가 무거워진다 — 운영 규모에서 주기·범위를 다시 정한다
 - **정기 대조가 재시작에 묶이지 않게(2026-10-05, D-93)** — 주기를 프로세스 타이머로만 세어 하루 안에 다시 뜨는 Pod 들만 있으면 대조가 돌지 않았고, 재시작하면 마지막 성공·불일치 수를 잃어 두 경보가 꺼졌다. 이제 마지막 대조 시각·불일치 수를 대학 DB `scheduled_job_run`(마이그레이션 **0012**)에 남기고, Pod 마다 10분마다 읽어 지표를 맞춘 뒤 주기가 지났으면 리더 하나가 대조한다. 앞날 시각은 믿지 않고, 프로세스가 주기만큼 대조하지 못했으면 DB 와 상관없이 대조한다(슈퍼유저가 줄을 고쳐 미뤄도). 대조를 켰는데 한 번도 끝난 적이 없으면 마지막 성공을 0 으로 낸다. 멈춤 경보는 주기 지표 `audit_worm_verify_interval_seconds` 의 두 배를 본다(주기를 사흘로 늘려도 거짓 경보가 없다).
 - **다른 주기 작업도(2026-10-05, D-93)** — D+1 자동 대조·Outbox 보관·멱등 기록 정리(그리고 결제 재확인 워커·감사 WORM 내보내기의 마지막 성공)를 공통 도구 `common/scheduling/periodic-job.ts` 로 옮겼다: 때는 `scheduled_job_run` 의 마지막 성공으로(재시작해도 이어진다), 실패하면 남기지 않고, 모든 Pod 가 `scheduled_job_last_success_seconds{task}`·`scheduled_job_interval_seconds{task}`·`scheduled_job_suspended{task}` 를 낸다. 경보 `ScheduledJobStale`(주기의 두 배, Peak Mode 억제 중 제외, `expiry-rules.yaml`). 새 주기 작업을 만들면 이 도구를 쓴다 시험 `audit-worm.integration.test` 5개 통과·skip 0
-- **경보 규칙 시험(2026-10-05, D-93)** — `npm run check:alert-rules`(CI contracts 잡): promtool check·test, 경보 12개 모두의 울릴 때·조용할 때([observability README](../deploy/platform/observability/README.md#규칙-검사경보-단위-시험)). 수집 경보 두 개의 결함(성공 뒤에도 울림·한 번도 성공 못 하면 안 울림)을 고쳤다
+- **경보 규칙 시험(2026-10-05, D-93)** — `npm run check:alert-rules`(CI contracts 잡): promtool check·test, 경보 **33개** 모두의 울릴 때·조용할 때([observability README](../deploy/platform/observability/README.md#규칙-검사경보-단위-시험)), 기록 규칙 14개, 경보 대응표 일치까지 검사한다. 수집 경보 두 개의 결함(성공 뒤에도 울림·한 번도 성공 못 하면 안 울림)을 고쳤다
 - **남은 것** — 운영 버킷 IaC. 노션(D-75)
 - **권한 변경 기록(2026-10-05, G-15·D-91)** — 같은 스케줄러가 `access_grant_log` 도 순번으로 이어 `access-grants/<대학>/<날짜>/<순번 12자리>.ndjson` 으로 내보낸다(보관은 감사 WORM 보관과 1095일 중 긴 쪽). 대조 `verifyGrantWorm`. 시험 1개 추가(모두 4개 통과)
 
 ### 권한 부여·변경·말소 기록 수집 (2026-10-05, G-15·D-91)
 
 - **작업** — 차트 `accessGrantSync` CronJob(1시간마다, `dist/tools/access-grant-sync.js`): 로그인 서버 관리 이벤트를 옮기고 실제 권한과 대조, 해시 체인 검증. 관리 이벤트가 꺼져 있거나 체인이 끊기면 종료 코드 1
-- **경보** — `expiry-rules.yaml` 의 `AccessGrantSyncStale`(마지막 성공 3시간 넘음)·`AccessGrantSyncFailing`(Job 실패). kube-state-metrics 지표라 로컬 축소 스택(kube-state-metrics 끔)에서는 울리지 않는다. YAML 파싱만 확인했고 promtool 문법 검사는 못 했다(로컬에 Prometheus 이미지 없음)
+- **경보** — `expiry-rules.yaml` 의 `AccessGrantSyncStale`(마지막 성공 3시간 넘음)·`AccessGrantSyncFailing`(Job 실패). kube-state-metrics 지표라 로컬 축소 스택(kube-state-metrics 끔)에서는 실제 발생까지 재현하지 않았지만, promtool 문법·울릴 때·조용할 때 단위 시험은 통과했다
 
 ### T-M5-63 ✅ (2026-10-03) — Writer fencing·승격 잠금 (D-76)
 

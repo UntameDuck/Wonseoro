@@ -23,7 +23,7 @@ jobs:
       - run: npm run typecheck -w @wonseoro/contracts
       - run: npm run typecheck -w @wonseoro/server-kit
       # 운영 이미지는 서비스별 의존성만 설치한다 — 선언이 빠지면 거기서 처음 깨진다 (T-M4-01)
-      - run: node scripts/check-deps.mjs
+      - run: npm run check:deps
       # 새 마이그레이션이 로컬·CI·보안·화면 준비 경로 중 일부에서 빠지지 않았는지
       - run: npm run check:migrations
       # 노션 첨부 교체 대기표의 바이트·SHA-256이 현재 저장소 파일과 같은지

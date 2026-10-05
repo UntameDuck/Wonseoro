@@ -324,13 +324,13 @@ dev-folder/
 
 | 단계 | 진행 | 내용 |
 | --- | --- | --- |
-| M0 기반 | 7/8 | 모노레포, 계약, ADR, 로컬 인프라 |
+| M0 기반 | 7/8 | 모노레포, 계약, ADR, 로컬 인프라. 제출문서 정정만 사람 작업으로 남음 |
 | M1 접수 Core | **14/14** | 원서 생성·자동저장·추가문항·서류·감사 hash-chain |
 | M2 결제·Finalize·화면 | **24/24** | 결제 재검증, Finalize 트랜잭션, KRDS 6단계 화면, Dashboard |
-| M3 운영 안전장치 | **13/15 · 종료** (🟡 2) | 마감 정책 엔진, 설정 거버넌스, 4-way 대조, 증적 재구성, 의존성 차단, 서명된 적용 기록, 보존기간 매트릭스, 목적별 가명 참조, 관리자 콘솔. 결제 자동 정합화(PG 콜백·재확인·대조 스케줄), 감사 기록 삭제 차단(앱 최소권한 DB 역할), **결제 = 접수**(결제 확인 시 자동 접수), 한 전형 한 모집단위 |
-| M4 분산 실증 | 20/28 · 진행 중 | Helm·kind·Flux signed Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표·예약 Peak Mode(서명 커밋 → Flux Pull)·전 서비스 계측(지표·Trace·trace_id 로그)·로그 마스킹 강제·업무 KPI 대시보드(Golden Signals·업무 KPI 7종·Support 고정 5종)·학교 NAT 뒤 정상 사용자 보호(지원자 단위 Adaptive Throttling)·Redis 장애 무영향·**중앙 2시간 실제 단절 중 접수 지속·event loss 0**·**PG 확정 1~30분 지연 자동 접수** 완료. 노드 장애 흡수 정책 결정(ADR-0008). 노드 장애 재측정(Edge 재시도는 K-PaaS 판정)·K-PaaS 시험 대기 |
-| M5 신뢰성·보안·접근성 | 7/42 · 진행 | OIDC·MFA, 실 PG, 실 AV, WORM 감사, **화면 제품화**(개발 흔적 걷어내기) |
-| M6 Pilot 준비 | 0/15 | 대학 1곳 Shadow Test |
+| M3 운영 안전장치 | **15/15 · 종료** | 마감 정책 엔진, 설정 거버넌스, 4-way 대조, 증적 재구성, 의존성 차단, 서명된 적용 기록, 보존기간 매트릭스, 목적별 가명 참조, 관리자 콘솔, WORM 감사, JWKS 단절 유예 |
+| M4 분산 실증 | **21/28 · 진행 중** | Helm·kind·Flux signed Pull·대학 간 격리·동시 Finalize·PgBouncer·Object Storage 장애·HPA 커스텀 지표·예약 Peak Mode·전 서비스 계측·로그 마스킹·KPI 대시보드·Adaptive Throttling·Redis 장애 무영향·**중앙 2시간 실제 단절 중 접수 지속·event loss 0**·**PG 확정 1~30분 지연 자동 접수**·Outbox 보관 완료. 실제 Edge·K-PaaS 시험 대기 |
+| M5 신뢰성·보안·접근성 | **37/42 · 진행 중** | OIDC·MFA, 보안 통제·파이프라인, 실 clamd, WORM, 운영 자동화, 접근성 자동 시험, **화면 제품화** 완료. 실물 Firefox·Safari 확인 등 사람·외부 작업 대기 |
+| M6 Pilot 준비 | **7/15** | 실행 패키지·판정 도구 준비 완료, 실제 대학 Shadow Test·승인 대기 |
 
 ### 검증된 것
 
@@ -338,15 +338,15 @@ dev-folder/
 - **설정만 바꿔 새 전형을 받는다.** 프론트엔드 코드 변경 없이 새 전형의 추가문항·항목 이름·공통원서 항목·제출 서류와 전형료가 화면에 반영됩니다. 적용하면 깨질 양식은 설정 초안 단계에서 거절됩니다(Config Linter).
 - **결제를 두 번 할 수 없다.** 한 원서에 결제창은 하나만 열리고, 결제를 시작한 원서는 고칠 수 없으며, 새로고침해도 진행 중인 결제를 이어 확인합니다. 콜백이 유실된 결제도 PG 정산 대조가 찾아 접수까지 잇습니다.
 - **단독 운영자 1명으로 마감시간을 바꿀 수 없다.** 작성자 자기승인 차단, 2인 승인, 과거 시각 예약 차단이 코드와 DB 제약 양쪽에서 막힙니다.
-- **재시도해도 접수는 한 건이다.** DB 제약 12종이 실제로 막는 것을 행동으로 검증합니다.
+- **재시도해도 접수는 한 건이다.** DB 제약 25종이 실제로 막는 것을 행동으로 검증합니다.
 - **배포 설정이 규칙을 우회하지 못한다.** 설계서의 배포 첨부(runtime)는 손으로 쓰지 않고 차트에서 만들어 CI 가 어긋남을 막습니다. Helm 차트는 운영 배포에서 서명된 이미지 digest가 없거나, 비밀을 차트가 만들거나, 서류 검사 엔진이 흉내이거나, DB 커넥션 예산을 넘으면 렌더링 단계에서 거절합니다. 마감·설정 버전은 배포 값이 아니라 2인 승인 기록으로만 바뀝니다.
 - **같은 학교 학생들이 한 IP 로 몰려도 막히지 않는다.** 요청 한도는 IP 가 아니라 로그인한 지원자 기준이고, 남의 원서를 훑는 봇만 위험 신호로 막습니다. 최종제출은 정상 사용자에게 한도를 걸지 않습니다(로컬 축소 환경: 같은 IP 뒤 정상 200명 + 봇 5개에서 정상 사용자 차단 0).
 - **마감일 운영자가 볼 지표가 설계서 그대로 나온다.** 업무 KPI 7종과 Support 고정 5종(Finalize 성공률·결제 확인 지연·Outbox 적체·DB 잠금 대기·오류율)을 앱이 내고 Grafana 대시보드로 보여 줍니다. 성공률은 업무 검증 거절을 빼고 계산합니다(로컬 축소 환경 검증).
 - **마감 전 사전 확장이 사람 손 없이 일어난다.** 대학별 예약에 따라 자동화가 서명 커밋으로 desired state를 바꾸고, 각 대학 클러스터의 Flux가 서명을 검증해 Pull합니다. 중앙은 대학 클러스터 권한을 갖지 않습니다(로컬 축소 환경 검증).
 
-### 아직 없는 것
+### 운영·외부 환경에서 남은 것
 
-인증(`AUTH_MODE=dev-headers`), 실 PG 연동, 실 clamd 로 돌린 안티바이러스 확인(ClamAV 어댑터는 구현), WORM 감사 저장소 물리 분리, 실제 K-PaaS·Registry 배포와 이미지 서명 admission, K-PaaS 부하·장애 시험 실측치. **흉내 구현은 운영 모드에서 선택되면 프로세스가 기동하지 않습니다.** 흉내·미연결 전수 점검 결과는 [docs/04-production-readiness.md §7](docs/04-production-readiness.md#7-흉내미연결-전수-점검-2026-09-30).
+실 PG 계약·Sandbox 실증, 실제 K-PaaS·Edge에서의 부하·장애·DR 실측, 운영 인증서·비밀·관측 스택 적용, 실물 Firefox·Safari 접근성 확인, 대학 Pilot·기관 승인·법무 확정이 남았습니다. OIDC·관리자 MFA, 실 clamd, WORM Object Lock, 이미지 서명·미서명 admission 거부는 로컬/CI 재현 환경에서 구현·검증을 끝냈습니다. **흉내 구현은 운영 모드에서 선택되면 프로세스가 기동하지 않습니다.** 최신 구분과 실행 순서는 [docs/03-next-steps.md](docs/03-next-steps.md), 흉내·미연결 전수 점검은 [docs/04-production-readiness.md §7](docs/04-production-readiness.md#7-흉내미연결-전수-점검-2026-09-30)에 있습니다.
 
 이어받는 사람·AI는 [docs/HANDOFF.md](docs/HANDOFF.md)부터 읽습니다. 자세한 현황과 다음 착수 순서는 [docs/03-next-steps.md](docs/03-next-steps.md), 운영 준비 점검 내역은 [docs/04-production-readiness.md](docs/04-production-readiness.md)를 참조하십시오.
 
@@ -366,7 +366,7 @@ dev-folder/
 
 - [다음 단계 및 현재 진행 현황](docs/03-next-steps.md)
 - [운영 준비 점검 — 하드코딩·기본값·인가](docs/04-production-readiness.md)
-- [설계 불일치 대장](docs/02-spec-discrepancy-register.md) — 설계서와 구현이 어긋난 53건의 판정 기록
+- [설계 불일치 대장](docs/02-spec-discrepancy-register.md) — 설계서와 구현이 어긋난 D-1~D-93 판정 기록
 - [문서 인덱스](docs/README.md)
 - [K-Admission 기술설계서](https://efficient-rook-e79.notion.site/K-Admission-K-PaaS-3de75ab5debe801f99c5fee017130c65)
 - [Wonseoro GitHub Repository](https://github.com/UntameDuck/Wonseoro)
