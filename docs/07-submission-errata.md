@@ -5,7 +5,9 @@
 
 제출처가 별도 정오표를 받는 경우 바로 쓸 A4 1쪽 PDF를 [output/pdf/wonseoro-submission-errata.pdf](../output/pdf/wonseoro-submission-errata.pdf)로 준비했다(2026-10-04). 원본 개발보고서를 고친 파일은 아니며, 제출·접수 확인 전에는 T-M0-08을 완료 처리하지 않는다.
 
-재생성 소스는 `scripts/docs/render-submission-errata.py`다. Windows 맑은 고딕과 번들 Python의 ReportLab으로 생성하고 Poppler 150dpi PNG 렌더링으로 표·한글·줄바꿈을 확인했다. 최종 파일은 A4 1쪽, JavaScript 없음, 암호화 없음이다.
+재생성 소스는 `scripts/docs/render-submission-errata.py`다. Windows 맑은 고딕, Linux Noto Sans CJK·나눔고딕, macOS 나눔고딕·Apple SD Gothic Neo 순으로 설치된 한글 글꼴 쌍을 찾는다. 다른 글꼴을 쓰려면 `WONSEORO_PDF_FONT_REGULAR`와 `WONSEORO_PDF_FONT_BOLD`를 함께 지정한다. 선택 결과는 `python scripts/docs/render-submission-errata.py --print-fonts`, 생성은 같은 명령에서 `--print-fonts`를 빼서 확인한다.
+
+2026-10-06 번들 Python의 ReportLab으로 다시 생성했다. 글꼴 탐색 단위시험 5개가 통과했고(skip 0·실패 0), Poppler 150dpi PNG에서 표·한글·줄바꿈·여백을 육안 확인했다. 최종 파일은 A4 1쪽(595.28×841.89pt), 추출 본문 794자·181단어이며 JavaScript·암호화가 없다.
 
 ## 정오표
 

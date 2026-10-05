@@ -11,9 +11,10 @@ import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { mkdirSync, openSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveDastOutput } from './dast-paths.mjs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
-const OUT = path.resolve(process.argv.find((a) => a.startsWith('--out='))?.split('=')[1] ?? path.join(ROOT, '.cache/dast/reports-auth'));
+const OUT = resolveDastOutput(process.argv.slice(2), ROOT);
 const ZAP = 'ghcr.io/zaproxy/zaproxy@sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef';
 const PG = 'dast-pg';
 const API_PORT = 3121;

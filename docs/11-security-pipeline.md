@@ -19,8 +19,8 @@
 
 ## 2. T-M5-24 이미지 검사
 
-Trivy 0.75.0으로 운영 런타임 이미지의 OS와 라이브러리를 함께 검사한다. 로컬 도구·DB 캐시는
-`E:\DockerData\tools\trivy-0.75.0`·`E:\DockerData\tools\trivy-cache`에 두어 C 드라이브를 쓰지 않는다.
+Trivy 0.75.0으로 운영 런타임 이미지의 OS와 라이브러리를 함께 검사한다. 2026-10-02 로컬 실증 때 사용한 도구·DB 캐시는
+`E:\DockerData\tools\trivy-0.75.0`·`E:\DockerData\tools\trivy-cache`에 있었다. 이는 당시 증적 위치이며 새 환경의 실행 경로가 아니다.
 
 | 이미지 | 빌드 파일 | 로컬 Critical |
 |---|---|---:|

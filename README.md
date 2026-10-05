@@ -19,7 +19,7 @@
 
 <p align="center">
   <img alt="Status" src="https://img.shields.io/badge/Status-Working_MVP-2563EB?style=flat-square" />
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-287_passing-16A34A?style=flat-square" />
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-CI_gated-16A34A?style=flat-square" />
   <img alt="K-PaaS" src="https://img.shields.io/badge/Platform-K--PaaS-0F766E?style=flat-square" />
   <img alt="Kubernetes" src="https://img.shields.io/badge/Runtime-Kubernetes-326CE5?style=flat-square&amp;logo=kubernetes&amp;logoColor=white" />
   <img alt="KRDS" src="https://img.shields.io/badge/UI-KRDS-4F46E5?style=flat-square" />
@@ -311,7 +311,7 @@ dev-folder/
 
 ## Project Status
 
-> 기준일 2026-10-01 · 전체 146개 태스크 중 **85개 완료** · **M3 종료 · M4 진행** · 테스트 **423개** (실패 0)
+> 기준일 2026-10-06 · 전체 **146개 태스크 중 125개 완료, 21개 남음** · AI 로컬 작업 완료 · 핵심 회귀 **609 통과·3 정상 skip·0 실패**
 
 지원자가 화면에서 공통원서를 쓰고 원서를 만들어 서류를 올리고 결제한 뒤 **접수번호·접수증을 받는 전 과정이 동작합니다.**
 

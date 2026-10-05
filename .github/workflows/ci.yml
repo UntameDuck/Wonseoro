@@ -26,12 +26,16 @@ jobs:
       - run: npm run check:deps
       # 새 마이그레이션이 로컬·CI·보안·화면 준비 경로 중 일부에서 빠지지 않았는지
       - run: npm run check:migrations
+      # 로컬 DAST 보고서 기본값·재정의가 특정 PC 경로에 묶이지 않는지
+      - run: npm run test:security:dast-config
       # 노션 첨부 교체 대기표의 바이트·SHA-256이 현재 저장소 파일과 같은지
       - run: npm run check:notion-assets
       # 설계 불일치 대장에서 만든 문서 05의 노션 반영 목록이 최신인지
       - run: npm run check:notion-changeset
       # Markdown 상대 링크가 실제 저장소 파일을 가리키는지
       - run: npm run check:docs-links
+      # 루트·문서 색인·다음 단계의 전체/완료/잔여 태스크 수가 같은지
+      - run: npm run check:docs-status
       # 접근성·화면 캡처 도구의 운영체제별 브라우저 경로 선택
       - run: npm run test:a11y:browser-config
       # Actions YAML 구조와 npm script 참조가 실제 package.json과 맞는지

@@ -63,7 +63,7 @@
 | Keycloak 이미지 | 내려받음 — `quay.io/keycloak/keycloak:26.8.0@sha256:b0f60d489d51c5d113390bdf5461d4c06e6051be026c05549f2e1e10ec352bcc`, 약 750MB, Docker 저장소(C 드라이브 아님) |
 | 기동 확인 | 임시 렐름으로 기동 **79초**(kind 클러스터 2개가 떠 있는 상태), 메모리 **약 614MiB** / VM 7.5GB. discovery·JWKS(RS256)·토큰 발급·역할 클레임(`realm_access.roles`)·ACR 클레임 확인. 확인 뒤 컨테이너는 지웠다 |
 | 포트 | 18080 — 저장소 어디에서도 쓰지 않는다 |
-| 라이브러리 | `jose` 6.2.12(의존성 없음) — 단계 2에서 `server-kit` 에 더한다. **C 드라이브가 3.1GB 남았다** → 설치는 `npm install --cache E:\DockerData\npm-cache` 로 |
+| 라이브러리 | `jose` 6.2.12(의존성 없음) — 단계 2에서 `server-kit` 에 추가 완료. 의존성을 다시 설치할 때는 저장소 로컬 캐시 `npm install --cache .cache/npm`을 쓴다(HANDOFF §3) |
 | 메모리 주의 | kind 클러스터 2개 + Keycloak + 로컬 서버 셋을 함께 띄우면 VM 7.5GB 에 빠듯하다(HANDOFF §3). 단계 7·8 은 kind 를 하나씩 |
 
 ## 5. AI 가 못 하는 것 (B·C 로 남는다)

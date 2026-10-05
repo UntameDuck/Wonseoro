@@ -1,11 +1,14 @@
 # 인수인계 — 다음 작업자(사람·AI 공통)가 먼저 읽는 문서
 
-> 작성: 2026-09-29 · **최종 갱신 2026-10-05 (4)** · 원격 반영 여부는 `git status --branch`와 `git log origin/main..HEAD`로 확인한다 — 원격 CI 결과는 GitHub Actions 에서 확인한다
+> 작성: 2026-09-29 · **최종 갱신 2026-10-06 (1)** · 원격 반영 여부는 `git status --branch`와 `git log origin/main..HEAD`로 확인한다 — 원격 CI 결과는 GitHub Actions 에서 확인한다
 >
 > **2026-10-05 (4) Codex 진행 기록.** 이 PC에 실제 Python이 없어도 노션 변경 목록을 갱신할 수 있게 `npm run docs:notion-changeset`을 만들고, 단위 시험 4개·문서 05 드리프트 검사 `npm run check:notion-changeset`을 CI contracts 잡에 넣었다. `scripts/notion-changeset.py`는 Node 단일 원본을 부르는 호환 실행기다. Node 검사 4 통과·skip 0·실패 0, Python 호환 실행과 의존성 검사 6 통과·skip 0·실패 0. Markdown 상대 경로·GitHub식 제목 앵커도 `npm run check:docs-links`의 단위 시험 6개와 저장소 문서 61개 검사로 CI에서 고정했다. 처음 실행에서 찾은 접근성 문서의 옛 M5 앵커 1개를 고친 뒤 skip 0·실패 0이다.
-> **같은 세션 — 로컬 경로 이식성.** `scripts/security/dast-local.mjs`가 인자 없이 특정 `E:` 드라이브에 쓰던 기본값을 저장소의 무시 경로 `.cache/dast/reports-auth/`로 옮기고, `--out=<폴더>`는 유지했다. GitOps 로컬 실행 예시와 Peak Mode 스크립트 주석도 특정 드라이브 대신 접근 제한된 `$env:TEMP` 작업 폴더를 쓰게 했다. DAST 기본 경로 확인 1개·Node 문법, 마이그레이션 단위 3개 및 대학 12/중앙 5 실행 경로, 문서 링크 단위 6개·Markdown 61개 통과(skip 0·실패 0). 전체 ZAP active scan은 코드 동작이 아니라 출력 경로만 바꿔 이 단위에서는 다시 돌리지 않았다.
-> **같은 세션 — 워크플로 정적 검사.** `npm run check:workflows`가 Actions YAML 중복 키·필수 잡 구조·버전 없는 `uses`·루트와 정확한 `-w` 워크스페이스에 없는 `npm run` 호출·없는 로컬 Node 실행 파일을 CI contracts 잡에서 막는다. 단위 6개와 실제 워크플로 5개·잡 17개·단계 151개 통과(skip 0·실패 0).
+> **같은 세션 — 로컬 경로 이식성.** `scripts/security/dast-local.mjs`가 인자 없이 특정 `E:` 드라이브에 쓰던 기본값을 저장소의 무시 경로 `.cache/dast/reports-auth/`로 옮기고, `--out=<폴더>`는 유지했다. GitOps 로컬 실행 예시와 Peak Mode 스크립트 주석도 특정 드라이브 대신 접근 제한된 `$env:TEMP` 작업 폴더를 쓰게 했다. DAST 경로 단위 4개(기본·상대·절대·빈 값 거절)·Node 문법, 마이그레이션 단위 3개 및 대학 12/중앙 5 실행 경로, 문서 링크 단위 6개·Markdown 61개 통과(skip 0·실패 0). DAST 경로 시험은 CI contracts 잡에 포함했다. 전체 ZAP active scan은 코드 동작이 아니라 출력 경로만 바꿔 이 단위에서는 다시 돌리지 않았다.
+> **같은 세션 — 워크플로 정적 검사.** `npm run check:workflows`가 Actions YAML 중복 키·필수 잡 구조·버전 없는 `uses`·재사용 잡의 버전/로컬 파일·루트와 정확한 `-w` 워크스페이스에 없는 `npm run` 호출·없는 로컬 Node/`node --test`/셸 실행 파일·`working-directory`·로컬 action을 CI contracts 잡에서 막는다. 루트·워크스페이스 package script의 소스 실행 파일과 소스 glob 기준 폴더도 대조하고, `dist` 등 빌드 생성물만 명시적으로 제외한다. 단위 9개, 실제 워크플로 5개·잡 17개·단계 153개, package script 소스 실행 파일/경로 76개 통과·생성물 9개 제외(skip 0·실패 0).
 > **같은 세션 — 브라우저 경로 이식성.** 접근성 시험과 화면 캡처가 각각 박아 두던 Windows Chrome/Edge 경로를 `tests/a11y/helpers/browser.mjs`의 Windows·macOS·Linux 설치 위치·PATH/PATHEXT 공용 탐색으로 합쳤다. 기존 `CHROME` 재정의와 `--browser=edge`는 유지한다. 탐색 단위 6개·현재 PC Chrome 선택/실행 확인 통과(skip 0·실패 0). 화면 코드는 바뀌지 않아 전 화면 접근성 순회·`check:ui-copy`는 이 단위에서 다시 돌리지 않았다.
+> **같은 세션 — 제출 정오표 생성 이식성.** `scripts/docs/render-submission-errata.py`의 Windows 맑은 고딕 고정 경로를 Windows·Linux·macOS 한글 글꼴 후보와 환경변수 재정의로 바꿨다. 글꼴 선택 단위시험 5개 통과(skip 0·실패 0), 번들 Python으로 PDF 재생성, pypdf·pdfplumber로 A4 1쪽·본문 필수 문구·JavaScript 없음·암호화 없음 확인, Poppler 150dpi 렌더링 육안 확인을 마쳤다. 제출·접수는 여전히 사람 몫이라 T-M0-08 상태는 바꾸지 않았다.
+> **같은 세션 — 공개 진행 상태 정합성.** 루트 README에 남은 옛 85/146·423개 시험·287 passing 표기를 실제 125/146·핵심 회귀 609 통과/3 정상 skip으로 고쳤다. 변동할 시험 수는 배지에 고정하지 않고 CI 게이트로 표시한다. `npm run check:docs-status`가 루트 README·문서 색인·03의 전체/완료/잔여 합과 상호 일치, 두 README의 M0~M6 표 합계·단계별 또는 묶음별 대응을 검사하며 CI contracts 잡에 포함된다. 단위시험 7개와 실제 상태 문서 3개·마일스톤 표 2개 통과(skip 0·실패 0).
+> **같은 세션 — 로컬 환경 안내 정리.** 인증 문서에 현재 지침처럼 남아 있던 C: 3.1GB·`E:\DockerData\npm-cache` 문구를 완료 상태와 저장소 로컬 `.cache/npm` 정책으로 바꿨다. 보안 문서의 Trivy `E:` 경로도 2026-10-02 실증 증적 위치일 뿐 새 환경 지침이 아님을 명시했다. 문서 링크 단위 6개·Markdown 61개 통과(skip 0·실패 0).
 >
 > ## 세션 마감 상태(2026-10-05 (3) Codex → 다음 에이전트)
 >
