@@ -169,6 +169,8 @@ B11 대응에 더한다:
 > 같은 원서·종류의 처리 중 요청은 하나(부분 유니크), 회신은 처리 중 → 결과 한 번(트리거), 내용·받은 시각·기한 변경과 삭제는 거절, 앱은 결과 칸만 UPDATE(저장소 마이그레이션 `0009_privacy_request.sql`, D-84).
 > 권한 부여·변경·말소 기록 `access_grant_log(seq, source, source_event_id, occurred_at, action, change_kind, subject, roles, actor, details, recorded_at, prev_hash, row_hash)` —
 > 추가만(트리거), (source, source_event_id) 유일, **순번·기록 시각·SHA-256 해시 체인은 DB 트리거가 매긴다**, 검증 함수 `access_grant_log_verify()`, 앱은 넣고 읽기만(저장소 마이그레이션 `0011_access_grant_log.sql`, D-91).
+> 주기 작업 마지막 성공 `scheduled_job_run(job, last_success_at, result)` — 작업마다 한 줄(감사 WORM 정기 대조의 마지막 시각·불일치 개수), 앱은 덮어쓰기만·지우기 없음.
+> 재시작해도 대조 주기와 경보 지표가 이어지게 하는 값이며, 앞날 시각은 믿지 않는다(저장소 마이그레이션 `0012_scheduled_job_run.sql`, D-93).
 > 장애 공지 원장 `service_incident` 는 대학 Data Plane에 둔다(저장소 마이그레이션 `0007_service_incident.sql`, D-78). 상태는 `ACTIVE`에서 `RESOLVED`로만 바뀌고 제목·안내·수준·시각·발행자는 수정하지 못한다. 앱 역할에는 조회·추가·해제용 UPDATE만 주며 DELETE·TRUNCATE 권한은 주지 않는다.
 
 v1.0 §8.3 「고위험 필드 별도 암호화」 에 한 줄 더한다:

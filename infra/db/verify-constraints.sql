@@ -357,8 +357,9 @@ BEGIN
               -- 비상 접속 기록(0004) — 앱은 읽지도 쓰지도 않는다
               THEN has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'SELECT')
                    OR has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'INSERT')
-              WHEN t.tablename = 'service_incident'
+              WHEN t.tablename IN ('service_incident', 'scheduled_job_run')
               -- 장애 공지(0007) — 앱은 발행·해제(UPDATE)만. 삭제·비우기는 원장 규칙상 없다
+              -- 주기 작업 마지막 성공(0012) — 앱은 덮어쓰기만, 지우지 않는다
               THEN NOT (has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'SELECT')
                     AND has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'INSERT')
                     AND has_table_privilege('kadmission_app', format('%I.%I', t.schemaname, t.tablename), 'UPDATE'))

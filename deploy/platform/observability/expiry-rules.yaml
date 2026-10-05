@@ -75,26 +75,55 @@ serverFiles:
             labels: { severity: critical, page: "true" }
             annotations:
               summary: "{{ $labels.namespace }} {{ $labels.log }} 기록이 WORM 조각과 다르다({{ $labels.kind }}) — 감사 기록 변조 대응(보안 담당·문서 19)"
+          # 주기(AUDIT_WORM_VERIFY_INTERVAL_MS, 최대 7일)의 두 배를 넘으면. 주기 지표가 없는 옛 앱이면 이틀
           - alert: AuditWormVerifyStale
-            expr: time() - max by (namespace) (audit_worm_verify_last_success_seconds) > 2 * 86400
+            expr: |
+              (
+                (time() - max by (namespace) (audit_worm_verify_last_success_seconds))
+                  > on (namespace) (2 * max by (namespace) (audit_worm_verify_interval_seconds))
+              )
+              or
+              (
+                (time() - max by (namespace) (audit_worm_verify_last_success_seconds) > 2 * 86400)
+                  unless on (namespace) audit_worm_verify_interval_seconds
+              )
             for: 30m
             labels: { severity: warning }
             annotations:
-              summary: "{{ $labels.namespace }} WORM 대조가 이틀 넘게 끝나지 않았다 — 버킷 접근·대학 API 리더를 본다"
+              summary: "{{ $labels.namespace }} WORM 대조가 주기의 두 배가 넘도록 끝나지 않았다 — 버킷 접근·대학 API 리더를 본다"
 
       # 권한 부여·변경·말소 기록 수집(G-15, D-91 — 차트 accessGrantSync CronJob, 1시간마다).
       # 멈춘 채 로그인 서버의 관리 이벤트 보관기간이 지나면 "누가 바꿨는지" 가 사라진다(대조 기록은 남지만 바꾼 사람 모름).
       # kube-state-metrics 지표다 — 로컬 축소 스택(prometheus-values.yaml)은 kube-state-metrics 를 꺼 두어 여기서는 울리지 않는다
       - name: k-admission-access-grant-sync
         rules:
+          # 한 번도 성공하지 못한 CronJob 은 마지막 성공 시각 지표가 없다 — 만든 지 3시간이 지났는데도 없으면 같이 울린다
           - alert: AccessGrantSyncStale
-            expr: time() - max by (namespace, cronjob) (kube_cronjob_status_last_successful_time{cronjob=~".+-access-grant-sync"}) > 3 * 3600
+            expr: |
+              (time() - max by (namespace, cronjob) (kube_cronjob_status_last_successful_time{cronjob=~".+-access-grant-sync"}) > 3 * 3600)
+              or
+              (
+                (time() - max by (namespace, cronjob) (kube_cronjob_created{cronjob=~".+-access-grant-sync"}) > 3 * 3600)
+                  unless on (namespace, cronjob) kube_cronjob_status_last_successful_time{cronjob=~".+-access-grant-sync"}
+              )
             for: 10m
             labels: { severity: warning }
             annotations:
               summary: "{{ $labels.namespace }} 권한 변경 기록 수집이 3시간 넘게 성공하지 못했다 — 관리 이벤트(세부 포함)가 꺼졌거나 수집 클라이언트·DB 연결을 본다"
+          # 실패한 Job 은 이력(failedJobsHistoryLimit 3)에 남아 kube_job_status_failed 가 계속 1 이다 — 그것만 보면
+          # 한 번 실패한 뒤 다음 시간에 성공해도 실패 Job 이 지워질 때까지(ttlSecondsAfterFinished 1시간) 울린다. "마지막 성공보다 뒤에 만든 Job 이 실패했다" 만 본다
+          # (성공한 적이 아직 없으면 실패 Job 이 있기만 해도). 시험: tests/alert-rules.test.yaml
           - alert: AccessGrantSyncFailing
-            expr: max by (namespace) (kube_job_status_failed{job_name=~".+-access-grant-sync-.+"}) > 0
+            expr: |
+              (
+                max by (namespace) (kube_job_created{job_name=~".+-access-grant-sync-.+"} and on (namespace, job_name) (kube_job_status_failed{job_name=~".+-access-grant-sync-.+"} > 0))
+                  > on (namespace) max by (namespace) (kube_cronjob_status_last_successful_time{cronjob=~".+-access-grant-sync"})
+              )
+              or
+              (
+                max by (namespace) (kube_job_created{job_name=~".+-access-grant-sync-.+"} and on (namespace, job_name) (kube_job_status_failed{job_name=~".+-access-grant-sync-.+"} > 0))
+                  unless on (namespace) kube_cronjob_status_last_successful_time{cronjob=~".+-access-grant-sync"}
+              )
             for: 5m
             labels: { severity: warning }
             annotations:

@@ -1,0 +1,62 @@
+# KPI 기록 규칙 단위 시험 — 비율의 정의(kpi-rules.yaml 머리말)가 식에 그대로인지 값으로 본다
+#   - 성공률 분모에서 업무 검증 거절(rejected)·충돌(conflict)은 뺀다
+#   - Finalize 는 이미 접수된 원서의 재요청(already_finalized)도 성공이다
+#   - 5xx 가 한 건도 없으면 오류율은 "데이터 없음" 이 아니라 0 이다(트래픽은 있으니)
+rule_files:
+  - recording_rules.yml
+
+evaluation_interval: 30s
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'draft_saves_total{namespace="univ-a",outcome="saved"}'
+        values: '0+8x10'
+      - series: 'draft_saves_total{namespace="univ-a",outcome="error"}'
+        values: '0+2x10'
+      - series: 'draft_saves_total{namespace="univ-a",outcome="conflict"}'
+        values: '0+50x10'
+      - series: 'draft_saves_total{namespace="univ-a",outcome="rejected"}'
+        values: '0+50x10'
+      - series: 'finalizations_total{namespace="univ-a",outcome="finalized",trigger="applicant"}'
+        values: '0+6x10'
+      - series: 'finalizations_total{namespace="univ-a",outcome="already_finalized",trigger="applicant"}'
+        values: '0+1x10'
+      - series: 'finalizations_total{namespace="univ-a",outcome="error",trigger="payment_confirmed"}'
+        values: '0+1x10'
+      - series: 'finalizations_total{namespace="univ-a",outcome="rejected",trigger="applicant"}'
+        values: '0+8x10'
+      - series: 'http_requests_total{namespace="univ-a",pod="api-1",http_response_status_code="200"}'
+        values: '0+60x10'
+      - series: 'http_requests_total{namespace="univ-b",pod="api-1",http_response_status_code="200"}'
+        values: '0+30x10'
+      - series: 'http_requests_total{namespace="univ-b",pod="api-1",http_response_status_code="503"}'
+        values: '0+10x10'
+    promql_expr_test:
+      - expr: kadmission:draft_save_success_rate:5m
+        eval_time: 10m
+        exp_samples:
+          - labels: 'kadmission:draft_save_success_rate:5m{namespace="univ-a"}'
+            value: 0.8
+      - expr: kadmission:finalize_success_rate:5m
+        eval_time: 10m
+        exp_samples:
+          - labels: 'kadmission:finalize_success_rate:5m{namespace="univ-a"}'
+            value: 0.875
+      - expr: kadmission:finalize_retry_rate:5m
+        eval_time: 10m
+        exp_samples:
+          - labels: 'kadmission:finalize_retry_rate:5m{namespace="univ-a"}'
+            value: 0.0625
+      - expr: kadmission:finalize_tps:5m
+        eval_time: 10m
+        exp_samples:
+          - labels: 'kadmission:finalize_tps:5m{namespace="univ-a"}'
+            value: 0.1
+      - expr: kadmission:http_error_rate:5m
+        eval_time: 10m
+        exp_samples:
+          - labels: 'kadmission:http_error_rate:5m{namespace="univ-a"}'
+            value: 0
+          - labels: 'kadmission:http_error_rate:5m{namespace="univ-b"}'
+            value: 0.25

@@ -5,7 +5,17 @@ import { DeleteObjectCommand, HeadObjectCommand, PutObjectRetentionCommand, S3Cl
 import { Db } from '@wonseoro/server-kit';
 import { breakGlass } from '../../test-support/break-glass';
 import { Client } from 'pg';
-import { S3WormStore, exportAuditSegment, exportGrantSegment, verifyAllWorm, verifyAuditWorm, verifyGrantWorm } from './audit-worm';
+import {
+  S3WormStore,
+  exportAuditSegment,
+  exportGrantSegment,
+  loadWormVerify,
+  verifyAllWorm,
+  verifyAuditWorm,
+  verifyGrantWorm,
+  verifyWormIfDue,
+  wormVerifyJob,
+} from './audit-worm';
 
 /**
  * 감사 기록 WORM — 실제 S3 호환 Object Lock 으로 (T-M3-03, D-75)
@@ -55,6 +65,7 @@ after(async () => {
     await c.query(`DELETE FROM audit_event WHERE application_id = $1`, [applicationId]);
     await c.query(`DELETE FROM application WHERE id = $1`, [applicationId]);
     await c.query(`DELETE FROM applicant WHERE id = $1`, [applicantId]);
+    await c.query(`DELETE FROM scheduled_job_run WHERE job = $1`, [wormVerifyJob(UNIV)]);
   });
   await db.onApplicationShutdown();
 });
@@ -147,5 +158,30 @@ describe('감사 기록 WORM (T-M3-03)', () => {
       await su.query('ROLLBACK');
       await su.end();
     }
+  });
+
+  it('정기 대조는 DB 의 마지막 대조로 때를 정해 재시작해도 이어지고, 앞날 기록·오래 못 돈 프로세스는 기록을 믿지 않는다 (D-93)', async (t) => {
+    if (!available) return t.skip('DB·Object Storage 없음');
+    const hour = 3_600_000;
+    const o = { university: UNIV, intervalMs: hour, processSince: Date.now() };
+    const first = await verifyWormIfDue(db, store, o);
+    assert.ok(first, '기록이 없으면 바로 대조한다');
+    const rec = await loadWormVerify(db, UNIV);
+    assert.ok(rec && Date.now() - rec.at < 60_000, '마지막 대조를 DB 에 남긴다');
+    assert.deepEqual(rec.counts.audit, { missing: first.audit.missingInDb.length, altered: first.audit.alteredInDb.length });
+    assert.deepEqual(rec.counts['access-grants'], { missing: first['access-grants'].missingInDb.length, altered: first['access-grants'].alteredInDb.length });
+    // 막 다시 뜬 프로세스라도 DB 의 마지막 대조가 주기 안이면 하지 않는다(재시작마다 대조하지 않는다)
+    assert.equal(await verifyWormIfDue(db, store, { ...o, processSince: Date.now() }), null);
+    // 주기가 지났으면 한다
+    assert.ok(await verifyWormIfDue(db, store, { ...o, now: Date.now() + 2 * hour }));
+    // 이 프로세스가 주기만큼 대조하지 못했으면 DB 기록과 상관없이 한다(슈퍼유저가 기록을 고쳐 미뤄도)
+    assert.ok(await verifyWormIfDue(db, store, { ...o, processSince: Date.now() - 2 * hour }));
+    // 앞날로 고친 기록은 없는 것으로 본다 — 바로 대조하고 지금 시각으로 덮어쓴다
+    await breakGlass((c) => c.query(`UPDATE scheduled_job_run SET last_success_at = now() + interval '1 day' WHERE job = $1`, [wormVerifyJob(UNIV)]));
+    assert.equal(await loadWormVerify(db, UNIV), null);
+    assert.ok(await verifyWormIfDue(db, store, { ...o, processSince: Date.now() }));
+    const fixed = await loadWormVerify(db, UNIV);
+    // DB 컨테이너와 호스트 시계가 조금 어긋날 수 있다 — 하루 뒤가 아니라 지금으로 덮어썼는지만 본다
+    assert.ok(fixed && Math.abs(fixed.at - Date.now()) < 60_000, JSON.stringify({ fixed, now: Date.now() }));
   });
 });

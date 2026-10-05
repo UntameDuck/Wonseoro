@@ -1,0 +1,190 @@
+# 경보 규칙 단위 시험 — promtool test rules (node scripts/check-alert-rules.mjs 가 규칙 파일을 values 에서 꺼내 같은 폴더에 둔다)
+# 울려야 할 때 울리고(이름표·안내 문구까지), 울리면 안 될 때 조용한지 본다.
+rule_files:
+  - alerting_rules.yml
+
+evaluation_interval: 1m
+
+tests:
+  # ── 날짜 경보 — 남은 날짜에 맞는 단계만, 짧게 쓰는 것은 날짜 경보에서 뺀다 ─────────
+  - interval: 1m
+    input_series:
+      - series: 'credential_expiry_timestamp_seconds{namespace="univ-a",kind="ca-cert",name="platform-ca"}'
+        values: '1728000x30' # 20일 뒤
+      - series: 'credential_expiry_timestamp_seconds{namespace="univ-a",kind="external-cert",name="edge-tls"}'
+        values: '43200x30' # 12시간 뒤
+      - series: 'credential_expiry_timestamp_seconds{namespace="univ-a",kind="workload-cert",name="admission-api"}'
+        values: '72000x30' # 20시간 뒤 — 정상 갱신 주기 안
+      - series: 'credential_expiry_timestamp_seconds{namespace="univ-a",kind="db-credential",name="app"}'
+        values: '2400x30' # 40분 뒤 — 정상 교체 주기 안
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: CredentialExpiresIn30Days
+        exp_alerts:
+          - exp_labels: { severity: info, horizon: 30d, namespace: univ-a, kind: ca-cert, name: platform-ca }
+            exp_annotations: { summary: "ca-cert/platform-ca 가 30일 안에 끝난다 — 교체 일정을 잡는다" }
+          - exp_labels: { severity: info, horizon: 30d, namespace: univ-a, kind: external-cert, name: edge-tls }
+            exp_annotations: { summary: "external-cert/edge-tls 가 30일 안에 끝난다 — 교체 일정을 잡는다" }
+      - eval_time: 15m
+        alertname: CredentialExpiresIn14Days
+        exp_alerts:
+          - exp_labels: { severity: warning, horizon: 14d, namespace: univ-a, kind: external-cert, name: edge-tls }
+            exp_annotations: { summary: "external-cert/edge-tls 가 14일 안에 끝난다" }
+      - eval_time: 15m
+        alertname: CredentialExpiresIn1Day
+        exp_alerts:
+          - exp_labels: { severity: critical, horizon: 1d, page: "true", namespace: univ-a, kind: external-cert, name: edge-tls }
+            exp_annotations: { summary: "external-cert/edge-tls 가 하루 안에 끝난다 — 지금 바꾼다" }
+      - eval_time: 15m
+        alertname: WorkloadCertificateNotRenewed
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: DbCredentialNotRotated
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: CredentialExpiryUnknown
+        exp_alerts: []
+
+  # 2.5일 남은 CA — 7일·3일 단계는 울리고, 하루 단계는 아직
+  - interval: 1m
+    input_series:
+      - series: 'credential_expiry_timestamp_seconds{namespace="univ-b",kind="ca-cert",name="platform-ca"}'
+        values: '216000x30'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: CredentialExpiresIn7Days
+        exp_alerts:
+          - exp_labels: { severity: warning, horizon: 7d, namespace: univ-b, kind: ca-cert, name: platform-ca }
+            exp_annotations: { summary: "ca-cert/platform-ca 가 7일 안에 끝난다 — 교체 훈련 절차로 바꾼다" }
+      - eval_time: 15m
+        alertname: CredentialExpiresIn3Days
+        exp_alerts:
+          - exp_labels: { severity: critical, horizon: 3d, namespace: univ-b, kind: ca-cert, name: platform-ca }
+            exp_annotations: { summary: "ca-cert/platform-ca 가 3일 안에 끝난다" }
+      - eval_time: 15m
+        alertname: CredentialExpiresIn1Day
+        exp_alerts: []
+
+  # ── 갱신 멈춤·CA 지표 없음 ─────────────────────────────────────────────
+  - interval: 1m
+    input_series:
+      - series: 'credential_expiry_timestamp_seconds{namespace="univ-a",kind="workload-cert",name="admission-api"}'
+        values: '25200x40' # 7시간 뒤 — 두 번 연속 못 받았다
+      - series: 'credential_expiry_timestamp_seconds{namespace="univ-a",kind="db-credential",name="app"}'
+        values: '500x40' # 10분 안
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: WorkloadCertificateNotRenewed
+        exp_alerts:
+          - exp_labels: { severity: critical, page: "true", namespace: univ-a, name: admission-api }
+            exp_annotations: { summary: "admission-api 의 워크로드 인증서가 갱신되지 않는다 — Vault PKI·네트워크를 본다" }
+      - eval_time: 6m
+        alertname: DbCredentialNotRotated
+        exp_alerts:
+          - exp_labels: { severity: critical, page: "true", namespace: univ-a, name: app }
+            exp_annotations: { summary: "app 의 DB 동적 계정이 교체되지 않는다 — 곧 DB 연결이 끊긴다" }
+      - eval_time: 6m
+        alertname: CredentialExpiresIn30Days
+        exp_alerts: []
+      - eval_time: 35m
+        alertname: CredentialExpiryUnknown
+        exp_alerts:
+          - exp_labels: { severity: warning, kind: ca-cert }
+            exp_annotations: { summary: "플랫폼 CA 만료 지표가 없다 — 만료 경보가 꺼진 것과 같다" }
+
+  # ── WORM 대조 — 불일치는 바로, 대조 멈춤은 이틀 ──────────────────────────
+  - interval: 1m
+    input_series:
+      - series: 'audit_worm_verify_mismatches{namespace="univ-a",log="access-grants",kind="altered"}'
+        values: '0 0 3x3000'
+      - series: 'audit_worm_verify_mismatches{namespace="univ-b",log="audit",kind="missing"}'
+        values: '0x3000'
+      - series: 'audit_worm_verify_last_success_seconds{namespace="univ-a"}'
+        values: '0x3000' # 시각 0 에 한 번 끝나고 멈췄다
+      - series: 'audit_worm_verify_last_success_seconds{namespace="univ-b"}'
+        values: '100000+60x3000' # 계속 끝난다
+      # 주기 지표가 있으면 "주기의 두 배" — 1시간 주기(univ-d)는 2시간 남짓에, 3일 주기(univ-c)는 이틀이 지나도 조용
+      - series: 'audit_worm_verify_last_success_seconds{namespace="univ-c"}'
+        values: '0x3000'
+      - series: 'audit_worm_verify_interval_seconds{namespace="univ-c",pod="api-1"}'
+        values: '259200x3000'
+      - series: 'audit_worm_verify_last_success_seconds{namespace="univ-d"}'
+        values: '0x3000'
+      - series: 'audit_worm_verify_interval_seconds{namespace="univ-d",pod="api-1"}'
+        values: '3600x3000'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: AuditWormMismatch
+        exp_alerts:
+          - exp_labels: { severity: critical, page: "true", namespace: univ-a, log: access-grants, kind: altered }
+            exp_annotations: { summary: "univ-a access-grants 기록이 WORM 조각과 다르다(altered) — 감사 기록 변조 대응(보안 담당·문서 19)" }
+      - eval_time: 2h
+        alertname: AuditWormVerifyStale
+        exp_alerts: []
+      - eval_time: 3h
+        alertname: AuditWormVerifyStale
+        exp_alerts:
+          - exp_labels: { severity: warning, namespace: univ-d }
+            exp_annotations: { summary: "univ-d WORM 대조가 주기의 두 배가 넘도록 끝나지 않았다 — 버킷 접근·대학 API 리더를 본다" }
+      # 주기 지표가 없는 옛 앱(univ-a)은 이틀
+      - eval_time: 47h
+        alertname: AuditWormVerifyStale
+        exp_alerts:
+          - exp_labels: { severity: warning, namespace: univ-d }
+            exp_annotations: { summary: "univ-d WORM 대조가 주기의 두 배가 넘도록 끝나지 않았다 — 버킷 접근·대학 API 리더를 본다" }
+      - eval_time: 49h
+        alertname: AuditWormVerifyStale
+        exp_alerts:
+          - exp_labels: { severity: warning, namespace: univ-a }
+            exp_annotations: { summary: "univ-a WORM 대조가 주기의 두 배가 넘도록 끝나지 않았다 — 버킷 접근·대학 API 리더를 본다" }
+          - exp_labels: { severity: warning, namespace: univ-d }
+            exp_annotations: { summary: "univ-d WORM 대조가 주기의 두 배가 넘도록 끝나지 않았다 — 버킷 접근·대학 API 리더를 본다" }
+
+  # ── 권한 변경 기록 수집 — 실패 이력이 남아도 그 뒤에 성공했으면 조용하다 ────────────
+  # univ-a: 마지막 성공(0초) 뒤에 만든 Job(60초)이 실패 → 울림
+  # univ-b: 실패 Job(60초) 뒤에 성공(120초) — 실패 Job 은 이력에 남아 있다 → 조용
+  # univ-c: 한 번도 성공 못 함, 실패 Job 있음 → 울림. 만든 지 3시간 넘으면 멈춤 경보도
+  - interval: 1m
+    input_series:
+      - series: 'kube_cronjob_status_last_successful_time{namespace="univ-a",cronjob="ka-access-grant-sync"}'
+        values: '0x300'
+      - series: 'kube_job_created{namespace="univ-a",job_name="ka-access-grant-sync-29001"}'
+        values: '60x300'
+      - series: 'kube_job_status_failed{namespace="univ-a",job_name="ka-access-grant-sync-29001",reason="BackoffLimitExceeded"}'
+        values: '1x300'
+      - series: 'kube_cronjob_status_last_successful_time{namespace="univ-b",cronjob="kb-access-grant-sync"}'
+        values: '120x300'
+      - series: 'kube_job_created{namespace="univ-b",job_name="kb-access-grant-sync-29001"}'
+        values: '60x300'
+      - series: 'kube_job_status_failed{namespace="univ-b",job_name="kb-access-grant-sync-29001",reason="BackoffLimitExceeded"}'
+        values: '1x300'
+      - series: 'kube_job_created{namespace="univ-b",job_name="kb-access-grant-sync-29002"}'
+        values: '120x300'
+      - series: 'kube_job_status_failed{namespace="univ-b",job_name="kb-access-grant-sync-29002"}'
+        values: '0x300'
+      - series: 'kube_cronjob_created{namespace="univ-c",cronjob="kc-access-grant-sync"}'
+        values: '0x300'
+      - series: 'kube_job_created{namespace="univ-c",job_name="kc-access-grant-sync-29001"}'
+        values: '60x300'
+      - series: 'kube_job_status_failed{namespace="univ-c",job_name="kc-access-grant-sync-29001",reason="BackoffLimitExceeded"}'
+        values: '1x300'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: AccessGrantSyncFailing
+        exp_alerts:
+          - exp_labels: { severity: warning, namespace: univ-a }
+            exp_annotations: { summary: "univ-a 권한 변경 기록 수집 Job 이 실패했다 — 종료 코드 1 은 관리 이벤트 꺼짐 또는 해시 체인 끊김" }
+          - exp_labels: { severity: warning, namespace: univ-c }
+            exp_annotations: { summary: "univ-c 권한 변경 기록 수집 Job 이 실패했다 — 종료 코드 1 은 관리 이벤트 꺼짐 또는 해시 체인 끊김" }
+      - eval_time: 10m
+        alertname: AccessGrantSyncStale
+        exp_alerts: []
+      - eval_time: 200m
+        alertname: AccessGrantSyncStale
+        exp_alerts:
+          - exp_labels: { severity: warning, namespace: univ-a, cronjob: ka-access-grant-sync }
+            exp_annotations: { summary: "univ-a 권한 변경 기록 수집이 3시간 넘게 성공하지 못했다 — 관리 이벤트(세부 포함)가 꺼졌거나 수집 클라이언트·DB 연결을 본다" }
+          - exp_labels: { severity: warning, namespace: univ-b, cronjob: kb-access-grant-sync }
+            exp_annotations: { summary: "univ-b 권한 변경 기록 수집이 3시간 넘게 성공하지 못했다 — 관리 이벤트(세부 포함)가 꺼졌거나 수집 클라이언트·DB 연결을 본다" }
+          - exp_labels: { severity: warning, namespace: univ-c, cronjob: kc-access-grant-sync }
+            exp_annotations: { summary: "univ-c 권한 변경 기록 수집이 3시간 넘게 성공하지 못했다 — 관리 이벤트(세부 포함)가 꺼졌거나 수집 클라이언트·DB 연결을 본다" }

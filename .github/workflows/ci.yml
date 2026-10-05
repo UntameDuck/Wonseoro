@@ -28,6 +28,8 @@ jobs:
       - run: node scripts/check-logging.mjs
       # 대시보드가 쓰는 KPI 규칙이 정의돼 있고 설계서 지표가 빠짐없는지 (T-M4-21~23)
       - run: npm run test:m4:observability
+      # 경보·기록 규칙 promtool 검사와 경보 단위 시험(울릴 때·조용할 때) — promtool 이 없으면 digest 고정 Prometheus 이미지로 돈다
+      - run: npm run check:alert-rules
       # GitOps가 서명 검증·namespace 한정 권한·대학별 values를 우회하지 않는지 확인한다 (T-M4-05)
       - run: npm run test:m4:gitops
       # 외부 실증·사건 판정 게이트(Pilot·부하·HA·PG·Edge·DR·수동 접근성·유출 통지)가 빈 양식을 통과시키지 않는지 (D-90~D-92)
@@ -101,6 +103,7 @@ jobs:
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0010_fee_refund_request.sql
       # 권한 부여·변경·말소 기록(G-15, D-91)
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0011_access_grant_log.sql
+      - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/migrations/0012_scheduled_job_run.sql
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/dev-roles.sql
       # 제약이 실제로 막는지 먼저 확인한다
       - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/verify-constraints.sql

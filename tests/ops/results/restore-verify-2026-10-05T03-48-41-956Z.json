@@ -1,0 +1,59 @@
+{
+  "test": "복구 검증 — 덤프·복구·행 수·체크섬·업무 불변식 (T-M5-62)",
+  "environment": "축소 환경 — 로컬 DB",
+  "at": "2026-10-05T03:48:41.956Z",
+  "passed": true,
+  "steps": [
+    {
+      "ok": true,
+      "what": "원본 스냅숏 — 표 32개",
+      "detail": {
+        "snapshot": "00000003-0000073E-1"
+      }
+    },
+    {
+      "ok": true,
+      "what": "덤프를 새 DB 에 복구",
+      "detail": {
+        "dumpBytes": 357286,
+        "seconds": 3.7
+      }
+    },
+    {
+      "ok": true,
+      "what": "표 32개 행 수·체크섬이 원본과 같다(행 1587)"
+    },
+    {
+      "ok": true,
+      "what": "자기 시험 — 복구본 한 행을 바꾸면 체크섬이 달라진다(access_grant_log.seq)"
+    },
+    {
+      "ok": true,
+      "what": "불변식: 접수는 원서마다 하나"
+    },
+    {
+      "ok": true,
+      "what": "불변식: 접수된 원서는 모두 FINALIZED"
+    },
+    {
+      "ok": true,
+      "what": "불변식: FINALIZED 원서는 모두 접수 기록이 있다"
+    },
+    {
+      "ok": true,
+      "what": "불변식: 접수된 원서는 확정 결제가 있다"
+    },
+    {
+      "ok": true,
+      "what": "불변식: Outbox 순번은 원서마다 유일"
+    },
+    {
+      "ok": true,
+      "what": "불변식: 감사 체인 — 앞 해시가 같은 원서의 기록을 가리킨다"
+    },
+    {
+      "ok": true,
+      "what": "DB 제약 검사(verify-constraints) — PASS 25"
+    }
+  ]
+}

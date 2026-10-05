@@ -249,12 +249,19 @@ export async function verifyGrantWorm(db: Queryable, store: WormStore, universit
 /* ── 정기 대조 — WORM 조각과 DB 가 다르면(지워졌거나 고쳐졌으면) 지표로 알린다 ──────────────
  * 경보 규칙: deploy/platform/observability/expiry-rules.yaml 의 AuditWormMismatch·AuditWormVerifyStale.
  * 지운 줄·고친 줄의 ID 는 로그에만(지표 이름표에 싣지 않는다 — 수가 끝없이 늘 수 있다).
+ *
+ * 마지막 대조 시각·불일치 수는 DB(scheduled_job_run, 0012)에도 남긴다(D-93). 프로세스 안에만 두면
+ *   - 주기 타이머가 재시작마다 처음부터 다시 세어, 하루 안에 다시 뜨는 Pod 들만 있으면 대조가 한 번도 돌지 않고
+ *   - 재시작한 Pod 는 마지막 성공 지표가 없어(경보 식이 비어) 대조가 멈춰도 AuditWormVerifyStale 이 울리지 않으며
+ *   - 불일치를 찾은 뒤 재시작하면 불일치 수가 0 으로 돌아가 AuditWormMismatch 가 조용히 꺼진다.
+ * DB 기록은 "언제 돌릴지" 와 재시작 뒤 지표의 바닥값으로만 쓴다 — 슈퍼유저가 이 행을 고쳐 대조를 미뤄도, 프로세스는 자기가 뜬 뒤
+ * 주기만큼 대조하지 못했으면 DB 와 상관없이 대조한다(예전과 같은 보장). 앞날 시각은 믿지 않는다.
  */
-const verifyState: Record<'audit' | 'access-grants', { missing: number; altered: number }> = {
-  audit: { missing: 0, altered: 0 },
-  'access-grants': { missing: 0, altered: 0 },
-};
+type VerifyCounts = Record<'audit' | 'access-grants', { missing: number; altered: number }>;
+const zeroCounts = (): VerifyCounts => ({ audit: { missing: 0, altered: 0 }, 'access-grants': { missing: 0, altered: 0 } });
+let verifyState: VerifyCounts = zeroCounts();
 let lastVerifiedAt = 0;
+let verifyEnabled = false;
 const meter = metrics.getMeter('k-admission.audit');
 meter
   .createObservableGauge('audit_worm_verify_mismatches', { description: 'WORM 조각과 다른 DB 기록 수 — 지워짐(missing)·고쳐짐(altered) (D-75·D-91)' })
@@ -265,14 +272,104 @@ meter
     }
   });
 meter
-  .createObservableGauge('audit_worm_verify_last_success_seconds', { description: '마지막으로 WORM 대조를 끝낸 시각(유닉스 초)' })
+  .createObservableGauge('audit_worm_verify_last_success_seconds', {
+    description: '마지막으로 WORM 대조를 끝낸 시각(유닉스 초) — 대조를 켰는데 한 번도 끝난 적이 없으면 0',
+  })
   .addCallback((r) => {
-    if (lastVerifiedAt) r.observe(lastVerifiedAt / 1000);
+    if (verifyEnabled || lastVerifiedAt) r.observe(lastVerifiedAt / 1000);
+  });
+// 경보(AuditWormVerifyStale)가 "주기의 두 배" 를 보게 — 주기는 설정으로 최대 7일까지 바뀐다(이틀 고정이면 사흘 주기에서 매번 울린다)
+meter
+  .createObservableGauge('audit_worm_verify_interval_seconds', { description: 'WORM 정기 대조 주기(초) — 대조를 켠 Pod 만' })
+  .addCallback((r) => {
+    if (verifyEnabled) r.observe(AUDIT_WORM.verifyIntervalMs / 1000);
   });
 
 /** 감사 기록·권한 변경 기록의 WORM 조각 전부를 DB 와 맞춘다 */
 export async function verifyAllWorm(db: Queryable, store: WormStore, university: string): Promise<Record<'audit' | 'access-grants', WormVerifyResult>> {
   return { audit: await verifyAuditWorm(db, store, university), 'access-grants': await verifyGrantWorm(db, store, university) };
+}
+
+export const wormVerifyJob = (university: string): string => `audit-worm-verify:${university}`;
+
+/** 시계가 어긋난 Pod 를 감안해 이만큼까지의 앞날은 받아 준다 */
+const FUTURE_SKEW_MS = 60_000;
+/** "대조할 때가 됐나" 를 보는 주기 — 한 줄 읽기라 싸다 */
+const VERIFY_CHECK_MS = 10 * 60_000;
+
+export interface WormVerifyRecord {
+  at: number;
+  counts: VerifyCounts;
+}
+
+/** DB 에 남긴 마지막 대조 — 없거나 앞날이면 null */
+export async function loadWormVerify(db: Queryable, university: string, now = Date.now()): Promise<WormVerifyRecord | null> {
+  const { rows } = await db.query<{ at: Date; result: Partial<VerifyCounts> }>(
+    `SELECT last_success_at AS at, result FROM scheduled_job_run WHERE job = $1`,
+    [wormVerifyJob(university)],
+  );
+  const row = rows[0];
+  if (!row || row.at.getTime() > now + FUTURE_SKEW_MS) return null;
+  const counts = zeroCounts();
+  for (const log of ['audit', 'access-grants'] as const) {
+    counts[log] = { missing: Number(row.result?.[log]?.missing ?? 0), altered: Number(row.result?.[log]?.altered ?? 0) };
+  }
+  return { at: row.at.getTime(), counts };
+}
+
+async function recordWormVerify(db: Db, university: string, counts: VerifyCounts): Promise<void> {
+  await db.tx((c) =>
+    c.query(
+      `INSERT INTO scheduled_job_run (job, last_success_at, result) VALUES ($1, now(), $2)
+       ON CONFLICT (job) DO UPDATE SET last_success_at = EXCLUDED.last_success_at, result = EXCLUDED.result`,
+      [wormVerifyJob(university), JSON.stringify(counts)],
+    ),
+  );
+}
+
+/** 지표를 DB 기록과 맞춘다 — 이 프로세스가 더 최근에 대조했으면 그 값을 둔다 */
+function applyVerifyRecord(rec: WormVerifyRecord | null): void {
+  if (rec && rec.at > lastVerifiedAt) {
+    lastVerifiedAt = rec.at;
+    verifyState = rec.counts;
+  }
+}
+
+export interface WormVerifyOptions {
+  university: string;
+  intervalMs: number;
+  /** 이 프로세스가 마지막으로 대조를 끝낸 시각(없으면 뜬 시각) — DB 기록과 상관없이 이만큼 지나면 대조한다 */
+  processSince: number;
+  now?: number;
+  /** 대조는 끝났는데 DB 에 남기지 못했을 때 — 결과는 그대로 돌려준다(이 프로세스의 지표는 이미 바뀌었다) */
+  onRecordError?: (err: Error) => void;
+}
+
+/**
+ * 대조할 때가 됐으면(DB 기록이 없거나·주기가 지났거나·앞날이거나, 이 프로세스가 주기만큼 대조하지 못했으면) 리더 하나가 대조하고 기록한다.
+ * 때가 아니거나 리더가 아니면 null. 잠금을 잡은 뒤 다시 본다 — 다른 Pod 가 막 끝냈으면 하지 않는다.
+ */
+export async function verifyWormIfDue(db: Db, store: WormStore, o: WormVerifyOptions): Promise<Record<'audit' | 'access-grants', WormVerifyResult> | null> {
+  const due = async (): Promise<boolean> => {
+    const now = o.now ?? Date.now();
+    const rec = await loadWormVerify(db, o.university, now);
+    applyVerifyRecord(rec);
+    return !rec || now - rec.at >= o.intervalMs || now - o.processSince >= o.intervalMs;
+  };
+  if (!(await due())) return null;
+  return withLeaderLock(db, `${AuditWormScheduler.LOCK}:verify`, async () => {
+    if (!(await due())) return null;
+    const r = await verifyAllWorm(db, store, o.university);
+    const counts = zeroCounts();
+    for (const log of ['audit', 'access-grants'] as const) {
+      counts[log] = { missing: r[log].missingInDb.length, altered: r[log].alteredInDb.length };
+    }
+    // 지표를 먼저 — 기록이 실패해도(DB 쓰기 거절) 이 프로세스의 결과는 알린다
+    verifyState = counts;
+    lastVerifiedAt = Date.now();
+    await recordWormVerify(db, o.university, counts).catch((err: Error) => o.onRecordError?.(err));
+    return r;
+  });
 }
 
 /** 5분마다·리더 하나 — 다 내보낼 때까지 조각을 잇는다(한 번에 최대 20조각). 권한 변경 기록도 같은 주기에. 대조는 따로(기본 하루) */
@@ -295,7 +392,10 @@ export class AuditWormScheduler implements OnModuleInit, OnApplicationShutdown {
     this.timer = setInterval(() => void this.safeTick(), AUDIT_WORM.intervalMs);
     this.timer.unref();
     if (AUDIT_WORM.verifyIntervalMs > 0) {
-      this.verifyTimer = setInterval(() => void this.safeVerify(), AUDIT_WORM.verifyIntervalMs);
+      // 대조 주기(기본 하루)마다가 아니라 자주 "때가 됐나" 만 본다 — 때는 DB 의 마지막 대조로 정한다(재시작해도 이어진다, D-93)
+      verifyEnabled = true;
+      this.processSince = Date.now();
+      this.verifyTimer = setInterval(() => void this.safeVerify(), Math.min(AUDIT_WORM.verifyIntervalMs, VERIFY_CHECK_MS));
       this.verifyTimer.unref();
     }
   }
@@ -306,6 +406,7 @@ export class AuditWormScheduler implements OnModuleInit, OnApplicationShutdown {
   }
 
   private verifyTimer: NodeJS.Timeout | null = null;
+  private processSince = Date.now();
 
   private async safeVerify(): Promise<void> {
     try {
@@ -315,21 +416,24 @@ export class AuditWormScheduler implements OnModuleInit, OnApplicationShutdown {
     }
   }
 
-  /** 리더 하나가 대조하고 지표를 바꾼다. 다르면 지운·고친 ID 를 로그에 남긴다 */
+  /** 때가 됐으면 리더 하나가 대조하고 지표·DB 기록을 바꾼다. 다르면 지운·고친 ID 를 로그에 남긴다 */
   async verify(): Promise<Record<'audit' | 'access-grants', WormVerifyResult> | null> {
     const store = this.store;
     if (!store || shouldSuspendNonCriticalJobs(this.peakMode)) return null;
-    return withLeaderLock(this.db, `${AuditWormScheduler.LOCK}:verify`, async () => {
-      const r = await verifyAllWorm(this.db, store, UNIVERSITY_ID);
-      for (const log of ['audit', 'access-grants'] as const) {
-        verifyState[log] = { missing: r[log].missingInDb.length, altered: r[log].alteredInDb.length };
-        if (r[log].missingInDb.length || r[log].alteredInDb.length) {
-          this.logger.error(`WORM 대조 불일치(${log}) — 지워짐 ${r[log].missingInDb.slice(0, 20).join(',')} · 고쳐짐 ${r[log].alteredInDb.slice(0, 20).join(',')}`);
-        }
-      }
-      lastVerifiedAt = Date.now();
-      return r;
+    const r = await verifyWormIfDue(this.db, store, {
+      university: UNIVERSITY_ID,
+      intervalMs: AUDIT_WORM.verifyIntervalMs,
+      processSince: this.processSince,
+      onRecordError: (err) => this.logger.warn(`audit worm verify record failed (${describeFailure(err)})`),
     });
+    if (!r) return null;
+    this.processSince = Date.now();
+    for (const log of ['audit', 'access-grants'] as const) {
+      if (r[log].missingInDb.length || r[log].alteredInDb.length) {
+        this.logger.error(`WORM 대조 불일치(${log}) — 지워짐 ${r[log].missingInDb.slice(0, 20).join(',')} · 고쳐짐 ${r[log].alteredInDb.slice(0, 20).join(',')}`);
+      }
+    }
+    return r;
   }
 
   private async safeTick(): Promise<void> {

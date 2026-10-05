@@ -93,3 +93,13 @@ DB 연결 예산 30을 넘지 않도록 `api.autoscaling.maxReplicas=4`로만 �
 ## 만료 경보 (T-M5-65)
 
 `expiry-rules.yaml` — 인증서·자격증명 만료 30/14/7/3/1일 날짜 경보와 짧게 쓰는 것(워크로드 인증서·DB 동적 계정)의 갱신 멈춤 경보. Prometheus 를 올릴 때 `-f kpi-rules.yaml -f expiry-rules.yaml`. 지표는 서비스마다 `credential_expiry_timestamp_seconds{kind,name}`([docs/14](../../../docs/14-operations-automation.md)).
+같은 파일에 WORM 대조(`AuditWormMismatch`·`AuditWormVerifyStale`)와 권한 변경 기록 수집(`AccessGrantSyncStale`·`AccessGrantSyncFailing`) 경보가 있다.
+
+## 규칙 검사·경보 단위 시험
+
+`npm run check:alert-rules`(CI `contracts` 잡) — 두 values 의 `serverFiles` 규칙 파일을 꺼내 `promtool check rules` 와
+`promtool test rules tests/*.test.yaml` 을 돌린다. 두 values 가 같은 `serverFiles` 이름을 쓰면(helm 이 앞 규칙을 덮어쓴다) 실패한다.
+promtool 이 PATH 에 없으면 로컬 축소 환경과 같은 Prometheus v3.15.0 이미지(digest 고정)를 docker 로 쓴다.
+경보를 고치거나 더하면 `tests/alert-rules.test.yaml` 에 울릴 때·조용할 때를 같이 넣는다 — 안내 문구(`summary`)까지 비교한다.
+KPI 비율의 정의(거절·충돌은 분모에서 뺀다, 이미 접수된 재요청은 성공, 5xx 가 없으면 오류율 0)는 `tests/kpi-rules.test.yaml` 이 값으로 본다
+(기대값은 부동소수점이 정확히 나오는 비율로 고른다 — 0.15 같은 값은 끝자리가 달라 실패한다).
