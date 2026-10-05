@@ -899,10 +899,10 @@ const text = await (await fetch((await r.json()).signedUrls[0], {credentials:'om
 | **발견** | 2026-09-30 (미완결 기능 전수 점검) |
 | **충돌** | v1.0 §5.4 · §B5 는 AV 검사를 요구한다. 검사 워커의 유일한 엔진은 파일명 표식으로 판정하는 Mock 이었고(운영 기동은 막혀 있다, R8), 접수 API 는 워커가 보낸 엔진·버전을 버리고 모든 검사 기록에 `mock-av` 를 남겼다 — 실엔진을 붙여도 증적(Evidence Package)은 거짓이 된다. 엔진 장애와 "검사 실패" 를 구분하지 않았다 |
 | **판정** | 엔진을 추상화하고 **ClamAV(clamd INSTREAM)** 어댑터를 둔다(`SCANNER_ENGINE=clamav`). 워커는 저장소 자격증명 없이 접수 API 가 검사 대기 목록에 싣는 **파일 하나·몇 분짜리 서명 URL** 로 읽어 흘려보내고, 흘리는 동안 SHA-256 을 기록과 맞춘다. 엔진·서명 DB 버전을 clamd 에 묻어 기록한다. 엔진에 닿지 못하면 판정하지 않고 검사 대기로 남긴다. 차트: `documentService.clamav.host`·`scannerEgress`(clamav 일 때만 워커 출구) |
-| **남은 것** | 실제 clamd·서명 DB 로 돌린 확인은 없다 — 시험은 같은 프로토콜의 가짜 clamd 다(clamd 이미지·서명 DB 내려받기 필요). clamd 배치(사이드카·공용 서비스)는 K-PaaS 착수 때 정한다 |
+| **남은 것** | 실 clamd·서명 DB 확인은 2026-10-03 완료했다(D-73). clamd 배치(사이드카·공용 서비스)와 서명 DB 미러는 K-PaaS 착수 때 정한다 |
 | **저장소 반영** | ✅ (2026-09-30) `engines.ts`·시험 8개(서류 워커의 첫 시험)·검사 대기 목록 `downloadUrl`·검사 기록 엔진·버전·서명 이름 |
 | **노션 반영** | ⬜ §03 첨부 v1.4.0(`downloadUrl`·`signature`) · §05 서류 워커 구성(clamd) — [06-notion-changeset.md](06-notion-changeset.md) |
-| **상태** | 🟡 어댑터 구현 — 실 clamd 연동 확인 대기(T-M5-08) |
+| **상태** | 🟢 저장소 반영·실 clamd 연동 확인 완료(T-M5-08, 2026-10-03). 실 clamd에서 찾은 스트림 중단·PDF 능동 콘텐츠 결함은 D-73으로 수정 |
 
 ---
 

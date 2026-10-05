@@ -1,6 +1,7 @@
 # 다음 단계 (Next Steps)
 
 > 최종 갱신: **2026-10-05** — Pilot 도구 T-M6-01·06·07, 개인정보·법정 고지 G-1~G-13·**G-15**(권한 부여·변경·말소 기록, D-91)의 AI 구현, G-14 유출 통지·신고 도구·절차서 초안(D-92), **최신 화면 캡처 43장**까지 끝냈다. 남은 사람 태스크의 실행 전 준비도 [18-pilot-execution-package.md](18-pilot-execution-package.md)와 `ops:pilot-readiness` 증적 게이트로 만들었다. **A 목록과 태스크 밖 AI 몫은 모두 끝났다.** 남은 태스크 21개는 실제 외부 환경·사람·기관 승인/실행이 있어야 끝난다. 완료 수는 그대로다.
+> 2026-10-05 (3) 재검증: 대학 API 447(444 통과·3 skip)·중앙 42·서류 12·보안 선별 250·DB 제약 25종·실제 로컬 Keycloak 권한 기록 12개·외부 수용 게이트 단위 34개(skip 0) 모두 통과했다. 외부 실행용 빈 양식 7종도 모두 의도대로 실패했다. 복구 검증은 축소 환경 새 PostgreSQL에서 11개(표 32개·2,568행) 통과했다. 새 `check:migrations`가 대학 12개/중앙 5개 마이그레이션의 실행 경로 누락과 순서를 CI에서 막는다.
 > **2026-10-05 (2)** — 경보·KPI 기록 규칙을 promtool 로 검사·단위 시험(`npm run check:alert-rules`, CI)하다 찾은 결함을 고쳤다(D-93): WORM 정기 대조가 재시작에 묶여 돌지 않거나 변조 경보가 꺼지던 것(마이그레이션 **0012** `scheduled_job_run`), 권한 기록 수집 경보 두 개. 권한 변경 기록 수집 CronJob 을 kind 에서 실제로 돌렸다(D-91). 이어서 대학 API 주기 작업(대조·보관·정리·결제 재확인·WORM 내보내기)을 DB 기준 주기·멈춤 경보로, 로그뿐이던 장애 신호(중앙 반영·DEAD·회로·검사 엔진·시계·발급자·필드 키·출구/내부 인증 거절·Vault)를 경보 27개·대응표·운영 신호 대시보드로 만들었고 실제 Prometheus 로 평가했다. 태스크 완료 수는 그대로.
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
@@ -89,7 +90,7 @@ CI 와 같은 순서를 로컬 빈 PostgreSQL 컨테이너로 재현하면 CI �
 | D-55 | 원서 상태머신을 흐름에 연결 · 한 원서 한 결제(재사용 200·확인 중 409) · PG 정산 대조 · 거절된 접수 요청·접수증 감사 · 멱등 정리 · 형식 오류 식별자 404 |
 | D-56 | 화면이 설정만 보고 그린다(공통원서 항목 `x-profile`·항목 이름 `title`·서류 목록) · Config Linter |
 | D-57 | 공통원서 지원자 API·화면·표준 항목 · 가명 토큰은 등록값 · 중앙 AUTH_MODE·엄격 UTF-8 |
-| D-58 | ClamAV 어댑터 · 서명 URL · 검사 기록에 실제 엔진·버전 (실 clamd 확인 남음) |
+| D-58 | ClamAV 어댑터 · 서명 URL · 검사 기록에 실제 엔진·버전 · 실 clamd/서명 DB 실증 완료(D-73) |
 | D-59 | 운영 콘솔 설정 초안 만들기·Diff 경고·보존기간 화면 |
 | D-60 | §04 심장박동 송수신 · 내 원서 대학별 확인 불가 · 이벤트 버전 확장 속성 |
 | D-61 | §A9 시각 — 노드–DB offset 측정, DB 커밋 시각, 초과 노드 Finalize 503 |
@@ -153,7 +154,7 @@ T-M5-40~46 ✅·47 🟡 — **[09-accessibility.md](09-accessibility.md)**. 설�
 | 노션 반영(첨부 5종·본문) | 사람 — AI 노션 쓰기가 막혀 있다 | [06-notion-changeset.md](06-notion-changeset.md) |
 | ~~증적 감사 체인 거짓 "끊김" (D-62)~~ | ✅ 2026-10-01 수정 — 원서 체인 잠금·시각 단조·연결 따라가기 검증 | [대장 D-62](02-spec-discrepancy-register.md) |
 | ~~화면 결함 U-1~U-11~~ | 태스크 T-M5-50~56 으로 옮겼다(U-1~U-59) | [08-ui-production-readiness.md](08-ui-production-readiness.md) |
-| 실 clamd 연동 확인 (D-58) | AI (A) — T-M5-08 | 어댑터는 있다 |
+| ~~실 clamd 연동 확인 (D-58)~~ | ✅ 2026-10-03 완료 — 실제 서명 DB·EICAR·압축/PDF 한도·능동 콘텐츠 10종 실증(D-73) | [13-security-controls-plan.md](13-security-controls-plan.md) |
 | Peak Mode 예약 워크플로 켜기 | 사람 — 서명키·저장소 변수 | ADR-0006 |
 | 실 인증(대학 IdP·간편인증)·실 PG 계약·서명키·레지스트리 | 기관·운영 | M5·M6 |
 | 개인정보·법정 고지 차이 G-1~G-15 — G-1·2·3·4·5·6·8·9·10·11·12·13과 최신 화면 캡처 43장 ✅, **G-15 권한 부여·변경·말소 기록 ✅(2026-10-05, D-91 — 마이그레이션 0011·수집 도구·실제 Keycloak 시험)**. **G-14 유출 통지·신고는 절차서 초안·범위 산정·판정 게이트까지 준비(D-92, [19](19-breach-response-runbook.md))** — 확정은 T-M6-08. G-7(본인확인기관)은 외부 몫 | AI 몫 완료 + 법무·대학(동의서 문안·여권번호 근거·공통원서 운영주체) | [10-admission-privacy-and-legal-notices.md §6·§7](10-admission-privacy-and-legal-notices.md) |
@@ -168,7 +169,7 @@ T-M5-40~46 ✅·47 🟡 — **[09-accessibility.md](09-accessibility.md)**. 설�
 4. ~~보안 통제 T-M5-01·03~09~~ ✅ **끝(2026-10-03, [13](13-security-controls-plan.md))**: 단계 1 ✅ 서비스 간 상호 TLS·대학 신원 묶기(내부 경로 여섯이 인증 없이 열려 있던 결함 D-69 수정 — 다른 대학 사칭·남의 공통원서·서류 검사 위조 차단, `test:security:mtls` 25). 단계 2 ✅ 출구 허용 목록(서버 호출은 의존 서비스 호스트만, 연결 순간 메타데이터 주소 거절, 서류 워커 서명 URL SSRF 차단)·NetworkPolicy 자동 시험(kind 72칸 `test:security:netpol`). 단계 3 ✅ 필드 암호화(원서 항목 값·공통원서 금고가 평문 jsonb 이던 것 D-70 — 봉투 암호화, KEK 교체·닫힌 실패, 마이그레이션 대학 0003·중앙 0004). 단계 4 ✅ Vault(첨부 정책 그대로 + 워크로드별 PKI 역할 D-71, Transit KEK·DB 동적 계정 무중단 교체·PKI 짧은 인증서, `test:security:vault` 22). 단계 5 ✅ break-glass(끝나는 시각 전에만 렌더링·매분 회수 작업·경보 이벤트, DB 비상 계정은 Vault 15분·기록·문장 로그 D-72, kind `test:security:break-glass` 9). 단계 6 ✅ 실 clamd(실 clamd 가 먼저 끊으면 워커가 멈추던 결함·PDF 능동 콘텐츠 D-73, `test:security:clamd` 10)
 5. ~~T-M4-10 Outbox 파티션·보관~~ ✅ **끝(2026-10-03, D-74)** — 보관 표만 월별 파티션(바로 쓰는 표는 유니크 키 때문에 그대로), 7일 지난 전송 완료를 영수증과 함께 옮기고 원서마다 마지막 순번은 남김, 13개월 지난 달은 파티션째 삭제(SECURITY DEFINER 함수), 마이그레이션 0005
 6. ~~운영 자동화 T-M5-62·63·65·T-M3-03~~ ✅ **끝(2026-10-03, [14](14-operations-automation.md))**: T-M5-65 ✅ 만료 경보(지표 `credential_expiry_timestamp_seconds`, 30/14/7/3/1일·갱신 멈춤 경보 규칙). T-M3-03 ✅ WORM(감사 기록을 Object Lock COMPLIANCE 조각으로, 슈퍼유저 변조 대조 D-75). T-M5-62 ✅ 복구 검증(같은 시점 덤프·새 DB 복구·행 수·체크섬·불변식·제약, 매달 CI — 시험 정리 코드가 남긴 고아 행을 잡았다). T-M5-63 ✅ Writer fencing(쓰기 세대·문장 트리거·승격 잠금 D-76). **운영 자동화 끝**
-7. Pilot 도구·문서 T-M6-01·02·03·06·07·11·14 — **진행 중**: T-M6-03 ✅ CSP 사전 점검. T-M6-11 ✅ 개인정보 처리흐름도([15](15-privacy-data-flow.md)). T-M6-14 ✅ 대학 온보딩 문서([16](16-university-onboarding.md)). T-M6-02 ✅ Config 호환 시험(D-77). T-M6-01 ✅ 구조화 전형 Schema 온보딩. T-M6-06 ✅ 대학 Data Plane 장애 원장·공개 상태 API·지원자 전역 배너/상태 페이지·운영자 발행/해제(D-78, [17](17-pilot-support-tools.md)). T-M6-07 ✅ 개인정보 최소 상담 조회 — 접수번호·상담 확인번호, 허용 목록 응답, 자동 증적번호(D-79). **A 끝**
+7. ~~Pilot 도구·문서 T-M6-01·02·03·06·07·11·14~~ — **완료**: T-M6-03 ✅ CSP 사전 점검. T-M6-11 ✅ 개인정보 처리흐름도([15](15-privacy-data-flow.md)). T-M6-14 ✅ 대학 온보딩 문서([16](16-university-onboarding.md)). T-M6-02 ✅ Config 호환 시험(D-77). T-M6-01 ✅ 구조화 전형 Schema 온보딩. T-M6-06 ✅ 대학 Data Plane 장애 원장·공개 상태 API·지원자 전역 배너/상태 페이지·운영자 발행/해제(D-78, [17](17-pilot-support-tools.md)). T-M6-07 ✅ 개인정보 최소 상담 조회 — 접수번호·상담 확인번호, 허용 목록 응답, 자동 증적번호(D-79). **A 끝**
 
 A 를 다 해도 **B·C 21개**가 남는다 — K-PaaS 시험 환경·실 PG sandbox·대학 협조가 있어야 끝난다.
 
@@ -210,7 +211,7 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 | T-M4-24 | ✅ `StructuredLogger` 본문 미기록·마스킹(주민번호·전화·이메일·카드·토큰·접속 비밀번호)·운영 스택 없음, `check-logging.mjs` 로 CI 강제 |
 | T-M4-21~23 | ✅ 업무 KPI 7종·Support 고정 5종·Golden Signals — 앱 카운터·DB 게이지 + recording rule 14개(`kpi-rules.yaml`) + Grafana 대시보드 3종. kind 에서 실제 접수 흐름으로 값 확인·Grafana 렌더링 확인 (`business-kpi-kind-…`·`grafana-dashboards-…`). 이 과정에서 취소 이벤트가 중앙에 한 건도 반영되지 않던 계약 위반(D-50)을 찾아 고쳤다 |
 
-### 🎯 목표 5 — 남은 로컬 기능 시험 · **현재 목표**
+### ✅ 목표 5 — 남은 로컬 기능 시험 · **로컬 몫 완료**
 
 | ID | 할 일 |
 |---|---|
@@ -219,7 +220,7 @@ M4 의 목표는 "한 대학 장애가 다른 대학으로 번지지 않는다" 
 | T-M4-39 | 🟡 다중 노드 kind(제어 1 + 워커 2, zone 2개) 재측정(2026-09-30, **부하는 kind 네트워크 안 컨테이너**): 계획 정비(drain) 0/666·정비 뒤 재분산 0/1,139 — 무중단. 노드 강제 정지는 첫 시도 6.1%·3번 재시도 뒤 사용자 체감 1.4%, 실패는 거의 다 NotReady(grace 16초 → 22초) 전 죽은 Pod 로 간 연결 시간 초과 — Edge 재시도(ADR-0008)가 흡수할 대상이라 K-PaaS 에서 판정. 대체 Pod 는 축출 10초 뒤 살아 있는 zone 에 Ready `node-failure-kind-2026-09-30T15-46-21-045Z.json`. 이 과정에서 고친 것: `nodeTaintsPolicy: Honor`·`matchLabelKeys`, 정비 뒤 재분산 절차(Honor 만 두면 정비 뒤 한 zone 에 모여 다음 장애가 전면 장애), PgBouncer 정상 종료(preStop·grace 60초)·앱 DB 풀 연결 사용 50회로 돌리기(rolling restart 체감 실패 2 → 0), 측정 도구 결함 둘(동기 kubectl·Docker Desktop 포트 전달 멈춤 — 이전 "약 10%·66초" 는 부풀려진 값). PgBouncer `trafficDistribution` 은 실측 뒤 기본에서 뺐다 |
 | T-M4-35 | ✅ 중앙 2시간 실제 단절 통과 — 원서 24건 처리·DEAD 0·event loss 0·복구 10초 뒤 전량 전송·재시작 0 (`central-outage-realtime-2026-09-30T01-59-27-784Z.json`). 단절 중 대조가 `CENTRAL_ACK_MISSING` 13건을 올렸다(30분 넘은 미확인 — 설계대로의 신호, 복구 뒤 다음 대조에서 자동 해소 확인 예정) |
 | T-M4-34 | ✅ PG 확정 1~30분 지연 실제 시간 통과 — 위 목표 2 |
-| **다음** | 로컬에서 할 수 있는 M4 기능 시험은 끝났다. 남은 M4(T-M4-06·10·30~32·36·41, T-M4-39 판정)는 K-PaaS 환경이 필요하다 — 아래 「완성까지 남은 단계」 |
+| **다음** | 로컬에서 할 수 있는 M4 기능 시험은 끝났다. 남은 M4(T-M4-06·30~32·36·41, T-M4-39 판정)는 K-PaaS 환경이 필요하다 — 아래 「완성까지 남은 단계」. T-M4-10 Outbox 보관은 2026-10-03 완료(D-74) |
 
 ### 🎯 목표 4 — 노션 반영 · 저장소 쪽은 끝, **노션 쓰기 승인 대기** (2026-09-30)
 
@@ -382,9 +383,9 @@ npm run dev -w @wonseoro/admin-web
 | **인증** | ✅ `AUTH_MODE=oidc` — 토큰 직접 검증(2026-10-03). 로컬 Keycloak 로 시험했다. **실 본인확인 기관(간편인증·PASS·공동인증서) 연동**과 운영 발급자는 기관 계약 뒤 | 기관 연동 |
 | **운영자 인증** | ✅ 관리자 로그인(BFF)·비밀번호+일회용 번호·민감 동작 5분 재인증(2026-10-03). 운영 IdP 연동은 대학별 | 대학 IdP |
 | **실 PG** | Mock. 운영에서 선택되면 기동이 막힌다. 정산 대조 경로는 연결됐다(D-55) — 실 어댑터가 `reconcile()` 만 채우면 된다 | T-M6-04 |
-| **실 안티바이러스** | ClamAV 어댑터 구현(D-58). 실 clamd·서명 DB 로는 아직 돌려 보지 않았다 — 가짜 clamd 로 프로토콜만 시험 | T-M5-08 |
+| **실 안티바이러스** | ✅ ClamAV 어댑터와 실 clamd·공식 서명 DB를 실증했다. EICAR·압축 한도·PDF 폭탄·능동 콘텐츠·30MB 초과를 포함한 10개 시험 통과(D-73) | 운영 clamd 배치·서명 DB 미러는 플랫폼 운영 |
 | **원서 마감 처리(EXPIRED)** | 상태는 있지만 옮기지 않는다 — 마감 연장이 있어 마감 시각에 옮기면 되돌릴 수 없다(D-55) | 모집 종료 처리 |
-| **WORM 감사 저장소** | Object Lock COMPLIANCE 버킷으로 물리 분리하고 DB와 대조한다(D-75). 정기 대조 작업·경보와 운영 버킷 IaC는 남았다 | 운영 자동화 후속 |
+| **WORM 감사 저장소** | Object Lock COMPLIANCE 버킷 분리·DB 대조·재시작에 견디는 정기 대조·경보까지 완료(D-75·D-93). 운영 버킷 IaC와 실제 관측 스택 적용만 남았다 | 플랫폼 운영 |
 | **K-PaaS 배포** | Helm·Flux Pull 구조와 로컬 실증 완료. 실제 K-PaaS cluster·Registry release는 없음 | M4 |
 | **부하·장애 시험** | 숫자 없음. SLO 는 목표값이지 실측이 아니다 | M4 |
 | **제출 PDF 정정** | "Java LTS + Spring Boot" 로 적혀 있다 (실제는 NestJS) | T-M0-08 |
@@ -396,7 +397,7 @@ npm run dev -w @wonseoro/admin-web
 ```bash
 npm install
 npm run dev:infra            # postgres(univ_a 5432 / central 5434), redis, Object Storage(RustFS :9000)
-npm run db:migrate           # 0001(v1.2 스키마) · 0002(역할) + 개발용 앱 역할 로그인
+npm run db:migrate           # 대학 0001(v1.2 스키마) → … → 0012 + 개발용 앱 역할 로그인
 npm run db:migrate:central
 npm run db:seed
 npm run db:verify            # 정합성 제약·권한 18종이 실제로 막는지 확인

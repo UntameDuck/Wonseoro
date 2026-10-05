@@ -119,7 +119,7 @@ Dashboard 신원 없음 400
 
 - `AUTH_MODE=gateway` 의 실제 게이트웨이는 T-M5-02. 지금은 헤더 규약만 정의돼 있다
 - `ADMIN_API_TOKEN` 은 임시 문이다. OIDC + MFA 는 T-M5-10
-- 실 PG 연동 T-M6-04(실 PG Sandbox). 안티바이러스는 ClamAV 어댑터까지(§7) — 실 clamd 연동 확인은 T-M5-08
+- 실 PG 연동 T-M6-04(실 PG Sandbox). 안티바이러스는 ClamAV 어댑터와 실 clamd·서명 DB 실증까지 완료(T-M5-08, D-73)
 - D-27 의 중앙 가명 식별자 결정은 노션 §A3 과 함께 재검토가 필요하다
 
 ---
@@ -141,7 +141,7 @@ Dashboard 신원 없음 400
 | 감사 | 지원자의 접수 요청이 거절되면 흔적이 없었다. 접수증 발급(`RECEIPT_ISSUED`)은 정의만 있었다 | 둘 다 기록 | D-55 |
 | 멱등 기록 | 만료 정리(`purgeExpired`)를 부르는 곳이 없었다. 결제·서류 경로는 기록되지 않았다 | 예약 정리(Peak Mode 억제), 결제·서류 ID 로 원서를 찾아 기록 | D-55 |
 | 서류 | 화면이 서류 종류(TRANSCRIPT)를 박아 두었고 업로드는 아무 종류나 받았다. 검사 기록은 늘 `mock-av` | 설정의 서류 목록, 작성 중 원서만, 실제 엔진·버전 기록 | D-56 · D-58 |
-| 검사 엔진 | 파일을 읽지 않는 흉내뿐 | ClamAV(clamd INSTREAM) 어댑터 · 서명 URL · 해시 대조. 실 clamd 확인은 남음 | D-58 |
+| 검사 엔진 | 파일을 읽지 않는 흉내뿐 | ClamAV(clamd INSTREAM) 어댑터 · 서명 URL · 해시 대조 · 실 clamd/서명 DB 실증 완료 | D-58 · D-73 |
 | 설정 | 공통원서 항목·라벨이 화면·Vault 요청에 각각 박혀 있었다. 깨진 양식을 막을 검사(Config Linter)가 없었다 | 양식 `x-profile`·`title`, Config Linter | D-56 |
 | 공통원서 | 쓰는 길이 개발용 내부 API 뿐(누구 것이든 덮어쓰기), 화면 없음, 화면이 가명 토큰을 지어냈다 | 지원자 API·화면·표준 항목, 등록 토큰 대조, 중앙 AUTH_MODE·엄격 UTF-8 | D-57 |
 | 운영 콘솔 | 설정 초안을 만들 곳이 없었다(현재 설정 본문도 못 봤다). 보존기간 화면 없음 | 초안 만들기·Diff 경고·보존기간 화면 | D-59 |
@@ -166,7 +166,7 @@ Dashboard 신원 없음 400
 
 ```
 시험      admission-api 312 (309 통과·3 건너뜀) · central-api 28 · event-relay 7 · server-kit 49 · document-service 8 = 404, 실패 0
-          (CI 재현 DB — 빈 DB 에 0001·0002·dev-roles·verify-constraints·seed-dev·ci-seed-deadline)
+          (CI 재현 DB — 빈 DB 에 대학 0001~0012·dev-roles·verify-constraints·seed-dev·ci-seed-deadline)
 검사      check-contracts · check-deps · check-logging · helm lint · runtime 첨부 --check · test:m4:gitops · test:m4:observability 통과
 화면      축소 환경(로컬 프로세스, CI 재현 DB): 공통원서 저장(깨진 UTF-8 400) → 원서 생성(복사 항목, 토큰 불일치 403)
           → 검증 READY → 결제 의도 201·재요청 200 같은 결제·저장 409 → 새로고침 시 "결제 상태 다시 확인" → 결제 확인 → 자동 접수

@@ -53,7 +53,7 @@ docs/spec-assets/README.md 참조. 별도로 DDL을 새로 쓰지 말 것 (이�
 
 저장소가 더한 마이그레이션(노션 첨부 교체 때 0001 로 접어 넣는다):
 `0003_field_encryption.sql`(원서 항목 값 암호화, D-70) · `0004_break_glass.sql`(DB 비상 접속 역할·기록, D-72) · `0005_outbox_archive.sql`(Outbox 보관 월별 파티션, D-74) · `0006_writer_fence.sql`(쓰기 세대 펜싱, D-76) · `0007_service_incident.sql`(대학별 장애 공지 원장, D-78) · `0008_support_view.sql`(상담 확인번호·상담 증적, D-79) · `0009_privacy_request.sql`(정보주체 권리 요청·처리 기한, D-84) · `0010_fee_refund_request.sql`(전형료 반환·면제 감액 신청, D-89) · `0011_access_grant_log.sql`(접근 권한 부여·변경·말소 기록 — 추가 전용·DB 해시 체인, D-91) · `0012_scheduled_job_run.sql`(주기 작업 마지막 성공 — WORM 정기 대조 시각·불일치 수, D-93).
-적용 순서는 0001 → 0002 → … → 0008 → dev-roles. 중앙은 `central/0001`~`0005`(0004 = 공통원서 금고 암호화, 0005 = 공통원서 수집·이용 동의 기록 D-82).
+적용 순서는 0001 → 0002 → … → 0012 → dev-roles. 중앙은 `central/0001`~`0005`(0004 = 공통원서 금고 암호화, 0005 = 공통원서 수집·이용 동의 기록 D-82). `npm run check:migrations`가 새 파일이 실행 경로마다 순서대로 들어갔는지 검사한다.
 
 앞으로 스키마가 바뀌면 같은 방식을 따른다: 0003 부터 임시 마이그레이션으로 덧붙이고, 대장에 올리고,
 노션 첨부를 교체할 때 0001 로 접어 넣는다.
@@ -61,7 +61,7 @@ docs/spec-assets/README.md 참조. 별도로 DDL을 새로 쓰지 말 것 (이�
 ### 적용
 
 ```
-npm run db:migrate      # 0001 → 0002 → 개발용 앱 역할 로그인
+npm run db:migrate      # 0001 → … → 0012 → 개발용 앱 역할 로그인
 ```
 
 ### 제약이 실제로 막는지 확인

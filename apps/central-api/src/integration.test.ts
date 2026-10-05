@@ -16,7 +16,7 @@ import { ProfileRejection, ProfileVaultService } from './modules/profile-vault/p
  * 중앙 Sync Gateway 통합 테스트 — 실제 중앙 PostgreSQL 이 필요하다.
  *
  *   npm run dev:infra
- *   psql < infra/db/central/0001_init.sql
+ *   npm run db:migrate:central
  *   DATABASE_URL=postgresql://wonseoro:wonseoro@localhost:5434/central npm test -w @wonseoro/central-api
  *
  * DB 가 없으면 전부 skip 한다.
