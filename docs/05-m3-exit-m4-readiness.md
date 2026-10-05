@@ -200,7 +200,7 @@ G1 → G2 순서로 구현한다 (사용자 결정). 현재 위치는 ◀ 표시
 
 ## 부록 — 노션 반영 목록 (자동 생성)
 
-불일치 대장의 "노션 반영 ⬜" 을 노션 문서별로 묶었다. 대장이 원본이고, 이 목록은 `python scripts/notion-changeset.py --write` 로 다시 만든다. 반영한 조각은 대장에 `✅` 로 남기면 여기서 빠진다.
+불일치 대장의 "노션 반영 ⬜" 을 노션 문서별로 묶었다. 대장이 원본이고, 이 목록은 `npm run docs:notion-changeset`으로 다시 만들며 `npm run check:notion-changeset`이 CI에서 드리프트를 막는다. 반영한 조각은 대장에 `✅` 로 남기면 여기서 빠진다.
 
 | 노션 문서 | 반영 |
 |---|---|
@@ -213,77 +213,200 @@ G1 → G2 순서로 구현한다 (사용자 결정). 현재 위치는 ◀ 표시
 | v1.0 본문 | ✅ 2026-09-27 — §4 Backend(D-3) · §5.6 접수 전 취소(D-7) · §6.2 이벤트 예시(D-1·4·15) · §9 감사(D-7·36) · §12 6단계(D-2) · §17.1 접수번호(D-15) |
 | v1.1 §10 트래픽 | ⬜ D-18 (부록에서는 v1.0 으로 분류된다 — "§10 §1" 표기 때문) |
 
-<!-- 자동 생성: 불일치 대장의 "노션 반영 ⬜" 항목 16건에서 23개 수정 지점 -->
+<!-- 자동 생성: 불일치 대장의 "노션 반영 ⬜" 항목 44건에서 77개 수정 지점 -->
 
-### 먼저 결정·확인이 필요한 것 — 2건
+### 먼저 결정·확인이 필요한 것 — 5건
 
-- **D-58** 🟢 어댑터 구현·실 clamd 연동 확인 완료(T-M5-08, 2026-10-03 — D-73)
+- **D-58** 🟢 저장소 반영·실 clamd 연동 확인 완료(T-M5-08, 2026-10-03). 실 clamd에서 찾은 스트림 중단·PDF 능동 콘텐츠 결함은 D-73으로 수정<br>
   <sub>서류 검사 엔진이 파일을 읽지 않는 흉내뿐이었고, 검사 기록은 늘 'mock-av' 였다</sub>
-- **D-60** 🟡 저장소 반영·kind 확인 — 노션 반영 대기  
+- **D-60** 🟡 저장소 반영·kind 확인 — 노션 반영 대기<br>
   <sub>§04 심장박동(sync.heartbeat)을 아무도 보내지 않아 중앙이 조용한 대학과 죽은 대학을 구별하지 못했다 🔴</sub>
+- **D-86** v1.0 §12.1 ① 접수 홈에 "지원 전 확인 — 지원 제한 고지와 확인 체크", §03 OpenAPI v1.17.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>지원 횟수 제한·이중등록 금지를 원서 작성 전에 알리고 확인받지 않았다 🟡</sub>
+- **D-89** v1.0 결제·환불 절에 "전형료 반환 신청 — 사유·방법·계좌(봉함)·결정 한 번", §02 DDL 에 `fee_refund_request`, §03 OpenAPI v1.19.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>전형료 반환·면제/감액을 신청하고 계좌를 받을 경로가 없었다 🟡</sub>
+- **D-90** §08 M Profile에 Finalize TPS의 분모(서로 다른 접수/재시도), 멱등 키 재사용 규칙, 데이터셋 건수·지속시간, `finalize_first` p95를 명시하고 첨부 스켈레톤을 그 결정에 맞춰 교체 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>M Profile의 Finalize 63,000요청과 전체 지원 30,000건, 단일 원서 스켈레톤의 측정 의미가 충돌한다 🔴</sub>
 
-### §01 운영 리스크 — 2건
+### §01 운영 리스크 — 11건
 
-- **D-56** §A5 Config Linter 규칙 — [06-notion-changeset.md](06-notion-changeset.md)  
+- **D-56** §A5 Config Linter 규칙 — [06-notion-changeset.md](06-notion-changeset.md)<br>
   <sub>화면이 전형 설정을 다 읽지 않았다 — 서류 종류·공통원서 항목·항목 이름이 코드에 박혀 있었다 🔴</sub>
-- **D-61** §01 A9 구현 방식(두 시각원·Finalize 만 제외) — [06-notion-changeset.md](06-notion-changeset.md)  
+- **D-61** §01 A9 구현 방식(두 시각원·Finalize 만 제외) — [06-notion-changeset.md](06-notion-changeset.md)<br>
   <sub>§A9 시각 동기화가 없었다 — clock offset 은 늘 0 이었고, 접수 시각은 Pod 시계였다 🔴</sub>
+- **D-67** §01 A1 「해결」 에 한 단락 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>발급자가 끊기면 5분 뒤 지원자가 쫓겨난다 — 키 캐시만으로는 "이미 접속한 사람은 계속" 이 5분이다 🟡</sub>
+- **D-74** §02 ERD(보관 표·함수), §01 B7 대응 한 줄 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>전송이 끝난 Outbox 이벤트·영수증이 지워지지 않고 쌓였다 — 첨부 DDL 의 유니크 키로는 바로 파티션할 수 없다 🟡</sub>
+- **D-75** §01 A11·v1.0 §9 에 WORM 방식(Object Lock COMPLIANCE·조각·대조), §05 values-m 에 `objectStorage.auditWormBucket` — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>감사 기록의 "분리 저장소" 가 없어 DB 슈퍼유저가 지운 감사 기록은 되찾을 수 없었다 🟡</sub>
+- **D-76** §01 A10 대응·DR 런북의 승격 순서(pg_promote → promote_writer → WRITER_EPOCH 배포), §02 ERD(`writer_fence`) — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>장애 전환 뒤 돌아온 옛 Primary 가 쓰기를 받을 수 있었다 — 단일 Writer 를 DB 가 보장하지 않았다 🟡</sub>
+- **D-77** §01 A5 대응에 "진행 중 원서 호환 시험 — 깨지면 적용 거절" — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>새 전형 설정이 진행 중인 원서와 맞는지 보지 않았다 — 결제까지 마친 원서가 접수 확정에서 막힐 수 있었다 🟡</sub>
+- **D-78** §01 B11 에 위 소유권·공개 범위·권한·감사 규칙, §02 ERD(`service_incident`), §03 OpenAPI v1.8.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>장애 공지의 소유권·저장 위치·발행 권한이 정해져 있지 않았다 🟡</sub>
+- **D-79** §01 B11 에 위 ①~⑤, §06 역할 정의에 `support-agent`, §02 ERD(`application.support_code`·`support_lookup`), §03 OpenAPI v1.9.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>"PII 최소 Support View" 와 "자동 증적번호" 의 역할·조회 키·응답 범위·증적 형식이 정해져 있지 않았다 🟡</sub>
+- **D-87** v1.1 §01 A15 Retention Matrix 표에 접수·미접수 신원·서류 4행과 접수 신원 하한·정합성 규칙 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>보존 항목이 접수·미접수 지원자의 신원·서류를 한 항목으로 묶어 접수분에 10년 하한을 걸 수 없었다 🟡</sub>
+- **D-91** §06 접근통제에 "권한 부여·변경·말소 기록 — 로그인 서버 관리 이벤트 + 대조, 대학 DB 추가 전용·해시 체인, 3년", §02 DDL 에 `access_grant_log`, §01 A15 Retention Matrix 에 항목 추가, §03 OpenAPI v1.20.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>담당자 접근 권한의 부여·변경·말소 기록이 없었다 — 권한 원본은 로그인 서버인데 관리 이벤트가 꺼져 있었다 🟡</sub>
 
-### §03 OpenAPI — 7건
+### §02 ERD·DDL — 9건
 
-- **D-51** §03 첨부 v1.3.0 교체 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md)  
+- **D-70** §02 ERD 에 `application_data_key`·`value_ciphertext`(첨부 DDL 교체 또는 "저장소 마이그레이션 0003" 한 줄), v1.0 §8.3 의 "고위험 필드" 를 "원서 항목 값 전부" 로 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>원서 항목 값·공통원서가 DB 에 평문 jsonb 로 있었다 — 첨부 DDL 에 암호문 자리가 없다 🟡</sub>
+- **D-72** §06 break-glass 절(렌더링 시각 조건·회수 작업·경보 이벤트·DB 비상 계정), §02 ERD(`break_glass_access`) — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>비상 역할이 켤 때 끝나는 시각만 적고 회수·경보가 없었고, DB 비상 접속은 길도 기록도 없었다 🟡</sub>
+- **D-74** §02 ERD(보관 표·함수), §01 B7 대응 한 줄 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>전송이 끝난 Outbox 이벤트·영수증이 지워지지 않고 쌓였다 — 첨부 DDL 의 유니크 키로는 바로 파티션할 수 없다 🟡</sub>
+- **D-76** §01 A10 대응·DR 런북의 승격 순서(pg_promote → promote_writer → WRITER_EPOCH 배포), §02 ERD(`writer_fence`) — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>장애 전환 뒤 돌아온 옛 Primary 가 쓰기를 받을 수 있었다 — 단일 Writer 를 DB 가 보장하지 않았다 🟡</sub>
+- **D-78** §01 B11 에 위 소유권·공개 범위·권한·감사 규칙, §02 ERD(`service_incident`), §03 OpenAPI v1.8.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>장애 공지의 소유권·저장 위치·발행 권한이 정해져 있지 않았다 🟡</sub>
+- **D-79** §01 B11 에 위 ①~⑤, §06 역할 정의에 `support-agent`, §02 ERD(`application.support_code`·`support_lookup`), §03 OpenAPI v1.9.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>"PII 최소 Support View" 와 "자동 증적번호" 의 역할·조회 키·응답 범위·증적 형식이 정해져 있지 않았다 🟡</sub>
+- **D-84** v1.0 §17 Privacy 에 "정보주체 권리 요청 — 대학 원서는 요청·기한·회신을 대학 DB 에, 처리 자체는 입학처", §02 DDL 에 `privacy_request`, §03 OpenAPI v1.15.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>대학 원서에 정보주체 권리(열람·정정·삭제·처리정지) 요청 경로와 처리 기한 관리가 없었다 🟡</sub>
+- **D-91** §06 접근통제에 "권한 부여·변경·말소 기록 — 로그인 서버 관리 이벤트 + 대조, 대학 DB 추가 전용·해시 체인, 3년", §02 DDL 에 `access_grant_log`, §01 A15 Retention Matrix 에 항목 추가, §03 OpenAPI v1.20.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>담당자 접근 권한의 부여·변경·말소 기록이 없었다 — 권한 원본은 로그인 서버인데 관리 이벤트가 꺼져 있었다 🟡</sub>
+- **D-93** §02 DDL 에 `scheduled_job_run` — [06-notion-changeset.md](06-notion-changeset.md) (OpenAPI·CloudEvents 는 바뀌지 않았다)<br>
+  <sub>WORM 정기 대조가 재시작에 묶여 있었고, 재시작하면 변조 경보가 꺼졌다 — 권한 기록 수집 경보는 성공 뒤에도 울렸다 🟢</sub>
+
+### §03 OpenAPI — 19건
+
+- **D-51** §03 첨부 v1.3.0 교체 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md)<br>
   <sub>계약에 요청 한도 응답(429)이 없다</sub>
-- **D-55** v1.0 §5.6 전이(`PAID → FINALIZED`, FINALIZING 비저장, EXPIRED 보류)·§03 첨부 v1.4.0 — [06-notion-changeset.md](06-notion-changeset.md)  
+- **D-55** v1.0 §5.6 전이(`PAID → FINALIZED`, FINALIZING 비저장, EXPIRED 보류)·§03 첨부 v1.4.0 — [06-notion-changeset.md](06-notion-changeset.md)<br>
   <sub>원서 상태머신이 정의만 있고 흐름에 연결되지 않았다 — 한 원서에 결제창을 몇 개든 열 수 있었다 🔴</sub>
-- **D-56** §03 첨부 v1.4.0(FormSchema `profileFields`·`documents`, ConfigDiff `warnings`)  
+- **D-56** §03 첨부 v1.4.0(FormSchema `profileFields`·`documents`, ConfigDiff `warnings`)<br>
   <sub>화면이 전형 설정을 다 읽지 않았다 — 서류 종류·공통원서 항목·항목 이름이 코드에 박혀 있었다 🔴</sub>
-- **D-57** §03 첨부 v1.4.0(`getMyProfile`·`replaceMyProfile`)  
+- **D-57** §03 첨부 v1.4.0(`getMyProfile`·`replaceMyProfile`)<br>
   <sub>공통원서를 쓰는 길이 개발용 내부 API 뿐이었고, 화면은 가명 토큰을 지어냈다 🔴</sub>
-- **D-58** §03 첨부 v1.4.0(`downloadUrl`·`signature`)  
+- **D-58** §03 첨부 v1.4.0(`downloadUrl`·`signature`)<br>
   <sub>서류 검사 엔진이 파일을 읽지 않는 흉내뿐이었고, 검사 기록은 늘 'mock-av' 였다</sub>
-- **D-59** §03 첨부 v1.4.0(`getActiveConfig` 본문·`createConfigVersion` 검사 규칙) — [06-notion-changeset.md](06-notion-changeset.md)  
+- **D-59** §03 첨부 v1.4.0(`getActiveConfig` 본문·`createConfigVersion` 검사 규칙) — [06-notion-changeset.md](06-notion-changeset.md)<br>
   <sub>운영 콘솔에서 설정 초안을 만들 수 없었고, 보존기간 화면이 없었다</sub>
-- **D-60** §03 첨부 v1.4.0(`ApplicationSummary`·이벤트 수신 규칙) — [06-notion-changeset.md](06-notion-changeset.md)  
+- **D-60** §03 첨부 v1.4.0(`ApplicationSummary`·이벤트 수신 규칙) — [06-notion-changeset.md](06-notion-changeset.md)<br>
   <sub>§04 심장박동(sync.heartbeat)을 아무도 보내지 않아 중앙이 조용한 대학과 죽은 대학을 구별하지 못했다 🔴</sub>
+- **D-64** ① 노션 06 역할 절에 "계약 범위 → 역할" 표 ② OpenAPI 첨부에 공통 응답 `Unauthenticated`·`StepUpRequired`·`AuthUnavailable` 과 운영 경로의 401·403 — [06-notion-changeset.md](06-notion-changeset.md) 에 올릴 것<br>
+  <sub>계약의 권한 범위 이름과 노션 06 의 역할 이름이 다르고, 계약에 인증 실패 응답이 없다 🟡</sub>
+- **D-65** OpenAPI 첨부 교체(1.7.0) — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>모집·전형·모집단위 조회가 지원자 토큰을 요구했다 — 로그인 전 화면·운영 콘솔이 볼 공개 정보 🟢</sub>
+- **D-69** ① §06 에 워크로드 신원·경로별 호출자 표 ② OpenAPI 첨부의 내부 경로 여섯에 401·403 응답(D-64 의 운영 경로 401·403 과 함께) ③ §05 runtime 첨부 교체 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>계약이 상호 TLS 를 요구한 내부 경로 여섯이 인증 없이 열려 있었다 — 다른 대학 사칭·남의 공통원서·서류 검사 위조 🔴</sub>
+- **D-78** §01 B11 에 위 소유권·공개 범위·권한·감사 규칙, §02 ERD(`service_incident`), §03 OpenAPI v1.8.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>장애 공지의 소유권·저장 위치·발행 권한이 정해져 있지 않았다 🟡</sub>
+- **D-79** §01 B11 에 위 ①~⑤, §06 역할 정의에 `support-agent`, §02 ERD(`application.support_code`·`support_lookup`), §03 OpenAPI v1.9.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>"PII 최소 Support View" 와 "자동 증적번호" 의 역할·조회 키·응답 범위·증적 형식이 정해져 있지 않았다 🟡</sub>
+- **D-80** §03 OpenAPI v1.10.0 첨부, §07 KRDS 화면 원칙에 "법정 고지 — 바닥글·결제 전·접수증" — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>법정 고지(처리방침·위탁·보호책임자·전형료 반환)를 어디에 두고 누가 정하는지 정해져 있지 않았다 🟡</sub>
+- **D-81** v1.0 §8.3 「동의 기록」 에 원서 동의·판·해시·철회 규칙, §03 OpenAPI v1.11.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>원서에 개인정보 수집·이용 동의 단계가 없었다 — 동의 기록은 공통원서 제공분뿐이었다 🟡</sub>
+- **D-82** v1.0 §17 Privacy(공통원서 수집·이용 동의·제공 고지), §03 OpenAPI v1.12.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>공통원서 자체의 수집·이용 동의와 대학 제공 고지가 없었다 🟡</sub>
+- **D-84** v1.0 §17 Privacy 에 "정보주체 권리 요청 — 대학 원서는 요청·기한·회신을 대학 DB 에, 처리 자체는 입학처", §02 DDL 에 `privacy_request`, §03 OpenAPI v1.15.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>대학 원서에 정보주체 권리(열람·정정·삭제·처리정지) 요청 경로와 처리 기한 관리가 없었다 🟡</sub>
+- **D-85** v1.0 §8.3 에 "민감정보 서류 — 설정 `sensitiveDocuments` 로 표시, 별도 동의 뒤에만 업로드, 서류가 있으면 동의 필수", §03 OpenAPI v1.16.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>민감정보(장애·건강) 서류를 다른 서류와 같게 받았다 — 별도 동의 구조가 없었다 🟡</sub>
+- **D-88** v1.0 §8.3 "고유식별정보 — 동의로 받는 항목은 `x-sensitive-consent` 로 별도 동의", §03 OpenAPI v1.18.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>여권번호처럼 동의로 받는 고유식별정보를 항목 단위로 별도 동의받을 방법이 없었다 🟡</sub>
+- **D-91** §06 접근통제에 "권한 부여·변경·말소 기록 — 로그인 서버 관리 이벤트 + 대조, 대학 DB 추가 전용·해시 체인, 3년", §02 DDL 에 `access_grant_log`, §01 A15 Retention Matrix 에 항목 추가, §03 OpenAPI v1.20.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>담당자 접근 권한의 부여·변경·말소 기록이 없었다 — 권한 원본은 로그인 서버인데 관리 이벤트가 꺼져 있었다 🟡</sub>
 
-### §06 보안정책 — 1건
+### §06 보안정책 — 7건
 
-- **D-53** §06 NetworkPolicy 첨부의 edge 선택자와 §05 Edge 서술 — [06-notion-changeset.md](06-notion-changeset.md)  
+- **D-53** §06 NetworkPolicy 첨부의 edge 선택자와 §05 Edge 서술 — [06-notion-changeset.md](06-notion-changeset.md)<br>
   <sub>§06 첨부·차트가 Edge 로 가정한 ingress-nginx 가 은퇴했다</sub>
+- **D-68** §06 RBAC 절에 역할별 Kubernetes 권한 한 줄씩·sre 수정 범위 승인 정책, §05 runtime 첨부 교체 — [06-notion-changeset.md](06-notion-changeset.md). 첨부 `network-rbac.yaml` 은 그대로 둔다(예시 3종 — 차트가 6종의 기준)<br>
+  <sub>Kubernetes 역할이 3종뿐이었고, sre-operator 의 "재시작" 권한이 Secret 원문을 꺼내는 길이었다 🟡</sub>
+- **D-69** ① §06 에 워크로드 신원·경로별 호출자 표 ② OpenAPI 첨부의 내부 경로 여섯에 401·403 응답(D-64 의 운영 경로 401·403 과 함께) ③ §05 runtime 첨부 교체 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>계약이 상호 TLS 를 요구한 내부 경로 여섯이 인증 없이 열려 있었다 — 다른 대학 사칭·남의 공통원서·서류 검사 위조 🔴</sub>
+- **D-71** §06 Vault 절·첨부 `vault-policy.hcl` 에 워크로드별 PKI 역할과 Relay·서류 워커 정책 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>첨부 Vault 정책의 PKI 역할이 대학 단위라, 같은 대학의 서류 워커가 Relay 인증서를 받아 이벤트를 위조할 수 있다 🟡</sub>
+- **D-72** §06 break-glass 절(렌더링 시각 조건·회수 작업·경보 이벤트·DB 비상 계정), §02 ERD(`break_glass_access`) — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>비상 역할이 켤 때 끝나는 시각만 적고 회수·경보가 없었고, DB 비상 접속은 길도 기록도 없었다 🟡</sub>
+- **D-79** §01 B11 에 위 ①~⑤, §06 역할 정의에 `support-agent`, §02 ERD(`application.support_code`·`support_lookup`), §03 OpenAPI v1.9.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>"PII 최소 Support View" 와 "자동 증적번호" 의 역할·조회 키·응답 범위·증적 형식이 정해져 있지 않았다 🟡</sub>
+- **D-91** §06 접근통제에 "권한 부여·변경·말소 기록 — 로그인 서버 관리 이벤트 + 대조, 대학 DB 추가 전용·해시 체인, 3년", §02 DDL 에 `access_grant_log`, §01 A15 Retention Matrix 에 항목 추가, §03 OpenAPI v1.20.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>담당자 접근 권한의 부여·변경·말소 기록이 없었다 — 권한 원본은 로그인 서버인데 관리 이벤트가 꺼져 있었다 🟡</sub>
 
 ### §04 CloudEvents — 2건
 
-- **D-47** §04 첨부 교체·본문 패턴 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md)  
+- **D-47** §04 첨부 교체·본문 패턴 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md)<br>
   <sub>CloudEvents subjectRef 계약이 DB 길이보다 긴 키 ID를 허용한다</sub>
-- **D-60** §04 본문 — 심장박동 발송·수신 규칙, payment.confirmed 미발송 판정  
+- **D-60** §04 본문 — 심장박동 발송·수신 규칙, payment.confirmed 미발송 판정<br>
   <sub>§04 심장박동(sync.heartbeat)을 아무도 보내지 않아 중앙이 조용한 대학과 죽은 대학을 구별하지 못했다 🔴</sub>
 
-### §07 KRDS — 1건
+### §05 배포 구성 — 7건
 
-- **D-43** §07 첨부 교체 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md)  
+- **D-44** §05 첨부 두 개 교체 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>§05 Helm 첨부(runtime·values-m)가 현재 구현과 다르다</sub>
+- **D-52** §08 시나리오 10 합격 기준·§05 노드 장애 흡수 절 — [06-notion-changeset.md](06-notion-changeset.md) (노션 쓰기 승인 대기)<br>
+  <sub>"API 노드 강제 종료 무중단"은 Pod 설정만으로는 지킬 수 없다</sub>
+- **D-53** §06 NetworkPolicy 첨부의 edge 선택자와 §05 Edge 서술 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>§06 첨부·차트가 Edge 로 가정한 ingress-nginx 가 은퇴했다</sub>
+- **D-58** §05 서류 워커 구성(clamd) — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>서류 검사 엔진이 파일을 읽지 않는 흉내뿐이었고, 검사 기록은 늘 'mock-av' 였다</sub>
+- **D-68** §06 RBAC 절에 역할별 Kubernetes 권한 한 줄씩·sre 수정 범위 승인 정책, §05 runtime 첨부 교체 — [06-notion-changeset.md](06-notion-changeset.md). 첨부 `network-rbac.yaml` 은 그대로 둔다(예시 3종 — 차트가 6종의 기준)<br>
+  <sub>Kubernetes 역할이 3종뿐이었고, sre-operator 의 "재시작" 권한이 Secret 원문을 꺼내는 길이었다 🟡</sub>
+- **D-69** ① §06 에 워크로드 신원·경로별 호출자 표 ② OpenAPI 첨부의 내부 경로 여섯에 401·403 응답(D-64 의 운영 경로 401·403 과 함께) ③ §05 runtime 첨부 교체 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>계약이 상호 TLS 를 요구한 내부 경로 여섯이 인증 없이 열려 있었다 — 다른 대학 사칭·남의 공통원서·서류 검사 위조 🔴</sub>
+- **D-75** §01 A11·v1.0 §9 에 WORM 방식(Object Lock COMPLIANCE·조각·대조), §05 values-m 에 `objectStorage.auditWormBucket` — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>감사 기록의 "분리 저장소" 가 없어 DB 슈퍼유저가 지운 감사 기록은 되찾을 수 없었다 🟡</sub>
+
+### §07 KRDS — 2건
+
+- **D-43** §07 첨부 교체 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md)<br>
   <sub>KRDS 와이어프레임 결제 화면이 "결제 = 접수"(D-42) 와 반대로 안내한다</sub>
+- **D-80** §03 OpenAPI v1.10.0 첨부, §07 KRDS 화면 원칙에 "법정 고지 — 바닥글·결제 전·접수증" — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>법정 고지(처리방침·위탁·보호책임자·전형료 반환)를 어디에 두고 누가 정하는지 정해져 있지 않았다 🟡</sub>
 
-### v1.0 본문 — 2건
+### §08 성능 — 1건
 
-- **D-55** v1.0 §5.6 전이(`PAID → FINALIZED`, FINALIZING 비저장, EXPIRED 보류)·§03 첨부 v1.4.0 — [06-notion-changeset.md](06-notion-changeset.md)  
+- **D-52** §08 시나리오 10 합격 기준·§05 노드 장애 흡수 절 — [06-notion-changeset.md](06-notion-changeset.md) (노션 쓰기 승인 대기)<br>
+  <sub>"API 노드 강제 종료 무중단"은 Pod 설정만으로는 지킬 수 없다</sub>
+
+### §09 STRIDE — 1건
+
+- **D-73** §09 파일 업로드 위협 — PDF 능동 콘텐츠 거절·압축 폭탄의 길·clamd 한도 설정 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>실 clamd 가 한도로 먼저 끊으면 서류 워커가 멈췄고, 스스로 움직이는 PDF 를 걸러 내지 않았다 🟡</sub>
+
+### §19 운영 런북 — 1건
+
+- **D-92** §19 운영 런북에 "개인정보 유출등 대응 — 72시간 통지·신고, 범위 산정·판정 도구" — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>개인정보 유출등의 72시간 통지·신고 절차와 범위 산정 수단이 없었다 🟡</sub>
+
+### v1.0 본문 — 9건
+
+- **D-55** v1.0 §5.6 전이(`PAID → FINALIZED`, FINALIZING 비저장, EXPIRED 보류)·§03 첨부 v1.4.0 — [06-notion-changeset.md](06-notion-changeset.md)<br>
   <sub>원서 상태머신이 정의만 있고 흐름에 연결되지 않았다 — 한 원서에 결제창을 몇 개든 열 수 있었다 🔴</sub>
-- **D-57** v1.0 §5 공통원서 표준 항목 — [06-notion-changeset.md](06-notion-changeset.md)  
+- **D-57** v1.0 §5 공통원서 표준 항목 — [06-notion-changeset.md](06-notion-changeset.md)<br>
   <sub>공통원서를 쓰는 길이 개발용 내부 API 뿐이었고, 화면은 가명 토큰을 지어냈다 🔴</sub>
+- **D-70** §02 ERD 에 `application_data_key`·`value_ciphertext`(첨부 DDL 교체 또는 "저장소 마이그레이션 0003" 한 줄), v1.0 §8.3 의 "고위험 필드" 를 "원서 항목 값 전부" 로 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>원서 항목 값·공통원서가 DB 에 평문 jsonb 로 있었다 — 첨부 DDL 에 암호문 자리가 없다 🟡</sub>
+- **D-75** §01 A11·v1.0 §9 에 WORM 방식(Object Lock COMPLIANCE·조각·대조), §05 values-m 에 `objectStorage.auditWormBucket` — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>감사 기록의 "분리 저장소" 가 없어 DB 슈퍼유저가 지운 감사 기록은 되찾을 수 없었다 🟡</sub>
+- **D-81** v1.0 §8.3 「동의 기록」 에 원서 동의·판·해시·철회 규칙, §03 OpenAPI v1.11.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>원서에 개인정보 수집·이용 동의 단계가 없었다 — 동의 기록은 공통원서 제공분뿐이었다 🟡</sub>
+- **D-82** v1.0 §17 Privacy(공통원서 수집·이용 동의·제공 고지), §03 OpenAPI v1.12.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>공통원서 자체의 수집·이용 동의와 대학 제공 고지가 없었다 🟡</sub>
+- **D-84** v1.0 §17 Privacy 에 "정보주체 권리 요청 — 대학 원서는 요청·기한·회신을 대학 DB 에, 처리 자체는 입학처", §02 DDL 에 `privacy_request`, §03 OpenAPI v1.15.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>대학 원서에 정보주체 권리(열람·정정·삭제·처리정지) 요청 경로와 처리 기한 관리가 없었다 🟡</sub>
+- **D-85** v1.0 §8.3 에 "민감정보 서류 — 설정 `sensitiveDocuments` 로 표시, 별도 동의 뒤에만 업로드, 서류가 있으면 동의 필수", §03 OpenAPI v1.16.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>민감정보(장애·건강) 서류를 다른 서류와 같게 받았다 — 별도 동의 구조가 없었다 🟡</sub>
+- **D-88** v1.0 §8.3 "고유식별정보 — 동의로 받는 항목은 `x-sensitive-consent` 로 별도 동의", §03 OpenAPI v1.18.0 첨부 — [06-notion-changeset.md](06-notion-changeset.md)<br>
+  <sub>여권번호처럼 동의로 받는 고유식별정보를 항목 단위로 별도 동의받을 방법이 없었다 🟡</sub>
 
 ### 제출 PDF 정정 — 2건
 
 - **D-2** 정정 문구 준비 완료 — [07-submission-errata.md](07-submission-errata.md). 제출처 반영은 사람
 - **D-3** 정정 문구 준비 완료 — [07-submission-errata.md](07-submission-errata.md). 제출처 반영은 사람
 
-### 기타 — 4건
+### 기타 — 1건
 
-- **D-44** §05 첨부 두 개 교체 — 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md)  
-  <sub>§05 Helm 첨부(runtime·values-m)가 현재 구현과 다르다</sub>
-- **D-49** values-m v1.2 가 `scheduledActivation: ""`·`scheduledEnd: ""`·`window: ""` 와 예약 출처 주석을 담았다(D-44 와 같은 파일). 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md)  
+- **D-49** values-m v1.2 가 `scheduledActivation: ""`·`scheduledEnd: ""`·`window: ""` 와 예약 출처 주석을 담았다(D-44 와 같은 파일). 노션 페이지 수정이 권한 분류기에 막혀(2026-09-30, 외부 시스템 쓰기) 사용자 승인 대기. 올릴 파일·문구는 [06-notion-changeset.md](06-notion-changeset.md)<br>
   <sub>첨부 values-m 의 예시 예약 시각이 지나면 자동 대조가 영구히 멈춘다</sub>
-- **D-52** §08 시나리오 10 합격 기준·§05 노드 장애 흡수 절 — [06-notion-changeset.md](06-notion-changeset.md) (노션 쓰기 승인 대기)  
-  <sub>"API 노드 강제 종료 무중단"은 Pod 설정만으로는 지킬 수 없다</sub>
-- **D-58** §05 서류 워커 구성(clamd) — [06-notion-changeset.md](06-notion-changeset.md)  
-  <sub>서류 검사 엔진이 파일을 읽지 않는 흉내뿐이었고, 검사 기록은 늘 'mock-av' 였다</sub>
 
-<!-- items=16 edits=23 -->
+<!-- items=44 edits=77 -->

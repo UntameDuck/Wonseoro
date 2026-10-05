@@ -99,7 +99,7 @@
 
 ## 다시 찍기
 
-Docker·Node 22+·Chrome이 필요하다. Chrome 경로가 다르면 `CHROME` 환경변수로 준다. 따로 설치할 것은 없다. 스크립트가 Chrome을 헤드리스로 띄워 DevTools 프로토콜로 조작한다.
+Docker·Node 22+·Chrome이 필요하다. 도구가 Windows·macOS·Linux의 일반 설치 위치나 PATH에서 Chrome을 찾고, 경로가 다르면 `CHROME` 환경변수로 준다. 따로 설치할 것은 없다. 스크립트가 Chrome을 헤드리스로 띄워 DevTools 프로토콜로 조작한다.
 **kind 시험 중에도 돌릴 수 있다.** 전용 DB·전용 포트만 쓴다. 다만 Docker 메모리를 조금(PostgreSQL 컨테이너 하나) 더 쓴다. 서류 업로드에 로컬 Object Storage(:9000)가 필요하다 — 꺼져 있으면 `docker compose -f infra/compose/docker-compose.dev.yml up -d object-storage`.
 
 서버는 `.claude/launch.json`의 `shots-*` 구성을 쓴다. env는 `scripts/screenshots/env/`에 있다. API·워커는 빌드 산출물(`dist`)로 뜬다. 코드가 바뀌었으면 먼저 `npm run build`를 한다. 지원자 웹·콘솔은 `next dev` 로 뜬다 — 개발용 신원 입력이 켜진다(T-M5-53).

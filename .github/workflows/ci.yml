@@ -28,6 +28,14 @@ jobs:
       - run: npm run check:migrations
       # 노션 첨부 교체 대기표의 바이트·SHA-256이 현재 저장소 파일과 같은지
       - run: npm run check:notion-assets
+      # 설계 불일치 대장에서 만든 문서 05의 노션 반영 목록이 최신인지
+      - run: npm run check:notion-changeset
+      # Markdown 상대 링크가 실제 저장소 파일을 가리키는지
+      - run: npm run check:docs-links
+      # 접근성·화면 캡처 도구의 운영체제별 브라우저 경로 선택
+      - run: npm run test:a11y:browser-config
+      # Actions YAML 구조와 npm script 참조가 실제 package.json과 맞는지
+      - run: npm run check:workflows
       # 서버 코드가 구조화·마스킹 로거를 우회하지 않는지 (T-M4-24)
       - run: node scripts/check-logging.mjs
       # 대시보드가 쓰는 KPI 규칙이 정의돼 있고 설계서 지표가 빠짐없는지 (T-M4-21~23)

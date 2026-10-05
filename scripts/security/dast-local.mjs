@@ -1,11 +1,11 @@
 // 토큰을 붙인 ZAP DAST 를 이 PC 에서 CI 와 같은 순서로 돌린다 (T-M5-27, T-M5-02 단계 9)
 //
-// 사용: node scripts/security/dast-local.mjs [--out=E:/DockerData/tools/zap-2.17.0/reports-auth]
+// 사용: node scripts/security/dast-local.mjs [--out=<보고서 폴더>]
 //   1. 빈 PostgreSQL 컨테이너(dast-pg :5498, --rm)에 스키마·개발 시드·CI 마감 시드
 //   2. 시험 발급자(dast-issuer.mjs :18099)와 대학 API(AUTH_MODE=oidc :3121, 지표 :9491)
 //   3. ZAP 2.17.0(고정 digest) OpenAPI active scan — 지원자 경로엔 지원자 토큰, 운영 경로엔 담당자 토큰(zap-auth-hook.py)
 //   4. High 0(check-zap-report.mjs) · 인증 뒤까지 닿았나(check-dast-auth.mjs)
-//   끝나면 컨테이너·프로세스를 내린다(dast-pg 는 --rm 이라 함께 사라진다). 보고서는 --out 폴더(저장소 밖 E 드라이브)
+//   끝나면 컨테이너·프로세스를 내린다(dast-pg 는 --rm 이라 함께 사라진다). 기본 보고서 폴더는 .cache/dast/reports-auth
 // CI 는 .github/workflows/security.yml 의 dast 잡이 같은 일을 한다 — 둘을 함께 고친다.
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { mkdirSync, openSync, readFileSync } from 'node:fs';
@@ -13,13 +13,18 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
-const OUT = path.resolve(process.argv.find((a) => a.startsWith('--out='))?.split('=')[1] ?? 'E:/DockerData/tools/zap-2.17.0/reports-auth');
+const OUT = path.resolve(process.argv.find((a) => a.startsWith('--out='))?.split('=')[1] ?? path.join(ROOT, '.cache/dast/reports-auth'));
 const ZAP = 'ghcr.io/zaproxy/zaproxy@sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef';
 const PG = 'dast-pg';
 const API_PORT = 3121;
 const METRICS = 9491;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const procs = [];
+
+if (process.argv.includes('--print-output')) {
+  console.log(OUT);
+  process.exit(0);
+}
 
 function psql(file, db = 'univ_a') {
   execFileSync('docker', ['exec', '-i', PG, 'psql', '-q', '-U', 'wonseoro', '-d', db, '-v', 'ON_ERROR_STOP=1'], {

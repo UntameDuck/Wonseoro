@@ -1,6 +1,6 @@
 # 접근성 — 키보드·포커스·스크린리더·확대·좁은 화면·세션·CAPTCHA·브라우저
 
-> 작성: 2026-10-01 · 태스크 [M5 「접근성」 T-M5-40 ~ 47](milestones/M5-reliability-security.md#접근성-권민준)
+> 작성: 2026-10-01 · 태스크 [M5 「접근성」 T-M5-40 ~ 47](milestones/M5-reliability-security.md#접근성-권민준--v10-124--07)
 > 기준: 노션 §07 「접근성」 — 키보드만으로 전체 접수, Visible Focus, Screen Reader Label/Error/Step/Status, 200% 확대,
 > 모바일 320 CSS px, Session Timeout 사전경고, CAPTCHA 대체수단. 수치 기준이 없는 항목은 KWCAG 2.2(= WCAG 2.2 AA 대응)를 따른다.
 > 화면 제품화(T-M5-50~56, [08](08-ui-production-readiness.md))가 끝난 같은 화면 위에서 한다. **디자인(배치·색·컴포넌트 모양)은 바꾸지 않는다.**
@@ -28,6 +28,8 @@
 **CI(2026-10-05)** — `.github/workflows/a11y.yml` 이 매주 월요일 03:00(한국 시간)·수동 실행으로 같은 서버·DB 를 띄워 키보드 완주와 지원자·콘솔 전 화면(1280·320)을 돌리고 결과 JSON·서버 로그를 산출물로 남긴다. 무거워서 PR 마다 돌리지 않는다. **아직 원격에서 돌려 보지 않았다** — push 뒤 수동 실행으로 첫 확인을 한다.
 
 **2026-10-05 (3) 화면 링크 회귀 확인** — 두 Next 앱의 내부 이동을 `next/link`로 통일한 뒤 로컬 축소 환경 Chrome 1280에서 키보드 완주 **1개(키 118번·문제 0)**, 지원자 **29화면/Tab 417자리**, 콘솔 **25화면/Tab 587자리**를 다시 돌려 문제 0건을 확인했다. 결과는 `keyboard-walk-chrome-1280-2026-10-05T07-12-51-897Z.json`, `focus-sweep-applicant-chrome-1280-2026-10-05T07-14-00-759Z.json`, `focus-sweep-admin-chrome-1280-2026-10-05T07-16-11-277Z.json`이다.
+
+**2026-10-05 (4) 실행환경 보강** — 접근성 시험과 화면 캡처가 Windows의 고정 `C:` 경로 대신 Windows·macOS·Linux의 일반 설치 위치와 PATH/PATHEXT를 공통 탐색한다. `CHROME=<실행 파일>` 재정의는 그대로다. 탐색 단위 시험 6개와 현재 PC Chrome 선택·실행 확인을 통과했다. 화면 코드는 바뀌지 않아 전 화면 순회는 다시 돌리지 않았다.
 
 ## 태스크
 

@@ -2,11 +2,12 @@
 
 운영 bootstrap과 달리 로컬 kind는 개발 이미지·Secret을 쓰지만 Git HEAD 서명 검증은 그대로 켠다.
 시험용 bare repository를 `http://host.docker.internal:9418/Wonseoro.git`에서 제공하고, 임시 SSH 공개키를
-`wonseoro-git-authors` Secret에 넣는다. 개인키와 bare repository는 저장소 밖 `E:\DockerData`에 둔다.
+`wonseoro-git-authors` Secret에 넣는다. 개인키와 bare repository는 저장소 밖의 접근 제한된 임시 폴더에 둔다.
 bare repository의 read-only smart HTTP는 다음 보조 스크립트로 연다.
 
 ```powershell
-node tests/m4/helpers/git-smart-http-server.mjs E:\DockerData\gitops-test 9418
+$gitRoot = Join-Path $env:TEMP "wonseoro-gitops-test-$((Get-Date).ToString('yyyyMMdd'))"
+node tests/m4/helpers/git-smart-http-server.mjs $gitRoot 9418
 ```
 
 검증 기준:
@@ -21,7 +22,7 @@ node tests/m4/helpers/git-smart-http-server.mjs E:\DockerData\gitops-test 9418
 위 환경(Flux 리소스는 suspend 상태여도 된다)에서:
 
 ```bash
-node tests/m4/peak-mode-gitops.mjs --git-root E:/DockerData/gitops-test-<날짜> --work E:/DockerData/gitops-test-<날짜>/work
+node tests/m4/peak-mode-gitops.mjs --git-root <임시-시험-경로> --work <임시-시험-경로>/work
 ```
 
 시험 사본에 dev-folder `main` 을 서명 병합하고, 지금 시작하는 예약 창을 넣어 생성기로 overlay 를 만든 서명 커밋을

@@ -4,15 +4,60 @@
 // 요소를 찾아 click() 하지 않고, Tab·Enter·Space 키 이벤트를 보내 사람이 키보드로 하는 그대로 움직인다.
 //   CHROME=<실행 파일>  다른 Chromium 계열(Edge)로 돌린다 (T-M5-47)
 import { spawn } from 'node:child_process';
-import { rmSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { workDir } from './workdir.mjs';
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+function commandExists(command, { platform, env, exists, join }) {
+  const pathValue = Object.entries(env).find(([key]) => key.toUpperCase() === 'PATH')?.[1] ?? '';
+  const separator = platform === 'win32' ? ';' : ':';
+  const extensions = platform === 'win32'
+    ? (env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean)
+    : [''];
+  const hasExtension = platform === 'win32' && extensions.some((extension) => command.toUpperCase().endsWith(extension.toUpperCase()));
+  return pathValue.split(separator).filter(Boolean).some((directory) => {
+    const base = join(directory, command);
+    return (hasExtension ? [''] : extensions).some((extension) => exists(`${base}${extension.toLowerCase()}`) || exists(`${base}${extension.toUpperCase()}`));
+  });
+}
+
+export function browserExecutable(name, { platform = process.platform, env = process.env, exists = existsSync } = {}) {
+  if (name === 'chrome' && env.CHROME) return env.CHROME;
+  const pathApi = platform === 'win32' ? path.win32 : path.posix;
+  const join = pathApi.join;
+  const candidates = platform === 'win32'
+    ? {
+        chrome: [
+          env.PROGRAMFILES && join(env.PROGRAMFILES, 'Google/Chrome/Application/chrome.exe'),
+          env['PROGRAMFILES(X86)'] && join(env['PROGRAMFILES(X86)'], 'Google/Chrome/Application/chrome.exe'),
+          env.LOCALAPPDATA && join(env.LOCALAPPDATA, 'Google/Chrome/Application/chrome.exe'),
+          'chrome.exe',
+        ],
+        edge: [
+          env['PROGRAMFILES(X86)'] && join(env['PROGRAMFILES(X86)'], 'Microsoft/Edge/Application/msedge.exe'),
+          env.PROGRAMFILES && join(env.PROGRAMFILES, 'Microsoft/Edge/Application/msedge.exe'),
+          'msedge.exe',
+        ],
+      }
+    : platform === 'darwin'
+      ? {
+          chrome: ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', 'google-chrome'],
+          edge: ['/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge', 'microsoft-edge'],
+        }
+      : { chrome: ['google-chrome', 'chromium', 'chromium-browser'], edge: ['microsoft-edge', 'microsoft-edge-stable'] };
+  const choices = candidates[name];
+  if (!choices) return name;
+  const available = choices.filter(Boolean).find((candidate) => (
+    pathApi.isAbsolute(candidate) ? exists(candidate) : commandExists(candidate, { platform, env, exists, join })
+  ));
+  return available ?? choices.filter(Boolean).find((candidate) => !pathApi.isAbsolute(candidate)) ?? choices[0];
+}
+
 export const BROWSERS = {
-  chrome: 'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  edge: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
+  chrome: browserExecutable('chrome'),
+  edge: browserExecutable('edge'),
 };
 
 /**

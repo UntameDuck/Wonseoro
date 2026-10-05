@@ -110,8 +110,7 @@ DB 앞 쿼리 형식 차단, 현재 열린 모집 선택, 전 응답 `nosniff`�
 
 로컬 결과(축소 환경, `node scripts/security/dast-local.mjs`): **WARN 0·High 0·PASS 118**, 인증 뒤까지 닿은 요청 지원자 1,236·담당자 3,036(거절 0), 대학 API 오류 로그 0.
 원격 Security(run 37108004422)도 같은 수치로 통과했다.
-알림은 Informational 3종(공격 요청에 대한 4xx 210건·캐시 정책 설명 2종)뿐이다. 보고서 `E:\DockerData	ools\zap-2.17.0
-eports-auth\`.
+알림은 Informational 3종(공격 요청에 대한 4xx 210건·캐시 정책 설명 2종)뿐이다. 당시 보고서는 `E:\DockerData\tools\zap-2.17.0\reports-auth\`에 남겼다. 새 로컬 실행의 기본 출력은 저장소에서 무시되는 `.cache/dast/reports-auth/`이며 `--out=<폴더>`로 바꿀 수 있다.
 
 ## 6. T-M5-28 이미지 서명
 

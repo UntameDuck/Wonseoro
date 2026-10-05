@@ -2,9 +2,9 @@
 //
 // 전제: kind-univ-a 에 T-M4-05 로컬 Flux(GitRepository·Kustomization·HelmRelease `wonseoro-local`/`univ-a`)가
 // 설치되어 있고, 시험 저장소 사본(--work)의 git 설정에 신뢰된 임시 SSH 서명키가 잡혀 있다.
-// 시험 저장소·서명키는 저장소 밖(E:\DockerData)에 있다. 이 스크립트는 키를 읽지 않고 `git commit -S` 만 부른다.
+// 시험 저장소·서명키는 저장소 밖의 접근 제한된 임시 폴더에 있다. 이 스크립트는 키를 읽지 않고 `git commit -S` 만 부른다.
 //
-//   node tests/m4/peak-mode-gitops.mjs --git-root E:\DockerData\gitops-test-... --work E:\DockerData\gitops-test-...\work
+//   node tests/m4/peak-mode-gitops.mjs --git-root <임시-시험-경로> --work <임시-시험-경로>/work
 //
 // 순서: 사본에 dev-folder main 을 서명 병합 → 예약 창(지금 시작)을 넣고 생성기로 overlay 를 만든 서명 커밋
 //   → Flux 재개 → API replica 2→3·PEAK_MODE_* env 확인 → 종료 시각 기준으로 다시 생성한 서명 커밋

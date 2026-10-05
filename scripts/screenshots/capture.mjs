@@ -14,6 +14,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { BROWSERS } from '../../tests/a11y/helpers/browser.mjs';
 import { workDir } from '../../tests/a11y/helpers/workdir.mjs';
 
 // 단계 사이에 이어 쓰는 상태(원서 ID)·Chrome 프로필·실패 화면은 저장소 안 `.cache/`(git 제외)에 둔다 —
@@ -40,7 +41,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /* ── Chrome · CDP ─────────────────────────────────────────────────── */
 
 const chrome = spawn(
-  process.env.CHROME ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe',
+  BROWSERS.chrome,
   [
     '--headless=new',
     `--remote-debugging-port=${CDP_PORT}`,
