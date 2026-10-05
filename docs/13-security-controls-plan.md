@@ -152,3 +152,15 @@
   첨부 PDF, PDF 폭탄(`Limits.Exceeded.MaxFileSize`), 자바스크립트 PDF, 30MB 넘는 파일 ERROR. 서류 워커 단위 12개(능동 콘텐츠 3 추가)
 - **CI 에 넣지 않은 이유** — 서명 DB 내려받기(약 200MB)가 CI 주소에서 자주 막힌다(ClamAV CDN 속도 제한). 운영은 플랫폼의 clamd(서명 DB 미러)를 `documentService.clamav.host` 로 가리킨다
 - **보안 통제(T-M5-01·03~09) 끝** — 단계 1~6 모두 ✅
+
+## 운영 경보 (2026-10-05, D-93)
+
+통제가 막은 것과 통제 자체의 장애는 카운터·로그뿐이었다 — 이제 Prometheus 경보로 받는다(규칙 `deploy/platform/observability/expiry-rules.yaml`, 대응은 [문서 14 「경보 대응표」](14-operations-automation.md#경보-대응표)).
+
+| 통제 | 경보 |
+|---|---|
+| 출구 허용 목록(단계 2) | `EgressDenied` — 등록 누락 또는 SSRF 시도 |
+| 상호 TLS·대학 신원(단계 1) | `InternalAuthRejected` — 신원 없음·불일치, `WorkloadCertificateNotRenewed`·`CredentialExpiryUnknown` |
+| 필드 암호화(단계 3) | `FieldKeyUnavailable`(닫힌 실패 — 원서를 못 읽음, decrypt-failed 는 변조 의심)·`FieldPlaintextReads`(평문 이전 미완) |
+| Vault(단계 4) | `VaultRequestsFailing`·`DbCredentialNotRotated` |
+| 실 clamd(단계 6) | `ScanEngineUnavailable`·`DocumentScanStalled` |

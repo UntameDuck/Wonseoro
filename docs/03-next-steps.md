@@ -1,7 +1,7 @@
 # 다음 단계 (Next Steps)
 
 > 최종 갱신: **2026-10-05** — Pilot 도구 T-M6-01·06·07, 개인정보·법정 고지 G-1~G-13·**G-15**(권한 부여·변경·말소 기록, D-91)의 AI 구현, G-14 유출 통지·신고 도구·절차서 초안(D-92), **최신 화면 캡처 43장**까지 끝냈다. 남은 사람 태스크의 실행 전 준비도 [18-pilot-execution-package.md](18-pilot-execution-package.md)와 `ops:pilot-readiness` 증적 게이트로 만들었다. **A 목록과 태스크 밖 AI 몫은 모두 끝났다.** 남은 태스크 21개는 실제 외부 환경·사람·기관 승인/실행이 있어야 끝난다. 완료 수는 그대로다.
-> **2026-10-05 (2)** — 경보·KPI 기록 규칙을 promtool 로 검사·단위 시험(`npm run check:alert-rules`, CI)하다 찾은 결함을 고쳤다(D-93): WORM 정기 대조가 재시작에 묶여 돌지 않거나 변조 경보가 꺼지던 것(마이그레이션 **0012** `scheduled_job_run`), 권한 기록 수집 경보 두 개. 권한 변경 기록 수집 CronJob 을 kind 에서 실제로 돌렸다(D-91). 태스크 완료 수는 그대로.
+> **2026-10-05 (2)** — 경보·KPI 기록 규칙을 promtool 로 검사·단위 시험(`npm run check:alert-rules`, CI)하다 찾은 결함을 고쳤다(D-93): WORM 정기 대조가 재시작에 묶여 돌지 않거나 변조 경보가 꺼지던 것(마이그레이션 **0012** `scheduled_job_run`), 권한 기록 수집 경보 두 개. 권한 변경 기록 수집 CronJob 을 kind 에서 실제로 돌렸다(D-91). 이어서 대학 API 주기 작업(대조·보관·정리·결제 재확인·WORM 내보내기)을 DB 기준 주기·멈춤 경보로, 로그뿐이던 장애 신호(중앙 반영·DEAD·회로·검사 엔진·시계·발급자·필드 키·출구/내부 인증 거절·Vault)를 경보 27개·대응표·운영 신호 대시보드로 만들었고 실제 Prometheus 로 평가했다. 태스크 완료 수는 그대로.
 > 이 문서는 **"지금 무엇을 해야 하는가"** 하나만 다룬다.
 > 전체 계획은 [00-development-plan.md](00-development-plan.md), 단계별 태스크는 [milestones/](milestones/).
 > 작업 착수 전 [01-notion-sync-protocol.md](01-notion-sync-protocol.md) 를 먼저 읽는다.

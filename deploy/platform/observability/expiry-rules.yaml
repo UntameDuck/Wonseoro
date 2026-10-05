@@ -180,6 +180,14 @@ serverFiles:
             labels: { severity: critical }
             annotations:
               summary: "{{ $labels.namespace }} {{ $labels.pod }} 의 시계가 DB 와 1초 넘게 어긋나 이 Pod 는 접수를 확정하지 않는다 — 노드 NTP·DB 시계를 본다"
+          # 필드 암호화(D-70)는 닫힌 실패다 — 키를 못 쓰면 원서 항목 값·공통원서를 읽지 못해 그 요청이 503 이 된다.
+          # decrypt-failed 는 암호문이 다른 레코드로 옮겨 붙었거나 바뀐 경우에도 난다(변조 신호)
+          - alert: FieldKeyUnavailable
+            expr: sum by (namespace, reason) (increase(field_crypto_failures_total[5m])) > 0
+            for: 1m
+            labels: { severity: critical }
+            annotations:
+              summary: "{{ $labels.namespace }} 필드 암호 키를 쓰지 못해({{ $labels.reason }}) 원서·공통원서를 읽지 못한다 — 키 묶음·Vault Transit 상태와 키 교체 이력을 본다(decrypt-failed 는 암호문 변조도 의심)"
           # 발급자 키를 쓸 수 없어(보관 한도 초과) 토큰을 판단하지 못해 거절하고 있다 — 로그인한 사람도 막힌다
           - alert: IssuerKeysUnavailable
             expr: sum by (namespace, audience) (rate(auth_decisions_total{result="unavailable"}[5m])) > 0
@@ -194,6 +202,38 @@ serverFiles:
             labels: { severity: warning }
             annotations:
               summary: "{{ $labels.namespace }} {{ $labels.audience }} 만료 토큰을 단절 유예로 받고 있다 — 발급자(로그인 서버)에 닿지 않는다"
+
+      # 보안 통제가 막은 것(docs/13, D-93) — 카운터만 있고 경보가 없었다. 막혔으니 피해는 없지만 시도·설정 오류의 신호다
+      - name: k-admission-security-signals
+        rules:
+          # 출구 허용 목록(T-M5-07) 밖으로 나가려 했다 — 새 의존 URL 을 configureEgress 에 안 넣었거나 SSRF 시도
+          - alert: EgressDenied
+            expr: sum by (namespace, reason) (increase(egress_denied_total[5m])) > 0
+            for: 1m
+            labels: { severity: warning }
+            annotations:
+              summary: "{{ $labels.namespace }} 허용 목록 밖으로 나가려는 연결을 막았다({{ $labels.reason }}) — 새 의존 주소의 출구 등록 누락인지, 사용자 입력 주소로 나가려 한 것(SSRF)인지 로그를 본다"
+          # 내부 경로(상호 TLS, D-69)에 신원이 없거나 다른 대학 신원으로 온 요청 — 위장 발신 시도 또는 인증서 문제
+          - alert: InternalAuthRejected
+            expr: sum by (namespace, result) (increase(internal_auth_decisions_total{result!="ok"}[5m])) > 0
+            for: 1m
+            labels: { severity: warning }
+            annotations:
+              summary: "{{ $labels.namespace }} 내부 경로 요청을 거절했다({{ $labels.result }}) — 워크로드 인증서 만료·대학 신원 불일치, 또는 위장 발신 시도를 본다"
+          # Vault(D-71) 요청이 실패·거절된다 — 계속되면 키 묶음·DB 동적 계정·인증서 갱신이 멈춘다
+          - alert: VaultRequestsFailing
+            expr: sum by (namespace, path_kind, result) (increase(vault_requests_total{result!="ok"}[5m])) > 0
+            for: 5m
+            labels: { severity: warning }
+            annotations:
+              summary: "{{ $labels.namespace }} Vault {{ $labels.path_kind }} 요청이 실패한다({{ $labels.result }}) — Vault 상태·정책·로그인 수단을 본다(denied 는 정책 문제)"
+          # 0003 이전 평문 원서 값이 아직 읽힌다 — 이전(field-keys encrypt-legacy)이 끝나지 않았다
+          - alert: FieldPlaintextReads
+            expr: sum by (namespace) (increase(field_plaintext_reads_total[1h])) > 0
+            for: 1h
+            labels: { severity: info }
+            annotations:
+              summary: "{{ $labels.namespace }} 암호화 전 평문 원서 값이 아직 읽힌다 — field-keys encrypt-legacy 로 옮긴다"
 
       # 권한 부여·변경·말소 기록 수집(G-15, D-91 — 차트 accessGrantSync CronJob, 1시간마다).
       # 멈춘 채 로그인 서버의 관리 이벤트 보관기간이 지나면 "누가 바꿨는지" 가 사라진다(대조 기록은 남지만 바꾼 사람 모름).

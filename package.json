@@ -34,6 +34,7 @@
     "dev:scanner": "npm run dev -w @wonseoro/document-service",
     "test:m4:observability": "node tests/m4/dashboards.mjs",
     "check:alert-rules": "node scripts/check-alert-rules.mjs",
+    "check:alert-rules:live": "node scripts/check-alert-rules.mjs && node scripts/check-alert-rules-live.mjs",
     "check:contracts": "node scripts/check-contracts.mjs",
     "check:ui-copy": "node scripts/check-ui-copy.mjs",
     "check:security:deps": "node scripts/check-security-deps.mjs",

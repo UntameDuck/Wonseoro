@@ -117,8 +117,9 @@ npm run ops:dr-acceptance -- --file=deploy/pilot/<대학>-dr.yaml
 
 **실제 Prometheus 확인(2026-10-05, 축소 환경)** — 화면 시험 env 로 대학 API 를 띄우고 Prometheus v3.15.0 컨테이너가 그 `/metrics` 를 수집하게 했다: 규칙 36개(기록 14·경보 22) 모두 오류 없이 평가, 운영 신호 대시보드 쿼리 10개 모두 성공. 기동 직후 `ScheduledJobStale` 이 대기(pending)였다가 결제 재확인(30초)·대조·Outbox 보관·멱등 정리(첫 확인 5분)가 실제로 돌아 `scheduled_job_run` 에 남자 모두 풀렸다(경보 지속 30분보다 먼저). 상호 TLS 가 없는 개발 환경이라 `CredentialExpiryUnknown` 은 대기 — 예상대로.
 
-규칙 원본은 [`deploy/platform/observability/expiry-rules.yaml`](../deploy/platform/observability/expiry-rules.yaml)(이름과 달리 모든 경보), 시험은 `tests/alert-rules.test.yaml` — `npm run check:alert-rules` 가 이 표에 모든 경보가 있는지도 본다(경보를 더하면 `node scripts/render-alert-runbook.mjs`). `{namespace}` 등은 경보 이름표. 심각도의 "호출" 은 `page: "true"`. 수치 기준은 설계서 상수·앱 설정을 그대로 쓰고 새로 만들지 않았다(D-93).
+규칙 원본은 [`deploy/platform/observability/expiry-rules.yaml`](../deploy/platform/observability/expiry-rules.yaml)(이름과 달리 모든 경보), 시험은 `tests/alert-rules.test.yaml` — `npm run check:alert-rules` 가 이 표가 규칙(이름·심각도·지속·안내 문구)과 같은지도 본다(경보를 더하면 `node scripts/render-alert-runbook.mjs`). `{namespace}` 등은 경보 이름표. 심각도의 "호출" 은 `page: "true"`. 수치 기준은 설계서 상수·앱 설정을 그대로 쓰고 새로 만들지 않았다(D-93).
 
+<!-- alert-table:start — node scripts/render-alert-runbook.mjs 가 다시 쓴다 -->
 | 경보 | 심각도 | 지속 | 안내(먼저 볼 것) |
 |---|---|---|---|
 | `CredentialExpiresIn30Days` | info | 10m | {kind}/{name} 가 30일 안에 끝난다 — 교체 일정을 잡는다 |
@@ -139,7 +140,13 @@ npm run ops:dr-acceptance -- --file=deploy/pilot/<대학>-dr.yaml
 | `DocumentScanStalled` | critical | 15m | {namespace} 검사 대기 서류가 있는데 검사가 끝나지 않는다 — 서류 워커 로그(대상 조회·결과 보고)·검사 엔진을 본다 |
 | `ScanEngineUnavailable` | critical | 5m | {namespace} 서류 검사 엔진({engine})에 닿지 못한다 — 올린 서류가 검사 대기로 남는다. 검사 엔진 상태·서명 DB 를 본다 |
 | `ClockOffsetExceeded` | critical | 2m | {namespace} {pod} 의 시계가 DB 와 1초 넘게 어긋나 이 Pod 는 접수를 확정하지 않는다 — 노드 NTP·DB 시계를 본다 |
+| `FieldKeyUnavailable` | critical | 1m | {namespace} 필드 암호 키를 쓰지 못해({reason}) 원서·공통원서를 읽지 못한다 — 키 묶음·Vault Transit 상태와 키 교체 이력을 본다(decrypt-failed 는 암호문 변조도 의심) |
 | `IssuerKeysUnavailable` | critical | 5m | {namespace} {audience} 토큰을 판단하지 못해 거절하고 있다 — 발급자(로그인 서버) 연결·공개키를 본다 |
 | `IssuerOutageGraceInUse` | warning | 5m | {namespace} {audience} 만료 토큰을 단절 유예로 받고 있다 — 발급자(로그인 서버)에 닿지 않는다 |
+| `EgressDenied` | warning | 1m | {namespace} 허용 목록 밖으로 나가려는 연결을 막았다({reason}) — 새 의존 주소의 출구 등록 누락인지, 사용자 입력 주소로 나가려 한 것(SSRF)인지 로그를 본다 |
+| `InternalAuthRejected` | warning | 1m | {namespace} 내부 경로 요청을 거절했다({result}) — 워크로드 인증서 만료·대학 신원 불일치, 또는 위장 발신 시도를 본다 |
+| `VaultRequestsFailing` | warning | 5m | {namespace} Vault {path_kind} 요청이 실패한다({result}) — Vault 상태·정책·로그인 수단을 본다(denied 는 정책 문제) |
+| `FieldPlaintextReads` | info | 1h | {namespace} 암호화 전 평문 원서 값이 아직 읽힌다 — field-keys encrypt-legacy 로 옮긴다 |
 | `AccessGrantSyncStale` | warning | 10m | {namespace} 권한 변경 기록 수집이 주기의 세 배(최소 3시간)가 넘도록 성공하지 못했다 — 관리 이벤트(세부 포함)가 꺼졌거나 수집 클라이언트·DB 연결을 본다 |
 | `AccessGrantSyncFailing` | warning | 5m | {namespace} 권한 변경 기록 수집 Job 이 실패했다 — 종료 코드 1 은 관리 이벤트 꺼짐 또는 해시 체인 끊김 |
+<!-- alert-table:end -->

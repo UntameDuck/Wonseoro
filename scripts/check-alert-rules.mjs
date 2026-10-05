@@ -30,12 +30,8 @@ for (const values of VALUES) {
     writeFileSync(join(OUT, name), stringify(content));
   }
 }
-// 운영 문서의 경보 대응표(docs/14 「경보 대응표」)에 모든 경보가 있어야 한다 — 경보만 더하고 대응을 안 적는 것을 막는다
-const RUNBOOK = 'docs/14-operations-automation.md';
-const alerts = parse(readFileSync(join(DIR, 'expiry-rules.yaml'), 'utf8')).serverFiles['alerting_rules.yml'].groups.flatMap((g) => g.rules.map((r) => r.alert));
-const runbook = readFileSync(RUNBOOK, 'utf8');
-const missing = alerts.filter((a) => !runbook.includes(`| \`${a}\` |`));
-if (missing.length) throw new Error(`${RUNBOOK} 「경보 대응표」에 없는 경보: ${missing.join(', ')}`);
+// 운영 문서의 경보 대응표(docs/14 「경보 대응표」)가 규칙과 같아야 한다 — 경보만 더하거나 문구·심각도만 바꾸고 표를 안 고치는 것을 막는다
+execFileSync(process.execPath, ['scripts/render-alert-runbook.mjs', '--check'], { stdio: 'inherit' });
 
 const tests = readdirSync(join(DIR, 'tests')).filter((f) => f.endsWith('.test.yaml'));
 for (const t of tests) copyFileSync(join(DIR, 'tests', t), join(OUT, t));

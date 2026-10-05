@@ -13,7 +13,7 @@ import { Db, describeFailure, envBool, secretOrDev } from '@wonseoro/server-kit'
 import { AUDIT_WORM, PEAK_MODE, S3, UNIVERSITY_ID } from '../../config';
 import type { Queryable } from '../../common/db/queryable';
 import { withLeaderLock } from '../../common/scheduling/leader-lock';
-import { markSuspended, recordJobSuccess, registerPeriodicJob, type PeriodicJob } from '../../common/scheduling/periodic-job';
+import { isMissingJobTable, markSuspended, recordJobSuccess, registerPeriodicJob, type PeriodicJob } from '../../common/scheduling/periodic-job';
 import { PEAK_MODE_POLICY, PeakModePolicy, shouldSuspendNonCriticalJobs } from '../../common/scheduling/peak-mode';
 
 /**
@@ -353,7 +353,14 @@ export interface WormVerifyOptions {
 export async function verifyWormIfDue(db: Db, store: WormStore, o: WormVerifyOptions): Promise<Record<'audit' | 'access-grants', WormVerifyResult> | null> {
   const due = async (): Promise<boolean> => {
     const now = o.now ?? Date.now();
-    const rec = await loadWormVerify(db, o.university, now);
+    let rec: WormVerifyRecord | null;
+    try {
+      rec = await loadWormVerify(db, o.university, now);
+    } catch (err) {
+      // 0012 를 아직 적용하지 않은 DB — 예전처럼 이 프로세스의 주기로만 정한다(10분마다 전체 대조하지 않게)
+      if (!isMissingJobTable(err)) throw err;
+      return now - o.processSince >= o.intervalMs;
+    }
     applyVerifyRecord(rec);
     return !rec || now - rec.at >= o.intervalMs || now - o.processSince >= o.intervalMs;
   };

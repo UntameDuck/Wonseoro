@@ -11,10 +11,14 @@ import { LEADER_LOCK_CLASS, withLeaderLock } from './leader-lock';
 let db: Db;
 let available = false;
 
-const heldLeaderLocks = async (): Promise<number> => {
+// 이 시험의 잠금만 센다 — 같은 때 도는 다른 시험(주기 작업 등)의 리더 잠금을 세면 간헐 실패한다(D-93 에서 겪음).
+// 두 정수 키 잠금은 pg_locks 의 classid = 첫 키, objid = 둘째 키(hashtext 값을 부호 없는 32비트로)
+const heldLeaderLocks = async (name: string): Promise<number> => {
   const { rows } = await db.query<{ n: string }>(
-    `SELECT count(*) AS n FROM pg_locks WHERE locktype = 'advisory' AND classid = $1`,
-    [LEADER_LOCK_CLASS],
+    `SELECT count(*) AS n FROM pg_locks
+      WHERE locktype = 'advisory' AND classid = $1 AND objsubid = 2
+        AND objid = ((hashtext($2)::bigint + 4294967296) % 4294967296)::text::oid`,
+    [LEADER_LOCK_CLASS, name],
   );
   return Number(rows[0]?.n ?? 0);
 };
@@ -33,10 +37,10 @@ describe('withLeaderLock (D-54)', () => {
   it('작업이 끝나면 잠금이 남지 않는다 — 성공·실패 모두', { skip: !process.env.DATABASE_URL }, async () => {
     if (!available) return;
     const name = `test:leader:${Date.now()}`;
-    assert.equal(await withLeaderLock(db, name, async () => heldLeaderLocks()), 1, '작업 중에는 잠금이 하나 있다');
-    assert.equal(await heldLeaderLocks(), 0);
+    assert.equal(await withLeaderLock(db, name, async () => heldLeaderLocks(name)), 1, '작업 중에는 잠금이 하나 있다');
+    assert.equal(await heldLeaderLocks(name), 0);
     await assert.rejects(withLeaderLock(db, name, async () => { throw new Error('작업 실패'); }), /작업 실패/);
-    assert.equal(await heldLeaderLocks(), 0, '작업이 실패해도 잠금이 풀린다');
+    assert.equal(await heldLeaderLocks(name), 0, '작업이 실패해도 잠금이 풀린다');
     assert.equal(await withLeaderLock(db, name, async () => 'again'), 'again', '다음 주기가 다시 잡는다');
   });
 

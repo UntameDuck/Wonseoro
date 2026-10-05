@@ -357,3 +357,60 @@ tests:
         exp_alerts:
           - exp_labels: { severity: critical, namespace: univ-a }
             exp_annotations: { summary: "univ-a 검사 대기 서류가 있는데 검사가 끝나지 않는다 — 서류 워커 로그(대상 조회·결과 보고)·검사 엔진을 본다" }
+
+  # ── 필드 암호 키 — 한 번이라도 못 쓰면 ───────────────────────────────────
+  - interval: 1m
+    input_series:
+      - series: 'field_crypto_failures_total{namespace="univ-a",pod="api-1",reason="unwrap-failed"}'
+        values: '0 0 3x8'
+      - series: 'field_crypto_failures_total{namespace="univ-b",pod="api-1",reason="decrypt-failed"}'
+        values: '0x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: FieldKeyUnavailable
+        exp_alerts:
+          - exp_labels: { severity: critical, namespace: univ-a, reason: unwrap-failed }
+            exp_annotations: { summary: "univ-a 필드 암호 키를 쓰지 못해(unwrap-failed) 원서·공통원서를 읽지 못한다 — 키 묶음·Vault Transit 상태와 키 교체 이력을 본다(decrypt-failed 는 암호문 변조도 의심)" }
+
+  # ── 보안 통제가 막은 것 ─────────────────────────────────────────────────
+  - interval: 1m
+    input_series:
+      - series: 'egress_denied_total{namespace="univ-a",pod="api-1",reason="host"}'
+        values: '0 0 1x8'
+      - series: 'internal_auth_decisions_total{namespace="central",pod="central-1",route="/internal/v1/events",result="ok"}'
+        values: '0+10x10'
+      - series: 'internal_auth_decisions_total{namespace="central",pod="central-1",route="/internal/v1/events",result="mismatch"}'
+        values: '0 0 2x8'
+      - series: 'vault_requests_total{namespace="univ-a",pod="api-1",path_kind="transit",result="denied"}'
+        values: '0 0+1x9'
+      - series: 'vault_requests_total{namespace="univ-b",pod="api-1",path_kind="transit",result="ok"}'
+        values: '0+5x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: EgressDenied
+        exp_alerts:
+          - exp_labels: { severity: warning, namespace: univ-a, reason: host }
+            exp_annotations: { summary: "univ-a 허용 목록 밖으로 나가려는 연결을 막았다(host) — 새 의존 주소의 출구 등록 누락인지, 사용자 입력 주소로 나가려 한 것(SSRF)인지 로그를 본다" }
+      - eval_time: 5m
+        alertname: InternalAuthRejected
+        exp_alerts:
+          - exp_labels: { severity: warning, namespace: central, result: mismatch }
+            exp_annotations: { summary: "central 내부 경로 요청을 거절했다(mismatch) — 워크로드 인증서 만료·대학 신원 불일치, 또는 위장 발신 시도를 본다" }
+      - eval_time: 9m
+        alertname: VaultRequestsFailing
+        exp_alerts:
+          - exp_labels: { severity: warning, namespace: univ-a, path_kind: transit, result: denied }
+            exp_annotations: { summary: "univ-a Vault transit 요청이 실패한다(denied) — Vault 상태·정책·로그인 수단을 본다(denied 는 정책 문제)" }
+  - interval: 5m
+    input_series:
+      - series: 'field_plaintext_reads_total{namespace="univ-a",pod="api-1"}'
+        values: '0+3x40'
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: FieldPlaintextReads
+        exp_alerts: []
+      - eval_time: 150m
+        alertname: FieldPlaintextReads
+        exp_alerts:
+          - exp_labels: { severity: info, namespace: univ-a }
+            exp_annotations: { summary: "univ-a 암호화 전 평문 원서 값이 아직 읽힌다 — field-keys encrypt-legacy 로 옮긴다" }

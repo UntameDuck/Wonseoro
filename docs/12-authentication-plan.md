@@ -211,3 +211,7 @@
 
 T-M5-02·10 은 끝났다. 남은 것 — 실 본인확인 기관 연동·운영 발급자(기관 계약, [10 §7](10-admission-privacy-and-legal-notices.md)),
 break-glass 의 짧은 TTL·사용 즉시 경보(T-M5-03), 노션 반영(D-64·D-65·D-67·D-68, [06](06-notion-changeset.md)).
+
+## 7. 운영 경보 (2026-10-05, D-93)
+
+발급자 장애는 로그뿐이었다 — `auth_decisions_total{audience,result}`(대학·중앙 API 모두)로 `IssuerKeysUnavailable`(키를 못 써 토큰 판단 불가 — 거절 중, critical)·`IssuerOutageGraceInUse`(단절 유예 D-67 로 받는 중, warning)를 받는다. 대응은 [문서 14 「경보 대응표」](14-operations-automation.md#경보-대응표). 권한 부여·변경·말소 기록 수집은 `AccessGrantSyncStale`(차트 schedule 주기의 세 배, 최소 3시간)·`AccessGrantSyncFailing`.

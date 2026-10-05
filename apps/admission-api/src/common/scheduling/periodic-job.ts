@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { metrics } from '@opentelemetry/api';
 import type { Db } from '@wonseoro/server-kit';
 import type { Queryable } from '../db/queryable';
@@ -77,12 +78,42 @@ export async function lastJobSuccess(db: Queryable, j: Pick<PeriodicJob, 'name' 
   return at;
 }
 
+/** 0012(scheduled_job_run)를 아직 적용하지 않은 DB — 예전처럼 타이머마다 돈다(작업이 아예 멈추는 것보다 낫다). 한 번만 알린다 */
+export const isMissingJobTable = (err: unknown): boolean => (err as { code?: string })?.code === '42P01';
+let missingTableWarned = false;
+function warnMissingTable(): void {
+  if (missingTableWarned) return;
+  missingTableWarned = true;
+  new Logger('periodic-job').warn('scheduled_job_run 표가 없다(마이그레이션 0012 미적용) — 주기 작업을 타이머마다 돌리고 마지막 성공은 남기지 않는다');
+}
+
 export async function isJobDue(db: Queryable, j: PeriodicJob, now = Date.now()): Promise<boolean> {
-  const last = await lastJobSuccess(db, j, now);
+  let last: number | null;
+  try {
+    last = await lastJobSuccess(db, j, now);
+  } catch (err) {
+    if (!isMissingJobTable(err)) throw err;
+    warnMissingTable();
+    // DB 에 기록이 없으니 이 프로세스가 마지막으로 끝낸 시각으로 주기를 지킨다 — 타이머(최대 5분)마다 돌면 1시간 주기 작업이 12배로 돈다
+    const s = jobs.get(j.name);
+    return !s || now - s.lastSuccess >= j.intervalMs;
+  }
   return last === null || now - last >= j.intervalMs;
 }
 
 export async function recordJobSuccess(db: Db, j: Pick<PeriodicJob, 'name' | 'university'>, result: Record<string, unknown> = {}): Promise<void> {
+  // 지표는 먼저 — DB 에 못 남겨도(표 없음) 이 프로세스가 끝낸 것은 알린다
+  const s0 = jobs.get(j.name);
+  if (s0) s0.lastSuccess = Math.max(s0.lastSuccess, Date.now());
+  try {
+    await recordRow(db, j, result);
+  } catch (err) {
+    if (!isMissingJobTable(err)) throw err;
+    warnMissingTable();
+  }
+}
+
+async function recordRow(db: Db, j: Pick<PeriodicJob, 'name' | 'university'>, result: Record<string, unknown>): Promise<void> {
   await db.tx((c) =>
     c.query(
       `INSERT INTO scheduled_job_run (job, last_success_at, result) VALUES ($1, now(), $2)
@@ -90,8 +121,6 @@ export async function recordJobSuccess(db: Db, j: Pick<PeriodicJob, 'name' | 'un
       [jobKey(j), JSON.stringify(result)],
     ),
   );
-  const s = jobs.get(j.name);
-  if (s) s.lastSuccess = Math.max(s.lastSuccess, Date.now());
 }
 
 /**
