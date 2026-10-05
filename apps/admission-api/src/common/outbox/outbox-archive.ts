@@ -1,9 +1,10 @@
 import { Inject, Injectable, Logger, Module, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { metrics } from '@opentelemetry/api';
 import { Db, describeFailure } from '@wonseoro/server-kit';
-import { OUTBOX_ARCHIVE, PEAK_MODE } from '../../config';
+import { OUTBOX_ARCHIVE, PEAK_MODE, UNIVERSITY_ID } from '../../config';
 import type { Queryable } from '../db/queryable';
 import { withLeaderLock } from '../scheduling/leader-lock';
+import { checkEveryMs, markSuspended, registerPeriodicJob, runIfDue, type PeriodicJob } from '../scheduling/periodic-job';
 import { PEAK_MODE_POLICY, PeakModePolicy, shouldSuspendNonCriticalJobs } from '../scheduling/peak-mode';
 
 const archived = metrics.getMeter('k-admission.outbox').createCounter('outbox_archived', {
@@ -70,12 +71,13 @@ async function moveBatch(c: Queryable, afterDays: number, batch: number): Promis
   return rows.length;
 }
 
-/** 매시간·리더 하나·Peak Mode 억제 구간에는 쉰다 — 멱등 기록 정리와 같은 규칙 */
+/** 매시간·리더 하나·Peak Mode 억제 구간에는 쉰다 — 멱등 기록 정리와 같은 규칙. 때는 DB 의 마지막 성공으로(periodic-job, D-93) */
 @Injectable()
 export class OutboxArchiveScheduler implements OnModuleInit, OnApplicationShutdown {
   static readonly LOCK = 'outbox:archive';
   private readonly logger = new Logger('outbox-archive');
   private timer: NodeJS.Timeout | null = null;
+  private readonly job: PeriodicJob = { name: 'outbox-archive', university: UNIVERSITY_ID, intervalMs: OUTBOX_ARCHIVE.intervalMs };
 
   constructor(
     private readonly db: Db,
@@ -84,7 +86,8 @@ export class OutboxArchiveScheduler implements OnModuleInit, OnApplicationShutdo
 
   onModuleInit(): void {
     if (!OUTBOX_ARCHIVE.autostart) return;
-    this.timer = setInterval(() => void this.safeTick(), OUTBOX_ARCHIVE.intervalMs);
+    registerPeriodicJob(this.job);
+    this.timer = setInterval(() => void this.safeTick(), checkEveryMs(this.job.intervalMs));
     this.timer.unref();
   }
 
@@ -94,13 +97,21 @@ export class OutboxArchiveScheduler implements OnModuleInit, OnApplicationShutdo
 
   private async safeTick(): Promise<void> {
     try {
-      const r = await this.tick();
+      const r = await this.tickIfDue();
       if (r && (r.moved || r.partitionsDropped.length)) {
         this.logger.log(`Outbox ${r.moved}건 보관, 지운 파티션 ${r.partitionsDropped.join(',') || '없음'}`);
       }
     } catch (err) {
       this.logger.warn(`outbox archive failed (${describeFailure(err)})`);
     }
+  }
+
+  /** 때가 됐을 때만 — 타이머가 부른다 */
+  async tickIfDue(): Promise<ArchiveResult | null> {
+    const suspended = shouldSuspendNonCriticalJobs(this.peakMode);
+    markSuspended(this.job, suspended);
+    if (suspended) return null;
+    return runIfDue(this.db, this.job, OutboxArchiveScheduler.LOCK, () => archiveOutbox(this.db, OUTBOX_ARCHIVE), (r) => ({ moved: r.moved, partitionsDropped: r.partitionsDropped.length }));
   }
 
   async tick(): Promise<ArchiveResult | null> {

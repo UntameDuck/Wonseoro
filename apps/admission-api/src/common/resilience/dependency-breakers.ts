@@ -1,4 +1,5 @@
 import { Global, Injectable, Logger, Module } from '@nestjs/common';
+import { metrics } from '@opentelemetry/api';
 import { CircuitBreaker, CircuitSnapshot, CircuitStateChange } from '@wonseoro/server-kit';
 import { BREAKER } from '../../config';
 
@@ -34,6 +35,16 @@ export class DependencyBreakers {
       this.centralVault.snapshot(),
       this.paymentGateway.snapshot(),
     ];
+  }
+
+  constructor() {
+    // 열림을 로그로만 알리면 아무도 못 본다 — Pod 마다 상태를 지표로 낸다(열림·반열림 = 1). 경보 DependencyCircuitOpen·PaymentGatewayCircuitOpen (D-93)
+    metrics
+      .getMeter('k-admission.resilience')
+      .createObservableGauge('dependency_circuit_open', { description: '의존성 회로가 열렸거나 반열림이면 1 (dependency=회로 이름)' })
+      .addCallback((r) => {
+        for (const s of this.snapshot()) r.observe(s.state === 'CLOSED' ? 0 : 1, { dependency: s.name });
+      });
   }
 
   private create(name: string): CircuitBreaker {

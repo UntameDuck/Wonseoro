@@ -69,6 +69,18 @@ export class ScannerService implements OnModuleInit, OnApplicationShutdown {
 
   private engineDown = false;
 
+  constructor() {
+    // 엔진 장애·보고 회로 열림은 로그뿐이었다 — 그동안 서류는 검사 대기로 남아 지원자가 다음 단계로 못 간다.
+    // 경보 ScanEngineUnavailable·DependencyCircuitOpen 이 본다 (D-93)
+    const meter = metrics.getMeter('k-admission.document');
+    meter
+      .createObservableGauge('scan_engine_unavailable', { description: '검사 엔진에 닿지 못하면 1 (마지막 시도 기준)' })
+      .addCallback((r) => r.observe(this.engineDown ? 1 : 0, { engine: this.engine.name }));
+    meter
+      .createObservableGauge('dependency_circuit_open', { description: '의존성 회로가 열렸거나 반열림이면 1 (dependency=회로 이름)' })
+      .addCallback((r) => r.observe(this.admissionApi.snapshot().state === 'CLOSED' ? 0 : 1, { dependency: this.admissionApi.snapshot().name }));
+  }
+
   /** 검사 엔진. 시험이 바꿔 끼울 수 있다. */
   engine: ScanEngine =
     SCANNER_ENGINE === 'clamav'

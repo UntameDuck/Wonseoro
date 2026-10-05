@@ -1,12 +1,13 @@
 import { Inject, Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { Db, describeFailure } from '@wonseoro/server-kit';
 import { withLeaderLock } from '../../common/scheduling/leader-lock';
+import { checkEveryMs, markSuspended, registerPeriodicJob, runIfDue, type PeriodicJob } from '../../common/scheduling/periodic-job';
 import {
   PeakModePolicy,
   PEAK_MODE_POLICY,
   shouldSuspendNonCriticalJobs,
 } from '../../common/scheduling/peak-mode';
-import { PEAK_MODE, RECON_SCHEDULE } from '../../config';
+import { PEAK_MODE, RECON_SCHEDULE, UNIVERSITY_ID } from '../../config';
 import { ReconcileResult, ReconciliationService } from './reconciliation.service';
 
 /**
@@ -17,12 +18,16 @@ import { ReconcileResult, ReconciliationService } from './reconciliation.service
  *
  * Pod 가 여럿이어도 한 번만 돈다 (advisory lock). 같은 불일치를 두 Pod 가 동시에
  * 열면 예외 큐가 중복으로 찬다 — `openIfNew` 가 막지만 경합에 기대지 않는다.
+ *
+ * 때는 DB 의 마지막 성공으로 정한다(`periodic-job`, D-93) — 주기보다 자주 다시 뜨는 Pod 들만 있어도 돌고,
+ * 계속 실패하면 경보 ScheduledJobStale 이 본다.
  */
 @Injectable()
 export class ReconciliationScheduler implements OnModuleInit, OnApplicationShutdown {
   static readonly LOCK = 'reconciliation:scheduled';
   private readonly logger = new Logger('reconciliation-schedule');
   private timer: NodeJS.Timeout | null = null;
+  private readonly job: PeriodicJob = { name: 'reconciliation', university: UNIVERSITY_ID, intervalMs: RECON_SCHEDULE.intervalMs };
 
   constructor(
     private readonly db: Db,
@@ -33,7 +38,8 @@ export class ReconciliationScheduler implements OnModuleInit, OnApplicationShutd
 
   onModuleInit(): void {
     if (!RECON_SCHEDULE.autostart) return;
-    this.timer = setInterval(() => void this.safeTick(), RECON_SCHEDULE.intervalMs);
+    registerPeriodicJob(this.job);
+    this.timer = setInterval(() => void this.safeTick(), checkEveryMs(this.job.intervalMs));
     this.timer.unref();
   }
 
@@ -43,13 +49,21 @@ export class ReconciliationScheduler implements OnModuleInit, OnApplicationShutd
 
   private async safeTick(): Promise<void> {
     try {
-      await this.tick();
+      await this.tickIfDue();
     } catch (err) {
       this.logger.warn(`scheduled reconcile failed (${describeFailure(err)})`);
     }
   }
 
-  /** Peak Mode로 억제됐거나 다른 Pod가 돌고 있으면 null. */
+  /** 때가 됐을 때만 — 타이머가 부른다. 억제·때 아님·다른 Pod 면 null */
+  async tickIfDue(sinceHours: number = RECON_SCHEDULE.sinceHours): Promise<ReconcileResult | null> {
+    const suspended = shouldSuspendNonCriticalJobs(this.peakMode);
+    markSuspended(this.job, suspended);
+    if (suspended) return null;
+    return runIfDue(this.db, this.job, ReconciliationScheduler.LOCK, () => this.reconciliation.reconcile(sinceHours));
+  }
+
+  /** 지금 바로(때와 상관없이). Peak Mode로 억제됐거나 다른 Pod가 돌고 있으면 null. */
   async tick(sinceHours: number = RECON_SCHEDULE.sinceHours): Promise<ReconcileResult | null> {
     if (shouldSuspendNonCriticalJobs(this.peakMode)) return null;
     return withLeaderLock(this.db, ReconciliationScheduler.LOCK, () =>

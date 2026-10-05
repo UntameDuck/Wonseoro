@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { metrics } from '@opentelemetry/api';
 import { Db, describeFailure } from '@wonseoro/server-kit';
+import { CENTRAL_GATE } from '../../config';
 
 /**
  * DB 에서 읽는 업무 KPI 게이지 (T-M4-22·23, v1.0 §15·§10.4).
@@ -11,6 +12,7 @@ import { Db, describeFailure } from '@wonseoro/server-kit';
  *   central_sync_lag_seconds     중앙이 아직 모르는 가장 오래된 이벤트의 나이 — DEAD 포함. 중앙 "내 원서" 가 얼마나 늦나
  *   document_scan_pending        검사 대기(QUARANTINED) 서류 수
  *   db_lock_waiting_sessions     행 잠금을 기다리는 앱 세션 수                — Support "DB lock wait"
+ *   central_sync_lag_warn_seconds 중앙 반영 지연 경보 기준(설정 SYNC_LAG_WARN_SECONDS) — 경보 규칙이 같은 기준을 쓰게
  *
  * 스크레이프마다 DB 에 묻지 않는다. REFRESH_MS 마다 한 번 읽어 두고 게이지 콜백은 그 값만 낸다.
  * Pod 마다 같은 값을 내므로 대시보드는 max() 로 모은다. 읽기가 실패하면 값을 내지 않는다 —
@@ -52,6 +54,10 @@ export class BusinessGauges implements OnModuleInit, OnApplicationShutdown {
     gauge('central_sync_lag_seconds', '중앙이 아직 모르는 가장 오래된 이벤트의 나이', 's', (s) => s.centralSyncLagSeconds);
     gauge('document_scan_pending', '검사 대기 서류 수', '{document}', (s) => s.documentScanPending);
     gauge('db_lock_waiting_sessions', '행 잠금을 기다리는 앱 세션 수', '{session}', (s) => s.dbLockWaitingSessions);
+    // 경보 CentralSyncLagging 이 앱의 지연 기준(SYNC_LAG_WARN_SECONDS — 로그 경보와 같은 값)을 보게 내보낸다 (D-93)
+    meter
+      .createObservableGauge('central_sync_lag_warn_seconds', { description: '중앙 반영 지연 경보 기준', unit: 's' })
+      .addCallback((result) => result.observe(CENTRAL_GATE.syncLagWarnSeconds));
   }
 
   onModuleInit(): void {

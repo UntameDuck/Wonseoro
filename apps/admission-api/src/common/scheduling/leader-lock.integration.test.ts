@@ -51,4 +51,25 @@ describe('withLeaderLock (D-54)', () => {
     assert.equal(outer, 'outer');
     assert.equal(inner, null, '두 번째 호출은 잠금을 못 잡고 null');
   });
+
+  it('DB 가 유휴 트랜잭션을 끊게 해 둬도 긴 작업 중 잠금이 풀리지 않는다 (D-93)', { skip: !process.env.DATABASE_URL }, async () => {
+    if (!available) return;
+    // 이 Db 의 연결은 모두 1초 넘게 idle in transaction 이면 끊긴다(운영 DB 의 흔한 설정을 흉내)
+    const strict = new Db('admission-api', 'kadmission');
+    strict.pool.on('connect', (c) => void c.query(`SET idle_in_transaction_session_timeout = 1000`));
+    try {
+      const name = `test:leader:${Date.now()}:idle`;
+      let second: unknown = 'not-called';
+      const outer = await withLeaderLock(strict, name, async () => {
+        await new Promise((r) => setTimeout(r, 2500));
+        // 잠금 연결이 끊겼다면 이 시점에 다른 Pod 가 잡을 수 있다
+        second = await withLeaderLock(db, name, async () => 'second');
+        return 'outer';
+      });
+      assert.equal(outer, 'outer');
+      assert.equal(second, null, '2.5초 작업 뒤에도 잠금은 그대로');
+    } finally {
+      await strict.onApplicationShutdown();
+    }
+  });
 });

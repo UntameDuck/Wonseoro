@@ -1,8 +1,9 @@
 import { Inject, Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { Db, describeFailure } from '@wonseoro/server-kit';
 import { withLeaderLock } from '../scheduling/leader-lock';
+import { checkEveryMs, markSuspended, registerPeriodicJob, runIfDue, type PeriodicJob } from '../scheduling/periodic-job';
 import { PeakModePolicy, PEAK_MODE_POLICY, shouldSuspendNonCriticalJobs } from '../scheduling/peak-mode';
-import { IDEMPOTENCY_PURGE, PEAK_MODE } from '../../config';
+import { IDEMPOTENCY_PURGE, PEAK_MODE, UNIVERSITY_ID } from '../../config';
 import { IdempotencyStore } from './idempotency.store';
 
 /**
@@ -13,12 +14,14 @@ import { IdempotencyStore } from './idempotency.store';
  *
  * 대조 스케줄러와 같은 규칙이다 — Pod 가 여럿이어도 한 곳만 돈다(세션 advisory lock),
  * Peak Mode 억제 구간에는 쉰다. 한 번에 정해진 건수씩 지우고, 남았으면 다음 주기에 이어서 지운다.
+ * 때는 DB 의 마지막 성공으로 정한다(`periodic-job`, D-93).
  */
 @Injectable()
 export class IdempotencyPurgeScheduler implements OnModuleInit, OnApplicationShutdown {
   static readonly LOCK = 'idempotency:purge';
   private readonly logger = new Logger('idempotency-purge');
   private timer: NodeJS.Timeout | null = null;
+  private readonly job: PeriodicJob = { name: 'idempotency-purge', university: UNIVERSITY_ID, intervalMs: IDEMPOTENCY_PURGE.intervalMs };
 
   constructor(
     private readonly db: Db,
@@ -29,7 +32,8 @@ export class IdempotencyPurgeScheduler implements OnModuleInit, OnApplicationShu
 
   onModuleInit(): void {
     if (!IDEMPOTENCY_PURGE.autostart) return;
-    this.timer = setInterval(() => void this.safeTick(), IDEMPOTENCY_PURGE.intervalMs);
+    registerPeriodicJob(this.job);
+    this.timer = setInterval(() => void this.safeTick(), checkEveryMs(this.job.intervalMs));
     this.timer.unref();
   }
 
@@ -39,14 +43,22 @@ export class IdempotencyPurgeScheduler implements OnModuleInit, OnApplicationShu
 
   private async safeTick(): Promise<void> {
     try {
-      const purged = await this.tick();
+      const purged = await this.tickIfDue();
       if (purged) this.logger.log(`만료된 멱등 기록 ${purged}건을 지웠다`);
     } catch (err) {
       this.logger.warn(`idempotency purge failed (${describeFailure(err)})`);
     }
   }
 
-  /** Peak Mode 로 억제됐거나 다른 Pod 가 돌고 있으면 null. */
+  /** 때가 됐을 때만 — 타이머가 부른다 */
+  async tickIfDue(): Promise<number | null> {
+    const suspended = shouldSuspendNonCriticalJobs(this.peakMode);
+    markSuspended(this.job, suspended);
+    if (suspended) return null;
+    return runIfDue(this.db, this.job, IdempotencyPurgeScheduler.LOCK, () => this.store.purgeExpired(), (n) => ({ purged: n }));
+  }
+
+  /** 지금 바로. Peak Mode 로 억제됐거나 다른 Pod 가 돌고 있으면 null. */
   async tick(): Promise<number | null> {
     if (shouldSuspendNonCriticalJobs(this.peakMode)) return null;
     return withLeaderLock(this.db, IdempotencyPurgeScheduler.LOCK, () => this.store.purgeExpired());

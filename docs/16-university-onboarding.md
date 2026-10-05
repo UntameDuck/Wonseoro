@@ -39,7 +39,7 @@
 | 항목 | 준비할 것 | 근거 |
 |---|---|---|
 | 클러스터 | `npm run ops:csp-preflight -- --context=<컨텍스트>` 의 필수 7개 통과 — 1.30 이상, 승인 정책 API, 기본 StorageClass, zone 2개 이상, Pod Security restricted, **NetworkPolicy 가 실제로 막을 것**, LoadBalancer | [문서 14](14-operations-automation.md) |
-| PostgreSQL | 대학 전용 인스턴스(다른 대학과 같이 쓰지 않는다)·Multi-AZ·PITR. 마이그레이션 `0001`~`0010` 적용. Primary/Standby 주소로 `npm run ops:ha-preflight` 통과 뒤 실 Failover·PITR 훈련 | [infra/db/README](../infra/db/README.md), [문서 14](14-operations-automation.md) |
+| PostgreSQL | 대학 전용 인스턴스(다른 대학과 같이 쓰지 않는다)·Multi-AZ·PITR. 마이그레이션 `0001`~`0012` 적용. 앱의 주기 작업(대조·보관·WORM 대조)은 리더 잠금 연결을 작업 내내 트랜잭션으로 쥔다 — DB 에 `idle_in_transaction_session_timeout` 을 걸어도 앱이 그 트랜잭션에서만 끈다(`SET LOCAL`). DB 관리 도구가 오래된 idle in transaction 연결을 강제로 끊게 하려면 `application_name`·앱 역할로 이 연결을 빼 둔다. Primary/Standby 주소로 `npm run ops:ha-preflight` 통과 뒤 실 Failover·PITR 훈련 | [infra/db/README](../infra/db/README.md), [문서 14](14-operations-automation.md) |
 | Object Storage | 서류 버킷(비공개) + **감사 WORM 버킷**(Object Lock COMPLIANCE — 만들 때 켜야 한다) | D-75 |
 | Vault | 대학 경로 — Transit `pii-<대학>`(원서 암호화 키), DB 역할 `admission-api-<대학>`·`break-glass-<대학>`, PKI 역할 `kadmission-<대학>-<워크로드>`(워크로드마다), Kubernetes 인증 역할 `<대학>-<워크로드>` | [문서 13 단계 4](13-security-controls-plan.md), D-71 |
 | 중앙 연결 | 중앙 주소, 대학 Relay·API 의 워크로드 인증서(상호 TLS). 다른 대학 이름으로는 보낼 수 없다 | D-69 |

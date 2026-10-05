@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { Logger } from '@nestjs/common';
+import { metrics } from '@opentelemetry/api';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { CACHE_CONTROL_PII, MEDIA_PROBLEM, ProblemCode, problemType } from '@wonseoro/contracts';
 import { egressHttp, OidcTokenError, OidcUnavailableError, OidcVerifier } from '@wonseoro/server-kit';
@@ -20,6 +21,11 @@ declare module 'fastify' {
     applicantSubject?: string;
   }
 }
+
+/** 대학 API 와 같은 이름·이름표 — 경보 IssuerKeysUnavailable·IssuerOutageGraceInUse 가 중앙도 본다 (D-93) */
+const decisions = metrics.getMeter('k-admission.auth').createCounter('auth_decisions', {
+  description: '토큰 검증 판정 수 (audience=applicant, result=ok|grace|missing|invalid|unavailable)',
+});
 
 /** 경로 모양으로 지원자 토큰이 필요한지 */
 export function needsApplicantToken(method: string, routeUrl: string | undefined): boolean {
@@ -58,6 +64,7 @@ export function installOidcAuthentication(fastify: FastifyInstance, verifier: Oi
     try {
       const verified = await verifier.verify(OidcVerifier.bearer(request.headers.authorization));
       request.applicantSubject = verified.subject;
+      decisions.add(1, { audience: 'applicant', result: verified.outageGrace ? 'grace' : 'ok' });
       if (verified.outageGrace && Date.now() - lastGraceLog > 60_000) {
         lastGraceLog = Date.now();
         logger.warn('발급자에 닿지 않아 만료된 지원자 토큰을 단절 유예로 받는 중 (D-67)');
@@ -68,10 +75,12 @@ export function installOidcAuthentication(fastify: FastifyInstance, verifier: Oi
       let title: string;
       let detail: string;
       if (err instanceof OidcUnavailableError) {
+        decisions.add(1, { audience: 'applicant', result: 'unavailable' });
         logger.error(`발급자 키를 쓸 수 없어 지원자 토큰을 판단하지 못함: ${err.message}`);
         [status, code, title, detail] = [503, ProblemCode.AUTH_UNAVAILABLE, '지금 로그인을 확인할 수 없습니다', '잠시 후 다시 시도해 주십시오.'];
         reply.header('retry-after', '30');
       } else if (err instanceof OidcTokenError) {
+        decisions.add(1, { audience: 'applicant', result: err.problem === 'missing' ? 'missing' : 'invalid' });
         if (err.problem !== 'missing') logger.warn(`지원자 토큰 거절: ${err.problem}`);
         [status, code, title, detail] = [401, ProblemCode.UNAUTHENTICATED, '로그인이 필요합니다', '로그인 정보가 없거나 확인되지 않았습니다. 다시 로그인해 주십시오.'];
         reply.header('www-authenticate', 'Bearer error="invalid_token"');

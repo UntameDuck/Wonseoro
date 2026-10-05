@@ -168,6 +168,13 @@ tests:
         values: '60x300'
       - series: 'kube_job_status_failed{namespace="univ-c",job_name="kc-access-grant-sync-29001",reason="BackoffLimitExceeded"}'
         values: '1x300'
+      # univ-d: 6시간 주기 — 마지막 성공(0초) 뒤 200분이 지나도 한계(18시간) 안이라 조용
+      - series: 'kube_cronjob_status_last_successful_time{namespace="univ-d",cronjob="kd-access-grant-sync"}'
+        values: '0x300'
+      - series: 'kube_cronjob_status_last_schedule_time{namespace="univ-d",cronjob="kd-access-grant-sync"}'
+        values: '0x300'
+      - series: 'kube_cronjob_next_schedule_time{namespace="univ-d",cronjob="kd-access-grant-sync"}'
+        values: '21600x300'
     alert_rule_test:
       - eval_time: 10m
         alertname: AccessGrantSyncFailing
@@ -183,8 +190,146 @@ tests:
         alertname: AccessGrantSyncStale
         exp_alerts:
           - exp_labels: { severity: warning, namespace: univ-a, cronjob: ka-access-grant-sync }
-            exp_annotations: { summary: "univ-a 권한 변경 기록 수집이 3시간 넘게 성공하지 못했다 — 관리 이벤트(세부 포함)가 꺼졌거나 수집 클라이언트·DB 연결을 본다" }
+            exp_annotations: { summary: "univ-a 권한 변경 기록 수집이 주기의 세 배(최소 3시간)가 넘도록 성공하지 못했다 — 관리 이벤트(세부 포함)가 꺼졌거나 수집 클라이언트·DB 연결을 본다" }
           - exp_labels: { severity: warning, namespace: univ-b, cronjob: kb-access-grant-sync }
-            exp_annotations: { summary: "univ-b 권한 변경 기록 수집이 3시간 넘게 성공하지 못했다 — 관리 이벤트(세부 포함)가 꺼졌거나 수집 클라이언트·DB 연결을 본다" }
+            exp_annotations: { summary: "univ-b 권한 변경 기록 수집이 주기의 세 배(최소 3시간)가 넘도록 성공하지 못했다 — 관리 이벤트(세부 포함)가 꺼졌거나 수집 클라이언트·DB 연결을 본다" }
           - exp_labels: { severity: warning, namespace: univ-c, cronjob: kc-access-grant-sync }
-            exp_annotations: { summary: "univ-c 권한 변경 기록 수집이 3시간 넘게 성공하지 못했다 — 관리 이벤트(세부 포함)가 꺼졌거나 수집 클라이언트·DB 연결을 본다" }
+            exp_annotations: { summary: "univ-c 권한 변경 기록 수집이 주기의 세 배(최소 3시간)가 넘도록 성공하지 못했다 — 관리 이벤트(세부 포함)가 꺼졌거나 수집 클라이언트·DB 연결을 본다" }
+
+  # ── 대학 API 주기 작업 — 주기의 두 배, Peak Mode 억제 중에는 조용 ─────────────────
+  # univ-a 대조(1시간): 시각 0 에 끝나고 멈춤 → 2시간 넘으면 울림
+  # univ-a Outbox 보관(1시간): 계속 끝난다 → 조용
+  # univ-b 대조(1시간): 멈췄지만 억제 중 → 조용
+  - interval: 1m
+    input_series:
+      - series: 'scheduled_job_last_success_seconds{namespace="univ-a",pod="api-1",task="reconciliation"}'
+        values: '0x200'
+      - series: 'scheduled_job_interval_seconds{namespace="univ-a",pod="api-1",task="reconciliation"}'
+        values: '3600x200'
+      - series: 'scheduled_job_suspended{namespace="univ-a",pod="api-1",task="reconciliation"}'
+        values: '0x200'
+      - series: 'scheduled_job_last_success_seconds{namespace="univ-a",pod="api-1",task="outbox-archive"}'
+        values: '0+60x200'
+      - series: 'scheduled_job_interval_seconds{namespace="univ-a",pod="api-1",task="outbox-archive"}'
+        values: '3600x200'
+      - series: 'scheduled_job_suspended{namespace="univ-a",pod="api-1",task="outbox-archive"}'
+        values: '0x200'
+      - series: 'scheduled_job_last_success_seconds{namespace="univ-b",pod="api-1",task="reconciliation"}'
+        values: '0x200'
+      - series: 'scheduled_job_interval_seconds{namespace="univ-b",pod="api-1",task="reconciliation"}'
+        values: '3600x200'
+      - series: 'scheduled_job_suspended{namespace="univ-b",pod="api-1",task="reconciliation"}'
+        values: '1x200'
+    alert_rule_test:
+      - eval_time: 2h
+        alertname: ScheduledJobStale
+        exp_alerts: []
+      - eval_time: 3h
+        alertname: ScheduledJobStale
+        exp_alerts:
+          - exp_labels: { severity: warning, namespace: univ-a, task: reconciliation }
+            exp_annotations: { summary: "univ-a 주기 작업 reconciliation 이 주기의 두 배가 넘도록 끝나지 않았다 — 대학 API 로그의 실패 원인·DB 연결을 본다" }
+
+  # ── 중앙 반영 — 앱 기준(지표)을 따르고, 지표가 없으면 300초 · DEAD 는 한 건이라도 ───────────
+  # univ-a: 기준 600초, 지연 400초 → 조용 / univ-b: 기준 600초, 지연 900초 → 울림 / univ-c: 기준 지표 없음, 지연 400초 → 울림(300초)
+  - interval: 1m
+    input_series:
+      - series: 'central_sync_lag_seconds{namespace="univ-a",pod="api-1"}'
+        values: '400x20'
+      - series: 'central_sync_lag_warn_seconds{namespace="univ-a",pod="api-1"}'
+        values: '600x20'
+      - series: 'central_sync_lag_seconds{namespace="univ-b",pod="api-1"}'
+        values: '900x20'
+      - series: 'central_sync_lag_warn_seconds{namespace="univ-b",pod="api-1"}'
+        values: '600x20'
+      - series: 'central_sync_lag_seconds{namespace="univ-c",pod="api-1"}'
+        values: '400x20'
+      - series: 'outbox_dead_events{namespace="univ-a",pod="api-1"}'
+        values: '0x20'
+      - series: 'outbox_dead_events{namespace="univ-b",pod="api-1"}'
+        values: '0 0 2x18'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: CentralSyncLagging
+        exp_alerts:
+          - exp_labels: { severity: warning, namespace: univ-b }
+            exp_annotations: { summary: "univ-b 중앙이 모르는 가장 오래된 이벤트가 기준보다 오래됐다 — 접수는 계속된다. 중앙 연결·Relay·DEAD 이벤트를 본다" }
+          - exp_labels: { severity: warning, namespace: univ-c }
+            exp_annotations: { summary: "univ-c 중앙이 모르는 가장 오래된 이벤트가 기준보다 오래됐다 — 접수는 계속된다. 중앙 연결·Relay·DEAD 이벤트를 본다" }
+      - eval_time: 10m
+        alertname: OutboxDeadEvents
+        exp_alerts:
+          - exp_labels: { severity: warning, namespace: univ-b }
+            exp_annotations: { summary: "univ-b 재시도를 멈춘 Outbox 이벤트가 있다 — 중앙이 모르는 변경이다. 운영 콘솔 「대조 · 예외」의 「통합 조회 전송을 포기한 알림」과 Relay 로그로 원인을 본다" }
+
+  # ── 의존성 회로 — 결제는 5분, 그 밖은 10분. 한 Pod 라도 열려 있으면 ─────────────
+  - interval: 1m
+    input_series:
+      - series: 'dependency_circuit_open{namespace="univ-a",pod="api-1",dependency="payment-gateway"}'
+        values: '0 1x20'
+      - series: 'dependency_circuit_open{namespace="univ-a",pod="api-2",dependency="payment-gateway"}'
+        values: '0x20'
+      - series: 'dependency_circuit_open{namespace="univ-a",pod="api-1",dependency="central-profile-vault"}'
+        values: '0 1x20'
+      - series: 'dependency_circuit_open{namespace="univ-b",pod="api-1",dependency="payment-gateway"}'
+        values: '0 1 1 0x18'
+    alert_rule_test:
+      - eval_time: 7m
+        alertname: PaymentGatewayCircuitOpen
+        exp_alerts:
+          - exp_labels: { severity: critical, namespace: univ-a }
+            exp_annotations: { summary: "univ-a 결제사 연결 회로가 열려 결제 확인이 멈췄다 — 결제는 확인 대기로 남고 대조가 넘겨받는다. 결제사 상태·출구를 본다" }
+      - eval_time: 7m
+        alertname: DependencyCircuitOpen
+        exp_alerts: []
+      - eval_time: 12m
+        alertname: DependencyCircuitOpen
+        exp_alerts:
+          - exp_labels: { severity: warning, namespace: univ-a, dependency: central-profile-vault }
+            exp_annotations: { summary: "univ-a central-profile-vault 회로가 열려 있다 — 그 의존성으로 가는 연결·상태를 본다(중앙 회로면 접수는 계속된다, 접수 API 회로면 서류 검사가 멈춘다)" }
+
+  # ── 서류 검사 엔진 — 5분 넘게 닿지 못하면 ─────────────────────────────────
+  - interval: 1m
+    input_series:
+      - series: 'scan_engine_unavailable{namespace="univ-a",pod="doc-1",engine="clamav"}'
+        values: '0 1x10'
+      - series: 'scan_engine_unavailable{namespace="univ-b",pod="doc-1",engine="clamav"}'
+        values: '0 1 1 0x8'
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: ScanEngineUnavailable
+        exp_alerts:
+          - exp_labels: { severity: critical, namespace: univ-a, engine: clamav }
+            exp_annotations: { summary: "univ-a 서류 검사 엔진(clamav)에 닿지 못한다 — 올린 서류가 검사 대기로 남는다. 검사 엔진 상태·서명 DB 를 본다" }
+
+  # ── 시각·인증 ────────────────────────────────────────────────────────
+  - interval: 1m
+    input_series:
+      - series: 'clock_offset_ms{namespace="univ-a",pod="api-1"}'
+        values: '20 -1500x10'
+      - series: 'clock_offset_ms{namespace="univ-a",pod="api-2"}'
+        values: '900x11'
+      - series: 'auth_decisions_total{namespace="univ-a",pod="api-1",audience="applicant",result="ok"}'
+        values: '0+100x11'
+      - series: 'auth_decisions_total{namespace="univ-a",pod="api-1",audience="applicant",result="grace"}'
+        values: '0 0 0+5x9'
+      - series: 'auth_decisions_total{namespace="univ-a",pod="api-1",audience="staff",result="unavailable"}'
+        values: '0 0 0+2x9'
+      - series: 'auth_decisions_total{namespace="univ-b",pod="api-1",audience="staff",result="unavailable"}'
+        values: '0x11'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ClockOffsetExceeded
+        exp_alerts:
+          - exp_labels: { severity: critical, namespace: univ-a, pod: api-1 }
+            exp_annotations: { summary: "univ-a api-1 의 시계가 DB 와 1초 넘게 어긋나 이 Pod 는 접수를 확정하지 않는다 — 노드 NTP·DB 시계를 본다" }
+      - eval_time: 10m
+        alertname: IssuerKeysUnavailable
+        exp_alerts:
+          - exp_labels: { severity: critical, namespace: univ-a, audience: staff }
+            exp_annotations: { summary: "univ-a staff 토큰을 판단하지 못해 거절하고 있다 — 발급자(로그인 서버) 연결·공개키를 본다" }
+      - eval_time: 10m
+        alertname: IssuerOutageGraceInUse
+        exp_alerts:
+          - exp_labels: { severity: warning, namespace: univ-a, audience: applicant }
+            exp_annotations: { summary: "univ-a applicant 만료 토큰을 단절 유예로 받고 있다 — 발급자(로그인 서버)에 닿지 않는다" }

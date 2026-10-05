@@ -33,6 +33,9 @@ export async function withLeaderLock<T>(
   try {
     await client.query('BEGIN');
     open = true;
+    // 잠금 연결은 작업 내내 idle in transaction 이다. DB 가 idle_in_transaction_session_timeout 을 걸어 두면
+    // 긴 작업(WORM 전체 대조) 중 연결이 끊겨 잠금이 풀리고 다른 Pod 가 같이 돈다 — 이 트랜잭션에서만 끈다(D-93)
+    await client.query(`SET LOCAL idle_in_transaction_session_timeout = 0`);
     const { rows } = await client.query<{ ok: boolean }>(
       `SELECT pg_try_advisory_xact_lock($1, hashtext($2)) AS ok`,
       [LEADER_LOCK_CLASS, name],
