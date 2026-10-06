@@ -1,5 +1,36 @@
 # 인수인계 — 다음 작업자(사람·AI 공통)가 먼저 읽는 문서
 
+> ## 세션 마감 상태(2026-10-06 (1) Codex → 다음 에이전트)
+>
+> **커밋·원격 상태.** 이번 세션 작업 커밋은 18개이며 마감·push 상태 정리 커밋까지 **20개**다. 2026-10-06 사용자가 요청해 `3633a46..c76a384`를 먼저 push했고, 이 상태 정리 커밋도 이어 push했다. 로컬 `main`과 `origin/main`은 일치한다.
+>
+> - `9adae08` 노션 변경 목록 드리프트 검사
+> - `21abb12` Markdown 로컬 링크 검사
+> - `8e75eb5` 문서 제목 앵커 회귀 검사
+> - `b8d6f93` 로컬 보안 시험 드라이브 의존성 제거
+> - `42b5c3e`·`792efd9` 워크플로 구조·대상별 실행 경로 검사
+> - `98bd454`·`23bdb0a` 접근성/캡처 브라우저 공용 탐색·PATH 판정
+> - `37124cd` 정오표 PDF 글꼴 경로 이식·PDF 재검증
+> - `84d0363`·`b30f01d` 공개 상태·마일스톤 표 자동 대조
+> - `5d95fa0` 로컬 캐시 안내 정합화
+> - `950e12e`·`aaa4f1c`·`6b5d794` 워크플로 로컬 경로·재사용 잡·Node 시험 파일 검사
+> - `b725330` DAST 출력 경로 회귀 검사
+> - `6d6024d`·`449dc83` package script 실행 파일·소스 glob 검사
+> - `c76a384` 마감 상태·인계 포인터 정리
+> - 이 상태 정리 커밋: push 완료 상태 반영
+>
+> **검증 결과.** 노션 목록 단위 4개·의존성 6개, 문서 링크 단위 6개와 Markdown 61개, 상태/마일스톤 단위 7개와 상태 문서 3개·마일스톤 표 2개, 워크플로 단위 9개와 Actions 5개·잡 17개·단계 153개·package script 소스 실행 파일/경로 76개, 브라우저 탐색 6개, DAST 경로 4개, PDF 글꼴 탐색 5개가 모두 통과했다. 각 Node/Python 단위시험은 **skip 0·실패 0**이며 package script 빌드 생성물 9개는 의도적으로 정적 존재 검사에서 제외했다. 정오표 PDF는 A4 1쪽·본문 필수 문구·JavaScript 없음·암호화 없음, Poppler 150dpi 렌더링에서 한글·표·여백 이상 없음으로 확인했다. 마이그레이션 단위 3개와 대학 12/중앙 5 실행 경로도 통과했다.
+>
+> **못 돌린 검증.** 전체 ZAP active scan은 출력 경로만 바꿔 다시 돌리지 않았다. 화면 코드는 바뀌지 않아 전 화면 접근성 순회와 `npm run check:ui-copy`를 다시 돌리지 않았다. 원격 CI, 실물 Firefox·iPhone Safari, 실제 스크린리더·확대·음성 입력, K-PaaS·PG Sandbox·Edge/DR·30,000 VU 부하·Pilot/War-room/Compliance/대학 Shadow Test는 push·사람·외부 환경이 필요해 실행하지 않았다.
+>
+> **환경 변화.** `wonseoro-dev-keycloak-1`, `ci-pg`, `wonseoro-dev-object-storage-1`, `ui-shots-pg`, `wonseoro-dev-postgres-central-1`, `wonseoro-dev-postgres-univ-a-1`이 실행 중이다. 새 컨테이너·마이그레이션 적용은 없다. `output/pdf/wonseoro-submission-errata.pdf`를 재생성했고 150dpi 검사용 PNG는 git 제외 `tmp/pdfs/`에 있다. 화면 캡처 43장은 그대로 최신이다.
+>
+> **다음 에이전트.** 새 AI 로컬 제품 태스크는 없다. 먼저 `git status --branch`, `git log origin/main..HEAD --oneline`, `npm run check:docs-status`, `npm run check:docs-links`, `npm run check:workflows`, `npm run check:notion-changeset`, `npm run check:notion-assets`를 실행한다. 사람이 새 증적을 넣으면 [18 Pilot 실행 패키지](18-pilot-execution-package.md)의 해당 YAML과 판정 명령을 사용하고, 설계 차이는 먼저 이 대장에 D-N으로 등록한다.
+>
+> **사람이 할 일·남은 자료.** 원격 CI 결과를 확인한다. 제출처에는 [07 정정 안내](07-submission-errata.md)와 [정오표 PDF](../output/pdf/wonseoro-submission-errata.pdf)를 제출해 T-M0-08 접수 증적을 남긴다. [06 노션 변경안](06-notion-changeset.md)의 첨부 5종·본문을 페이지별 승인 후 반영한다. [18 Pilot 실행 패키지](18-pilot-execution-package.md)로 수동 접근성·Pilot·War-room·Compliance·대학 Shadow Test, [19 유출 대응 절차서](19-breach-response-runbook.md)로 T-M6-08 확정을 진행한다. 외부 부하·HA·PG·Edge·DR 결과와 D-90 Finalize 분모·지속시간 결정이 남았다.
+>
+> **함정.** runtime 첨부는 손으로 고치지 말고 `node scripts/render-runtime-attachment.mjs`를 쓴다. 노션 첨부 사본은 바이트를 바꾸지 않는다. 로컬 수치는 반드시 “축소 환경”으로 표시한다. PDF 생성은 Codex 번들 Python/ReportLab과 설치된 한글 글꼴이 필요하며 `--print-fonts`로 먼저 확인한다. 같은 폴더와 `origin/main`이 움직일 수 있으므로 커밋 전후 Git 상태를 다시 본다.
+>
 > 작성: 2026-09-29 · **최종 갱신 2026-10-06 (1)** · 원격 반영 여부는 `git status --branch`와 `git log origin/main..HEAD`로 확인한다 — 원격 CI 결과는 GitHub Actions 에서 확인한다
 >
 > **2026-10-05 (4) Codex 진행 기록.** 이 PC에 실제 Python이 없어도 노션 변경 목록을 갱신할 수 있게 `npm run docs:notion-changeset`을 만들고, 단위 시험 4개·문서 05 드리프트 검사 `npm run check:notion-changeset`을 CI contracts 잡에 넣었다. `scripts/notion-changeset.py`는 Node 단일 원본을 부르는 호환 실행기다. Node 검사 4 통과·skip 0·실패 0, Python 호환 실행과 의존성 검사 6 통과·skip 0·실패 0. Markdown 상대 경로·GitHub식 제목 앵커도 `npm run check:docs-links`의 단위 시험 6개와 저장소 문서 61개 검사로 CI에서 고정했다. 처음 실행에서 찾은 접근성 문서의 옛 M5 앵커 1개를 고친 뒤 skip 0·실패 0이다.
